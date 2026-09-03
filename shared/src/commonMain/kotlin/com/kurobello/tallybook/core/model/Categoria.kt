@@ -1,9 +1,9 @@
 package com.kurobello.tallybook.core.model
 
 /**
- * @property icono nombre de un ícono Lucide, ej. "shopping-cart".
- * @property color tinte con nombre (amber, blue...) que se resuelve contra los tokens del tema; no
- *   es un hex, para no acoplar la categoría a un tema concreto.
+ * @property icono name of a Lucide icon, e.g. "shopping-cart".
+ * @property color named tint (amber, blue...) resolved against the theme tokens; not a hex, so a
+ *   categoria is never coupled to a concrete theme.
  */
 data class Categoria(
     val id: String,

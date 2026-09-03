@@ -69,6 +69,13 @@ fun App() {
 El patrón real a seguir para pantallas nuevas es MVVM con split MVI (`UiState` + `Channel` de efectos +
 interfaz `Actions`) — ver skill `android-skills:android-dev`, sección "New-project UI convention".
 
+**Idioma del código: inglés.** Identificadores, nombres de test, comentarios y KDoc van en inglés. La
+única excepción es el vocabulario de dominio, que queda en español (`Moneda`, `Movimiento`,
+`TipoMovimiento`, `Categoria`, `GASTO`/`INGRESO`, `monto`, `fecha`, `descripcion`, `padreId`, las
+columnas de los `.sq`): es el lenguaje ubicuo del producto y el que usa `docs/business-logic.md`.
+Los nombres de test siguen el estilo de su source set — camelCase en `commonTest`, backticks en
+`androidHostTest` — pero el idioma es el mismo en los dos.
+
 ## 4. Reglas de arquitectura
 
 - Una sola dirección de datos: Vista (Compose, `commonMain`) → ViewModel (`StateFlow<UiState>`) →
