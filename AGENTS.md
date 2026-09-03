@@ -110,9 +110,10 @@ sesión.
 - Commits: conventional commits (`feat:`, `fix:`, `chore:`).
 - Este AGENTS.md se actualiza en el mismo PR que cambia una convención.
 
-## 8. Documentación
+## 8. Workflow de desarrollo y documentación
 
-Workflow completo en `docs/README.md` — no duplicado acá. Resumen: `docs/business-logic.md` es la única
-referencia de reglas de negocio; `docs/tasks/<slug>.md` es el spec activo de una feature en desarrollo
-(efímero); una vez confirmada en dispositivo real, se compacta (sin historial ni decisiones) y lo que
-sobrevive pasa a `docs/features/<nombre>.md` si la feature es importante.
+Ciclo completo (worktrees, roles, code review dedicado, compactación) en `docs/README.md` — no
+duplicado acá. Resumen: una feature por worktree (máximo 4 a la vez), subagentes ejecutan por waves y
+un code-reviewer dedicado corrige antes de pedir tu ok en dispositivo real; `docs/business-logic.md` es
+la única referencia de reglas de negocio, `docs/tasks/<slug>.md` el spec activo (efímero, se compacta al
+cerrar la feature).

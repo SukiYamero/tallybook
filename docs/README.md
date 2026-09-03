@@ -1,28 +1,42 @@
-# Documentación de este repo
+# Cómo se trabaja en este repo
 
-Reglas del workflow de documentación. Reglas del producto van en `business-logic.md` y `features/`, no acá.
+## Ciclo de una feature
 
-## Proceso
+1. **Worktree por feature** — `EnterWorktree`, rama `feat/<slug>`, máximo **4 worktrees activos** a la
+   vez. Cada worktree tiene su propio `docs/tasks/<slug>.md` (copiar `tasks/_template.md`), con el
+   trabajo agrupado en waves.
+2. **Los subagentes ejecutan la wave.** Leen `docs/tasks/<slug>.md` para contexto, invocan las skills
+   del stack que correspondan (ver `AGENTS.md` §3), y cuestionan el spec si algo no cierra en vez de
+   implementarlo a ciegas.
+3. **Antes de reportar terminado, el subagente confirma:**
+   - `detekt`/`ktfmtCheck` limpios (el hook de `PostToolUse` ya lo fuerza en cada edición).
+   - Tests mínimos que aporten valor real, agrupados — no un archivo por caso ni cobertura por
+     cobertura.
+4. **Code review dedicado.** Un subagente nuevo (rol code-reviewer, skill `code-review` con `--fix`
+   sobre el diff de esa feature puntual) busca código espagueti, duplicado, algo reusable en vez de
+   escribirlo de nuevo, un enfoque más simple con menos código, bugs o casos no contemplados — y lo
+   arregla ahí mismo, no solo lo señala.
+5. **El code-reviewer reporta al orquestador** (yo) que lint + tests + review quedaron ok.
+6. **Yo te aviso a vos**: "pasate al worktree `<slug>` y probá `<qué>`". Vos das el ok o pedís iterar —
+   se vuelve al paso 3 con lo que falte.
+7. **Con tu ok**: compacto el spec (saco decisiones/historial, dejo solo lo vigente), actualizo
+   `business-logic.md`/`features/<nombre>.md` si aplica, commit, merge a `main`, borro la rama y el
+   worktree (`ExitWorktree`).
 
-1. **Analizar exhaustivo antes de proponer** — leer todo lo relevante del código/dominio antes de escribir
-   un spec, no asumir.
-2. **Spec para el trabajo** — un plan que los subagentes siguen y pueden cuestionar. Vive en
-   `docs/tasks/<slug>.md` mientras la feature está en desarrollo, con la forma de `tasks/_template.md`.
-   Adentro, el trabajo se agrupa en **waves** (qué puede correr en paralelo por no depender entre sí, qué
-   espera a la wave anterior) — no en sprints: acá no hay ceremonia de equipo ni caja de calendario que
-   coordinar, la unidad real es la feature, no la semana. Los checkboxes atómicos de una wave no se
-   documentan — se trackean con las Tasks de la sesión (`TaskCreate`/`TaskUpdate`), que son efímeras por
-   diseño y no dejan rastro una vez terminada la feature.
-3. **Confirmar en un dispositivo físico real** antes de dar la feature por cerrada — no alcanza con que
-   compile.
-4. **Compactar el spec** una vez confirmado: sacar decisiones tomadas, historial, razones de por qué se
-   eligió tal enfoque — dejar solo lo que es cierto hoy. Si la feature es importante, lo que sobrevive pasa
-   a `docs/features/<nombre>.md`; si no, el `.md` de `tasks/` se borra.
+## Roles
 
-## Reglas
+- **Vos** — última palabra: probás en dispositivo físico real y das el ok o pedís cambios. Nada se
+  mergea sin tu confirmación.
+- **Yo (orquestador)** — reparto el trabajo entre worktrees/subagentes, hago seguimiento proactivo sin
+  esperar a que preguntes en qué va cada uno, y soy el único punto que te reporta a vos.
+- **Subagentes** — ejecutan una wave dentro de un worktree, usan las skills del stack, cuestionan el
+  spec cuando algo no tiene sentido; el de code-review corrige lo que encuentra en vez de solo
+  señalarlo.
 
-- **Una sola referencia por tema.** El mismo dato nunca vive en dos `.md` — se actualiza donde vive, no se
-  copia a otro lado.
+## Reglas de documentación
+
+- **Una sola referencia por tema.** El mismo dato nunca vive en dos `.md` — se actualiza donde vive, no
+  se copia a otro lado.
 - **Nada de historial de decisiones.** Git ya es el changelog; un doc describe el estado actual, no cómo
   se llegó a él.
 - **Troubleshooting: lo mínimo indispensable.** Solo lo que un agente no puede re-derivar por su cuenta
