@@ -23,3 +23,6 @@ feature que las necesita, no antes.
 - **Manrope (fuente) y `BottomSheet`/`Toast`/`PagedGrid`** (componentes bespoke del diseño de moneta):
   no son una librería a elegir — se construyen con primitivas de Compose (`Font`/`FontResource`,
   `Modifier`/`AnimatedContent`), igual que en la versión web.
+- **Colores/tokens de tema claro y oscuro**: reusar los ya definidos en moneta
+  (`web/moneta/docs/ui/design-tokens.md`), no diseñar unos nuevos — portarlos a Compose Multiplatform
+  cuando se arme el theming (`ColorScheme` de Material3 o tokens propios, a definir en esa feature).
