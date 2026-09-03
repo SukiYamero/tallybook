@@ -67,6 +67,10 @@ interfaz `Actions`) — ver skill `android-skills:android-dev`, sección "New-pr
   `CoroutineDispatcher` (no está garantizado en todos los targets sin los artefactos `-ktx`).
 - Specifics de plataforma (biometría, keystore/keychain, push) vía `expect`/`actual`, nunca `if` de
   plataforma en medio de lógica compartida.
+- **Comentarios: estrictos.** Solo si explican un *por qué* no deducible del código ni del historial de
+  git (`git log`/`git blame` ya son el changelog). Nunca narrar el *qué*, nunca "antes era X", nunca un
+  comentario que un lector podría inferir en 5 segundos leyendo la línea de al lado. Antes de escribirlo,
+  preguntarse: ¿esto se puede encontrar leyendo el código o el historial? Si sí, no se escribe.
 
 ### Antipatrones prohibidos de este stack
 
@@ -75,6 +79,7 @@ interfaz `Actions`) — ver skill `android-skills:android-dev`, sección "New-pr
 | Retrofit/OkHttp directo en `shared/` | Ktor en `commonMain` (Retrofit es Android-only, no compila iOS) |
 | `SharedFlow` para un evento one-shot (navegar, snackbar) | `Channel(Channel.BUFFERED).receiveAsFlow()` — no se pierde en background |
 | Un segundo flag `shouldShowX` al lado de uno ya existente en el mismo ViewModel | Generalizar el mecanismo existente, no duplicarlo |
+| Comentar cada línea o restatear lo que ya dice el código | Comentar solo la excepción no obvia (workaround, constraint, gotcha) |
 
 ## 5. Límites — qué el agente nunca debe tocar
 
@@ -98,3 +103,10 @@ sesión.
 - Branches: `feat/`, `fix/`.
 - Commits: conventional commits (`feat:`, `fix:`, `chore:`).
 - Este AGENTS.md se actualiza en el mismo PR que cambia una convención.
+
+## 8. Documentación
+
+Workflow completo en `docs/README.md` — no duplicado acá. Resumen: `docs/business-logic.md` es la única
+referencia de reglas de negocio; `docs/tasks/<slug>.md` es el spec activo de una feature en desarrollo
+(efímero); una vez confirmada en dispositivo real, se compacta (sin historial ni decisiones) y lo que
+sobrevive pasa a `docs/features/<nombre>.md` si la feature es importante.
