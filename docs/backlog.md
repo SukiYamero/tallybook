@@ -11,9 +11,9 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 ## Media
 
 - **Taxonomía detallada de errores** — `DataError` arranca con `Local`/`Unknown` en
-  `docs/tasks/fundacion.md`; falta expandirlo (causas de red granulares, mapeo a mensajes localizados
-  para el usuario) cuando exista una pantalla real que muestre errores — primera feature con red
-  (Auth+Drive) o la primera con estados de error en UI (movimientos).
+  `docs/tasks/fundacion/wave-1/task1/task.md`; falta expandirlo (causas de red granulares, mapeo a
+  mensajes localizados para el usuario) cuando exista una pantalla real que muestre errores — primera
+  feature con red (Auth+Drive) o la primera con estados de error en UI (movimientos).
 
 ## Baja
 

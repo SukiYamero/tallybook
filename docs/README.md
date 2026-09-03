@@ -51,6 +51,12 @@
 - `wording.md` — voz y tono, portado de moneta. Única referencia de cómo se escribe la copy en cada
   idioma.
 - `tasks/<slug>.md` — spec activo de una feature en desarrollo (copiar `tasks/_template.md`). Efímero:
-  se borra o se compacta a `features/` al terminar, nunca se acumula.
+  se borra o se compacta a `features/` al terminar, nunca se acumula. Si la feature es grande (varias
+  waves, cada una con varias tareas que un subagente necesita ejecutar sin releer todo el spec),
+  usar en cambio `tasks/<slug>/` como folder: un `README.md` con el Contexto/alcance general, un
+  `wave-N/tasks.md` por wave (overview, qué se necesita a nivel general) y un `wave-N/taskM/task.md`
+  por tarea con el detalle completo — objetivo, contexto, archivos, interfaces, pasos de
+  implementación, y si bloquea o está bloqueada por otra tarea. Mismo ciclo de vida efímero que la
+  versión de un solo archivo. Ver `tasks/fundacion/` como ejemplo real.
 - `features/<nombre>.md` — doc chico post-confirmación, solo para features realmente importantes.
 - `backlog.md` — pendientes por criticidad, sin historial. Se borra el ítem apenas se resuelve.
