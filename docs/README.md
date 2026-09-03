@@ -49,3 +49,4 @@
 - `tasks/<slug>.md` — spec activo de una feature en desarrollo (copiar `tasks/_template.md`). Efímero:
   se borra o se compacta a `features/` al terminar, nunca se acumula.
 - `features/<nombre>.md` — doc chico post-confirmación, solo para features realmente importantes.
+- `backlog.md` — pendientes por criticidad, sin historial. Se borra el ítem apenas se resuelve.
