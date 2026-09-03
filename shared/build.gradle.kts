@@ -2,11 +2,13 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
   alias(libs.plugins.kotlinMultiplatform)
+  alias(libs.plugins.kotlinSerialization)
   alias(libs.plugins.androidMultiplatformLibrary)
   alias(libs.plugins.composeMultiplatform)
   alias(libs.plugins.composeCompiler)
   alias(libs.plugins.detekt)
   alias(libs.plugins.ktfmt)
+  alias(libs.plugins.sqldelight)
 }
 
 detekt {
@@ -17,6 +19,16 @@ detekt {
       "src/androidMain/kotlin",
       "src/iosMain/kotlin",
   )
+}
+
+sqldelight {
+  databases {
+    create("TallybookDatabase") {
+      packageName.set("com.kurobello.tallybook.core.database")
+      schemaOutputDirectory.set(file("src/commonMain/sqldelight/databases"))
+      verifyMigrations.set(true)
+    }
+  }
 }
 
 kotlin {
@@ -43,6 +55,7 @@ kotlin {
     androidMain.dependencies {
       implementation(libs.compose.uiToolingPreview)
       implementation(libs.compose.uiTooling)
+      implementation(libs.sqldelight.androidDriver)
     }
     commonMain.dependencies {
       implementation(libs.compose.runtime)
@@ -53,8 +66,17 @@ kotlin {
       implementation(libs.compose.uiToolingPreview)
       implementation(libs.androidx.lifecycle.viewmodelCompose)
       implementation(libs.androidx.lifecycle.runtimeCompose)
+      implementation(libs.kotlinx.datetime)
+      implementation(libs.koin.core)
+      implementation(libs.koin.compose)
+      implementation(libs.koin.composeViewmodel)
+      implementation(libs.navigation3.runtime)
+      implementation(libs.navigation3.ui)
+      implementation(libs.sqldelight.runtime)
     }
+    iosMain.dependencies { implementation(libs.sqldelight.nativeDriver) }
     commonTest.dependencies { implementation(libs.kotlin.test) }
+    getByName("androidHostTest").dependencies { implementation(libs.sqldelight.sqliteDriver) }
   }
 }
 
