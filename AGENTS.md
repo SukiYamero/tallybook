@@ -13,14 +13,24 @@ package `com.kurobello.tallybook`. Lint/formato: **Detekt 1.23.8** (análisis es
 - `iosApp/` — entry point iOS (Xcode project, Swift). Aunque la UI es Compose Multiplatform, este
   target sigue siendo necesario como shell/entry point y para cualquier código nativo iOS puntual.
 - DI: **Koin** (no Hilt — Hilt es Android-only y no compila en `commonMain`).
-- Persistencia/red: aún sin definir — cuando se agregue, red vía **Ktor** (no Retrofit, no compila en
-  iOS) y persistencia vía **Room multiplatform** o **SQLDelight** en `commonMain`.
+- Red: **Ktor** en `commonMain` (no Retrofit, no compila en iOS).
+- Persistencia: **SQLDelight** en `commonMain` (no Room Multiplatform — decidido, no solo por
+  continuidad con `native-kmp-migration.md` de moneta: SQL-first da el control de queries/transacciones
+  que va a necesitar el motor de sync/outbox, mejor que el ORM por anotaciones de Room). Ninguno de los
+  tres tiene código todavía — son decisiones de stack, se implementan cuando arranque la primera feature
+  que los necesite.
+
+**Paquetes** (convención a seguir cuando haya código real, no estructura ya creada): feature-vertical
+dentro de `commonMain` — `com.kurobello.tallybook.core.{data,model,database,network,ui}` para lo
+compartido entre features (`core.model` sin deps de framework), `com.kurobello.tallybook.feature.<x>.
+{ui,viewmodel}` por feature, `com.kurobello.tallybook.di` para los módulos de Koin. Kotlin no importa
+por path relativo (import por package totalmente calificado), así que el problema de "imports gigantes" de
+TS/JS no aplica acá — no hace falta alias.
 
 **Skills instaladas para este stack** (se auto-invocan por contexto, no hace falta pedirlas):
 `claude-android-skill` (arquitectura Android general), `chrisbanes-skills` (Compose state/effects,
 performance, coroutines/Flow, Gradle), `android-skills` (KMP: `kmp-boundaries`, `kmp-ktor`, `koin`,
-`android-data-layer`, testing/debugging). MCPs: `mobile-mcp` (control del device físico), `jetbrains`
-(contexto de Android Studio, requiere el IDE abierto).
+`android-data-layer`, testing/debugging). MCP: `mobile-mcp` (control del device físico).
 
 ## 2. Comandos — exactos, con flags
 
