@@ -67,6 +67,12 @@ interfaz `Actions`) — ver skill `android-skills:android-dev`, sección "New-pr
   `CoroutineDispatcher` (no está garantizado en todos los targets sin los artefactos `-ktx`).
 - Specifics de plataforma (biometría, keystore/keychain, push) vía `expect`/`actual`, nunca `if` de
   plataforma en medio de lógica compartida.
+- Composables chicos, reutilizables y stateless cuando se pueda — el estado vive en el ViewModel, no en
+  la UI.
+- UDF (paralelo a React, para pensarlo con el mismo modelo mental): el estado baja (`UiState`), los
+  eventos suben (`Actions`) — nunca al revés.
+- Compose Multiplatform + `StateFlow`/`Flow` son la única UI/estado de este proyecto — nada de
+  XML/View system ni `LiveData`, ni siquiera para un caso puntual Android-only.
 - **Comentarios: estrictos.** Solo si explican un *por qué* no deducible del código ni del historial de
   git (`git log`/`git blame` ya son el changelog). Nunca narrar el *qué*, nunca "antes era X", nunca un
   comentario que un lector podría inferir en 5 segundos leyendo la línea de al lado. Antes de escribirlo,

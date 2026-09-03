@@ -7,7 +7,12 @@ Reglas del workflow de documentación. Reglas del producto van en `business-logi
 1. **Analizar exhaustivo antes de proponer** — leer todo lo relevante del código/dominio antes de escribir
    un spec, no asumir.
 2. **Spec para el trabajo** — un plan que los subagentes siguen y pueden cuestionar. Vive en
-   `docs/tasks/<slug>.md` mientras la feature está en desarrollo.
+   `docs/tasks/<slug>.md` mientras la feature está en desarrollo, con la forma de `tasks/_template.md`.
+   Adentro, el trabajo se agrupa en **waves** (qué puede correr en paralelo por no depender entre sí, qué
+   espera a la wave anterior) — no en sprints: acá no hay ceremonia de equipo ni caja de calendario que
+   coordinar, la unidad real es la feature, no la semana. Los checkboxes atómicos de una wave no se
+   documentan — se trackean con las Tasks de la sesión (`TaskCreate`/`TaskUpdate`), que son efímeras por
+   diseño y no dejan rastro una vez terminada la feature.
 3. **Confirmar en un dispositivo físico real** antes de dar la feature por cerrada — no alcanza con que
    compile.
 4. **Compactar el spec** una vez confirmado: sacar decisiones tomadas, historial, razones de por qué se
@@ -27,6 +32,6 @@ Reglas del workflow de documentación. Reglas del producto van en `business-logi
 
 - `business-logic.md` — reglas de negocio del dominio, la única referencia. Se actualiza en el lugar,
   nunca se bifurca en otro archivo.
-- `tasks/<slug>.md` — spec activo de una feature en desarrollo. Efímero: se borra o se compacta a
-  `features/` al terminar, nunca se acumula.
+- `tasks/<slug>.md` — spec activo de una feature en desarrollo (copiar `tasks/_template.md`). Efímero:
+  se borra o se compacta a `features/` al terminar, nunca se acumula.
 - `features/<nombre>.md` — doc chico post-confirmación, solo para features realmente importantes.
