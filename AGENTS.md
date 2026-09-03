@@ -18,7 +18,8 @@ package `com.kurobello.tallybook`. Lint/formato: **Detekt 1.23.8** (análisis es
   continuidad con `native-kmp-migration.md` de moneta: SQL-first da el control de queries/transacciones
   que va a necesitar el motor de sync/outbox, mejor que el ORM por anotaciones de Room). Ninguno de los
   tres tiene código todavía — son decisiones de stack, se implementan cuando arranque la primera feature
-  que los necesite.
+  que los necesite. Librerías adicionales ya decididas (navegación, auth Google, Drive, dinero,
+  logging, íconos) en `docs/stack.md` — no duplicado acá.
 
 **Paquetes** (convención a seguir cuando haya código real, no estructura ya creada): feature-vertical
 dentro de `commonMain` — `com.kurobello.tallybook.core.{data,model,database,network,ui}` para lo

@@ -46,6 +46,8 @@
 
 - `business-logic.md` — reglas de negocio del dominio, la única referencia. Se actualiza en el lugar,
   nunca se bifurca en otro archivo.
+- `stack.md` — librerías ya decididas pero sin código todavía, para no re-discutirlas al arrancar la
+  feature que las necesita.
 - `tasks/<slug>.md` — spec activo de una feature en desarrollo (copiar `tasks/_template.md`). Efímero:
   se borra o se compacta a `features/` al terminar, nunca se acumula.
 - `features/<nombre>.md` — doc chico post-confirmación, solo para features realmente importantes.
