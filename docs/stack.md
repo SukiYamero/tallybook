@@ -17,6 +17,12 @@ feature que las necesita, no antes.
   plataforma (Logcat/os_log) y hooks de Crashlytics ya resueltos.
 - **Íconos**: `com.composables:icons-lucide` — Lucide empaquetado 1:1 para Compose Multiplatform, no
   hace falta bundlear los SVG a mano.
+- **Componentes headless**: `com.composables:core` (mismo maker que `icons-lucide`) — primitivas sin
+  estilo (`ModalBottomSheet`, `Dialog`, `Popup`, `DropdownMenu`) para skinear con diseño propio, el
+  equivalente de Radix (que ya usan en la web) para Compose Multiplatform. Da la plomería de
+  accesibilidad/foco/estado y el cableado del gesto de drag — **no trae animaciones ni feeling nativo**,
+  eso se diseña encima con las APIs de animación de Compose, igual que ya hacían con el `BottomSheet`
+  bespoke de la web.
 - **Imágenes / preferencias / listas paginadas**: Coil 3, DataStore, Paging 3 — ya cubiertos por skills
   instaladas (`android-skills:coil-compose`, `android-skills:datastore`, `android-skills:paging`), sin
   nada que decidir.
