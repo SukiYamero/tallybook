@@ -4,12 +4,16 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 
 ## Alta
 
-- **Formato de montos multi-moneda** — la primera feature a arrancar. Moneta usa `Intl.NumberFormat`;
-  Kotlin no tiene un equivalente directo en `commonMain`. Bloquea mostrar un monto bien formateado en
-  la primera feature real (agregar/ver un movimiento).
 - **iOS end-to-end** — nunca se confirmó un build+deploy real al iPhone. Falta: login con Apple ID en
   Xcode, Developer Mode en el iPhone, completar `TEAM_ID` en `iosApp/Configuration/Config.xcconfig`, un
   Cmd+R de prueba.
+
+## Media
+
+- **Taxonomía detallada de errores** — `DataError` arranca con `Local`/`Unknown` en
+  `docs/tasks/fundacion.md`; falta expandirlo (causas de red granulares, mapeo a mensajes localizados
+  para el usuario) cuando exista una pantalla real que muestre errores — primera feature con red
+  (Auth+Drive) o la primera con estados de error en UI (movimientos).
 
 ## Baja
 
