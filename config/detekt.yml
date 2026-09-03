@@ -1,0 +1,17 @@
+naming:
+  FunctionNaming:
+    # @Composable functions are PascalCase by Compose convention, not Detekt's default lowerCamelCase.
+    ignoreAnnotated: ["Composable"]
+    # KMP's own iOS entry-point convention (UIViewController factory), PascalCase without @Composable itself.
+    excludes: ["**/MainViewController.kt"]
+  MatchingDeclarationName:
+    # Conflicts with KMP's own expect/actual convention: Platform.android.kt / Platform.ios.kt
+    # holding AndroidPlatform / IOSPlatform, matching the expect file's name, not the class name.
+    active: false
+
+style:
+  WildcardImport:
+    excludeImports:
+      - "java.util.*"
+      - "kotlinx.android.synthetic.*"
+      - "androidx.compose.runtime.*"

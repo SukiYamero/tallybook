@@ -4,7 +4,8 @@
 
 **Kotlin Multiplatform, Compose Multiplatform (UI compartida Android + iOS)**: Kotlin 2.4.10 (K2) ·
 Compose Multiplatform 1.11.1 · Material3 1.11.0-alpha07 · AGP 9.0.1 · minSdk 31 / target-compileSdk 36 ·
-package `com.kurobello.tallybook`.
+package `com.kurobello.tallybook`. Lint/formato: **Detekt 1.23.8** (análisis estático) + **ktfmt 0.26.0**
+(formateo, reemplaza a ktlint) — config compartida en `config/detekt.yml`.
 
 - `shared/` — módulo Kotlin Multiplatform: toda la UI (Compose Multiplatform) y lógica de negocio
   viven en `commonMain`. `androidMain`/`iosMain` solo para `expect`/`actual` de APIs de plataforma.
@@ -30,6 +31,8 @@ performance, coroutines/Flow, Gradle), `android-skills` (KMP: `kmp-boundaries`, 
   `adb install -r androidApp/build/outputs/apk/debug/androidApp-debug.apk && adb shell am start -n com.kurobello.tallybook/.MainActivity`
 - iOS: abrir `iosApp/iosApp.xcodeproj` en Xcode y correr con Cmd+R sobre el iPhone físico
   (o `xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -sdk iphoneos build` para solo compilar).
+- Lint (cero warnings, todos los módulos): `./gradlew detekt`
+- Formato — verificar: `./gradlew ktfmtCheck` · aplicar: `./gradlew ktfmtFormat`
 
 ## 3. Estilo de código — con ejemplo, no descripción
 
@@ -82,8 +85,10 @@ interfaz `Actions`) — ver skill `android-skills:android-dev`, sección "New-pr
 
 ## 6. Loop de verificación
 
-Build angosto primero: `./gradlew :androidApp:assembleDebug` o el módulo tocado, antes de un build
-completo. Evidencia final sobre el dispositivo físico real (no emulador): `adb install` + `adb shell am
+`./gradlew detekt ktfmtCheck` antes de dar por terminado cualquier cambio de Kotlin — no es opcional,
+es lo que separa "compila" de "cumple la convención del repo". Build angosto primero:
+`./gradlew :androidApp:assembleDebug` o el módulo tocado, antes de un build completo. Evidencia final
+sobre el dispositivo físico real (no emulador): `adb install` + `adb shell am
 start` en Android, Cmd+R en Xcode sobre el iPhone en iOS — o vía MCP `mobile-mcp`
 (`mobile_take_screenshot`, `mobile_list_elements_on_screen`) para verificación visual sin salir de la
 sesión.
