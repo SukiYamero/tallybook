@@ -19,9 +19,8 @@ Un **movimiento** registra un gasto o un ingreso.
 
 ## Moneda e idioma
 
-Multi-moneda: COP, MXN, ARS, CLP, BRL, USD, DOP por ahora — moneta hoy soporta COP, MXN, ARS, BRL, USD,
-PEN (sin CLP ni DOP). Al portar: agregar CLP y DOP a la tabla de mapeo; **PEN queda pendiente de
-confirmar** — se mantiene como 8va moneda o se descarta (ver `docs/backlog.md`).
+Multi-moneda: COP, MXN, ARS, CLP, BRL, USD, DOP, PEN. Moneta hoy soporta COP, MXN, ARS, BRL, USD, PEN —
+al portar, agregar CLP y DOP a la tabla de mapeo.
 
 **Mecanismo** (portado de moneta, `src/lib/i18n/regionCurrency.ts` + `detectLocale.ts`): se lee el
 locale del sistema una sola vez; idioma y región salen del mismo tag (`es-CO` → idioma `es`, región
