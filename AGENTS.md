@@ -62,6 +62,13 @@ interfaz `Actions`) — ver skill `android-skills:android-dev`, sección "New-pr
 
 - Una sola dirección de datos: Vista (Compose, `commonMain`) → ViewModel (`StateFlow<UiState>`) →
   Repositorio → fuente de datos.
+- **Single Source of Truth, sin excepciones salvo `expect`/`actual`.** Cada dato tiene un único dueño —
+  la base local (Room/SQLDelight en `commonMain`) para datos persistidos, el `UiState` del ViewModel
+  para estado de pantalla. La red actualiza esa fuente, la UI nunca lee la respuesta de red directo ni
+  duplica el mismo dato en dos lugares. En KMP esto se extiende un nivel más: la lógica de negocio se
+  escribe una sola vez en `commonMain` para Android e iOS — si algo termina reimplementado por
+  plataforma, ya se rompió el patrón. La única bifurcación legítima es `expect`/`actual`: el contrato
+  (la firma, el "qué") sigue single-sourced ahí, solo la implementación difiere por plataforma.
 - Cero lógica de negocio en la capa de vista; cero Android/iOS-only imports en `commonMain`.
 - Nunca `Dispatchers.Main`/`Dispatchers.IO` a pie en código compartido — inyectar el
   `CoroutineDispatcher` (no está garantizado en todos los targets sin los artefactos `-ktx`).
