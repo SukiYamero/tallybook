@@ -1,0 +1,17 @@
+-- No tipo column: a categoria is gasto or ingreso only through the movimiento that references it
+-- (cat_ingresos is just another parent). icono is a Lucide name, color a theme-token name, not a hex.
+CREATE TABLE categoria (
+    id TEXT NOT NULL PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    padre_id TEXT,
+    icono TEXT NOT NULL,
+    color TEXT NOT NULL
+);
+
+insertCategoria:
+INSERT INTO categoria(id, nombre, padre_id, icono, color)
+VALUES (?, ?, ?, ?, ?);
+
+selectAllCategorias:
+SELECT *
+FROM categoria;

@@ -1,0 +1,45 @@
+-- monto_minor holds the amount in minor units, the same Long domain as Money.minorUnits; the decimal
+-- point comes from Moneda.scale, never from the column. Exact integers keep SUM() aggregation in
+-- SQLite instead of in Kotlin, which a TEXT or REAL column could not do without losing exactness.
+CREATE TABLE movimiento (
+    id TEXT NOT NULL PRIMARY KEY,
+    tipo TEXT NOT NULL,
+    monto_minor INTEGER NOT NULL,
+    monto_moneda TEXT NOT NULL,
+    fecha TEXT NOT NULL,
+    categoria_id TEXT NOT NULL,
+    descripcion TEXT
+);
+
+-- Every list, aggregate and chart narrows by date first; ISO-8601 TEXT sorts lexicographically, so
+-- one index on fecha serves both the BETWEEN range scan and the ORDER BY below without a sort step.
+-- Leading with monto_moneda instead would help nothing: the currency is inferred from the locale and
+-- is effectively constant per user, so it has almost no selectivity.
+CREATE INDEX movimiento_fecha ON movimiento(fecha);
+
+insertMovimiento:
+INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, categoria_id, descripcion)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+selectAllMovimientos:
+SELECT *
+FROM movimiento
+ORDER BY fecha DESC;
+
+selectMovimientoById:
+SELECT *
+FROM movimiento
+WHERE id = ?;
+
+deleteMovimiento:
+DELETE FROM movimiento
+WHERE id = ?;
+
+-- Grouped by tipo as well as categoria_id so gastos and ingresos in the same categoria never net
+-- each other out, and so the balance general falls out of the same result. Filtered by moneda
+-- because minor units of different currencies are different units and adding them is meaningless.
+sumMovimientosPorCategoria:
+SELECT categoria_id, tipo, SUM(monto_minor) AS total_minor
+FROM movimiento
+WHERE monto_moneda = ? AND fecha BETWEEN ? AND ?
+GROUP BY categoria_id, tipo;
