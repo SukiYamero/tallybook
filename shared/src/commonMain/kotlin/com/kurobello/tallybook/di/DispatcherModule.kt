@@ -13,7 +13,7 @@ enum class DispatcherQualifier {
 
 // Dispatchers.IO isn't declared on every KMP target (Native only ships Default/Main/Unconfined),
 // so the blocking-friendly dispatcher is resolved per platform via expect/actual.
-expect val ioDispatcher: CoroutineDispatcher
+internal expect val ioDispatcher: CoroutineDispatcher
 
 // Explicit <CoroutineDispatcher>: Dispatchers.Main infers as MainCoroutineDispatcher, which would
 // otherwise register under a different key and make it unresolvable via CoroutineDispatcher.

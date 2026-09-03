@@ -3,4 +3,4 @@ package com.kurobello.tallybook.di
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 
-actual val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+internal actual val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
