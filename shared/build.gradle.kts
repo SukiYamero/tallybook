@@ -55,6 +55,7 @@ kotlin {
     androidMain.dependencies {
       implementation(libs.compose.uiToolingPreview)
       implementation(libs.compose.uiTooling)
+      implementation(libs.koin.android)
       implementation(libs.sqldelight.androidDriver)
     }
     commonMain.dependencies {
@@ -81,7 +82,10 @@ kotlin {
       implementation(libs.kotlin.test)
       implementation(libs.kotlinx.serialization.json)
     }
-    getByName("androidHostTest").dependencies { implementation(libs.sqldelight.sqliteDriver) }
+    getByName("androidHostTest").dependencies {
+      implementation(libs.kotlinx.coroutines.test)
+      implementation(libs.sqldelight.sqliteDriver)
+    }
   }
 }
 

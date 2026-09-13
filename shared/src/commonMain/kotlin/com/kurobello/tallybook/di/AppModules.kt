@@ -1,4 +1,4 @@
 package com.kurobello.tallybook.di
 
-// Wave 2/3 append databaseModule / repositoryModule / viewModelModule here.
-val appModules = listOf(dispatcherModule)
+// Wave 3 appends viewModelModule here.
+val appModules = listOf(dispatcherModule, databaseDriverModule, databaseModule, repositoryModule)
