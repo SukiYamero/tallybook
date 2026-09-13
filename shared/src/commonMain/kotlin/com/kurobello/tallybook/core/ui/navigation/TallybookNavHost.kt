@@ -16,10 +16,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.serialization.NavBackStackSerializer
 import androidx.navigation3.ui.NavDisplay
 import com.kurobello.tallybook.feature.home.HomeRoute
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.serializer
 
 @Composable
 fun TallybookNavHost(startDestination: Destination = Home) {
@@ -47,7 +47,8 @@ fun TallybookNavHost(startDestination: Destination = Home) {
   )
 }
 
-internal fun destinationBackStackSerializer(): KSerializer<NavBackStack<Destination>> = serializer()
+internal fun destinationBackStackSerializer(): KSerializer<NavBackStack<Destination>> =
+    NavBackStackSerializer(Destination.serializer())
 
 internal fun navigationContentTransform(): ContentTransform =
     fadeIn(
