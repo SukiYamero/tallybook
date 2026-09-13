@@ -5,9 +5,9 @@
 1. **Worktree por feature** — `EnterWorktree`, rama `feat/<slug>`, máximo **4 worktrees activos** a la
    vez. Cada worktree tiene su propio `docs/tasks/<slug>.md` (copiar `tasks/_template.md`), con el
    trabajo agrupado en waves.
-2. **Los subagentes ejecutan la wave.** Leen `docs/tasks/<slug>.md` para contexto, invocan las skills
-   del stack que correspondan (ver `AGENTS.md` §3), y cuestionan el spec si algo no cierra en vez de
-   implementarlo a ciegas.
+2. **Los subagentes ejecutan la wave o el stage activo.** Leen su `task.md` y el overview enlazado,
+   invocan las skills del stack que correspondan (ver `AGENTS.md` §3), y cuestionan el spec si algo no
+   cierra en vez de implementarlo a ciegas.
 3. **Antes de reportar terminado, el subagente confirma:**
    - `detekt`/`ktfmtCheck` limpios (el hook de `PostToolUse` ya lo fuerza en cada edición).
    - Tests mínimos que aporten valor real, agrupados — no un archivo por caso ni cobertura por
@@ -16,7 +16,8 @@
 4. **Code review dedicado.** Un subagente nuevo (rol code-reviewer, skill `code-review` con `--fix`
    sobre el diff de esa feature puntual) busca código espagueti, duplicado, algo reusable en vez de
    escribirlo de nuevo, un enfoque más simple con menos código, bugs o casos no contemplados — y lo
-   arregla ahí mismo, no solo lo señala.
+   arregla ahí mismo, no solo lo señala. En una wave con stages, este gate se repite al cerrar cada
+   stage sobre su diff acumulado; el review final cubre la wave completa.
 5. **El code-reviewer reporta al orquestador** (yo) que lint + tests + review quedaron ok.
 6. **Yo te aviso a vos**: "pasate al worktree `<slug>` y probá `<qué>`". Vos das el ok o pedís iterar —
    se vuelve al paso 3 con lo que falte.
@@ -67,8 +68,8 @@ parciales.
   nunca se bifurca en otro archivo.
 - `stack.md` — librerías ya decididas pero sin código todavía, para no re-discutirlas al arrancar la
   feature que las necesita.
-- `wording.md` — voz y tono, portado de moneta. Única referencia de cómo se escribe la copy en cada
-  idioma.
+- `wording.md` — voz y tono portada desde Moneta, que se conserva únicamente como referencia legacy.
+  Es la única referencia de cómo se escribe la copy en cada idioma de Tallybook.
 - `tasks/<slug>.md` — spec activo de una feature en desarrollo (copiar `tasks/_template.md`). Efímero:
   se borra o se compacta a `features/` al terminar, nunca se acumula. Si la feature es grande (varias
   waves, cada una con varias tareas que un subagente necesita ejecutar sin releer todo el spec),
@@ -77,5 +78,10 @@ parciales.
   por tarea con el detalle completo — objetivo, contexto, archivos, interfaces, pasos de
   implementación, y si bloquea o está bloqueada por otra tarea. Mismo ciclo de vida efímero que la
   versión de un solo archivo. Ver `tasks/fundacion/` como ejemplo real.
+- `tasks/wave-N/` — cuando una wave de producto necesita checkpoints más frecuentes que una feature
+  común, el `README.md` contiene el contrato global y cada `stage-N/` agrupa el siguiente incremento
+  verificable. Un stage no habilita al siguiente hasta que un subagente implementador termine sus
+  tareas y un subagente reviewer nuevo revise y corrija el diff acumulado del stage. La unidad de
+  ejecución sigue siendo `taskN/task.md`; el stage agrega control, no reemplaza el detalle por tarea.
 - `features/<nombre>.md` — doc chico post-confirmación, solo para features realmente importantes.
 - `backlog.md` — pendientes por criticidad, sin historial. Se borra el ítem apenas se resuelve.
