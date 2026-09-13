@@ -35,7 +35,7 @@ todo el spec.
 - Build limpio de `:androidApp:assembleDebug`, `detekt` y `ktfmtCheck` sin warnings.
 - Tests unitarios de Wave 1 y Wave 2 en verde (`./gradlew :shared:testAndroidHostTest`).
 - En el Android físico: la app abre, muestra la pantalla smoke-test con el theme aplicado (colores +
-  Manrope), el ícono Lucide y la primitiva de `composables:core` se ven correctamente, y navegar entre
+  Manrope), el ícono Lucide y el diálogo de `composeunstyled-dialog` se ven correctamente, y navegar entre
   los 2 destinos del shell de Nav3 funciona (back-stack real, no solo un `if`).
 - iOS: queda pendiente tu verificación manual (`TEAM_ID` en Xcode, Developer Mode en el iPhone, Cmd+R)
   — no es criterio de cierre de este spec, pero si `:shared:iosSimulatorArm64Test` pasa, la base ya

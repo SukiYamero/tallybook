@@ -65,6 +65,8 @@ kotlin {
       implementation(libs.compose.ui)
       implementation(libs.compose.components.resources)
       implementation(libs.compose.uiToolingPreview)
+      implementation(libs.compose.unstyled.dialog)
+      implementation(libs.composables.icons.lucide)
       implementation(libs.androidx.lifecycle.viewmodelCompose)
       implementation(libs.androidx.lifecycle.runtimeCompose)
       implementation(libs.kotlinx.coroutines.core)
@@ -80,12 +82,10 @@ kotlin {
     iosMain.dependencies { implementation(libs.sqldelight.nativeDriver) }
     commonTest.dependencies {
       implementation(libs.kotlin.test)
+      implementation(libs.kotlinx.coroutines.test)
       implementation(libs.kotlinx.serialization.json)
     }
-    getByName("androidHostTest").dependencies {
-      implementation(libs.kotlinx.coroutines.test)
-      implementation(libs.sqldelight.sqliteDriver)
-    }
+    getByName("androidHostTest").dependencies { implementation(libs.sqldelight.sqliteDriver) }
   }
 }
 

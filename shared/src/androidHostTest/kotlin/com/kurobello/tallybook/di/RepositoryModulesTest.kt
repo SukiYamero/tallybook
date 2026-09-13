@@ -5,6 +5,7 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.database.DatabaseDriverFactory
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.feature.home.HomeViewModel
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import org.koin.dsl.koinApplication
@@ -13,7 +14,7 @@ import org.koin.dsl.module
 class RepositoryModulesTest {
 
   @Test
-  fun `app modules resolve both repositories with a platform driver`() {
+  fun `app modules resolve repositories and the home view model`() {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     TallybookDatabase.Schema.create(driver)
     val testDriverModule = module {
@@ -26,6 +27,7 @@ class RepositoryModulesTest {
 
     assertNotNull(application.koin.get<MovimientoRepository>())
     assertNotNull(application.koin.get<CategoriaRepository>())
+    assertNotNull(application.koin.get<HomeViewModel>())
 
     application.close()
     driver.close()

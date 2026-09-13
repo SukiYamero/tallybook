@@ -12,11 +12,12 @@ import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
+import com.kurobello.tallybook.feature.home.HomeRoute
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.serializer
 
 @Composable
-fun TallybookNavHost(startDestination: Destination = Placeholder1) {
+fun TallybookNavHost(startDestination: Destination = Home) {
   val backStack =
       rememberSerializable(serializer = destinationBackStackSerializer()) {
         NavBackStack(startDestination)
@@ -26,13 +27,7 @@ fun TallybookNavHost(startDestination: Destination = Placeholder1) {
       onBack = { backStack.removeLastOrNull() },
       entryProvider =
           entryProvider {
-            entry<Placeholder1> {
-              PlaceholderContent(
-                  label = "Placeholder 1",
-                  actionLabel = "Go to Placeholder 2",
-                  onAction = { backStack.add(Placeholder2) },
-              )
-            }
+            entry<Home> { HomeRoute(onNavigateNext = { backStack.add(Placeholder2) }) }
             entry<Placeholder2> {
               PlaceholderContent(
                   label = "Placeholder 2",

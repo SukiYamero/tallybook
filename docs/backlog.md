@@ -15,12 +15,6 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
   mensajes localizados para el usuario) cuando exista una pantalla real que muestre errores — primera
   feature con red (Auth+Drive) o la primera con estados de error en UI (movimientos).
 
-- **`initKoin()` a una `Application` propia en Wave 2** — hoy arranca desde `MainActivity.onCreate`, que
-  alcanzaba para Wave 1. El `databaseModule` va a necesitar `androidContext()` para `AndroidSqliteDriver`,
-  y ese es el momento natural de moverlo. `initKoin(extraModules)` ya acepta la forma.
-- **El binding Android de `DatabaseDriverFactory` obliga a un módulo Koin en `androidMain`** —
-  `AndroidDatabaseDriverFactory` es `internal` y vive en `androidMain`, así que el módulo que lo declara
-  no puede estar en `commonMain/di`. Decidirlo en el spec de Wave 2, no descubrirlo a mitad de la tarea.
 - **El `actual` de `ioDispatcher` en iOS no está testeado** — `DispatcherModuleTest` vive en
   `androidHostTest` y afirma `assertNotEquals(io, default)`, que en iOS es falso (ahí `ioDispatcher` es
   `Dispatchers.Default`). Mover el test a `commonTest` requiere reescribir esa aserción.

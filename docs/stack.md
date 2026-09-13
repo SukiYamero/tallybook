@@ -23,9 +23,10 @@ feature que las necesita, no antes.
   arregló en `main` en junio 2025 y nunca liberó.
 - **Logging**: Kermit (`co.touchlab:kermit`) por sobre Napier — más mantenido, con writers nativos por
   plataforma (Logcat/os_log) y hooks de Crashlytics ya resueltos.
-- **Íconos**: `com.composables:icons-lucide` — Lucide empaquetado 1:1 para Compose Multiplatform, no
+- **Íconos**: `com.composables:icons-lucide-cmp` — Lucide empaquetado 1:1 para Compose Multiplatform, no
   hace falta bundlear los SVG a mano.
-- **Componentes headless**: `com.composables:core` (mismo maker que `icons-lucide`) — primitivas sin
+- **Componentes headless**: módulos 2.x de Compose Unstyled (mismo maker que `icons-lucide-cmp`),
+  agregados por componente — por ejemplo `com.composables:composeunstyled-dialog` — primitivas sin
   estilo (`ModalBottomSheet`, `Dialog`, `Popup`, `DropdownMenu`) para skinear con diseño propio, el
   equivalente de Radix (que ya usan en la web) para Compose Multiplatform. Da la plomería de
   accesibilidad/foco/estado y el cableado del gesto de drag — **no trae animaciones ni feeling nativo**,
