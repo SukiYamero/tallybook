@@ -85,6 +85,11 @@ kotlin {
       implementation(libs.kotlinx.coroutines.test)
       implementation(libs.kotlinx.serialization.json)
     }
+    getByName("androidDeviceTest").dependencies {
+      implementation(libs.androidx.compose.ui.test.junit4)
+      implementation(libs.androidx.compose.ui.test.manifest)
+      implementation(libs.androidx.testExt.junit)
+    }
     getByName("androidHostTest").dependencies { implementation(libs.sqldelight.sqliteDriver) }
   }
 }

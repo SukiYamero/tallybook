@@ -35,6 +35,12 @@ Ninguno nuevo — revisión y limpieza sobre lo ya creado en Wave 1-3.
       alguno pendiente.
 - [x] **Step 7** — reportar al usuario para que pruebe en su Android físico (per `docs/README.md`
       paso 6) — no mergear/cerrar sin su ok.
+- [x] **Step 8** — reemplazar el crossfade predeterminado de 700 ms de `NavDisplay` por un
+      fade-through compartido entre forward, Back y predictive Back: salida de 90 ms y entrada de
+      220 ms con 90 ms de delay. Verificar en dispositivo que el destino entrante no dibuja antes de
+      terminar la salida. Fuentes primarias:
+      <https://developer.android.com/guide/navigation/navigation-3/recipes/animations> y
+      <https://developer.android.com/develop/ui/compose/animation/composables-modifiers>.
 
 ## Bloqueante
 

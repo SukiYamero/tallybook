@@ -1,5 +1,10 @@
 package com.kurobello.tallybook.core.ui.navigation
 
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +30,9 @@ fun TallybookNavHost(startDestination: Destination = Home) {
   NavDisplay(
       backStack = backStack,
       onBack = { backStack.removeLastOrNull() },
+      transitionSpec = { navigationContentTransform() },
+      popTransitionSpec = { navigationContentTransform() },
+      predictivePopTransitionSpec = { navigationContentTransform() },
       entryProvider =
           entryProvider {
             entry<Home> { HomeRoute(onNavigateNext = { backStack.add(Placeholder2) }) }
@@ -40,6 +48,19 @@ fun TallybookNavHost(startDestination: Destination = Home) {
 }
 
 internal fun destinationBackStackSerializer(): KSerializer<NavBackStack<Destination>> = serializer()
+
+internal fun navigationContentTransform(): ContentTransform =
+    fadeIn(
+        animationSpec =
+            tween(
+                durationMillis = NAVIGATION_FADE_IN_DURATION_MILLIS,
+                delayMillis = NAVIGATION_FADE_OUT_DURATION_MILLIS,
+            )
+    ) togetherWith
+        fadeOut(animationSpec = tween(durationMillis = NAVIGATION_FADE_OUT_DURATION_MILLIS))
+
+private const val NAVIGATION_FADE_OUT_DURATION_MILLIS = 90
+private const val NAVIGATION_FADE_IN_DURATION_MILLIS = 220
 
 @Composable
 private fun PlaceholderContent(label: String, actionLabel: String, onAction: () -> Unit) {
