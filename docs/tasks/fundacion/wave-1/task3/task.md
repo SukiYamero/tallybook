@@ -12,6 +12,11 @@ cuelgue la pantalla smoke-test.
   Multiplatform 1.10 (el proyecto ya está en 1.11.1). Sin librerías de terceros.
 - Nada de rutas como `String` — cada destino es un objeto/clase tipada, consistente con la API real de
   Navigation 3.
+- En `commonMain`, conservar el tipo cerrado `Destination` al persistir el back stack. La sobrecarga de
+  `rememberNavBackStack` que recibe `SavedStateConfiguration` serializa a través del `NavKey` abierto y
+  exige registrar todos sus subtipos; para esta jerarquía sellada corresponde `rememberSerializable`
+  con el serializer generado de `NavBackStack<Destination>`. Referencia oficial:
+  https://developer.android.com/guide/navigation/navigation-3/save-state.
 
 ## Archivos
 
@@ -31,22 +36,27 @@ data object Placeholder2 : Destination
 
 @Composable
 fun TallybookNavHost(startDestination: Destination = Placeholder1)
-// Wave 3 reemplaza Placeholder1 por el destino real de la pantalla smoke-test,
-// consumiendo la misma función — no crea un NavHost paralelo.
 ```
+
+Wave 3 reemplaza `Placeholder1` por el destino real de la pantalla smoke-test y consume la misma
+función; no crea un NavHost paralelo.
 
 ## Implementación
 
 - [ ] **Step 1** — agregar la dependencia, correr `./gradlew :shared:compileKotlinMetadata` para
       confirmar que resuelve.
 - [ ] **Step 2** — implementar `Destinations.kt` con 2 destinos placeholder.
-- [ ] **Step 3** — implementar `TallybookNavHost` con un back stack real (botón "ir a Placeholder2" en
-      Placeholder1, botón "volver" en Placeholder2 usando el back-stack de Nav3, no un `if` manual).
-- [ ] **Step 4** — verificación manual en Android físico (es plomería de navegación, no hay lógica de
-      negocio que testear con TDD acá): instalar, tocar "ir a Placeholder2", confirmar que el botón
-      atrás del sistema vuelve a Placeholder1 (prueba de que el back-stack es real).
-- [ ] **Step 5** — `./gradlew detekt ktfmtCheck` limpio.
-- [ ] **Step 6** — commit:
+- [ ] **Step 3** — implementar `TallybookNavHost` con un `NavBackStack<Destination>` persistido mediante
+      su serializer cerrado (botón "ir a Placeholder2" en Placeholder1, botón "volver" en Placeholder2
+      usando el back-stack de Nav3, no un `if` manual).
+- [ ] **Step 4** — test de integración del contrato de persistencia: serializar y restaurar un back
+      stack mixto `[Placeholder1, Placeholder2]`. Los tests de serializers individuales no cubren este
+      contrato.
+- [ ] **Step 5** — verificación manual en Android físico: instalar, abrir en Placeholder1, tocar el
+      botón para llegar a Placeholder2 y usar atrás del sistema para volver. Repetir tras rotar la
+      pantalla para confirmar restauración.
+- [ ] **Step 6** — `./gradlew detekt ktfmtCheck` limpio.
+- [ ] **Step 7** — commit:
 ```bash
 git add shared/build.gradle.kts gradle/libs.versions.toml \
         shared/src/commonMain/kotlin/com/kurobello/tallybook/core/ui/navigation/

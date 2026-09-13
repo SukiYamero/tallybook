@@ -129,6 +129,10 @@ start` en Android, Cmd+R en Xcode sobre el iPhone en iOS — o vía MCP `mobile-
 (`mobile_take_screenshot`, `mobile_list_elements_on_screen`) para verificación visual sin salir de la
 sesión.
 
+Para APIs recientes, experimentales, sensibles a versión o con diferencias por plataforma, aplicar antes
+de implementar el gate de evidencia definido en `docs/README.md` — versión resuelta, fuente primaria,
+prueba del punto de integración y ejecución en el target que corresponda.
+
 ## 7. Git
 
 - Branches: `feat/`, `fix/`.

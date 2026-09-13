@@ -20,3 +20,8 @@ cuando la anterior está verificada.>
 
 <Cómo se confirma que funciona en un dispositivo físico real — el criterio de "listo", no una lista de
 QA exhaustiva.>
+
+- **APIs sensibles a versión/plataforma**: <versión resuelta + enlace a documentación o fuente oficial;
+  borrar este ítem si no aplica>.
+- **Contrato de integración**: <test que conecta las piezas reales y el fallo que detectaría>.
+- **Runtime por target**: <qué debe ejecutarse en Android/iOS porque build o tests host no lo prueban>.

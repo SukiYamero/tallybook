@@ -1,12 +1,13 @@
 package com.kurobello.tallybook.core.ui.navigation
 
+import androidx.navigation3.runtime.NavBackStack
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 
-// Nav3 restores the back stack by serializing each NavKey, so a destination without a working
-// generated serializer only fails at process death — far from this change.
+// Leaf serializers do not prove that navigation can persist a mixed route stack as one value.
 @OptIn(ExperimentalSerializationApi::class)
 class DestinationSerializationTest {
 
@@ -32,5 +33,15 @@ class DestinationSerializationTest {
         "com.kurobello.tallybook.core.ui.navigation.Destination",
         serializer<Destination>().descriptor.serialName,
     )
+  }
+
+  @Test
+  fun destinationBackStackSurvivesSerializationRoundTrip() {
+    val original = NavBackStack<Destination>(Placeholder1, Placeholder2)
+
+    val encoded = Json.encodeToString(destinationBackStackSerializer(), original)
+    val restored = Json.decodeFromString(destinationBackStackSerializer(), encoded)
+
+    assertEquals(listOf(Placeholder1, Placeholder2), restored.toList())
   }
 }

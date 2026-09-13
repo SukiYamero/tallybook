@@ -6,18 +6,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.saveable.rememberSerializable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.entryProvider
-import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
-import androidx.savedstate.serialization.SavedStateConfiguration
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.serializer
 
 @Composable
 fun TallybookNavHost(startDestination: Destination = Placeholder1) {
-  // The vararg-only rememberNavBackStack overload is androidMain-only; commonMain has to pass the
-  // configuration explicitly.
-  val backStack = rememberNavBackStack(SavedStateConfiguration.DEFAULT, startDestination)
+  val backStack =
+      rememberSerializable(serializer = destinationBackStackSerializer()) {
+        NavBackStack(startDestination)
+      }
   NavDisplay(
       backStack = backStack,
       onBack = { backStack.removeLastOrNull() },
@@ -40,6 +43,8 @@ fun TallybookNavHost(startDestination: Destination = Placeholder1) {
           },
   )
 }
+
+internal fun destinationBackStackSerializer(): KSerializer<NavBackStack<Destination>> = serializer()
 
 @Composable
 private fun PlaceholderContent(label: String, actionLabel: String, onAction: () -> Unit) {

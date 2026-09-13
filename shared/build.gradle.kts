@@ -77,7 +77,10 @@ kotlin {
       implementation(libs.sqldelight.runtime)
     }
     iosMain.dependencies { implementation(libs.sqldelight.nativeDriver) }
-    commonTest.dependencies { implementation(libs.kotlin.test) }
+    commonTest.dependencies {
+      implementation(libs.kotlin.test)
+      implementation(libs.kotlinx.serialization.json)
+    }
     getByName("androidHostTest").dependencies { implementation(libs.sqldelight.sqliteDriver) }
   }
 }

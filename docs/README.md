@@ -12,6 +12,7 @@
    - `detekt`/`ktfmtCheck` limpios (el hook de `PostToolUse` ya lo fuerza en cada edición).
    - Tests mínimos que aporten valor real, agrupados — no un archivo por caso ni cobertura por
      cobertura.
+   - El gate de APIs externas de este documento está completo cuando aplica.
 4. **Code review dedicado.** Un subagente nuevo (rol code-reviewer, skill `code-review` con `--fix`
    sobre el diff de esa feature puntual) busca código espagueti, duplicado, algo reusable en vez de
    escribirlo de nuevo, un enfoque más simple con menos código, bugs o casos no contemplados — y lo
@@ -22,6 +23,24 @@
 7. **Con tu ok**: compacto el spec (saco decisiones/historial, dejo solo lo vigente), actualizo
    `business-logic.md`/`features/<nombre>.md` si aplica, commit, merge a `main`, borro la rama y el
    worktree (`ExitWorktree`).
+
+## Gate de APIs externas
+
+Aplica a APIs recientes, experimentales, sensibles a versión o con comportamiento distinto por
+plataforma, como navegación, serialización/restauración, DI al arranque o lifecycle:
+
+1. Confirmar la versión realmente resuelta por Gradle, no solo la solicitada en el catálogo.
+2. Verificar el contrato usado contra documentación oficial vigente. Si la documentación no determina
+   el comportamiento exacto, consultar el código fuente de esa versión. Registrar el enlace primario en
+   el spec activo cuando el contrato no sea obvio.
+3. Probar el punto de integración completo. Tests de piezas aisladas no sustituyen el contrato que las
+   conecta; por ejemplo, serializers individuales no prueban que el back stack completo se restaure.
+4. Identificar qué no puede demostrar un test host y validarlo en el target correspondiente. Compilar un
+   APK no demuestra que la app arranque; compilar `commonMain` no demuestra el comportamiento en iOS.
+
+La evidencia debe corresponder al árbol actual y al comportamiento afirmado. Si una validación requerida
+no puede ejecutarse, la tarea queda explícitamente sin confirmar; no se infiere éxito desde checks
+parciales.
 
 ## Roles
 
