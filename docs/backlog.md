@@ -4,9 +4,11 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 
 ## Alta
 
-- **iOS end-to-end** — nunca se confirmó un build+deploy real al iPhone. Falta: login con Apple ID en
-  Xcode, Developer Mode en el iPhone, completar `TEAM_ID` en `iosApp/Configuration/Config.xcconfig`, un
-  Cmd+R de prueba.
+- **iOS end-to-end** — `commonMain` y los tests compilan para `iosSimulatorArm64`, pero este host no
+  tiene runtimes ni simuladores instalados en Xcode, por lo que `iosSimulatorArm64Test` todavía no se
+  puede ejecutar. Falta: instalar un runtime iOS y correr ese test; luego, para el dispositivo físico,
+  iniciar sesión con Apple ID en Xcode, habilitar Developer Mode en el iPhone, completar `TEAM_ID` en
+  `iosApp/Configuration/Config.xcconfig` y ejecutar con Cmd+R.
 
 ## Media
 
@@ -25,6 +27,12 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
   agregó en Wave 1 a propósito: no tenía consumidor todavía.
 
 ## Baja
+
+- **Compatibilidad de Detekt con Gradle 10** — Detekt 1.23.8 no produce hallazgos, pero su plugin
+  invoca `ReportingExtension.file(String)`, API deprecada por Gradle 9 y eliminada en Gradle 10. La
+  siguiente línea de Detekt todavía es 2.0 alpha; migrar cuando publique una versión estable compatible,
+  antes de actualizar el wrapper a Gradle 10. Referencia:
+  <https://github.com/detekt/detekt#requirements>.
 
 - **CI (GitHub Actions)** — build + test en cada push. Se implementa cuando haya valor real que
   proteger (colaboradores o releases reales), no antes.

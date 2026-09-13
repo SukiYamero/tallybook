@@ -16,22 +16,24 @@ Ninguno nuevo — revisión y limpieza sobre lo ya creado en Wave 1-3.
 
 ## Implementación
 
-- [ ] **Step 1** — `grep -rn "Greeting\|GreetingUtil\|class App\b" shared/` — confirmar cero
+- [x] **Step 1** — `grep -rn "Greeting\|GreetingUtil\|class App\b" shared/` — confirmar cero
       resultados (o justificar por qué queda algo).
 - [ ] **Step 2** — `./gradlew detekt ktfmtCheck` sobre todo el módulo `shared` (no solo los archivos
-      tocados) — cero warnings.
-- [ ] **Step 3** — `./gradlew :shared:testAndroidHostTest` — todos los tests de Wave 1/2 en verde.
+      tocados) — Detekt tiene cero hallazgos y ktfmt pasa, pero el plugin estable Detekt 1.23.8 emite
+      una deprecación de Gradle 10 desde `ReportingExtension.file(String)`.
+- [x] **Step 3** — `./gradlew :shared:testAndroidHostTest` — todos los tests de Wave 1/2 en verde.
 - [ ] **Step 4** — `./gradlew :shared:iosSimulatorArm64Test` — confirmar que compila y corre en el
       simulador iOS (no es lo mismo que el dispositivo físico, pero confirma que nada de Wave 1-3
-      rompió el target iOS).
-- [ ] **Step 5** —
+      rompió el target iOS). Las fuentes y tests compilan para el target; la ejecución está bloqueada
+      porque Xcode no tiene ningún runtime ni simulador instalado.
+- [x] **Step 5** —
       `./gradlew :androidApp:assembleDebug && adb install -r androidApp/build/outputs/apk/debug/androidApp-debug.apk && adb shell am start -n com.kurobello.tallybook/.MainActivity`
       — confirmar que abre sin crashear y se ve la pantalla smoke-test completa (theme + ícono +
       primitiva + navegación).
-- [ ] **Step 6** — actualizar `docs/backlog.md`: precisar el ítem de iOS end-to-end si
-      `iosSimulatorArm64Test` ya pasa (compila y corre en simulador, sigue pendiente dispositivo
-      físico real) — no cerrar el ítem completo.
-- [ ] **Step 7** — reportar al usuario para que pruebe en su Android físico (per `docs/README.md`
+- [x] **Step 6** — actualizar `docs/backlog.md`: precisar por separado la compilación, la ejecución en
+      simulador y la validación en dispositivo iOS real — no cerrar el ítem completo mientras quede
+      alguno pendiente.
+- [x] **Step 7** — reportar al usuario para que pruebe en su Android físico (per `docs/README.md`
       paso 6) — no mergear/cerrar sin su ok.
 
 ## Bloqueante
