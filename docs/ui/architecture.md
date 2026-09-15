@@ -266,13 +266,33 @@ The implementation should centralize this policy in `TallybookScreenFrame` and t
 chrome. Do not scatter `statusBarsPadding()`, `navigationBarsPadding()`, or arbitrary top padding across
 feature screens.
 
+### Orientation support policy
+
+Tallybook is designed and reviewed **portrait-first** on phones and tablets. Portrait is the reference
+orientation for Moneta parity, spacing decisions, component composition, screenshots, and final visual
+acceptance.
+
+Landscape remains supported, but it is a functional compatibility target rather than an equal visual
+optimization target. A landscape layout must:
+
+- remain usable without crashes, clipped critical actions, or content hidden behind system UI;
+- keep essential content reachable through scrolling when the available height is compact;
+- preserve screen state and user input across rotation; and
+- handle the keyboard, sheets, dialogs, and back behavior without trapping the user.
+
+Landscape does not require pixel parity with the portrait reference, bespoke two-pane layouts, or the
+same degree of spacing and density refinement. Do not add landscape-only composition or optimize a
+screen exhaustively unless a feature requirement or observed usability problem justifies the extra
+complexity. The application remains rotatable; this policy does not authorize locking it to portrait.
+
 ### Verification matrix
 
 Every new top-level layout is checked in at least these conditions:
 
 - Android gesture navigation and three-button navigation.
 - iPhone with a Dynamic Island or notch and a device/simulator without one when available.
-- Portrait, landscape when supported, keyboard open, and enlarged system text.
+- Portrait as the visual acceptance reference, with keyboard open and enlarged system text.
+- Landscape as a functional smoke check against the compatibility requirements above.
 - Light and dark themes.
 
 ## Navigation architecture
@@ -433,6 +453,8 @@ Use this checklist in every UI pull request:
 - Are touch targets at least 48 dp and semantics meaningful?
 - Does the screen support loading, empty, error, and content states that already exist?
 - Was behavior preserved while appearance changed?
+- Was portrait treated as the visual reference and landscape kept functionally usable without
+  unnecessary orientation-specific complexity?
 - Was the result compared with the Moneta source and verified on Android and iOS?
 
 ## Remaining product decisions
