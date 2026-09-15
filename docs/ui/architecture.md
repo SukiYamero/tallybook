@@ -1,0 +1,442 @@
+# Tallybook UI architecture
+
+This document is the durable source of truth for how Tallybook UI is designed, implemented, and
+reviewed. It covers the shared Compose Multiplatform UI on Android and iOS. Feature specifications may
+reference this guide, but must not duplicate it.
+
+## Product direction
+
+Tallybook follows Moneta's visual language and interaction density while remaining a native shared UI.
+The goal is visual and behavioral parity, not a literal translation of HTML, CSS, or React components.
+
+The target UI does not use Material components or Material visual defaults. Existing Material-based
+screens remain valid during the incremental migration, but every migrated surface must use the
+Tallybook-owned theme and components described here.
+
+The reference implementation is the Moneta repository:
+
+- `web/moneta/src/styles/index.css` is the visual ground truth.
+- `web/moneta/docs/ui/design-tokens.md` explains the rationale behind the tokens.
+- The relevant Moneta component is inspected before its Compose counterpart is designed. A screenshot
+  alone is not enough when the source can answer layout, state, or motion questions.
+
+When the reference and current Tallybook behavior disagree, preserve business behavior and treat the
+visual difference as a design decision. UI migration must not silently change navigation, persistence,
+validation, or domain rules.
+
+## Chosen foundation
+
+The UI stack has three layers:
+
+1. **Compose Foundation and runtime** provide layout, drawing, text, gestures, semantics, animation,
+   focus, and platform insets.
+2. **Compose Unstyled 2.x** provides renderless interaction primitives when a component has non-trivial
+   behavior such as dialogs, modal sheets, popups, or menus. Add only the module required by the
+   component.
+3. **Tallybook UI** owns appearance, tokens, component APIs, accessibility policy, and composition.
+
+Compose Unstyled is the native equivalent of the Radix layer used under shadcn: it supplies behavior,
+not a visual identity. Composables UI may be used as a source-owned implementation reference, similar
+to copying a shadcn component into the application. Copied code must be adapted to this architecture;
+it is not a new runtime design-system dependency.
+
+Lucide remains the icon family and Manrope remains the typeface. Navigation 3 remains responsible for
+destinations and back-stack behavior; it does not determine navigation chrome.
+
+### Dependency rules
+
+- Do not add a visual component library to make the UI look approximately right.
+- Reuse a Compose Unstyled primitive before implementing complex focus, dismissal, or drag behavior.
+- Use Foundation directly for simple components such as cards, rows, buttons, chips, and navigation
+  chrome.
+- Do not add a dependency for a single component unless its behavior is difficult to implement and
+  verify correctly on both platforms.
+- Any version-sensitive library must pass the external API gate in `docs/README.md` before adoption.
+
+Primary references:
+
+- <https://composables.com/compose-unstyled/docs/overview>
+- <https://composables.com/compose-unstyled/docs/custom-themes>
+- <https://composables.com/ui>
+- <https://kotlinlang.org/docs/multiplatform/compose-platform-specifics.html>
+- <https://developer.android.com/develop/ui/compose/system/insets-ui>
+
+## Architecture and ownership
+
+The component hierarchy is intentionally small:
+
+```text
+TallybookTheme
+└── TallybookAppShell
+    ├── feature screen
+    │   └── reusable Tallybook components
+    │       └── Foundation or Compose Unstyled primitives
+    └── bottom navigation chrome when its increment is enabled
+```
+
+Responsibilities are split as follows:
+
+| Layer | Owns | Must not own |
+|---|---|---|
+| Theme | All visual tokens: colors, typography, spacing, dimensions, radii, motion, and layout constants | Feature state or component composition |
+| App shell | Edge-to-edge background, bottom-navigation placement, shared overlay host | Feature-specific content or destination policy |
+| Screen frame | Safe-area edges, screen content width, screen-level spacing | Bottom-bar internals or modal insets |
+| Component | Its token selection, shape, internal composition, states, semantics, minimum hit target | Raw visual values, screen position, or business state |
+| Feature | Composition and domain-specific copy/state | Raw visual values, new token systems, or duplicated primitives |
+
+Reusable components accept state and callbacks. They do not read ViewModels. Feature routes connect
+`UiState` and `Actions` to stateless screen content.
+
+### Intended package structure
+
+Create packages only as the pilot needs them:
+
+```text
+core/ui/theme/       colors, type, spacing, dimensions, radii, motion, theme locals
+core/ui/layout/      TallybookAppShell, TallybookScreenFrame, inset policy
+core/ui/component/   reusable application components
+feature/<name>/ui/   feature composition
+```
+
+Avoid a catch-all component catalog. A component moves into `core/ui/component` only after it has a
+stable, domain-neutral API or a second real consumer.
+
+## Design tokens
+
+Every static visual value is a token. Production composables must not contain anonymous `dp`, `sp`,
+color, radius, duration, alpha, or easing literals. This rule applies even when a value is used only
+once: a genuinely unique value receives a semantic component token instead of remaining embedded in
+the component.
+
+This gives every measurement a name, makes design review searchable, and prevents small variations
+from accumulating across screens. It does not mean every value is global: primitive scales are shared,
+while genuinely unique measurements live in a clearly named component-token group.
+
+Examples:
+
+- Use `TallybookSpacing.space16`, not `16.dp`.
+- Use `TallybookTypography.body`, not `fontSize = 14.sp`.
+- Use `TallybookComponentSize.searchHeight`, not `46.dp` inside `HomeSearch`.
+- Add `TallybookComponentSize.amountDisplayHeight` before using a new one-off measurement.
+
+Token declarations are the only files allowed to contain static visual literals. Runtime values
+reported by the platform, measured constraints, calculated percentages, data-driven chart values, and
+animation progress are not design literals and remain local to the logic that calculates them.
+
+### Required token groups
+
+- **Colors:** semantic canvas, surfaces, five foreground tiers, borders, status colors, and charts.
+  Preserve the palette already ported from Moneta, but expose it without `MaterialTheme`.
+- **Typography:** a primitive size scale and semantic `TextStyle` roles backed by Manrope. Components
+  consume semantic roles; they never set `fontSize`, `lineHeight`, or `letterSpacing` directly.
+- **Spacing:** a finite primitive scale used for every padding, gap, offset, and layout separation.
+- **Dimensions:** named sizes for controls, icons, touch targets, screen constants, and unique component
+  measurements that do not represent spacing.
+- **Radii:** explicit named steps. Moneta's radii are not a geometric scale.
+- **Motion:** duration and easing roles, including the iOS-like sheet curve and reduced-motion policy.
+- **Screen layout:** semantic composition tokens such as the horizontal screen inset, top content
+  floor, and bottom-navigation content height.
+
+### Spacing scale
+
+The initial `TallybookSpacing` scale is ported from the values already present in Moneta:
+
+| Token | Value |
+|---|---:|
+| `space0` | 0 dp |
+| `space2` | 2 dp |
+| `space4` | 4 dp |
+| `space6` | 6 dp |
+| `space8` | 8 dp |
+| `space10` | 10 dp |
+| `space12` | 12 dp |
+| `space14` | 14 dp |
+| `space16` | 16 dp |
+| `space18` | 18 dp |
+| `space20` | 20 dp |
+| `space22` | 22 dp |
+| `space24` | 24 dp |
+| `space28` | 28 dp |
+| `space32` | 32 dp |
+| `space40` | 40 dp |
+| `space48` | 48 dp |
+
+The names are primitive steps, not semantic instructions. A component may expose semantic aliases such
+as `screenHorizontal = TallybookSpacing.space20` or
+`modalContentHorizontal = TallybookSpacing.space22`. If a future design needs a missing value, add one
+documented step to the scale or a semantic dimension token before using it. Do not round it to the
+nearest existing value merely to avoid adding a token.
+
+### Typography scale
+
+`TallybookTypeScale` defines the complete size range already observed in Moneta:
+
+| Token | Size |
+|---|---:|
+| `size10` | 10 sp |
+| `size11` | 11 sp |
+| `size12` | 12 sp |
+| `size13` | 13 sp |
+| `size14` | 14 sp |
+| `size15` | 15 sp |
+| `size16` | 16 sp |
+| `size17` | 17 sp |
+| `size18` | 18 sp |
+| `size19` | 19 sp |
+| `size20` | 20 sp |
+| `size21` | 21 sp |
+| `size28` | 28 sp |
+| `size30` | 30 sp |
+
+`TallybookTypography` maps these primitives to semantic roles such as `caption`, `label`, `body`,
+`bodyEmphasis`, `title`, `headline`, and `displayAmount`, including weight and line height. Feature code
+uses those roles rather than primitive sizes. If a new visual role needs a different size, weight, or
+line height, define or extend the semantic role first; even one-off display text must be named.
+
+### Token organization
+
+The intended files are:
+
+```text
+core/ui/theme/Color.kt
+core/ui/theme/Spacing.kt
+core/ui/theme/Dimensions.kt
+core/ui/theme/Radius.kt
+core/ui/theme/Typography.kt
+core/ui/theme/Motion.kt
+```
+
+Tokens are immutable values exposed through `TallybookTheme`. Their names describe either a stable
+primitive step or a semantic purpose. Do not name tokens after the first screen that happens to use
+them if the concept is shared.
+
+Before adding a token:
+
+1. Reuse an existing semantic token when it represents the same design role.
+2. Otherwise reuse an exact primitive value and introduce a semantic alias when the role deserves a
+   name.
+3. If no exact primitive exists, add the new primitive or unique component dimension first.
+4. Never reuse a close value when the design intentionally calls for a different one.
+
+### Measured Moneta baseline
+
+The following measurements are the starting contract for a 390 x 844 phone viewport. They are
+reference dimensions, not a fixed device frame:
+
+| Element | Baseline |
+|---|---:|
+| Screen horizontal content inset | 20 dp |
+| Screen top content floor | 24 dp |
+| Home header height | 44 dp |
+| Header to search spacing | 20 dp |
+| Search container | 46 dp high, 14 dp horizontal padding, 18 dp radius |
+| Search to content spacing | 18 dp |
+| Empty-state card | 26 dp radius, 24 dp horizontal and 48 dp vertical padding |
+| Modal sheet top radius | 30 dp |
+| Modal sheet horizontal content inset | 22 dp |
+| Modal sheet bottom content inset | 28 dp plus the applicable system inset |
+| Primary sheet action | 54 dp high, 18 dp radius |
+
+These values may adapt for larger text, compact height, and wide screens. The visual body may be
+smaller than the hit target, but every interactive target must be at least 48 x 48 dp in Tallybook.
+
+## Edge-to-edge and safe areas
+
+The application background draws edge to edge. Content and interactive chrome apply only the system
+insets they own. Insets are conditional values reported by the platform; no iPhone model, Android
+manufacturer, or hardcoded notch size is used.
+
+### Ownership rules
+
+- A normal top-level screen uses an effective top inset of
+  `max(safeDrawing.top, TallybookLayout.screenTopFloor)`.
+- Portrait content adds `TallybookLayout.screenHorizontal` after the safe left and right edges. On a
+  phone without lateral insets, the result remains the same layout token.
+- A standalone screen without bottom chrome uses an effective bottom inset of
+  `max(safeDrawing.bottom, TallybookLayout.screenBottomFloor)`.
+- The bottom navigation component owns its bottom system inset. Screen content receives the
+  bar's published clearance and must not apply the same bottom inset again.
+- A modal sheet owns its bottom safe inset and IME response. The obscured screen behind it does not add
+  modal padding.
+- Fixed overlays use the relevant safe edge directly. They do not inherit a blanket screen padding.
+- `WindowInsets.ime` and `WindowInsets.safeDrawing` are separate concerns. Keyboard movement must not
+  double-apply the navigation-bar inset.
+
+The implementation should centralize this policy in `TallybookScreenFrame` and the owners of fixed
+chrome. Do not scatter `statusBarsPadding()`, `navigationBarsPadding()`, or arbitrary top padding across
+feature screens.
+
+### Verification matrix
+
+Every new top-level layout is checked in at least these conditions:
+
+- Android gesture navigation and three-button navigation.
+- iPhone with a Dynamic Island or notch and a device/simulator without one when available.
+- Portrait, landscape when supported, keyboard open, and enlarged system text.
+- Light and dark themes.
+
+## Navigation architecture
+
+Tallybook uses bottom navigation for its stable primary destinations. The bar is anchored to the
+bottom edge and spans the full application width. It is not a detached floating pill like Moneta's
+current bar.
+
+Its background extends behind the bottom safe area and comes from semantic theme tokens:
+
+- `navigationSurface` for the light/dark background.
+- `navigationContent` for unselected icons and labels.
+- `navigationSelected` for the active destination.
+- `navigationDivider` for an optional subtle top boundary.
+
+The bar has no external horizontal margin or detached pill shadow. An optional subtle divider or tonal
+elevation may separate it from content, but it must come from the theme. The interactive row stays
+above the home indicator or Android navigation area, while the themed surface fills behind it. Its
+content height, icon sizes, label style, spacing, and published screen clearance are tokens; none are
+hardcoded in the component.
+
+### Patterns used by current finance apps
+
+- **Monarch Money:** core destinations remain visible in bottom navigation while extra sections and
+  settings live behind a profile or menu entry. This is a useful hybrid when the product has more
+  sections than a bottom bar can hold.
+- **Copilot Money:** Dashboard is the stable home; users can reorder the surrounding app sections.
+  Creation is contextual: a manual transaction is added from the Transactions tab instead of a
+  permanent center action.
+- **Revolut:** Home is a stable bottom destination, while secondary financial tools such as analytics
+  are entered from an action inside Home. The bottom bar represents broad destinations, not every
+  capability.
+- **Wallet by BudgetBakers:** navigation differs by platform: Android exposes a top-left menu while
+  iOS exposes a bottom `More` destination. This scales, but Tallybook should avoid platform divergence
+  unless user testing demonstrates a clear benefit.
+
+Sources:
+
+- <https://www.monarchmoney.com/new-mobile-navigation>
+- <https://help.monarch.com/hc/en-us/articles/360054839131-Refreshing-Accounts>
+- <https://help.copilot.money/en/articles/6045480-dashboard-tab-overview>
+- <https://help.copilot.money/en/articles/9554412-transactions-tab-overview>
+- <https://help.revolut.com/en-MT/help/accounts/budget-and-analytics/what-is-the-analytics-dashboard/>
+- <https://support.budgetbakers.com/hc/en-us/articles/212249009-How-do-I-contact-support>
+
+### Tallybook destination rule
+
+Use bottom navigation only when there are three to five stable, peer-level destinations used often.
+Do not use it as an index of every future feature. Less frequent sections belong in a `More` or profile
+surface, and actions belong in the screen where their result is visible.
+
+The chosen structure is a hybrid architecture:
+
+- Keep Home as the stable entry destination.
+- Reserve the bottom navigation for a small set of proven primary destinations.
+- Put growing or administrative areas in a secondary menu.
+- Treat `Create movimiento` as a contextual action until usage proves it must be globally persistent.
+
+The Home pilot still renders no bottom navigation and no global create button because it validates the
+screen shell first. `TallybookAppShell` reserves the architectural slot and the later navigation
+increment publishes its occupied space without changing Home's content components.
+
+Before implementing the bar, record the real candidate destinations, their expected frequency, and
+whether each is a destination or an action. The bar pattern is decided; its final destination set is
+not.
+
+## Incremental migration
+
+The redesign is delivered as small, device-verifiable increments. Business behavior remains unchanged
+unless a separate feature specification says otherwise.
+
+### Increment 0 — architecture guide
+
+This document is the only deliverable. No production UI is changed.
+
+### Increment 1 — Home outer shell pilot
+
+The first implementation increment validates the architecture with the smallest recognizable slice:
+
+- Replace Material ownership at the root with Tallybook theme locals and an edge-to-edge canvas.
+- Add the shared screen frame and safe-area policy.
+- Recreate Home's outer layout: header placement, search surface, content spacing, and the outer
+  loading/empty/content containers.
+- Preserve the existing Home state and actions. Inner dashboard cards may remain visually unchanged
+  behind the new outer composition until their own increment.
+- Add semantics and minimum hit targets to any migrated interaction.
+
+Explicitly out of scope:
+
+- Bottom navigation.
+- The global or centered create button.
+- The add-movement sheet and its fields.
+- A redesign of balance, chart, category, or movement-row internals.
+- New navigation destinations or business behavior.
+
+The pilot is accepted only after side-by-side review against Moneta on a real Android device and an
+iPhone, with light/dark screenshots and no content under system UI.
+
+### Later increments
+
+1. Migrate Home dashboard components one family at a time.
+2. Implement the themed, full-width bottom navigation with the approved destination set.
+3. Decide the placement and persistence of `Create movimiento`.
+4. Migrate the add-movement sheet and form components.
+5. Apply the established components to the remaining screens.
+
+Each increment must leave the app shippable. Do not create a parallel second screen tree for the
+redesign.
+
+## Component API rules
+
+- Prefer value parameters and callbacks over slot APIs when the content has a stable visual role.
+- Use slots only where variable content is a real requirement.
+- Every reusable layout accepts a root `Modifier` as its first optional parameter.
+- The caller controls external placement; the component controls its internal padding and shape.
+- Model mutually exclusive visual states with a sealed type or enum, not several booleans.
+- Colors are semantic inputs. Feature code must not contain raw brand colors.
+- Interactive components expose enabled, selected, loading, pressed/focused, error, and disabled states
+  when those states exist in the product.
+- Components must work with screen readers, keyboard/focus traversal where supported, and enlarged
+  text before they are considered reusable.
+
+## Motion
+
+Motion communicates hierarchy and state; it is not decoration.
+
+- Sheets use the Moneta iOS-like easing curve and a shared duration role.
+- Navigation transitions preserve spatial direction and back behavior.
+- Press feedback is subtle and does not change layout.
+- Reduced-motion preference removes non-essential translation and scale while preserving state
+  visibility.
+- Motion values live in the theme only when at least two components share the same role.
+
+## Testing and review
+
+The narrowest useful verification for a UI increment includes:
+
+- Unit tests for token or state transformations when logic exists.
+- Compose UI tests for semantics, actions, selection, focus, and visibility.
+- Screenshot/golden coverage for stable visual components when the project adds a supported harness.
+- `./gradlew detekt ktfmtCheck`.
+- `./gradlew :shared:testAndroidHostTest` and `./gradlew :androidApp:assembleDebug` for shared UI changes.
+- iOS compilation and device/simulator review for APIs or layout behavior affected by the change.
+- Final visual review on physical Android and iPhone devices before merge.
+
+Pixel comparison is evidence, not the only acceptance criterion. Accessibility, dynamic text, system
+insets, and state behavior may require intentional differences from the web reference.
+
+## Maintenance checklist
+
+Use this checklist in every UI pull request:
+
+- Does the change reuse an existing Tallybook component or prove why a new one is needed?
+- Does every static visual value come from a primitive or semantic token?
+- If the design introduced a new value, was its token added before the component used it?
+- Is Material appearance or behavior leaking into a migrated surface?
+- Does exactly one owner apply each system inset?
+- Are touch targets at least 48 dp and semantics meaningful?
+- Does the screen support loading, empty, error, and content states that already exist?
+- Was behavior preserved while appearance changed?
+- Was the result compared with the Moneta source and verified on Android and iOS?
+
+## Remaining product decisions
+
+The bottom navigation pattern is decided. Its final destination set and the global placement of
+`Create movimiento` remain open. Neither blocks the Home outer-shell pilot because the shell treats
+the bar and action as separately owned UI.

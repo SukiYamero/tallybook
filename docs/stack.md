@@ -31,14 +31,14 @@ feature que las necesita, no antes.
   equivalente de Radix (que ya usan en la web) para Compose Multiplatform. Da la plomería de
   accesibilidad/foco/estado y el cableado del gesto de drag — **no trae animaciones ni feeling nativo**,
   eso se diseña encima con las APIs de animación de Compose, igual que ya hacían con el `BottomSheet`
-  bespoke de la web.
+  bespoke de la web. La arquitectura y las reglas de uso viven únicamente en `docs/ui/architecture.md`.
 - **Imágenes / preferencias / listas paginadas**: Coil 3, DataStore, Paging 3 — ya cubiertos por skills
   instaladas (`android-skills:coil-compose`, `android-skills:datastore`, `android-skills:paging`), sin
   nada que decidir.
 - **Manrope (fuente) y `BottomSheet`/`Toast`/`PagedGrid`** (componentes bespoke del diseño de moneta):
   no son una librería a elegir — se construyen con primitivas de Compose (`Font`/`FontResource`,
   `Modifier`/`AnimatedContent`), igual que en la versión web.
-- **Colores/tokens de tema claro y oscuro**: reusar los ya definidos en moneta
-  (`web/moneta/docs/ui/design-tokens.md` — confirmado: solo colores, sin spacing/tipografía/otros
-  tokens), no diseñar unos nuevos — portarlos a Compose Multiplatform cuando se arme el theming
-  (`ColorScheme` de Material3 o tokens propios, a definir en esa feature).
+- **Tokens visuales**: la paleta, tipografía, radios y medidas observadas en Moneta se portan a tokens
+  propios de Tallybook. Todo valor visual estático, incluido spacing y tamaños de texto, debe provenir
+  del sistema de tokens definido en `docs/ui/architecture.md`. Material puede seguir presente mientras
+  dure la migración, pero no define el tema ni los componentes finales.

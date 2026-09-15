@@ -70,6 +70,8 @@ parciales.
   feature que las necesita.
 - `wording.md` — voz y tono portada desde Moneta, que se conserva únicamente como referencia legacy.
   Es la única referencia de cómo se escribe la copy en cada idioma de Tallybook.
+- `ui/architecture.md` — arquitectura visual compartida, componentes, tokens, safe areas, navegación y
+  estrategia incremental del rediseño. Es la única referencia durable para implementar o revisar UI.
 - `tasks/<slug>.md` — spec activo de una feature en desarrollo (copiar `tasks/_template.md`). Efímero:
   se borra o se compacta a `features/` al terminar, nunca se acumula. Si la feature es grande (varias
   waves, cada una con varias tareas que un subagente necesita ejecutar sin releer todo el spec),
