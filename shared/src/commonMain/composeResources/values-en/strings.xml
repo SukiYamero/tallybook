@@ -24,8 +24,11 @@
     <string name="save_expense">Save expense</string>
     <string name="save_income">Save income</string>
     <string name="close">Close</string>
+    <string name="confirm">Confirm</string>
     <string name="back">Back</string>
     <string name="more_fields">More details</string>
+    <string name="expanded">expanded</string>
+    <string name="collapsed">collapsed</string>
     <string name="search_categories">Search categories</string>
     <string name="no_categories_found">No categories found</string>
     <string name="unknown_category">No category</string>
@@ -35,9 +38,12 @@
     <string name="amount_malformed">That amount doesn’t look right</string>
     <string name="amount_not_positive">The amount must be greater than zero</string>
     <string name="amount_too_many_decimals">The amount has too many decimal places</string>
+    <string name="amount_overflow">That amount is too large</string>
     <string name="category_required">Choose a category</string>
     <string name="future_date_not_allowed">The date can’t be in the future</string>
     <string name="movimiento_save_error">We couldn’t save the movement. What you entered is still here so you can try again.</string>
+    <string name="movimiento_preferences_error">We couldn’t load your settings. What you entered is still here. Try loading them again.</string>
+    <string name="movimiento_categories_error">We couldn’t load your categories. What you entered is still here. Try loading them again.</string>
 
     <string name="category_comida">Food</string>
     <string name="category_supermercado">Groceries</string>

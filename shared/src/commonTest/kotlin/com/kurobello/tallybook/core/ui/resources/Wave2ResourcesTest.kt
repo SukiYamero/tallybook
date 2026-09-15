@@ -33,8 +33,11 @@ class Wave2ResourcesTest {
             Res.string.save_expense,
             Res.string.save_income,
             Res.string.close,
+            Res.string.confirm,
             Res.string.back,
             Res.string.more_fields,
+            Res.string.expanded,
+            Res.string.collapsed,
             Res.string.search_categories,
             Res.string.no_categories_found,
             Res.string.unknown_category,
@@ -43,9 +46,12 @@ class Wave2ResourcesTest {
             Res.string.amount_malformed,
             Res.string.amount_not_positive,
             Res.string.amount_too_many_decimals,
+            Res.string.amount_overflow,
             Res.string.category_required,
             Res.string.future_date_not_allowed,
             Res.string.movimiento_save_error,
+            Res.string.movimiento_preferences_error,
+            Res.string.movimiento_categories_error,
             Res.string.category_comida,
             Res.string.category_supermercado,
             Res.string.category_restaurante,
@@ -106,6 +112,6 @@ class Wave2ResourcesTest {
             Res.string.category_reembolso,
         )
 
-    assertEquals(94, resources.distinct().size)
+    assertEquals(100, resources.distinct().size)
   }
 }
