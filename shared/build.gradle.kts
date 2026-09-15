@@ -104,6 +104,9 @@ dependencies { androidRuntimeClasspath(libs.compose.uiTooling) }
 
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
   if (name == "testAndroidHostTest") {
+    // Compose Multiplatform common UI tests need a device or native UI host; Robolectric cannot
+    // initialize their v2 test environment. Pure common tests still run in this host task.
+    exclude("**/ui/test/**")
     jvmArgs(
         "--add-opens=java.base/java.lang=ALL-UNNAMED",
         "--add-opens=java.base/java.util=ALL-UNNAMED",

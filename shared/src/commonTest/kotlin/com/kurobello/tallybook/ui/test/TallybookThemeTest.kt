@@ -1,4 +1,4 @@
-package com.kurobello.tallybook.core.ui.theme
+package com.kurobello.tallybook.ui.test
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.v2.runComposeUiTest
+import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.test.Test
 import kotlin.test.assertNotEquals
 

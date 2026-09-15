@@ -184,9 +184,14 @@ git commit -m "feat(ui): add Foundation design-system primitives"
 - Consumes: `TallybookTheme.colors.canvas`, `TallybookTheme.dimensions.screenHorizontal`, `screenTopFloor`, and `screenBottomFloor`.
 - Produces: `TallybookScreenFrame(modifier, content)` for the Home outer-shell increment.
 
-- [ ] **Step 1: Write the failing layout contract test**
+- [ ] **Step 1: Write the failing inset-policy contract tests**
 
-Render a tagged child in a fixed-size root with `TallybookScreenFrame`. Assert its top and left positions are at least the documented minimum screen tokens. The production mutation caught is a frame that forgets content insets and lets content touch system/UI edges.
+Test the pure `screenContentPadding(safeInsets, layoutDirection)` policy used by the frame. With zero
+safe insets, assert the documented horizontal, top, and bottom floors. With non-zero safe insets,
+assert that horizontal values are additive while top and bottom use the larger value. The production
+mutations caught are double-added vertical insets and omitted lateral safe areas. A pure policy test is
+preferred to a position assertion because Compose UI Test 1.11.1 does not yet expose the v2 root-position
+assertions documented for newer versions.
 
 - [ ] **Step 2: Run the focused iOS test and verify RED**
 
@@ -194,11 +199,15 @@ Run the filtered `TallybookScreenFrameTest` through the wrapper. Expected: compi
 
 - [ ] **Step 3: Implement the frame**
 
-Read `WindowInsets.safeDrawing.asPaddingValues()` and calculate start/end with the current layout direction. Apply horizontal safe insets plus the semantic screen inset, and use the maximum of each vertical safe inset and its floor token. The root uses the caller modifier first, then fills available size and paints the theme canvas. Expose one `BoxScope` content slot and no feature policy.
+Read `WindowInsets.safeDrawing.asPaddingValues()` and pass it with the current layout direction to the
+tested `screenContentPadding` policy. Apply horizontal safe insets plus the semantic screen inset, and
+use the maximum of each vertical safe inset and its floor token. The root uses the caller modifier
+first, then fills available size and paints the theme canvas. Expose one `BoxScope` content slot and no
+feature policy.
 
 - [ ] **Step 4: Run the focused test and verify GREEN**
 
-Run the same focused wrapped test. Expected: the child respects minimum top and horizontal positions.
+Run the same focused wrapped test. Expected: minimum and non-zero-safe-inset cases pass.
 
 - [ ] **Step 5: Run complete verification**
 
