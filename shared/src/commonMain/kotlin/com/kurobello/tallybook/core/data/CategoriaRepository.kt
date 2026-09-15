@@ -5,5 +5,7 @@ import com.kurobello.tallybook.core.model.DataOutcome
 
 interface CategoriaRepository {
 
-  suspend fun obtenerTodas(): DataOutcome<List<Categoria>>
+  suspend fun getAll(): DataOutcome<List<Categoria>>
+
+  suspend fun ensureSeeded(categorias: List<Categoria>): DataOutcome<Unit>
 }

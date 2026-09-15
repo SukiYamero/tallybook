@@ -2,6 +2,8 @@ package com.kurobello.tallybook.di
 
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
+import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.LocalDataBootstrapper
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import kotlinx.coroutines.CoroutineDispatcher
@@ -14,5 +16,14 @@ val repositoryModule = module {
   }
   single<CategoriaRepository> {
     CategoriaRepositoryImpl(get(), get<CoroutineDispatcher>(named(DispatcherQualifier.IO)))
+  }
+  single { CategorySeedProvider() }
+  single {
+    LocalDataBootstrapper(
+        localeProvider = get(),
+        preferencesRepository = get(),
+        categoriaRepository = get(),
+        categorySeedProvider = get(),
+    )
   }
 }

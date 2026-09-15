@@ -8,6 +8,10 @@ CREATE TABLE categoria (
     color TEXT NOT NULL
 );
 
+insertCategoriaIfAbsent:
+INSERT OR IGNORE INTO categoria(id, nombre, padre_id, icono, color)
+VALUES (?, ?, ?, ?, ?);
+
 insertCategoria:
 INSERT INTO categoria(id, nombre, padre_id, icono, color)
 VALUES (?, ?, ?, ?, ?);
