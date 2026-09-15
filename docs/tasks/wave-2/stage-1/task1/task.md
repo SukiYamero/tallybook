@@ -72,17 +72,25 @@ Android/iOS.
 
 ## Implementación TDD
 
-- [ ] Escribir primero tests table-driven para tags simples, tags con script, `_`, región sin idioma
+- [x] Escribir primero tests table-driven para tags simples, tags con script, `_`, región sin idioma
       soportado y tag vacío; confirmar RED.
-- [ ] Implementar el parser mínimo sin dependencia de locale externa y confirmar GREEN.
-- [ ] Escribir tests table-driven de las ocho regiones y fallback; confirmar RED y después GREEN.
-- [ ] Implementar providers finos Android/iOS y los módulos Koin.
-- [ ] Probar con un contenedor Koin aislado que el binding host puede sustituirse por un fake y que
+- [x] Implementar el parser mínimo sin dependencia de locale externa y confirmar GREEN.
+- [x] Escribir tests table-driven de las ocho regiones y fallback; confirmar RED y después GREEN.
+- [x] Implementar providers finos Android/iOS y los módulos Koin.
+- [x] Probar con un contenedor Koin aislado que el binding host puede sustituirse por un fake y que
       `DeviceLocaleProvider` se resuelve una sola vez por contenedor.
-- [ ] Ejecutar `./gradlew :shared:testAndroidHostTest` y
+- [x] Ejecutar `./gradlew :shared:testAndroidHostTest` y
       `./gradlew :shared:compileKotlinIosSimulatorArm64`.
-- [ ] Ejecutar `./gradlew detekt ktfmtCheck`.
-- [ ] Commit sugerido: `feat(locale): resolve device locale and initial currency`.
+- [x] Ejecutar `./gradlew detekt ktfmtCheck`.
+- [x] Commit del stage: `02370c8 feat(locale): add preferences and localized resources`.
+
+## Evidencia de control
+
+- `LocaleResolutionTest` cubre tags simples, script, `_`, región con idioma no soportado, tag vacío y
+  las ocho regiones; `LocaleModuleTest` comprueba sustitución y singleton Koin.
+- Los gates host, compilación iOS, Detekt y ktfmt se ejecutaron GREEN sobre el árbol actual.
+- El informe local ignorado `.superpowers/sdd/README/stage-1-task-1-report.md` registra los RED de
+  contrato, moneda y binding de plataforma, y el GREEN posterior.
 
 ## Bloqueos
 

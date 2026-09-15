@@ -32,6 +32,7 @@ import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.category_comida
 import tallybook.shared.generated.resources.unknown_category
 
 @Composable
@@ -106,7 +107,7 @@ internal fun MovimientoRowLightPreview() {
   TallybookTheme(darkTheme = false) {
     MovimientoRow(
         movimiento = previewMovimiento(TipoMovimiento.GASTO),
-        categoria = previewMovimientoCategoria,
+        categoria = previewMovimientoCategoria(),
         modifier = Modifier.widthIn(max = 420.dp),
     )
   }
@@ -125,21 +126,23 @@ internal fun MovimientoRowDarkPreview() {
 }
 
 @Suppress("MagicNumber")
+@Composable
 private fun previewMovimiento(tipo: TipoMovimiento) =
     Movimiento(
         id = "mov-preview",
         tipo = tipo,
         monto = Money(128_500, Moneda.COP),
         fecha = LocalDate(2026, 9, 15),
-        categoriaId = previewMovimientoCategoria.id,
-        descripcion = "Almuerzo",
+        categoriaId = previewMovimientoCategoria().id,
+        descripcion = null,
         createdAt = Instant.fromEpochMilliseconds(1_757_894_400_000),
     )
 
-private val previewMovimientoCategoria =
+@Composable
+private fun previewMovimientoCategoria() =
     Categoria(
         id = "cat_comida",
-        nombre = "Comida",
+        nombre = stringResource(Res.string.category_comida),
         padreId = null,
         icono = CategoryIcon.UTENSILS,
         color = CategoryTint.AMBER,

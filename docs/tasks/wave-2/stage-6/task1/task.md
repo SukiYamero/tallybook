@@ -104,19 +104,30 @@ por simetría.
 
 ## Implementación TDD
 
-- [ ] Tests RED/GREEN de startup success, failure durable, retry y prohibición de doble initialize
+- [x] Tests RED/GREEN de startup success, failure durable, retry y prohibición de doble initialize
       concurrente.
-- [ ] Tests RED/GREEN de Home: initial loading, empty, summary/recientes, category map y error upstream.
-- [ ] Test de combine donde cada upstream emite en distinto orden; Home no queda bloqueado ni produce
+- [x] Tests RED/GREEN de Home: initial loading, empty, summary/recientes, category map y error upstream.
+- [x] Test de combine donde cada upstream emite en distinto orden; Home no queda bloqueado ni produce
       un estado parcialmente incoherente.
-- [ ] Construir `HomeScreen` puro con previews de loading, empty, populated y error.
-- [ ] UI tests de cada branch y callbacks del FAB, empty CTA y retry.
-- [ ] Integrar sheet con estado local y confirmar cierre manual/éxito/reapertura limpia.
-- [ ] Confirmar con un fake repository observable que un insert actualiza Home por Flow, no por mutación
+- [x] Construir `HomeScreen` puro con previews de loading, empty, populated y error.
+- [x] UI tests de cada branch y callbacks del FAB, empty CTA y retry.
+- [x] Integrar sheet con estado local y confirmar cierre manual/éxito/reapertura limpia.
+- [x] Confirmar con un fake repository observable que un insert actualiza Home por Flow, no por mutación
       local.
-- [ ] Actualizar Koin y sus tests de resolución.
-- [ ] Ejecutar tests, compilación iOS, `detekt` y `ktfmtCheck`.
-- [ ] Commit sugerido: `feat(home): show the local balance and recent movements`.
+- [x] Actualizar Koin y sus tests de resolución.
+- [x] Ejecutar tests, compilación iOS, `detekt` y `ktfmtCheck`.
+- [x] Commit del stage: `feat(home): complete the first local movement flow`; el amend final incorpora
+      los ajustes de QA y la evidencia del dispositivo.
+
+## Evidencia de control
+
+- `HomeViewModelTest`, `HomeScreenTest`, `HomeSheetSessionTest` y
+  `HomeSheetSessionLifecycleHostTest` cubren orden de emisiones, estados de Home, callbacks, invalidez
+  reactiva y reapertura de la sheet. `FirstMovimientoIntegrationTest` cubre bootstrap, 58 categorías,
+  flujo gasto/ingreso, moneda ajena y persistencia al recrear repositorios.
+- Los gates de tests, compilación iOS, Detekt y ktfmt están GREEN sobre el árbol actual.
+- El informe local ignorado `.superpowers/sdd/README/stage-6-task-1-report.md` registra los RED/GREEN
+  de startup, Home, sesión de sheet y regresión de error previo a las demás fuentes.
 
 ## Bloqueos
 

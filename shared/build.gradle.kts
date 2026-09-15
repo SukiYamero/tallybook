@@ -65,7 +65,6 @@ kotlin {
       implementation(libs.compose.ui)
       implementation(libs.compose.components.resources)
       implementation(libs.compose.uiToolingPreview)
-      implementation(libs.compose.unstyled.dialog)
       implementation(libs.compose.unstyled.modal.bottom.sheet)
       implementation(libs.composables.icons.lucide)
       implementation(libs.androidx.datastore.preferences.core)
@@ -93,8 +92,27 @@ kotlin {
       implementation(libs.androidx.compose.ui.test.manifest)
       implementation(libs.androidx.testExt.junit)
     }
-    getByName("androidHostTest").dependencies { implementation(libs.sqldelight.sqliteDriver) }
+    getByName("androidHostTest").dependencies {
+      implementation(libs.robolectric)
+      implementation(libs.sqldelight.sqliteDriver)
+    }
   }
 }
 
 dependencies { androidRuntimeClasspath(libs.compose.uiTooling) }
+
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+  if (name == "testAndroidHostTest") {
+    jvmArgs(
+        "--add-opens=java.base/java.lang=ALL-UNNAMED",
+        "--add-opens=java.base/java.util=ALL-UNNAMED",
+        "--add-opens=java.base/java.io=ALL-UNNAMED",
+        "--add-opens=java.base/java.net=ALL-UNNAMED",
+        "--add-opens=java.base/java.security=ALL-UNNAMED",
+        "--add-opens=java.base/java.text=ALL-UNNAMED",
+        "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
+        "--add-opens=java.desktop/java.awt.font=ALL-UNNAMED",
+        "--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
+    )
+  }
+}

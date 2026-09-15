@@ -1,10 +1,10 @@
 package com.kurobello.tallybook.feature.movimientos.ui
 
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -126,16 +126,14 @@ internal fun MovimientoForm(
         onFechaChanged = actions::onFechaChanged,
     )
     Column(
-        modifier =
-            Modifier.bringIntoViewRequester(categoryBringIntoViewRequester)
-                .focusRequester(categoryFocusRequester)
-                .focusable(),
+        modifier = Modifier.bringIntoViewRequester(categoryBringIntoViewRequester),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
       CategoryField(
           selected = uiState.categorias.firstOrNull { it.id == uiState.selectedCategoriaId },
           isError = uiState.isCategoriaMissing,
           onOpen = { categoryPickerVisible = true },
+          modifier = Modifier.focusRequester(categoryFocusRequester),
       )
       if (uiState.isCategoriaMissing) {
         Text(
@@ -180,7 +178,7 @@ internal fun MovimientoForm(
     Button(
         onClick = actions::onSubmit,
         modifier =
-            Modifier.fillMaxWidth().padding(bottom = 8.dp).semantics {
+            Modifier.fillMaxWidth().padding(bottom = 8.dp).heightIn(min = 48.dp).semantics {
               contentDescription = submitLabel
             },
         enabled = !uiState.isSubmitting && !uiState.isLoading && uiState.error == null,

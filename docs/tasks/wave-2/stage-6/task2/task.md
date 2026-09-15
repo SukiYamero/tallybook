@@ -58,32 +58,48 @@ DataStore/bootstrap/repositorios/Flow/ViewModel.
 
 ## Verificación automatizada
 
-- [ ] `./gradlew :shared:testAndroidHostTest`
-- [ ] `./gradlew :shared:compileKotlinIosSimulatorArm64`
-- [ ] Ejecutar los Android device tests relevantes en el dispositivo conectado.
-- [ ] `./gradlew detekt ktfmtCheck`
-- [ ] `./gradlew :androidApp:assembleDebug`
-- [ ] Confirmar con `rg` cero placeholders/copy legacy y cero imports Android/iOS en `commonMain`.
-- [ ] Revisar `git diff --check` y `git status --short`; preservar `.claude/` y cambios ajenos.
+- [x] `./gradlew :shared:testAndroidHostTest`
+- [x] `./gradlew :shared:compileKotlinIosSimulatorArm64`
+- [x] Ejecutar los Android device tests relevantes en el dispositivo conectado.
+- [x] `./gradlew detekt ktfmtCheck`
+- [x] `./gradlew :androidApp:assembleDebug`
+- [x] Confirmar con `rg` cero placeholders/copy legacy y cero imports Android/iOS en `commonMain`.
+- [x] Revisar `git diff --check` y `git status --short`; preservar `.claude/` y cambios ajenos.
 
 ## Verificación Android física
 
-- [ ] Instalar el APK con el comando de `AGENTS.md` y lanzar la app.
-- [ ] En instalación limpia, confirmar moneda regional, Home vacío y 58 categorías disponibles.
-- [ ] Intentar submit inválido y confirmar que no cierra ni pierde campos.
-- [ ] Crear un gasto y un ingreso; confirmar orden reciente y balance exacto.
-- [ ] Cambiar light/dark del sistema y confirmar legibilidad.
-- [ ] Probar teclado, selector, date picker, scroll, gesto/scrim/Back del sheet.
-- [ ] Matar el proceso, volver a abrir y confirmar persistencia.
-- [ ] Capturar screenshot y árbol de elementos si `mobile-mcp` está disponible.
+- [x] Instalar el APK con el comando de `AGENTS.md` y lanzar la app.
+- [x] En instalación limpia, confirmar moneda regional, Home vacío y 58 categorías disponibles.
+- [x] Intentar submit inválido y confirmar que no cierra ni pierde campos.
+- [x] Crear un gasto y un ingreso; confirmar orden reciente y balance exacto.
+- [x] Cambiar light/dark del sistema y confirmar legibilidad.
+- [x] Probar teclado, selector, date picker, scroll, gesto/scrim/Back del sheet.
+- [x] Matar el proceso, volver a abrir y confirmar persistencia.
+- [x] Capturar screenshot y árbol de elementos si `mobile-mcp` está disponible.
 
 ## Review final y entrega
 
-- [ ] Pedir a un reviewer nuevo que compare el diff completo con cada requisito de Wave 2.
-- [ ] El reviewer corrige hallazgos, ejecuta nuevamente checks afectados y reporta evidencia.
-- [ ] El orquestador informa al usuario qué probar en el dispositivo; no mergea/cierra sin su OK.
-- [ ] Commit sugerido después del review: `feat(movements): complete the first local movement flow`.
+- [x] Pedir a un reviewer nuevo que compare el diff completo con cada requisito de Wave 2.
+- [x] El reviewer corrige hallazgos, ejecuta nuevamente checks afectados y reporta evidencia.
+- [x] El orquestador informó la evidencia del dispositivo; el usuario aprobó el cierre funcional y dejó
+      el rediseño visual para una iteración separada.
+- [x] Amend final de Stage 6 sobre `feat(home): complete the first local movement flow`, autorizado
+      después de la aprobación funcional explícita del usuario.
+
+## Evidencia de control
+
+- Android device tests: `102/102` GREEN en `aaa9cea2` (M2012K11AG, Android 13) en 61.826 s. Los gates
+  host, compilación iOS,
+  Detekt, ktfmt y `:androidApp:assembleDebug` están GREEN sobre el árbol actual.
+- Instalación limpia en Android físico: Home vacío con USD y 58 categorías; submit inválido conserva el
+  formulario; gasto `$12.50` e ingreso `$20.00` dejan balance `$7.50` y orden reciente correcto.
+  Light/dark, teclado, selector, date picker, scroll, scrim, gesto, Back y persistencia tras
+  force-stop/relaunch quedaron verificados. La base de datos física contiene 58 categorías y 2
+  movimientos; hay capturas y XML de accessibility.
+- Un reviewer Sol medium revisó y aprobó explícitamente el diff posterior a `3ff8ea3` sin hallazgos.
+  El usuario aprobó el cierre funcional el 2026-09-15; la apariencia actual no se considera aprobada y
+  se rediseñará en una iteración posterior sin reabrir el alcance funcional de Wave 2.
 
 ## Bloqueos
 
-Bloqueada por toda Wave 2. No habilita otra wave hasta review final y aprobación física del usuario.
+Sin bloqueos funcionales. El rediseño visual queda fuera del cierre de Wave 2.

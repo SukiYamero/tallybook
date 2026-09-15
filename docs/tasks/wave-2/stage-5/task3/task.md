@@ -83,17 +83,29 @@ acciones, son previewables y se prueban sin grafo.
 
 ## Implementación TDD
 
-- [ ] Construir primero previews de estado vacío, validación, cargando, failure y submitting.
-- [ ] UI test de selector tipo y callbacks de campos sobre un fake `Actions`.
-- [ ] UI test de submit vacío: errores de monto/categoría visibles y CTA no provoca cierre.
-- [ ] UI test de input válido y submit: callback único; doble tap con submitting no genera otro.
-- [ ] UI test de disclosure/descripcion y límite 180.
-- [ ] UI test de fecha futura bloqueada por picker; unit test de ViewModel ya cubre bypass.
-- [ ] UI test de load/save error, retry y preservación visual de valores.
-- [ ] Un único wiring test de Route prueba colección de `Saved`; no repetir todos los casos con VM real.
-- [ ] Prueba manual de teclado, scroll, scrim, gesto y Back en Android físico.
-- [ ] Ejecutar tests pertinentes, compilación iOS, `detekt` y `ktfmtCheck`.
-- [ ] Commit sugerido: `feat(movements): add the movement entry sheet`.
+- [x] Construir primero previews de estado vacío, validación, cargando, failure y submitting.
+- [x] UI test de selector tipo y callbacks de campos sobre un fake `Actions`.
+- [x] UI test de submit vacío: errores de monto/categoría visibles y CTA no provoca cierre.
+- [x] UI test de input válido y submit: callback único; doble tap con submitting no genera otro.
+- [x] UI test de disclosure/descripcion y límite 180.
+- [x] UI test de fecha futura bloqueada por picker; unit test de ViewModel ya cubre bypass.
+- [x] UI test de load/save error, retry y preservación visual de valores.
+- [x] Un único wiring test de Route prueba colección de `Saved`; no repetir todos los casos con VM real.
+- [x] Prueba manual de teclado, scroll, scrim, gesto y Back en Android físico.
+- [x] Ejecutar tests pertinentes, compilación iOS, `detekt` y `ktfmtCheck`.
+- [x] Commit del stage: `707c440 feat(ui): add the movement entry flow`.
+
+## Evidencia de control
+
+- `MovimientoFormTest`, `AddMovimientoSheetTest` y `AddMovimientoSheetRouteTest` cubren callbacks,
+  validación, submit único, límite de descripción, errores, preservación de valores y la colección de
+  `Saved` por la Route con un ViewModel real. `AddMovimientoSheetTest` también cubre CTA alcanzable y
+  scroll con teclado cerrado.
+- La revisión física cubrió teclado, scroll, scrim, gesto y Back; los gates de tests, compilación iOS,
+  Detekt y ktfmt están GREEN sobre el árbol actual.
+- `MovimientoFormTest.futureDateIsDisabledAndDoesNotChangeTheSelectedDate` usa el formatter público
+  de Material 3, un máximo fijo y verifica fecha futura deshabilitada sin callback; la ejecución física
+  focalizada pasó `1/1` en 2.764 s.
 
 ## Bloqueos
 

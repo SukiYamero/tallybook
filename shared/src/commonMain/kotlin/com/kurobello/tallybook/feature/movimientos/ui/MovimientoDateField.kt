@@ -30,6 +30,8 @@ internal data class MovimientoDateFieldState(
     val fecha: LocalDate,
     val showPicker: Boolean,
     val enabled: Boolean,
+    val maxSelectableDate: LocalDate =
+        Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date,
 )
 
 @Composable
@@ -49,10 +51,8 @@ internal fun MovimientoDateField(
   }
 
   if (state.showPicker) {
-    val maxDate = remember {
-      Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
-    }
-    val selectableDates = remember(maxDate) { DatesThrough(maxDate.toUtcMillis()) }
+    val selectableDates =
+        remember(state.maxSelectableDate) { DatesThrough(state.maxSelectableDate.toUtcMillis()) }
     val state =
         rememberDatePickerState(
             initialSelectedDateMillis = state.fecha.toUtcMillis(),

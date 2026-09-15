@@ -21,11 +21,6 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
   `androidHostTest` y afirma `assertNotEquals(io, default)`, que en iOS es falso (ahí `ioDispatcher` es
   `Dispatchers.Default`). Mover el test a `commonTest` requiere reescribir esa aserción.
 
-- **`sqldelight:coroutines-extensions` para queries reactivas** — las queries generadas devuelven
-  `Query`, no `Flow`. El primer repositorio de Wave 2 que exponga una lista observable necesita
-  `app.cash.sqldelight:coroutines-extensions` (`.asFlow().mapToList(dispatcher)`) en el catálogo. No se
-  agregó en Wave 1 a propósito: no tenía consumidor todavía.
-
 ## Baja
 
 - **Compatibilidad de Detekt con Gradle 10** — Detekt 1.23.8 no produce hallazgos, pero su plugin

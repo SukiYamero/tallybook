@@ -21,9 +21,13 @@ import com.kurobello.tallybook.core.ui.category.CategoryChip
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.test.assertEquals
 import kotlin.time.Instant
+import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
+import org.jetbrains.compose.resources.getString
 import org.junit.Rule
 import org.junit.Test
+import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.unknown_category
 
 class MovimientoComponentsTest {
 
@@ -73,6 +77,7 @@ class MovimientoComponentsTest {
 
   @Test
   fun movimientoRowUsesLocalizedFallbackWhenCategoryIsMissing() {
+    val unknownCategoryLabel = runBlocking { getString(Res.string.unknown_category) }
     composeRule.setContent {
       TallybookTheme {
         MovimientoRow(
@@ -82,7 +87,7 @@ class MovimientoComponentsTest {
       }
     }
 
-    composeRule.onNodeWithText("Sin categoría").assertExists()
+    composeRule.onNodeWithText(unknownCategoryLabel).assertExists()
     composeRule.onNodeWithText("cat_missing").assertDoesNotExist()
   }
 

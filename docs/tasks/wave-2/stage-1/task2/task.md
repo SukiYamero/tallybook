@@ -78,20 +78,30 @@ La key persistida se llama `moneda_principal`; el archivo se llama
 
 ## Implementación TDD
 
-- [ ] Agregar la dependencia y confirmar la versión realmente resuelta con Gradle.
-- [ ] Con un path temporal único por test, escribir un test RED donde `preferences` emite
+- [x] Agregar la dependencia y confirmar la versión realmente resuelta con Gradle.
+- [x] Con un path temporal único por test, escribir un test RED donde `preferences` emite
       `Uninitialized` antes de inicializar.
-- [ ] Implementar factory/repositorio mínimo y hacer GREEN.
-- [ ] Test RED/GREEN: `initialize(COP)` dos veces conserva el valor; `initialize(USD)` posterior no lo
+- [x] Implementar factory/repositorio mínimo y hacer GREEN.
+- [x] Test RED/GREEN: `initialize(COP)` dos veces conserva el valor; `initialize(USD)` posterior no lo
       reemplaza.
-- [ ] Test RED/GREEN: `setMonedaPrincipal(USD)` emite USD y una instancia nueva sobre el mismo archivo
+- [x] Test RED/GREEN: `setMonedaPrincipal(USD)` emite USD y una instancia nueva sobre el mismo archivo
       también lee USD.
-- [ ] Test de error: un fallo real del storage produce `DataOutcome.Failure(DataError.Local)`.
-- [ ] Test del grafo: sustituir solo `PreferencesPathProvider` por uno temporal y resolver una única
+- [x] Test de error: un fallo real del storage produce `DataOutcome.Failure(DataError.Local)`.
+- [x] Test del grafo: sustituir solo `PreferencesPathProvider` por uno temporal y resolver una única
       instancia de repositorio/DataStore.
-- [ ] Cerrar scopes y borrar únicamente el directorio temporal creado por cada test.
-- [ ] Ejecutar tests host, compilación iOS, `detekt` y `ktfmtCheck`.
-- [ ] Commit sugerido: `feat(preferences): persist the main currency with DataStore`.
+- [x] Cerrar scopes y borrar únicamente el directorio temporal creado por cada test.
+- [x] Ejecutar tests host, compilación iOS, `detekt` y `ktfmtCheck`.
+- [x] Commit del stage: `02370c8 feat(locale): add preferences and localized resources`.
+
+## Evidencia de control
+
+- `AppPreferencesRepositoryTest` cubre estado no inicializado, inicialización idempotente,
+  persistencia entre instancias y fallo real de storage; cada test cierra factory y elimina su propio
+  directorio temporal. `PreferencesModuleTest` cubre el override y los singletons.
+- DataStore `1.2.1` está fijado y resuelto por el build; los gates host, compilación iOS, Detekt y
+  ktfmt están GREEN sobre el árbol actual.
+- El informe local ignorado `.superpowers/sdd/README/stage-1-task-2-report.md` registra los RED/GREEN
+  de estado inicial, idempotencia, persistencia, errores y bindings Koin.
 
 ## Bloqueos
 

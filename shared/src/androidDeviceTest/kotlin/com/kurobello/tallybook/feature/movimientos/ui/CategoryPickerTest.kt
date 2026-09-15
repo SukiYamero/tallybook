@@ -1,7 +1,10 @@
 package com.kurobello.tallybook.feature.movimientos.ui
 
+import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -11,8 +14,14 @@ import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.test.assertEquals
+import kotlinx.coroutines.runBlocking
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.getString
 import org.junit.Rule
 import org.junit.Test
+import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.back
+import tallybook.shared.generated.resources.no_categories_found
 
 class CategoryPickerTest {
 
@@ -35,9 +44,9 @@ class CategoryPickerTest {
       }
     }
 
-    composeRule.onNodeWithText(comida.nombre).performClick()
+    composeRule.onCategoryOptionWithText(comida.nombre).performClick()
     composeRule.onNodeWithText(supermercado.nombre).assertExists()
-    composeRule.onNodeWithText(comida.nombre).performClick()
+    composeRule.onCategoryOptionWithText(comida.nombre).performClick()
 
     composeRule.runOnIdle {
       assertEquals(comida.id, selectedId)
@@ -85,8 +94,8 @@ class CategoryPickerTest {
       }
     }
 
-    composeRule.onNodeWithText(comida.nombre).performClick()
-    composeRule.onNodeWithText("Volver").performClick()
+    composeRule.onCategoryOptionWithText(comida.nombre).performClick()
+    composeRule.onNodeWithText(resourceString(Res.string.back)).performClick()
 
     composeRule.onNodeWithText(supermercado.nombre).assertDoesNotExist()
     composeRule.onNodeWithText(transporte.nombre).assertExists()
@@ -106,10 +115,16 @@ class CategoryPickerTest {
       }
     }
 
+    composeRule.onCategoryOptionWithText(comida.nombre).performClick()
     composeRule.onNodeWithText(supermercado.nombre).assertIsSelected()
     composeRule.onNode(hasSetTextAction()).performTextInput("no-match")
-    composeRule.onNodeWithText("No se encontraron categorías").assertExists()
+    composeRule.onNodeWithText(resourceString(Res.string.no_categories_found)).assertExists()
   }
+
+  private fun resourceString(resource: StringResource): String = runBlocking { getString(resource) }
+
+  private fun SemanticsNodeInteractionsProvider.onCategoryOptionWithText(text: String) =
+      onNode(hasText(text) and hasClickAction())
 
   private companion object {
     val comida = categoria(id = "comida", nombre = "Comida")

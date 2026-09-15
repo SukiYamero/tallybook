@@ -71,16 +71,25 @@ paleta se introduce aquí.
 
 ## Implementación TDD
 
-- [ ] Test puro RED/GREEN que obliga a cubrir todos los enums de icono/tinte definidos por Stage 2.
-- [ ] Implementar mappings y componentes mínimos con previews.
-- [ ] UI test de `CategoryChip`: label visible, selected semantics y callback único.
-- [ ] UI test de `MovimientoRow`: gasto/ingreso muestran signo correcto y missing category muestra
+- [x] Test puro RED/GREEN que obliga a cubrir todos los enums de icono/tinte definidos por Stage 2.
+- [x] Implementar mappings y componentes mínimos con previews.
+- [x] UI test de `CategoryChip`: label visible, selected semantics y callback único.
+- [x] UI test de `MovimientoRow`: gasto/ingreso muestran signo correcto y missing category muestra
       fallback localizado.
-- [ ] UI test de `BalanceCard`: tres montos correctos desde un summary fijo.
-- [ ] Verificar visualmente light/dark; usar screenshot test solo si color/layout no queda cubierto por
+- [x] UI test de `BalanceCard`: tres montos correctos desde un summary fijo.
+- [x] Verificar visualmente light/dark; usar screenshot test solo si color/layout no queda cubierto por
       inspección y semantics.
-- [ ] Ejecutar tests pertinentes, compilación iOS, `detekt` y `ktfmtCheck`.
-- [ ] Commit sugerido: `feat(ui): add category and movement presentation components`.
+- [x] Ejecutar tests pertinentes, compilación iOS, `detekt` y `ktfmtCheck`.
+- [x] Commit del stage: `707c440 feat(ui): add the movement entry flow`.
+
+## Evidencia de control
+
+- `CategoryPresentationTest` cubre los mappings exhaustivos. `MovimientoComponentsTest` cubre chip,
+  filas de ingreso/gasto/fallback y los tres valores de `BalanceCard`.
+- La revisión física registró capturas light/dark legibles; los gates de tests, compilación iOS, Detekt
+  y ktfmt están GREEN sobre el árbol actual.
+- El informe local ignorado `.superpowers/sdd/README/stage-5-task-1-report.md` registra los RED de
+  mappings/componentes ausentes y su GREEN posterior.
 
 ## Bloqueos
 

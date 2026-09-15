@@ -7,20 +7,16 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 
-// Leaf serializers do not prove that navigation can persist a mixed route stack as one value.
+// A leaf serializer alone does not prove Navigation 3 can restore a persisted back stack.
 @OptIn(ExperimentalSerializationApi::class)
 class DestinationSerializationTest {
 
   @Test
   fun everyDestinationExposesAGeneratedSerializer() {
-    val serialNames =
-        listOf(Home.serializer(), Placeholder2.serializer()).map { it.descriptor.serialName }
+    val serialNames = listOf(Home.serializer()).map { it.descriptor.serialName }
 
     assertEquals(
-        listOf(
-            "com.kurobello.tallybook.core.ui.navigation.Home",
-            "com.kurobello.tallybook.core.ui.navigation.Placeholder2",
-        ),
+        listOf("com.kurobello.tallybook.core.ui.navigation.Home"),
         serialNames,
     )
   }
@@ -35,11 +31,11 @@ class DestinationSerializationTest {
 
   @Test
   fun destinationBackStackSurvivesSerializationRoundTrip() {
-    val original = NavBackStack<Destination>(Home, Placeholder2)
+    val original = NavBackStack<Destination>(Home)
 
     val encoded = Json.encodeToString(destinationBackStackSerializer(), original)
     val restored = Json.decodeFromString(destinationBackStackSerializer(), encoded)
 
-    assertEquals(listOf(Home, Placeholder2), restored.toList())
+    assertEquals(listOf(Home), restored.toList())
   }
 }

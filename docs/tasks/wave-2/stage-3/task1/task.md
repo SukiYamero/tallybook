@@ -107,20 +107,29 @@ Usar `kotlin.time.Instant`, estable con Kotlin 2.4.10. Renombrar en esta tarea l
 
 ## Implementación TDD
 
-- [ ] Escribir tests de migración 1→2 con una fila legacy y confirmar que todos los campos sobreviven.
-- [ ] Implementar `.sqm`, generar `2.db` con SQLDelight y verificar migraciones.
-- [ ] Test RED/GREEN del mapper con `createdAt` ISO válido e inválido.
-- [ ] Test RED/GREEN de resumen vacío, gasto, ingreso, combinación y exclusión de otra moneda.
-- [ ] Test RED/GREEN del orden reciente con empates de fecha/instante y límite.
-- [ ] Test reactivo con collector activo antes del insert: debe recibir estado inicial y segunda emisión.
+- [x] Escribir tests de migración 1→2 con una fila legacy y confirmar que todos los campos sobreviven.
+- [x] Implementar `.sqm`, generar `2.db` con SQLDelight y verificar migraciones.
+- [x] Test RED/GREEN del mapper con `createdAt` ISO válido e inválido.
+- [x] Test RED/GREEN de resumen vacío, gasto, ingreso, combinación y exclusión de otra moneda.
+- [x] Test RED/GREEN del orden reciente con empates de fecha/instante y límite.
+- [x] Test reactivo con collector activo antes del insert: debe recibir estado inicial y segunda emisión.
       Un `first()` ejecutado después del insert no demuestra invalidación y no sirve como evidencia.
-- [ ] Repetir el contrato reactivo para categorías después de `ensureSeeded`.
-- [ ] Forzar un error de query/storage y confirmar `DataError.Local`; cancelar el collector y confirmar
+- [x] Repetir el contrato reactivo para categorías después de `ensureSeeded`.
+- [x] Forzar un error de query/storage y confirmar `DataError.Local`; cancelar el collector y confirmar
       que no se emite Failure por cancelación.
-- [ ] Actualizar tests de Koin y todos los constructores de `Movimiento`.
-- [ ] Ejecutar `./gradlew :shared:testAndroidHostTest`, verificación SQLDelight, compilación iOS,
+- [x] Actualizar tests de Koin y todos los constructores de `Movimiento`.
+- [x] Ejecutar `./gradlew :shared:testAndroidHostTest`, verificación SQLDelight, compilación iOS,
       `detekt` y `ktfmtCheck`.
-- [ ] Commit sugerido: `feat(data): expose reactive movement queries`.
+- [x] Commit del stage: `dbc8a7d feat(data): expose reactive movement queries`.
+
+## Evidencia de control
+
+- `DatabaseSchemaTest`, `MovimientoMapperTest`, `ReactiveRepositoryTest` y `FlowDataOperationTest`
+  cubren migración, mapper, resumen/orden/reactividad, errores locales y cancelación.
+- La verificación de migración SQLDelight y los gates host, compilación iOS, Detekt y ktfmt están GREEN
+  sobre el árbol actual.
+- El informe local ignorado `.superpowers/sdd/README/stage-3-task-1-report.md` registra el RED de los
+  contratos ausentes y el GREEN de la suite host con migración, mapper, resumen y orden.
 
 ## Bloqueos
 

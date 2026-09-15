@@ -1,8 +1,10 @@
 package com.kurobello.tallybook.di
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.kurobello.tallybook.AppStartupViewModel
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.PREFERENCES_FILE_NAME
@@ -30,6 +32,8 @@ class RepositoryModulesTest {
       single<PreferencesPathProvider> {
         RepositoryTestPreferencesPathProvider(directory.toString())
       }
+      single<DeviceLocaleProvider> { RepositoryTestDeviceLocaleProvider() }
+      single { CategorySeedProvider { "Category" } }
     }
     val application = koinApplication {
       allowOverride(true)
@@ -41,6 +45,7 @@ class RepositoryModulesTest {
       assertNotNull(application.koin.get<CategoriaRepository>())
       assertNotNull(application.koin.get<CategorySeedProvider>())
       assertNotNull(application.koin.get<LocalDataBootstrapper>())
+      assertNotNull(application.koin.get<AppStartupViewModel>())
       assertNotNull(application.koin.get<HomeViewModel>())
       assertNotNull(application.koin.get<AddMovimientoViewModel>())
     } finally {
@@ -56,4 +61,8 @@ private class RepositoryTestPreferencesPathProvider(
     private val directory: String,
 ) : PreferencesPathProvider {
   override fun path(): String = "$directory/$PREFERENCES_FILE_NAME"
+}
+
+private class RepositoryTestDeviceLocaleProvider : DeviceLocaleProvider {
+  override fun currentLanguageTag(): String = "es-CO"
 }

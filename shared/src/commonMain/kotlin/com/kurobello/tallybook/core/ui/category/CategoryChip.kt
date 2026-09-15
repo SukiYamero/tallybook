@@ -22,6 +22,9 @@ import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import org.jetbrains.compose.resources.stringResource
+import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.category_comida
 
 @Composable
 fun CategoryChip(
@@ -60,10 +63,11 @@ fun CategoryChip(
   }
 }
 
-private val chipPreviewCategoria =
+@Composable
+private fun chipPreviewCategoria() =
     Categoria(
         id = "cat_comida",
-        nombre = "Comida",
+        nombre = stringResource(Res.string.category_comida),
         padreId = null,
         icono = CategoryIcon.UTENSILS,
         color = CategoryTint.AMBER,
@@ -73,7 +77,7 @@ private val chipPreviewCategoria =
 @Composable
 internal fun CategoryChipLightPreview() {
   TallybookTheme(darkTheme = false) {
-    CategoryChip(categoria = chipPreviewCategoria, selected = true, onClick = {})
+    CategoryChip(categoria = chipPreviewCategoria(), selected = true, onClick = {})
   }
 }
 
@@ -81,6 +85,6 @@ internal fun CategoryChipLightPreview() {
 @Composable
 internal fun CategoryChipDarkPreview() {
   TallybookTheme(darkTheme = true) {
-    CategoryChip(categoria = chipPreviewCategoria, selected = false, onClick = {})
+    CategoryChip(categoria = chipPreviewCategoria(), selected = false, onClick = {})
   }
 }

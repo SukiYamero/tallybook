@@ -89,19 +89,28 @@ taxonomía mantiene vocabulario de dominio español, no verbos de infraestructur
 
 ## Implementación TDD
 
-- [ ] Test RED del catálogo: tamaño 58, IDs únicos, 12 raíces, padres existentes, sin ciclos y keys de
+- [x] Test RED del catálogo: tamaño 58, IDs únicos, 12 raíces, padres existentes, sin ciclos y keys de
       icono/tinte no vacías.
-- [ ] Portar el catálogo estructural y hacer GREEN antes de tocar SQLDelight.
-- [ ] Actualizar `Categoria`/mapper/tests existentes para enums tipados.
-- [ ] Test host RED: base vacía + `ensureSeeded` produce exactamente 58 filas.
-- [ ] Implementar query/transacción mínima y hacer GREEN.
-- [ ] Test RED/GREEN de idempotencia: dos llamadas siguen dando 58 filas.
-- [ ] Test RED/GREEN de no sobrescritura: modificar manualmente una fila, reejecutar seed y conservarla.
-- [ ] Test del bootstrap con fakes: llama una vez al provider, pasa la moneda correcta e interrumpe la
+- [x] Portar el catálogo estructural y hacer GREEN antes de tocar SQLDelight.
+- [x] Actualizar `Categoria`/mapper/tests existentes para enums tipados.
+- [x] Test host RED: base vacía + `ensureSeeded` produce exactamente 58 filas.
+- [x] Implementar query/transacción mínima y hacer GREEN.
+- [x] Test RED/GREEN de idempotencia: dos llamadas siguen dando 58 filas.
+- [x] Test RED/GREEN de no sobrescritura: modificar manualmente una fila, reejecutar seed y conservarla.
+- [x] Test del bootstrap con fakes: llama una vez al provider, pasa la moneda correcta e interrumpe la
       secuencia al primer fallo.
-- [ ] Test de integración con recursos reales en al menos un locale soportado.
-- [ ] Ejecutar tests host, compilación iOS, `detekt` y `ktfmtCheck`.
-- [ ] Commit sugerido: `feat(categories): seed the localized category catalog`.
+- [x] Test de integración con recursos reales en al menos un locale soportado.
+- [x] Ejecutar tests host, compilación iOS, `detekt` y `ktfmtCheck`.
+- [x] Commit del stage: `aed2c59 feat(categories): seed the localized category catalog`.
+
+## Evidencia de control
+
+- `CategorySeedCatalogTest`, `CategorySeedTest` y `LocalDataBootstrapperTest` cubren el catálogo,
+  seed idempotente/no destructivo y orden/fallo del bootstrap. `CategorySeedProviderDeviceTest` resuelve
+  nombres ingleses desde recursos empaquetados.
+- Los gates host, compilación iOS, Detekt y ktfmt están GREEN sobre el árbol actual.
+- El informe local ignorado `.superpowers/sdd/README/stage-2-task-1-report.md` registra RED/GREEN del
+  catálogo, provider de recursos, seed idempotente/no destructivo, bootstrap y Koin.
 
 ## Bloqueos
 

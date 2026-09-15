@@ -61,14 +61,22 @@ Las otras traducciones preservan intención y brevedad, no estructura literal. `
 
 ## Implementación y verificación
 
-- [ ] Crear primero el catálogo español y referenciar todas las keys desde un test/fixture compilable.
-- [ ] Portar las 58 traducciones exactas por locale desde `seedConfig.ts`.
-- [ ] Escribir las traducciones de UI aplicando `docs/wording.md`.
-- [ ] Comparar por script los nombres de key de los cuatro XML: no puede faltar ni sobrar ninguna.
-- [ ] Ejecutar generación/compilación de recursos Android e iOS.
-- [ ] Buscar `Moneta|KuroBello` dentro de los archivos nuevos y exigir cero resultados.
-- [ ] Ejecutar `./gradlew :shared:testAndroidHostTest`, compilación iOS, `detekt` y `ktfmtCheck`.
-- [ ] Commit sugerido: `feat(resources): add localized copy for the first movement flow`.
+- [x] Crear primero el catálogo español y referenciar todas las keys desde un test/fixture compilable.
+- [x] Portar las 58 traducciones exactas por locale desde `seedConfig.ts`.
+- [x] Escribir las traducciones de UI aplicando `docs/wording.md`.
+- [x] Comparar por script los nombres de key de los cuatro XML: no puede faltar ni sobrar ninguna.
+- [x] Ejecutar generación/compilación de recursos Android e iOS.
+- [x] Buscar `Moneta|KuroBello` dentro de los archivos nuevos y exigir cero resultados.
+- [x] Ejecutar `./gradlew :shared:testAndroidHostTest`, compilación iOS, `detekt` y `ktfmtCheck`.
+- [x] Commit del stage: `02370c8 feat(locale): add preferences and localized resources`.
+
+## Evidencia de control
+
+- `Wave2ResourcesTest` referencia las 100 keys del catálogo compilable. La compilación Android/iOS y
+  la búsqueda de copy legacy se verificaron GREEN sobre el árbol actual.
+- Un `diff` read-only sobre los cuatro XML confirmó las mismas 100 keys. El informe local ignorado
+  `.superpowers/sdd/README/stage-1-task-3-report.md` registra scripts exit 0 de paridad literal de las
+  58 categorías contra `seedConfig.ts`, copy española autoritativa y voseo/user-first por locale.
 
 ## Bloqueos
 

@@ -121,20 +121,29 @@ interna adicional, mantenerla privada al archivo y evitar dos parsers.
 
 ## Implementación TDD
 
-- [ ] Tests RED/GREEN table-driven de parser: escalas 0/2, separadores coma/punto, malformed,
+- [x] Tests RED/GREEN table-driven de parser: escalas 0/2, separadores coma/punto, malformed,
       not-positive, demasiados decimales y overflow.
-- [ ] Tests de defaults con Clock/zona fija, incluyendo un instante que cae en días distintos en UTC y
+- [x] Tests de defaults con Clock/zona fija, incluyendo un instante que cae en días distintos en UTC y
       `America/Bogota`.
-- [ ] Test RED/GREEN de carga de moneda/categorías y selección válida.
-- [ ] Test RED/GREEN por cada campo obligatorio: repositorio no recibe inserts.
-- [ ] Test RED/GREEN de descripción normalizada y construcción exacta de `Movimiento`, incluido
+- [x] Test RED/GREEN de carga de moneda/categorías y selección válida.
+- [x] Test RED/GREEN por cada campo obligatorio: repositorio no recibe inserts.
+- [x] Test RED/GREEN de descripción normalizada y construcción exacta de `Movimiento`, incluido
       `createdAt` del Clock e ID fake.
-- [ ] Test de doble submit con repositorio suspendido controladamente: exactamente una llamada.
-- [ ] Test de failure durable que conserva campos y de success con exactamente un efecto `Saved`.
-- [ ] Test de cancelación: cancelar ViewModel/scope no convierte cancelación en error de guardado.
-- [ ] Registrar bindings de producción y actualizar test del grafo Koin.
-- [ ] Ejecutar `commonTest`, `testAndroidHostTest`, compilación iOS, `detekt` y `ktfmtCheck`.
-- [ ] Commit sugerido: `feat(movements): add the movement form state and validation`.
+- [x] Test de doble submit con repositorio suspendido controladamente: exactamente una llamada.
+- [x] Test de failure durable que conserva campos y de success con exactamente un efecto `Saved`.
+- [x] Test de cancelación: cancelar ViewModel/scope no convierte cancelación en error de guardado.
+- [x] Registrar bindings de producción y actualizar test del grafo Koin.
+- [x] Ejecutar `commonTest`, `testAndroidHostTest`, compilación iOS, `detekt` y `ktfmtCheck`.
+- [x] Commit del stage: `77c51dc feat(movements): add form state and validation`.
+
+## Evidencia de control
+
+- `AmountInputTest` y `AddMovimientoViewModelTest` cubren parser, zona/Clock inyectados, bloqueo de
+  submit duplicado, preservación de failure, efecto `Saved` único y cancelación. `RepositoryModulesTest`
+  comprueba el grafo de producción.
+- Los gates common/host, compilación iOS, Detekt y ktfmt están GREEN sobre el árbol actual.
+- El informe local ignorado `.superpowers/sdd/README/stage-4-task-1-report.md` registra el RED de los
+  contratos de parser/ViewModel ausentes y el GREEN de `AmountInputTest`, ViewModel y Koin.
 
 ## Bloqueos
 

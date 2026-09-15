@@ -1,16 +1,23 @@
 package com.kurobello.tallybook.feature.movimientos.ui
 
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.unit.dp
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
@@ -21,10 +28,19 @@ import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoAction
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoEffect
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoUiState
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.getString
 import org.junit.Rule
 import org.junit.Test
+import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.amount_required
+import tallybook.shared.generated.resources.category_required
+import tallybook.shared.generated.resources.more_fields
+import tallybook.shared.generated.resources.save_expense
 
 class AddMovimientoSheetTest {
 
@@ -46,7 +62,9 @@ class AddMovimientoSheetTest {
       }
     }
 
-    composeRule.onNodeWithContentDescription("Guardar gasto").assertIsNotEnabled()
+    composeRule
+        .onNodeWithContentDescription(resourceString(Res.string.save_expense))
+        .assertIsNotEnabled()
     composeRule.runOnIdle { assertEquals(0, actions.submitCount) }
   }
 
@@ -65,7 +83,7 @@ class AddMovimientoSheetTest {
       }
     }
 
-    composeRule.onNodeWithText("Guardar gasto").performClick()
+    composeRule.onNodeWithText(resourceString(Res.string.save_expense)).performClick()
     composeRule.runOnIdle { assertEquals(1, actions.submitCount) }
   }
 
@@ -92,13 +110,13 @@ class AddMovimientoSheetTest {
       }
     }
 
-    composeRule.onNodeWithContentDescription("Guardar gasto").performClick()
+    composeRule.onNodeWithContentDescription(resourceString(Res.string.save_expense)).performClick()
 
     composeRule
         .onNode(
             SemanticsMatcher.expectValue(
                 SemanticsProperties.Error,
-                "Ingresa un monto",
+                resourceString(Res.string.amount_required),
             )
         )
         .assertIsDisplayed()
@@ -106,7 +124,7 @@ class AddMovimientoSheetTest {
         .onNode(
             SemanticsMatcher.expectValue(
                 SemanticsProperties.Error,
-                "Elige una categoría",
+                resourceString(Res.string.category_required),
             )
         )
         .assertIsDisplayed()
@@ -133,7 +151,7 @@ class AddMovimientoSheetTest {
 
     val idleHeight =
         composeRule
-            .onNodeWithContentDescription("Guardar gasto")
+            .onNodeWithContentDescription(resourceString(Res.string.save_expense))
             .fetchSemanticsNode()
             .boundsInRoot
             .height
@@ -143,11 +161,76 @@ class AddMovimientoSheetTest {
     assertEquals(
         idleHeight,
         composeRule
-            .onNodeWithContentDescription("Guardar gasto")
+            .onNodeWithContentDescription(resourceString(Res.string.save_expense))
             .fetchSemanticsNode()
             .boundsInRoot
             .height,
     )
+  }
+
+  @Test
+  fun closedKeyboardCtaIsFullyReachable() {
+    composeRule.setContent {
+      TallybookTheme {
+        AddMovimientoSheet(
+            visible = true,
+            uiState = state(),
+            actions = SubmitCountingActions(),
+            onDismiss = {},
+        )
+      }
+    }
+
+    val cta = composeRule.onNodeWithContentDescription(resourceString(Res.string.save_expense))
+    val ctaNode = cta.fetchSemanticsNode()
+    val ctaBounds = ctaNode.boundsInRoot
+    val rootHeight = ctaNode.layoutInfo.coordinates.findRootCoordinates().size.height.toFloat()
+    cta.assertIsDisplayed()
+    composeRule.runOnIdle {
+      assertTrue(ctaBounds.height >= with(composeRule.density) { 48.dp.toPx() })
+      assertTrue(
+          ctaBounds.bottom <= rootHeight,
+          "Expected CTA bottom ${ctaBounds.bottom} to be within root height $rootHeight",
+      )
+    }
+  }
+
+  @Test
+  fun expandedFormScrollsCtaIntoReachableBounds() {
+    composeRule.setContent {
+      TallybookTheme {
+        AddMovimientoSheet(
+            visible = true,
+            uiState = state(),
+            actions = SubmitCountingActions(),
+            onDismiss = {},
+            modifier = Modifier.height(400.dp),
+        )
+      }
+    }
+
+    composeRule.onNodeWithText(resourceString(Res.string.more_fields)).performClick()
+    val cta = composeRule.onNodeWithContentDescription(resourceString(Res.string.save_expense))
+    val initialBounds = cta.fetchSemanticsNode().boundsInRoot
+
+    composeRule.onNode(hasScrollAction()).performTouchInput { swipeUp() }
+    composeRule.waitForIdle()
+
+    val ctaNode = cta.fetchSemanticsNode()
+    val ctaBounds = ctaNode.boundsInRoot
+    val rootHeight = ctaNode.layoutInfo.coordinates.findRootCoordinates().size.height.toFloat()
+    cta.assertIsDisplayed()
+    composeRule.runOnIdle {
+      assertTrue(
+          ctaBounds != initialBounds,
+          "Expected CTA bounds to change after scrolling: initial=$initialBounds, after=$ctaBounds",
+      )
+      assertTrue(ctaBounds.height >= with(composeRule.density) { 48.dp.toPx() })
+      assertTrue(
+          ctaBounds.bottom <= rootHeight,
+          "Expected CTA bottom ${ctaBounds.bottom} to be within root height $rootHeight",
+      )
+    }
   }
 
   @Test
@@ -195,6 +278,8 @@ class AddMovimientoSheetTest {
           icono = CategoryIcon.UTENSILS,
           color = CategoryTint.AMBER,
       )
+
+  private fun resourceString(resource: StringResource): String = runBlocking { getString(resource) }
 
   private class SubmitCountingActions(private val onSubmitRequested: () -> Unit = {}) :
       AddMovimientoActions {

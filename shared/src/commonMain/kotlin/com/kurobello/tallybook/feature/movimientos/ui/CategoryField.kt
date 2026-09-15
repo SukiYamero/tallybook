@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
@@ -40,7 +41,15 @@ fun CategoryField(
   val borderColor =
       if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
 
-  Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+  Column(
+      modifier =
+          modifier
+              .defaultMinSize(minHeight = 48.dp)
+              .focusProperties { canFocus = true }
+              .clickable(role = Role.Button, onClick = onOpen)
+              .semantics(mergeDescendants = true) { errorMessage?.let(::error) },
+      verticalArrangement = Arrangement.spacedBy(4.dp),
+  ) {
     Text(
         text = label,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -49,10 +58,7 @@ fun CategoryField(
     Row(
         modifier =
             Modifier.fillMaxWidth()
-                .defaultMinSize(minHeight = 48.dp)
                 .border(width = 1.dp, color = borderColor, shape = MaterialTheme.shapes.medium)
-                .clickable(role = Role.Button, onClick = onOpen)
-                .semantics(mergeDescendants = true) { errorMessage?.let(::error) }
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,

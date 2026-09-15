@@ -80,16 +80,25 @@ provee contenido variable mediante slot. El estado `ModalBottomSheetState` no sa
 
 ## Implementación TDD
 
-- [ ] Tests RED/GREEN de tree: raíces/hijas, orphan como raíz, input vacío y orden estable.
-- [ ] Tests RED/GREEN de búsqueda con tildes, mayúsculas, raíz e hija.
-- [ ] Añadir dependencia y construir wrapper mínimo de bottom sheet con preview.
-- [ ] UI test de apertura inicial, drill-in, Back interno y selección del padre general.
-- [ ] UI test de búsqueda plana, empty result y selección de hija.
-- [ ] UI test de dismiss por callback y semantics del estado seleccionado.
-- [ ] Prueba manual con teclado abierto en Android físico; confirmar que sheet/CTA futuro no quedan
+- [x] Tests RED/GREEN de tree: raíces/hijas, orphan como raíz, input vacío y orden estable.
+- [x] Tests RED/GREEN de búsqueda con tildes, mayúsculas, raíz e hija.
+- [x] Añadir dependencia y construir wrapper mínimo de bottom sheet con preview.
+- [x] UI test de apertura inicial, drill-in, Back interno y selección del padre general.
+- [x] UI test de búsqueda plana, empty result y selección de hija.
+- [x] UI test de dismiss por callback y semantics del estado seleccionado.
+- [x] Prueba manual con teclado abierto en Android físico; confirmar que sheet/CTA futuro no quedan
       detrás de IME.
-- [ ] Ejecutar tests pertinentes, compilación iOS, `detekt` y `ktfmtCheck`.
-- [ ] Commit sugerido: `feat(categories): add the predefined category picker`.
+- [x] Ejecutar tests pertinentes, compilación iOS, `detekt` y `ktfmtCheck`.
+- [x] Commit del stage: `707c440 feat(ui): add the movement entry flow`.
+
+## Evidencia de control
+
+- `CategoryTreeTest` y `CategorySearchTest` cubren jerarquía, huérfanos, orden y búsqueda normalizada.
+  `CategoryPickerTest` cubre drill-in, Back interno, búsqueda plana, selección y callback de cierre.
+- La revisión física cubrió teclado y el selector; los gates de tests, compilación iOS, Detekt y ktfmt
+  están GREEN sobre el árbol actual.
+- El informe local ignorado `.superpowers/sdd/README/stage-5-task-2-report.md` registra el RED de
+  helpers ausentes y el GREEN posterior de árbol y búsqueda.
 
 ## Bloqueos
 

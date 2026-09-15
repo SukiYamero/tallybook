@@ -9,6 +9,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
+import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
 import com.kurobello.tallybook.core.ui.component.TallybookModalBottomSheet
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoEffect
@@ -27,12 +29,28 @@ internal fun AddMovimientoSheet(
     actions: AddMovimientoActions,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+) =
+    AddMovimientoSheet(
+        visible = visible,
+        uiState = uiState,
+        actions = actions,
+        callbacks = ModalBottomSheetCallbacks(onDismiss = onDismiss),
+        modifier = modifier,
+    )
+
+@Composable
+private fun AddMovimientoSheet(
+    visible: Boolean,
+    uiState: AddMovimientoUiState,
+    actions: AddMovimientoActions,
+    callbacks: ModalBottomSheetCallbacks,
+    modifier: Modifier = Modifier,
 ) {
   TallybookModalBottomSheet(
       visible = visible,
       paneTitle = stringResource(Res.string.add_movimiento_pane_title),
-      onDismiss = onDismiss,
-      modifier = modifier,
+      callbacks = callbacks,
+      layout = ModalBottomSheetLayout(modifier = modifier, fillAvailableHeight = true),
   ) {
     MovimientoForm(uiState = uiState, actions = actions, modifier = Modifier)
   }
@@ -42,6 +60,7 @@ internal fun AddMovimientoSheet(
 internal fun AddMovimientoSheetRoute(
     visible: Boolean,
     onDismiss: () -> Unit,
+    onHidden: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: AddMovimientoViewModel = koinViewModel(),
 ) {
@@ -51,7 +70,7 @@ internal fun AddMovimientoSheetRoute(
       visible = visible,
       uiState = uiState,
       actions = viewModel,
-      onDismiss = onDismiss,
+      callbacks = ModalBottomSheetCallbacks(onDismiss = onDismiss, onHidden = onHidden),
       modifier = modifier,
   )
 }

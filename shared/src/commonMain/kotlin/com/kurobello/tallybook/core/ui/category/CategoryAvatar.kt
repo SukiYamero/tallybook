@@ -16,6 +16,9 @@ import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import org.jetbrains.compose.resources.stringResource
+import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.category_comida
 
 @Composable
 fun CategoryAvatar(categoria: Categoria, modifier: Modifier = Modifier) {
@@ -48,19 +51,20 @@ internal fun CategoryAvatar(
 @Preview
 @Composable
 internal fun CategoryAvatarLightPreview() {
-  TallybookTheme(darkTheme = false) { CategoryAvatar(avatarPreviewCategoria) }
+  TallybookTheme(darkTheme = false) { CategoryAvatar(avatarPreviewCategoria()) }
 }
 
 @Preview
 @Composable
 internal fun CategoryAvatarDarkPreview() {
-  TallybookTheme(darkTheme = true) { CategoryAvatar(avatarPreviewCategoria) }
+  TallybookTheme(darkTheme = true) { CategoryAvatar(avatarPreviewCategoria()) }
 }
 
-private val avatarPreviewCategoria =
+@Composable
+private fun avatarPreviewCategoria() =
     Categoria(
         id = "cat_comida",
-        nombre = "Comida",
+        nombre = stringResource(Res.string.category_comida),
         padreId = null,
         icono = CategoryIcon.UTENSILS,
         color = CategoryTint.AMBER,
