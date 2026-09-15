@@ -9,6 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 
 class LocalDataBootstrapperTest {
@@ -102,6 +103,9 @@ class LocalDataBootstrapperTest {
   ) : CategoriaRepository {
     var seedCalls = 0
     val seededCategorias = mutableListOf<List<Categoria>>()
+
+    override fun observeAll(): Flow<DataOutcome<List<Categoria>>> =
+        flowOf(DataOutcome.Success(emptyList()))
 
     override suspend fun getAll(): DataOutcome<List<Categoria>> = DataOutcome.Success(emptyList())
 

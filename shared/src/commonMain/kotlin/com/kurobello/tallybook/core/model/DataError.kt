@@ -6,6 +6,8 @@ package com.kurobello.tallybook.core.model
  */
 sealed class DataError(message: String, cause: Throwable? = null) : Exception(message, cause) {
 
+  class InvalidInput(message: String) : DataError(message)
+
   class Local(cause: Throwable) : DataError("Error de almacenamiento local", cause)
 
   class Unknown(cause: Throwable) : DataError("Error inesperado", cause)

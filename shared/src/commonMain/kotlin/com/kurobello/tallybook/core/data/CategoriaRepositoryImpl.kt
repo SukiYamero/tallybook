@@ -1,28 +1,32 @@
 package com.kurobello.tallybook.core.data
 
+import app.cash.sqldelight.coroutines.asFlow
+import app.cash.sqldelight.coroutines.mapToList
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.DataOutcome
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 internal class CategoriaRepositoryImpl(
     private val database: TallybookDatabase,
     private val dispatcher: CoroutineDispatcher,
 ) : CategoriaRepository {
 
+  override fun observeAll(): Flow<DataOutcome<List<Categoria>>> =
+      database.categoriaQueries
+          .selectAllCategorias()
+          .asFlow()
+          .mapToList(dispatcher)
+          .map { rows -> rows.map { it.toDomain() } }
+          .asLocalDataOutcome()
+
   override suspend fun getAll(): DataOutcome<List<Categoria>> =
       runLocalDataOperation(dispatcher) {
-        database.categoriaQueries.selectAllCategorias().executeAsList().map { row ->
-          Categoria(
-              id = row.id,
-              nombre = row.nombre,
-              padreId = row.padre_id,
-              icono = CategoryIcon.entries.first { it.storageKey == row.icono },
-              color = CategoryTint.entries.first { it.storageKey == row.color },
-          )
-        }
+        database.categoriaQueries.selectAllCategorias().executeAsList().map { it.toDomain() }
       }
 
   override suspend fun ensureSeeded(categorias: List<Categoria>): DataOutcome<Unit> =
@@ -40,3 +44,12 @@ internal class CategoriaRepositoryImpl(
         }
       }
 }
+
+private fun com.kurobello.tallybook.core.database.Categoria.toDomain(): Categoria =
+    Categoria(
+        id = id,
+        nombre = nombre,
+        padreId = padre_id,
+        icono = CategoryIcon.entries.first { it.storageKey == icono },
+        color = CategoryTint.entries.first { it.storageKey == color },
+    )

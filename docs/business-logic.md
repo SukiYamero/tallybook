@@ -15,7 +15,8 @@ sincroniza cuentas bancarias reales.
 Un **movimiento** registra un gasto o un ingreso.
 
 - **Obligatorios**: tipo (gasto / ingreso), monto, fecha, categoría, moneda.
-- **Opcionales**: descripción (por ahora el único campo opcional).
+- **Opcionales**: descripción (por ahora el único campo opcional). `createdAt` es metadata técnica para
+  ordenar de forma estable, no un campo solicitado al usuario.
 
 ## Moneda e idioma
 
@@ -33,7 +34,7 @@ Lista predefinida (no las crea el usuario en el MVP), portada de moneta — no s
 tener una segunda copia que se desincronice; fuente real: `web/moneta/src/lib/schema.ts`
 (`CATEGORIAS_SEMILLA`).
 
-- 12 categorías padre, ~57 en total (cada padre con 3–6 hijas). Estructura por entrada: `{id, nombre,
+- 12 categorías padre, 58 en total (cada padre con 3–6 hijas). Estructura por entrada: `{id, nombre,
   padreId?, icono, color}`.
 - `icono` es un nombre de Lucide — compatible directo con `icons-lucide`, ya elegido.
 - `color` es un tinte con nombre (amber, blue, purple, rose, success...), no un hex — se resuelve contra

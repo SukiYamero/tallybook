@@ -4,8 +4,53 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.time.Instant
 
 class DatabaseSchemaTest {
+
+  @Test
+  fun `migration from schema 1 preserves a legacy movimiento and derives created at from fecha`() {
+    val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+    driver.execute(
+        null,
+        """
+        CREATE TABLE movimiento (
+            id TEXT NOT NULL PRIMARY KEY,
+            tipo TEXT NOT NULL,
+            monto_minor INTEGER NOT NULL,
+            monto_moneda TEXT NOT NULL,
+            fecha TEXT NOT NULL,
+            categoria_id TEXT NOT NULL,
+            descripcion TEXT
+        )
+        """
+            .trimIndent(),
+        0,
+    )
+    driver.execute(null, "CREATE INDEX movimiento_fecha ON movimiento(fecha)", 0)
+    driver.execute(
+        null,
+        """
+        INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, categoria_id, descripcion)
+        VALUES ('legacy', 'GASTO', 1_050, 'USD', '2026-09-03', 'cat_comida', 'almuerzo')
+        """
+            .trimIndent(),
+        0,
+    )
+
+    TallybookDatabase.Schema.migrate(driver, oldVersion = 1, newVersion = 2)
+
+    val row =
+        TallybookDatabase(driver).movimientoQueries.selectMovimientoById("legacy").executeAsOne()
+    assertEquals("legacy", row.id)
+    assertEquals("GASTO", row.tipo)
+    assertEquals(1_050L, row.monto_minor)
+    assertEquals("USD", row.monto_moneda)
+    assertEquals("2026-09-03", row.fecha)
+    assertEquals("cat_comida", row.categoria_id)
+    assertEquals("almuerzo", row.descripcion)
+    assertEquals(Instant.parse("2026-09-03T00:00:00Z").toString(), row.created_at)
+  }
 
   private fun inMemoryDatabase(): TallybookDatabase {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
@@ -21,6 +66,7 @@ class DatabaseSchemaTest {
       fecha: String = "2026-09-03",
       categoriaId: String = "cat1",
       descripcion: String? = null,
+      createdAt: String = "2026-09-03T12:00:00Z",
   ) =
       movimientoQueries.insertMovimiento(
           id = id,
@@ -30,6 +76,7 @@ class DatabaseSchemaTest {
           fecha = fecha,
           categoria_id = categoriaId,
           descripcion = descripcion,
+          created_at = createdAt,
       )
 
   @Test
@@ -53,6 +100,7 @@ class DatabaseSchemaTest {
     assertEquals("2026-09-03", row.fecha)
     assertEquals("cat_comida", row.categoria_id)
     assertEquals("almuerzo", row.descripcion)
+    assertEquals("2026-09-03T12:00:00Z", row.created_at)
   }
 
   @Test
@@ -103,6 +151,35 @@ class DatabaseSchemaTest {
     assertEquals(
         listOf("2026-09-03", "2026-05-20", "2026-01-15"),
         db.movimientoQueries.selectAllMovimientos().executeAsList().map { it.fecha },
+    )
+  }
+
+  @Test
+  fun `selectRecentMovimientos uses fecha then created at then id and obeys limit`() {
+    val db = inMemoryDatabase()
+    db.insert(id = "a", montoMinor = 100, fecha = "2026-09-03", createdAt = "2026-09-03T12:00:00Z")
+    db.insert(id = "c", montoMinor = 100, fecha = "2026-09-03", createdAt = "2026-09-03T12:00:00Z")
+    db.insert(id = "b", montoMinor = 100, fecha = "2026-09-03", createdAt = "2026-09-03T11:00:00Z")
+    db.insert(id = "d", montoMinor = 100, fecha = "2026-09-02", createdAt = "2026-09-04T12:00:00Z")
+
+    assertEquals(
+        listOf("c", "a", "b"),
+        db.movimientoQueries.selectRecentMovimientos(3).executeAsList().map { it.id },
+    )
+  }
+
+  @Test
+  fun `sumMovimientosByTipo filters by moneda before summing`() {
+    val db = inMemoryDatabase()
+    db.insert(id = "gasto", montoMinor = 500, moneda = "COP")
+    db.insert(id = "ingreso", tipo = "INGRESO", montoMinor = 2_000, moneda = "COP")
+    db.insert(id = "other", tipo = "INGRESO", montoMinor = 9_999, moneda = "USD")
+
+    assertEquals(
+        mapOf("GASTO" to 500L, "INGRESO" to 2_000L),
+        db.movimientoQueries.sumMovimientosByTipo("COP").executeAsList().associate {
+          it.tipo to it.total_minor
+        },
     )
   }
 

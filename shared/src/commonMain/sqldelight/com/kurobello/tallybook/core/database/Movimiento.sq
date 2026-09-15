@@ -8,23 +8,28 @@ CREATE TABLE movimiento (
     monto_moneda TEXT NOT NULL,
     fecha TEXT NOT NULL,
     categoria_id TEXT NOT NULL,
-    descripcion TEXT
+    descripcion TEXT,
+    created_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00Z'
 );
 
--- Every list, aggregate and chart narrows by date first; ISO-8601 TEXT sorts lexicographically, so
--- one index on fecha serves both the BETWEEN range scan and the ORDER BY below without a sort step.
--- Leading with monto_moneda instead would help nothing: the currency is inferred from the locale and
--- is effectively constant per user, so it has almost no selectivity.
-CREATE INDEX movimiento_fecha ON movimiento(fecha);
+-- The stable recent order matches this index so SQLite can scan it without a temporary sort; date-range
+-- aggregate queries still benefit from fecha as the leading key.
+CREATE INDEX movimiento_recent ON movimiento(fecha DESC, created_at DESC, id DESC);
 
 insertMovimiento:
-INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, categoria_id, descripcion)
-VALUES (?, ?, ?, ?, ?, ?, ?);
+INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, categoria_id, descripcion, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 
 selectAllMovimientos:
 SELECT *
 FROM movimiento
-ORDER BY fecha DESC;
+ORDER BY fecha DESC, created_at DESC, id DESC;
+
+selectRecentMovimientos:
+SELECT *
+FROM movimiento
+ORDER BY fecha DESC, created_at DESC, id DESC
+LIMIT ?;
 
 selectMovimientoById:
 SELECT *
@@ -34,6 +39,12 @@ WHERE id = ?;
 deleteMovimiento:
 DELETE FROM movimiento
 WHERE id = ?;
+
+sumMovimientosByTipo:
+SELECT tipo, SUM(monto_minor) AS total_minor
+FROM movimiento
+WHERE monto_moneda = ?
+GROUP BY tipo;
 
 -- Grouped by tipo as well as categoria_id so gastos and ingresos in the same categoria never net
 -- each other out, and so the balance general falls out of the same result. Filtered by moneda
