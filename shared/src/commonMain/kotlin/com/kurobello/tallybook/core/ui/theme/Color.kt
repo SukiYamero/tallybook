@@ -107,29 +107,40 @@ private val DarkChart =
         Color(0xFFF68FD0),
     )
 
-/** Text tiers below [ColorScheme.onSurface]; Material 3 only has [ColorScheme.onSurfaceVariant]. */
 @Immutable
-data class ForegroundColors(
+internal data class ForegroundColors(
+    val primary: Color,
     val secondary: Color,
     val tertiary: Color,
     val faint: Color,
     val disabled: Color,
 )
 
-@Immutable data class StatusColor(val base: Color, val strong: Color, val foreground: Color)
-
-/** [info] and [warning] are single tones: moneta defines no strong/foreground tier for them. */
 @Immutable
-data class StatusColors(
+internal data class SurfaceColors(
+    val deep: Color,
+    val sunken: Color,
+    val card: Color,
+    val raised: Color,
+    val high: Color,
+    val highest: Color,
+)
+
+@Immutable internal data class BrandColors(val primary: Color, val onPrimary: Color)
+
+@Immutable
+internal data class StatusColor(val base: Color, val strong: Color, val foreground: Color)
+
+@Immutable
+internal data class StatusColors(
     val success: StatusColor,
     val danger: StatusColor,
     val info: Color,
     val warning: Color,
 )
 
-/** Border tiers below [ColorScheme.outline]/[ColorScheme.outlineVariant], plus field and focus. */
 @Immutable
-data class BorderColors(
+internal data class BorderColors(
     val subtle: Color,
     val base: Color,
     val strong: Color,
@@ -138,19 +149,42 @@ data class BorderColors(
     val ring: Color,
 )
 
-/** Palette tiers the Material 3 [ColorScheme] has no slot for. */
 @Immutable
-data class TallybookColors(
+internal data class NavigationColors(
+    val surface: Color,
+    val content: Color,
+    val selected: Color,
+    val divider: Color,
+)
+
+@Immutable
+internal data class TallybookColors(
+    val canvas: Color,
+    val surface: SurfaceColors,
+    val brand: BrandColors,
     val foreground: ForegroundColors,
     val status: StatusColors,
     val border: BorderColors,
     val chart: List<Color>,
+    val navigation: NavigationColors,
 )
 
 internal val LightTallybookColors =
     TallybookColors(
+        canvas = LightCanvas,
+        surface =
+            SurfaceColors(
+                deep = LightSurfaceDeep,
+                sunken = LightSurfaceSunken,
+                card = LightSurfaceCard,
+                raised = LightSurfaceRaised,
+                high = LightSurfaceHigh,
+                highest = LightSurfaceHighest,
+            ),
+        brand = BrandColors(primary = LightPrimary, onPrimary = LightPrimaryForeground),
         foreground =
             ForegroundColors(
+                primary = LightForeground,
                 secondary = LightFgSecondary,
                 tertiary = LightFgTertiary,
                 faint = LightFgFaint,
@@ -183,12 +217,31 @@ internal val LightTallybookColors =
                 ring = LightRing,
             ),
         chart = LightChart,
+        navigation =
+            NavigationColors(
+                surface = LightSurfaceCard,
+                content = LightFgTertiary,
+                selected = LightPrimary,
+                divider = LightBorderSubtle,
+            ),
     )
 
 internal val DarkTallybookColors =
     TallybookColors(
+        canvas = DarkCanvas,
+        surface =
+            SurfaceColors(
+                deep = DarkSurfaceDeep,
+                sunken = DarkSurfaceSunken,
+                card = DarkSurfaceCard,
+                raised = DarkSurfaceRaised,
+                high = DarkSurfaceHigh,
+                highest = DarkSurfaceHighest,
+            ),
+        brand = BrandColors(primary = DarkPrimary, onPrimary = DarkPrimaryForeground),
         foreground =
             ForegroundColors(
+                primary = DarkForeground,
                 secondary = DarkFgSecondary,
                 tertiary = DarkFgTertiary,
                 faint = DarkFgFaint,
@@ -221,9 +274,16 @@ internal val DarkTallybookColors =
                 ring = DarkRing,
             ),
         chart = DarkChart,
+        navigation =
+            NavigationColors(
+                surface = DarkSurfaceCard,
+                content = DarkFgTertiary,
+                selected = DarkPrimary,
+                divider = DarkBorderSubtle,
+            ),
     )
 
-val LocalTallybookColors = staticCompositionLocalOf { LightTallybookColors }
+internal val LocalTallybookColors = staticCompositionLocalOf { LightTallybookColors }
 
 internal val LightColorScheme: ColorScheme =
     lightColorScheme(
