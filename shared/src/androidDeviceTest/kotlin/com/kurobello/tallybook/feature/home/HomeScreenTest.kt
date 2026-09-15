@@ -1,10 +1,21 @@
 package com.kurobello.tallybook.feature.home
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
@@ -16,6 +27,7 @@ import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.time.Instant
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
@@ -24,14 +36,60 @@ import org.jetbrains.compose.resources.getString
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.app_name
 import tallybook.shared.generated.resources.home_add_first
+import tallybook.shared.generated.resources.home_empty_title
+import tallybook.shared.generated.resources.home_load_error_title
 import tallybook.shared.generated.resources.home_recent
+import tallybook.shared.generated.resources.home_search_placeholder
 import tallybook.shared.generated.resources.loading
 import tallybook.shared.generated.resources.retry
 
 class HomeScreenTest {
 
   @get:Rule val composeRule = createComposeRule()
+
+  @Test
+  fun outerShellKeepsBrandAndSearchVisibleWhileLoading() {
+    val appName = localizedString(Res.string.app_name)
+    val searchPlaceholder = localizedString(Res.string.home_search_placeholder)
+    composeRule.setContent { TallybookTheme { HomeScreen(HomeUiState.loading(), {}, {}) } }
+
+    composeRule
+        .onNodeWithText(appName)
+        .assertIsDisplayed()
+        .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
+    composeRule.onNodeWithText(searchPlaceholder).assertIsDisplayed()
+  }
+
+  @Test
+  fun outerShellBaselineHeightsGrowForLargeText() {
+    val appName = localizedString(Res.string.app_name)
+    val searchPlaceholder = localizedString(Res.string.home_search_placeholder)
+    var deviceDensity: Density? = null
+    composeRule.setContent {
+      val currentDensity = LocalDensity.current
+      deviceDensity = currentDensity
+      CompositionLocalProvider(
+          LocalDensity provides Density(currentDensity.density, fontScale = 3f)
+      ) {
+        TallybookTheme { HomeScreen(HomeUiState.loading(), {}, {}) }
+      }
+    }
+
+    val density = checkNotNull(deviceDensity)
+    val headerHeight =
+        with(density) {
+          composeRule.onNodeWithText(appName).fetchSemanticsNode().size.height.toDp()
+        }
+    val searchHeight =
+        with(density) {
+          composeRule.onNodeWithText(searchPlaceholder).fetchSemanticsNode().size.height.toDp()
+        }
+
+    assertTrue(headerHeight > 44.dp)
+    assertTrue(searchHeight > 46.dp)
+  }
 
   @Test
   fun loadingExposesLocalizedProgressAndAddAction() {
@@ -41,6 +99,17 @@ class HomeScreenTest {
 
     composeRule.onNodeWithContentDescription(loadingDescription).assertIsDisplayed()
     composeRule.onNodeWithContentDescription(addMovementLabel).assertIsDisplayed()
+  }
+
+  @Test
+  fun emptyStateTitleIsAHeading() {
+    val emptyTitle = localizedString(Res.string.home_empty_title)
+    composeRule.setContent { TallybookTheme { HomeScreen(emptyState, {}, {}) } }
+
+    composeRule
+        .onNodeWithText(emptyTitle)
+        .assertIsDisplayed()
+        .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
   }
 
   @Test
@@ -72,6 +141,24 @@ class HomeScreenTest {
     composeRule.onNodeWithText(retryLabel).performClick()
 
     composeRule.runOnIdle { assertEquals(1, retries) }
+  }
+
+  @Test
+  fun errorStateBecomesAPoliteLiveRegion() {
+    val errorTitle = localizedString(Res.string.home_load_error_title)
+    var uiState by mutableStateOf(HomeUiState.loading())
+    composeRule.setContent { TallybookTheme { HomeScreen(uiState, {}, {}) } }
+
+    composeRule.runOnIdle { uiState = HomeUiState.error(DataError.Local(IllegalStateException())) }
+
+    composeRule
+        .onNodeWithText(errorTitle)
+        .assert(
+            SemanticsMatcher.expectValue(
+                SemanticsProperties.LiveRegion,
+                LiveRegionMode.Polite,
+            )
+        )
   }
 
   @Test

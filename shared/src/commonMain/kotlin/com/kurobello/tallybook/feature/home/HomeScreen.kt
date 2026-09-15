@@ -1,21 +1,10 @@
 package com.kurobello.tallybook.feature.home
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -27,28 +16,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.kurobello.tallybook.core.ui.movimiento.BalanceCard
-import com.kurobello.tallybook.core.ui.movimiento.MovimientoRow
+import com.kurobello.tallybook.core.ui.component.TallybookText
+import com.kurobello.tallybook.core.ui.layout.TallybookScreenFrame
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.ui.AddMovimientoSheetRoute
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.app_name
 import tallybook.shared.generated.resources.category_comida
 import tallybook.shared.generated.resources.home_add_first
-import tallybook.shared.generated.resources.home_empty_body
-import tallybook.shared.generated.resources.home_empty_title
-import tallybook.shared.generated.resources.home_load_error_body
-import tallybook.shared.generated.resources.home_load_error_title
-import tallybook.shared.generated.resources.home_recent
-import tallybook.shared.generated.resources.loading
-import tallybook.shared.generated.resources.retry
 
 @Composable
 internal fun HomeRoute(
@@ -142,91 +122,28 @@ internal fun HomeScreen(
     modifier: Modifier = Modifier,
 ) {
   val addMovementLabel = stringResource(Res.string.home_add_first)
-  Scaffold(
-      modifier = modifier,
-      topBar = { TopAppBar(title = { Text(stringResource(Res.string.app_name)) }) },
-      floatingActionButton = {
-        FloatingActionButton(
-            modifier = Modifier.semantics { contentDescription = addMovementLabel },
-            onClick = onAddMovimiento,
-        ) {
-          Text("+")
-        }
-      },
-  ) { contentPadding ->
-    when {
-      uiState.isLoading -> HomeLoading(contentPadding)
-      uiState.error != null -> HomeError(contentPadding, onRetry)
-      uiState.isEmpty -> HomeEmpty(contentPadding, onAddMovimiento)
-      else -> HomePopulated(uiState, contentPadding)
+  TallybookScreenFrame(modifier = modifier) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding =
+            PaddingValues(bottom = TallybookTheme.dimensions.homeFloatingActionClearance),
+    ) {
+      item { HomeHeader(modifier = Modifier.padding(bottom = TallybookTheme.spacing.space20)) }
+      item { HomeSearch(modifier = Modifier.padding(bottom = TallybookTheme.spacing.space18)) }
+      when {
+        uiState.isLoading -> item { HomeLoading() }
+        uiState.error != null -> item { HomeError(onRetry) }
+        uiState.isEmpty -> item { HomeEmpty(onAddMovimiento) }
+        else -> homePopulated(uiState)
+      }
     }
-  }
-}
 
-@Composable
-private fun HomeLoading(contentPadding: PaddingValues) {
-  val loadingDescription = stringResource(Res.string.loading)
-  Box(
-      modifier = Modifier.fillMaxSize().padding(contentPadding),
-      contentAlignment = Alignment.Center,
-  ) {
-    CircularProgressIndicator(
-        modifier = Modifier.semantics { contentDescription = loadingDescription }
-    )
-  }
-}
-
-@Composable
-private fun HomeError(contentPadding: PaddingValues, onRetry: () -> Unit) {
-  Column(
-      modifier = Modifier.fillMaxSize().padding(contentPadding).padding(24.dp),
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.Center,
-  ) {
-    Text(
-        text = stringResource(Res.string.home_load_error_title),
-        style = MaterialTheme.typography.titleLarge,
-    )
-    Text(text = stringResource(Res.string.home_load_error_body))
-    Button(onClick = onRetry) { Text(stringResource(Res.string.retry)) }
-  }
-}
-
-@Composable
-private fun HomeEmpty(contentPadding: PaddingValues, onAddMovimiento: () -> Unit) {
-  Column(
-      modifier = Modifier.fillMaxSize().padding(contentPadding).padding(24.dp),
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.Center,
-  ) {
-    Text(
-        text = stringResource(Res.string.home_empty_title),
-        style = MaterialTheme.typography.titleLarge,
-    )
-    Text(text = stringResource(Res.string.home_empty_body))
-    Button(onClick = onAddMovimiento) { Text(stringResource(Res.string.home_add_first)) }
-  }
-}
-
-@Composable
-private fun HomePopulated(uiState: HomeUiState, contentPadding: PaddingValues) {
-  LazyColumn(
-      modifier = Modifier.fillMaxSize(),
-      contentPadding = contentPadding,
-      verticalArrangement = Arrangement.spacedBy(12.dp),
-  ) {
-    item {
-      BalanceCard(summary = uiState.summary, modifier = Modifier.fillMaxWidth().padding(16.dp))
-    }
-    item {
-      Text(stringResource(Res.string.home_recent), modifier = Modifier.padding(horizontal = 16.dp))
-    }
-    items(items = uiState.recent, key = { it.id }) { movimiento ->
-      MovimientoRow(
-          movimiento = movimiento,
-          categoria = uiState.categoriasById[movimiento.categoriaId],
-          modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-      )
+    FloatingActionButton(
+        modifier =
+            Modifier.align(Alignment.BottomEnd).semantics { contentDescription = addMovementLabel },
+        onClick = onAddMovimiento,
+    ) {
+      TallybookText("+")
     }
   }
 }

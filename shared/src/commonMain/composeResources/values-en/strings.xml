@@ -11,6 +11,7 @@
     <string name="home_empty_title">No movements yet</string>
     <string name="home_empty_body">Add your first expense or income to start understanding your balance.</string>
     <string name="home_add_first">Add first movement</string>
+    <string name="home_search_placeholder">Search movements</string>
     <string name="home_load_error_title">We couldn’t load your movements</string>
     <string name="home_load_error_body">Your movements are still saved. Try loading them again.</string>
 

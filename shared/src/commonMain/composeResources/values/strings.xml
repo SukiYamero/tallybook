@@ -11,6 +11,7 @@
     <string name="home_empty_title">Todavía no hay movimientos</string>
     <string name="home_empty_body">Agrega tu primer gasto o ingreso para empezar a entender tu balance.</string>
     <string name="home_add_first">Agregar primer movimiento</string>
+    <string name="home_search_placeholder">Buscar movimientos</string>
     <string name="home_load_error_title">No pudimos cargar tus movimientos</string>
     <string name="home_load_error_body">Tus movimientos siguen guardados. Intenta cargarlos de nuevo.</string>
 

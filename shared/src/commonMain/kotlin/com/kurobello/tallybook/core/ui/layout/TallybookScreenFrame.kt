@@ -6,10 +6,14 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -25,11 +29,17 @@ internal fun TallybookScreenFrame(
           safeInsets = WindowInsets.safeDrawing.asPaddingValues(),
           layoutDirection = LocalLayoutDirection.current,
       )
-  Box(
-      modifier =
-          modifier.fillMaxSize().background(TallybookTheme.colors.canvas).padding(contentPadding),
-      content = content,
-  )
+  Box(modifier = modifier.fillMaxSize().background(TallybookTheme.colors.canvas)) {
+    Box(
+        modifier =
+            Modifier.align(Alignment.TopCenter)
+                .widthIn(max = TallybookTheme.dimensions.screenContentMaxWidth)
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(contentPadding),
+        content = content,
+    )
+  }
 }
 
 internal fun screenContentPadding(
