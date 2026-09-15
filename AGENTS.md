@@ -114,8 +114,9 @@ Los nombres de test siguen el estilo de su source set — camelCase en `commonTe
 
 ## 5. Límites — qué el agente nunca debe tocar
 
-- `iosApp/Configuration/Config.xcconfig` → `TEAM_ID` (firma personal de Xcode, se completa a mano una
-  vez logueado con el Apple ID) y cualquier `*.mobileprovision`/certificado.
+- `TEAM_ID` en `iosApp/Configuration/Config.xcconfig` es el identificador compartido del equipo de
+  firma y se versiona para que todos los worktrees usen la misma configuración. Certificados,
+  perfiles `*.mobileprovision`, cuentas y credenciales siguen siendo locales y nunca se versionan.
 - `local.properties`, `*.keystore`, `.env` si se agregan más adelante.
 - Contenido interno de `iosApp.xcodeproj/project.pbxproj` — editar desde Xcode, no a mano.
 
@@ -137,6 +138,8 @@ prueba del punto de integración y ejecución en el target que corresponda.
 
 - Branches: `feat/`, `fix/`.
 - Commits: conventional commits (`feat:`, `fix:`, `chore:`).
+- Los worktrees heredan `TEAM_ID` desde `Config.xcconfig`; no seleccionar un equipo distinto en
+  Xcode salvo que el equipo del proyecto cambie, porque esa acción reescribe `project.pbxproj`.
 - Este AGENTS.md se actualiza en el mismo PR que cambia una convención.
 
 ## 8. Workflow de desarrollo y documentación
