@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -18,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Density
 import com.kurobello.tallybook.core.ui.category.CategoryAvatar
@@ -41,6 +43,10 @@ import tallybook.shared.generated.resources.ui_catalog_data_display
 import tallybook.shared.generated.resources.ui_catalog_foundations
 import tallybook.shared.generated.resources.ui_catalog_light
 import tallybook.shared.generated.resources.ui_catalog_navigation
+import tallybook.shared.generated.resources.ui_catalog_sample_body_emphasis
+import tallybook.shared.generated.resources.ui_catalog_sample_body_small
+import tallybook.shared.generated.resources.ui_catalog_sample_caption
+import tallybook.shared.generated.resources.ui_catalog_sample_label
 import tallybook.shared.generated.resources.ui_catalog_sample_text
 import tallybook.shared.generated.resources.ui_catalog_system
 import tallybook.shared.generated.resources.ui_catalog_text_extra_large
@@ -88,7 +94,8 @@ internal fun UiCatalogScreen(
     onFontScaleChange: (CatalogFontScale) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-  val fixtures = uiCatalogFixtures(stringResource(Res.string.category_comida))
+  val categoryName = stringResource(Res.string.category_comida)
+  val fixtures = remember(categoryName) { uiCatalogFixtures(categoryName) }
   val foundations = stringResource(Res.string.ui_catalog_foundations)
   val actions = stringResource(Res.string.ui_catalog_actions)
   val dataDisplay = stringResource(Res.string.ui_catalog_data_display)
@@ -163,24 +170,48 @@ private fun LazyListScope.catalogFoundations(
     CatalogSurface {
       TallybookText(
           text = stringResource(Res.string.ui_catalog_sample_text),
-          style = TallybookTheme.typography.title,
+          style = TallybookTheme.typography.body,
       )
-      CatalogThemeMode.entries.forEach { mode ->
-        TallybookButton(
-            onClick = { onThemeModeChange(mode) },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = themeMode != mode,
-        ) {
-          TallybookText(text = mode.label())
+      TallybookText(
+          text = stringResource(Res.string.ui_catalog_sample_caption),
+          style = TallybookTheme.typography.caption,
+      )
+      TallybookText(
+          text = stringResource(Res.string.ui_catalog_sample_label),
+          style = TallybookTheme.typography.label,
+      )
+      TallybookText(
+          text = stringResource(Res.string.ui_catalog_sample_body_small),
+          style = TallybookTheme.typography.bodySmall,
+      )
+      TallybookText(
+          text = stringResource(Res.string.ui_catalog_sample_body_emphasis),
+          style = TallybookTheme.typography.bodyEmphasis,
+      )
+      Column(
+          modifier = Modifier.selectableGroup(),
+          verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
+      ) {
+        CatalogThemeMode.entries.forEach { mode ->
+          TallybookButton(
+              onClick = { onThemeModeChange(mode) },
+              modifier = Modifier.fillMaxWidth().semantics { selected = themeMode == mode },
+          ) {
+            TallybookText(text = mode.label())
+          }
         }
       }
-      CatalogFontScale.entries.forEach { scale ->
-        TallybookButton(
-            onClick = { onFontScaleChange(scale) },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = fontScale != scale,
-        ) {
-          TallybookText(text = scale.label())
+      Column(
+          modifier = Modifier.selectableGroup(),
+          verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
+      ) {
+        CatalogFontScale.entries.forEach { scale ->
+          TallybookButton(
+              onClick = { onFontScaleChange(scale) },
+              modifier = Modifier.fillMaxWidth().semantics { selected = fontScale == scale },
+          ) {
+            TallybookText(text = scale.label())
+          }
         }
       }
     }

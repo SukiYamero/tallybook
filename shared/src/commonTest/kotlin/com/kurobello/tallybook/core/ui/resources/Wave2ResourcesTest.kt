@@ -23,6 +23,10 @@ class Wave2ResourcesTest {
             Res.string.ui_catalog_text_large,
             Res.string.ui_catalog_text_extra_large,
             Res.string.ui_catalog_sample_text,
+            Res.string.ui_catalog_sample_caption,
+            Res.string.ui_catalog_sample_label,
+            Res.string.ui_catalog_sample_body_small,
+            Res.string.ui_catalog_sample_body_emphasis,
             Res.string.startup_error_title,
             Res.string.startup_error_body,
             Res.string.retry,
@@ -130,6 +134,6 @@ class Wave2ResourcesTest {
             Res.string.category_reembolso,
         )
 
-    assertEquals(118, resources.distinct().size)
+    assertEquals(122, resources.distinct().size)
   }
 }

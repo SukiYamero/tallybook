@@ -12,6 +12,10 @@
     <string name="ui_catalog_text_large">Large</string>
     <string name="ui_catalog_text_extra_large">Extra large</string>
     <string name="ui_catalog_sample_text">Sample text</string>
+    <string name="ui_catalog_sample_caption">Sample caption</string>
+    <string name="ui_catalog_sample_label">Sample label</string>
+    <string name="ui_catalog_sample_body_small">Sample small text</string>
+    <string name="ui_catalog_sample_body_emphasis">Sample emphasized text</string>
     <string name="startup_error_title">No pudimos preparar tus datos</string>
     <string name="startup_error_body">Tus datos existentes siguen guardados. Intenta abrirlos de nuevo.</string>
     <string name="retry">Reintentar</string>
