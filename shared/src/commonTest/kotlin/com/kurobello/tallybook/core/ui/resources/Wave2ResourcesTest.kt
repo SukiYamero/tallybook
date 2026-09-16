@@ -27,6 +27,30 @@ class Wave2ResourcesTest {
             Res.string.ui_catalog_sample_label,
             Res.string.ui_catalog_sample_body_small,
             Res.string.ui_catalog_sample_body_emphasis,
+            Res.string.ui_catalog_icon_buttons,
+            Res.string.ui_catalog_text_fields,
+            Res.string.ui_catalog_search_fields,
+            Res.string.ui_catalog_segmented_controls,
+            Res.string.ui_catalog_selection_fields,
+            Res.string.ui_catalog_loading_states,
+            Res.string.ui_catalog_state_default,
+            Res.string.ui_catalog_state_populated,
+            Res.string.ui_catalog_state_disabled,
+            Res.string.ui_catalog_state_selected,
+            Res.string.ui_catalog_state_supporting,
+            Res.string.ui_catalog_state_error,
+            Res.string.ui_catalog_icon_button,
+            Res.string.ui_catalog_disabled_icon_button,
+            Res.string.ui_catalog_text_field_label,
+            Res.string.ui_catalog_text_field_placeholder,
+            Res.string.ui_catalog_text_field_value,
+            Res.string.ui_catalog_text_field_supporting,
+            Res.string.ui_catalog_text_field_error,
+            Res.string.ui_catalog_clear_search,
+            Res.string.ui_catalog_search_query,
+            Res.string.ui_catalog_select_category,
+            Res.string.ui_catalog_selection_supporting,
+            Res.string.ui_catalog_loading_supporting,
             Res.string.startup_error_title,
             Res.string.startup_error_body,
             Res.string.retry,
@@ -134,6 +158,6 @@ class Wave2ResourcesTest {
             Res.string.category_reembolso,
         )
 
-    assertEquals(122, resources.distinct().size)
+    assertEquals(146, resources.distinct().size)
   }
 }
