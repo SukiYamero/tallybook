@@ -12,7 +12,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kurobello.tallybook.core.ui.navigation.Home
 import com.kurobello.tallybook.core.ui.navigation.TallybookNavHost
+import com.kurobello.tallybook.core.ui.navigation.UiCatalog
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -22,19 +24,31 @@ import tallybook.shared.generated.resources.startup_error_body
 import tallybook.shared.generated.resources.startup_error_title
 
 @Composable
-fun App() {
+fun App(launchMode: AppLaunchMode = AppLaunchMode.Standard) {
   TallybookTheme {
     val viewModel: AppStartupViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    AppStartupContent(uiState = uiState, onRetry = viewModel::onRetry)
+    AppStartupContent(uiState = uiState, launchMode = launchMode, onRetry = viewModel::onRetry)
   }
 }
 
 @Composable
-private fun AppStartupContent(uiState: AppStartupUiState, onRetry: () -> Unit) {
+private fun AppStartupContent(
+    uiState: AppStartupUiState,
+    launchMode: AppLaunchMode,
+    onRetry: () -> Unit,
+) {
   when (uiState) {
     AppStartupUiState.Initializing -> StartupLoading()
-    AppStartupUiState.Ready -> TallybookNavHost()
+    AppStartupUiState.Ready ->
+        TallybookNavHost(
+            startDestination =
+                if (launchMode == AppLaunchMode.UiCatalog) {
+                  UiCatalog
+                } else {
+                  Home
+                }
+        )
     AppStartupUiState.Error -> StartupError(onRetry)
   }
 }

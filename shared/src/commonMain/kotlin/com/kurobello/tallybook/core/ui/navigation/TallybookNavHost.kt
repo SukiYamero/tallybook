@@ -11,6 +11,7 @@ import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.serialization.NavBackStackSerializer
 import androidx.navigation3.ui.NavDisplay
+import com.kurobello.tallybook.core.ui.catalog.UiCatalogRoute
 import com.kurobello.tallybook.feature.home.HomeRoute
 import kotlinx.serialization.KSerializer
 
@@ -26,7 +27,11 @@ fun TallybookNavHost(startDestination: Destination = Home) {
       transitionSpec = { navigationContentTransform() },
       popTransitionSpec = { navigationContentTransform() },
       predictivePopTransitionSpec = { navigationContentTransform() },
-      entryProvider = entryProvider { entry<Home> { HomeRoute() } },
+      entryProvider =
+          entryProvider {
+            entry<Home> { HomeRoute() }
+            entry<UiCatalog> { UiCatalogRoute() }
+          },
   )
 }
 

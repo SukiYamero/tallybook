@@ -11,6 +11,7 @@ class Wave2ResourcesTest {
     val resources =
         listOf(
             Res.string.app_name,
+            Res.string.ui_catalog_title,
             Res.string.startup_error_title,
             Res.string.startup_error_body,
             Res.string.retry,
@@ -118,6 +119,6 @@ class Wave2ResourcesTest {
             Res.string.category_reembolso,
         )
 
-    assertEquals(106, resources.distinct().size)
+    assertEquals(107, resources.distinct().size)
   }
 }
