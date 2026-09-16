@@ -16,13 +16,11 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -31,6 +29,7 @@ import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Search
 import com.composables.icons.lucide.Wallet
 import com.kurobello.tallybook.core.ui.component.TallybookButton
+import com.kurobello.tallybook.core.ui.component.TallybookLoadingState
 import com.kurobello.tallybook.core.ui.component.TallybookSurface
 import com.kurobello.tallybook.core.ui.component.TallybookSurfaceDefaults
 import com.kurobello.tallybook.core.ui.component.TallybookSurfaceStyle
@@ -110,14 +109,12 @@ internal fun HomeLoading() {
       modifier = Modifier.fillMaxWidth(),
       style = homeStateSurfaceStyle(),
   ) {
-    Box(
-        modifier = Modifier.fillMaxWidth().padding(vertical = TallybookTheme.spacing.space48),
-        contentAlignment = Alignment.Center,
-    ) {
-      CircularProgressIndicator(
-          modifier = Modifier.semantics { contentDescription = loadingDescription }
-      )
-    }
+    TallybookLoadingState(
+        contentDescription = loadingDescription,
+        modifier =
+            Modifier.fillMaxWidth()
+                .heightIn(min = TallybookTheme.dimensions.containedLoadingMinHeight),
+    )
   }
 }
 

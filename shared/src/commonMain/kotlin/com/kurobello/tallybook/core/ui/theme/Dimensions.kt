@@ -19,4 +19,7 @@ internal object TallybookDimensions {
   val bottomNavigationSelectedContainer = 44.dp
   val bottomNavigationAddButton = 54.dp
   val bottomNavigationAddIcon = 26.dp
+  val loadingIndicatorSize = 40.dp
+  val loadingIndicatorStrokeWidth = 4.dp
+  val containedLoadingMinHeight = 144.dp
 }

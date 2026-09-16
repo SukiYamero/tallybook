@@ -5,10 +5,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.StringResource
@@ -16,6 +19,7 @@ import org.jetbrains.compose.resources.getString
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.loading
 import tallybook.shared.generated.resources.ui_catalog_actions
 import tallybook.shared.generated.resources.ui_catalog_dark
 import tallybook.shared.generated.resources.ui_catalog_data_display
@@ -42,7 +46,6 @@ class UiCatalogScreenTest {
             Res.string.ui_catalog_foundations,
             Res.string.ui_catalog_actions,
             Res.string.ui_catalog_data_display,
-            Res.string.ui_catalog_navigation,
         )
         .forEach { resource ->
           composeRule
@@ -50,6 +53,14 @@ class UiCatalogScreenTest {
               .performScrollTo()
               .assertIsDisplayed()
         }
+    composeRule.onNode(hasScrollAction()).performScrollToIndex(4)
+    composeRule
+        .onNodeWithText(localizedString(Res.string.ui_catalog_navigation))
+        .assertIsDisplayed()
+    composeRule.onNode(hasScrollAction()).performScrollToIndex(5)
+    composeRule
+        .onNodeWithContentDescription(localizedString(Res.string.loading))
+        .assertIsDisplayed()
   }
 
   @Test

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.Density
 import com.kurobello.tallybook.core.ui.category.CategoryAvatar
 import com.kurobello.tallybook.core.ui.category.CategoryChip
 import com.kurobello.tallybook.core.ui.component.TallybookButton
+import com.kurobello.tallybook.core.ui.component.TallybookLoadingState
 import com.kurobello.tallybook.core.ui.component.TallybookSurface
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.layout.TallybookScreenFrame
@@ -36,6 +38,7 @@ import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_comida
 import tallybook.shared.generated.resources.confirm
+import tallybook.shared.generated.resources.loading
 import tallybook.shared.generated.resources.retry
 import tallybook.shared.generated.resources.ui_catalog_actions
 import tallybook.shared.generated.resources.ui_catalog_dark
@@ -100,6 +103,7 @@ internal fun UiCatalogScreen(
   val actions = stringResource(Res.string.ui_catalog_actions)
   val dataDisplay = stringResource(Res.string.ui_catalog_data_display)
   val navigation = stringResource(Res.string.ui_catalog_navigation)
+  val loading = stringResource(Res.string.loading)
   TallybookScreenFrame(
       modifier = modifier,
       bottomBar = { TallybookBottomNavigation(onAddMovement = {}) },
@@ -127,6 +131,16 @@ internal fun UiCatalogScreen(
       catalogActions(title = actions)
       catalogDataDisplay(title = dataDisplay, fixtures = fixtures)
       catalogSection(key = "navigation", title = navigation) {}
+      catalogSection(key = "loading", title = loading) {
+        CatalogSurface {
+          TallybookLoadingState(
+              contentDescription = loading,
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .heightIn(min = TallybookTheme.dimensions.containedLoadingMinHeight),
+          )
+        }
+      }
     }
   }
 }
