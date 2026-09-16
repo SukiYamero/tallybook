@@ -55,6 +55,26 @@ class TallybookTextFieldTest {
   }
 
   @Test
+  fun rapidConsecutiveEditsRetainTheLatestParentValue() {
+    val parentValue = mutableStateOf("")
+    composeRule.setContent {
+      TallybookTheme {
+        TallybookTextField(
+            value = parentValue.value,
+            onValueChange = { parentValue.value = it },
+            label = "Description",
+        )
+      }
+    }
+
+    composeRule.onNodeWithContentDescription("Description").performTextInput("L")
+    composeRule.onNodeWithContentDescription("Description").performTextInput("unch")
+
+    composeRule.onNodeWithContentDescription("Description").assertTextEquals("Lunch")
+    composeRule.runOnIdle { assertEquals("Lunch", parentValue.value) }
+  }
+
+  @Test
   fun rejectedEditRetainsParentValue() {
     val parentValue = mutableStateOf("")
     val callbackCount = mutableIntStateOf(0)

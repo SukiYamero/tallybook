@@ -13,15 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,7 +28,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import com.kurobello.tallybook.core.ui.theme.TallybookSpacing
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
-import kotlinx.coroutines.yield
 
 @Composable
 @Suppress("LongParameterList")
@@ -53,7 +46,6 @@ internal fun TallybookTextField(
     leadingContent: (@Composable () -> Unit)? = null,
     trailingContent: (@Composable () -> Unit)? = null,
 ) {
-  val state = rememberTallybookTextFieldState(value = value, onValueChange = onValueChange)
   val interactionSource = remember { MutableInteractionSource() }
   val isFocused by interactionSource.collectIsFocusedAsState()
   val isError = message is TallybookFieldMessage.Error
@@ -62,7 +54,7 @@ internal fun TallybookTextField(
       tallybookTextFieldAppearance(enabled = enabled, isFocused = isFocused, isError = isError)
   val decoration =
       TallybookTextFieldDecorationParameters(
-          state = state,
+          value = value,
           placeholder = placeholder,
           textStyle = textStyle,
           appearance = appearance,
@@ -82,7 +74,8 @@ internal fun TallybookTextField(
       )
     }
     BasicTextField(
-        state = state,
+        value = value,
+        onValueChange = onValueChange,
         modifier =
             Modifier.semantics {
               if (inputDescription != null) {
@@ -96,10 +89,9 @@ internal fun TallybookTextField(
         readOnly = readOnly,
         textStyle = textStyle.merge(color = appearance.valueColor),
         keyboardOptions = keyboardOptions,
-        lineLimits =
-            if (singleLine) TextFieldLineLimits.SingleLine else TextFieldLineLimits.Default,
+        singleLine = singleLine,
         interactionSource = interactionSource,
-        decorator = { innerTextField ->
+        decorationBox = { innerTextField ->
           TallybookTextFieldDecoration(
               parameters = decoration,
               innerTextField = innerTextField,
@@ -110,36 +102,6 @@ internal fun TallybookTextField(
       TallybookFieldMessageContent(message = message)
     }
   }
-}
-
-@Composable
-private fun rememberTallybookTextFieldState(
-    value: String,
-    onValueChange: (String) -> Unit,
-): TextFieldState {
-  val state = rememberTextFieldState(value)
-  val currentOnValueChange by rememberUpdatedState(onValueChange)
-  val currentValue by rememberUpdatedState(value)
-  LaunchedEffect(state) {
-    snapshotFlow { state.text.toString() }
-        .collect { editedValue ->
-          if (editedValue != currentValue) {
-            currentOnValueChange(editedValue)
-            // Yield lets a synchronous parent response become the source of truth before
-            // reconciliation.
-            yield()
-            if (state.text.toString() != currentValue) {
-              state.edit { replace(0, length, currentValue) }
-            }
-          }
-        }
-  }
-  LaunchedEffect(value) {
-    if (state.text.toString() != value) {
-      state.edit { replace(0, length, value) }
-    }
-  }
-  return state
 }
 
 @Composable
@@ -170,7 +132,7 @@ private fun TallybookTextFieldDecoration(
       }
     }
     Box(modifier = Modifier.weight(1f)) {
-      if (parameters.state.text.isEmpty() && parameters.placeholder != null) {
+      if (parameters.value.isEmpty() && parameters.placeholder != null) {
         TallybookText(
             text = parameters.placeholder,
             color = parameters.appearance.placeholderColor,
@@ -188,7 +150,7 @@ private fun TallybookTextFieldDecoration(
 }
 
 private data class TallybookTextFieldDecorationParameters(
-    val state: TextFieldState,
+    val value: String,
     val placeholder: String?,
     val textStyle: TextStyle,
     val appearance: TallybookTextFieldAppearance,
