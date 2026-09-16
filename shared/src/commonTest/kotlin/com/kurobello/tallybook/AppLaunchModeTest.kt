@@ -1,5 +1,7 @@
 package com.kurobello.tallybook
 
+import com.kurobello.tallybook.core.ui.navigation.Home
+import com.kurobello.tallybook.core.ui.navigation.UiCatalog
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -34,5 +36,15 @@ class AppLaunchModeTest {
         AppLaunchMode.UiCatalog,
         resolveAppLaunchMode(developmentToolsEnabled = true, uiCatalogRequested = true),
     )
+  }
+
+  @Test
+  fun standardLaunchStartsAtHome() {
+    assertEquals(Home, startDestinationFor(AppLaunchMode.Standard))
+  }
+
+  @Test
+  fun catalogLaunchStartsAtUiCatalog() {
+    assertEquals(UiCatalog, startDestinationFor(AppLaunchMode.UiCatalog))
   }
 }

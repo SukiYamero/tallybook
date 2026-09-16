@@ -106,7 +106,7 @@ internal fun UiCatalogScreen(
   val loading = stringResource(Res.string.loading)
   TallybookScreenFrame(
       modifier = modifier,
-      bottomBar = { TallybookBottomNavigation(onAddMovement = {}) },
+      bottomBar = { TallybookBottomNavigation(onAddMovement = {}, selectedDestination = null) },
   ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),

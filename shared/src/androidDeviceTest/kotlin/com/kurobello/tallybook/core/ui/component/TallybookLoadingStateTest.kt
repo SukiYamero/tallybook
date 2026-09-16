@@ -62,7 +62,7 @@ class TallybookLoadingStateTest {
   }
 
   @Test
-  fun loadingStateKeepsIndicatorAndSupportingTextInsideOwnedRegionAtDoubleFontScale() {
+  fun loadingStateCentersIndicatorAndKeepsSupportingTextInsideRegionAtDoubleFontScale() {
     composeRule.mainClock.autoAdvance = false
     composeRule.setContent {
       val density = LocalDensity.current
@@ -90,10 +90,8 @@ class TallybookLoadingStateTest {
 
     composeRule.onNodeWithContentDescription("Loading movements").assertIsDisplayed()
     composeRule.onNodeWithText("Loading your movements").assertIsDisplayed()
-    assertTrue(indicator.left >= region.left)
-    assertTrue(indicator.right <= region.right)
-    assertTrue(indicator.top >= region.top)
-    assertTrue(indicator.bottom <= region.bottom)
+    assertEquals(region.center.x, indicator.center.x, absoluteTolerance = 1f)
+    assertEquals(region.center.y, indicator.center.y, absoluteTolerance = 1f)
     assertTrue(supportingText.left >= region.left)
     assertTrue(supportingText.right <= region.right)
     assertTrue(supportingText.top >= region.top)

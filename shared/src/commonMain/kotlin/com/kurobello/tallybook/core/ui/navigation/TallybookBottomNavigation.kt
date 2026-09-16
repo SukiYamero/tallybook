@@ -49,6 +49,7 @@ import tallybook.shared.generated.resources.navigation_search
 internal fun TallybookBottomNavigation(
     onAddMovement: () -> Unit,
     modifier: Modifier = Modifier,
+    selectedDestination: Destination? = Home,
 ) {
   Column(
       modifier = modifier.fillMaxWidth().background(TallybookTheme.colors.navigation.surface),
@@ -71,7 +72,7 @@ internal fun TallybookBottomNavigation(
       BottomNavigationIcon(
           icon = Lucide.House,
           label = stringResource(Res.string.navigation_home),
-          selected = true,
+          selected = selectedDestination == Home,
           modifier = Modifier.weight(1f),
       )
       BottomNavigationIcon(

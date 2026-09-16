@@ -3,6 +3,11 @@ package com.kurobello.tallybook.core.ui.catalog
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasScrollAction
@@ -20,6 +25,11 @@ import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.loading
+import tallybook.shared.generated.resources.navigation_add_movement
+import tallybook.shared.generated.resources.navigation_history
+import tallybook.shared.generated.resources.navigation_home
+import tallybook.shared.generated.resources.navigation_profile
+import tallybook.shared.generated.resources.navigation_search
 import tallybook.shared.generated.resources.ui_catalog_actions
 import tallybook.shared.generated.resources.ui_catalog_dark
 import tallybook.shared.generated.resources.ui_catalog_data_display
@@ -80,6 +90,28 @@ class UiCatalogScreenTest {
               .performScrollTo()
               .assertIsDisplayed()
         }
+  }
+
+  @Test
+  fun catalogBottomNavigationHasNoSelectedProductDestinationAndPreservesActions() {
+    val unavailableDestinations =
+        listOf(
+            Res.string.navigation_home,
+            Res.string.navigation_history,
+            Res.string.navigation_search,
+            Res.string.navigation_profile,
+        )
+    composeRule.setContent { UiCatalogRoute() }
+
+    unavailableDestinations.forEach { destination ->
+      composeRule
+          .onNodeWithContentDescription(localizedString(destination))
+          .assertHasNoClickAction()
+          .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
+    }
+    composeRule
+        .onNodeWithContentDescription(localizedString(Res.string.navigation_add_movement))
+        .assertHasClickAction()
   }
 
   @Test

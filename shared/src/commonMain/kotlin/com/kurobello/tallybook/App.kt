@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kurobello.tallybook.core.ui.component.TallybookLoadingState
+import com.kurobello.tallybook.core.ui.navigation.Destination
 import com.kurobello.tallybook.core.ui.navigation.Home
 import com.kurobello.tallybook.core.ui.navigation.TallybookNavHost
 import com.kurobello.tallybook.core.ui.navigation.UiCatalog
@@ -41,18 +42,16 @@ private fun AppStartupContent(
 ) {
   when (uiState) {
     AppStartupUiState.Initializing -> StartupLoading()
-    AppStartupUiState.Ready ->
-        TallybookNavHost(
-            startDestination =
-                if (launchMode == AppLaunchMode.UiCatalog) {
-                  UiCatalog
-                } else {
-                  Home
-                }
-        )
+    AppStartupUiState.Ready -> TallybookNavHost(startDestination = startDestinationFor(launchMode))
     AppStartupUiState.Error -> StartupError(onRetry)
   }
 }
+
+internal fun startDestinationFor(launchMode: AppLaunchMode): Destination =
+    when (launchMode) {
+      AppLaunchMode.Standard -> Home
+      AppLaunchMode.UiCatalog -> UiCatalog
+    }
 
 @Composable
 private fun StartupLoading() {
