@@ -29,4 +29,5 @@ internal object TallybookDimensions {
   val fieldVerticalPadding = TallybookSpacing.space12
   val fieldIconSize = TallybookSpacing.space20
   val fieldBorderWidth = borderThin
+  val segmentedControlMinimumHeight = minimumTouchTarget
 }
