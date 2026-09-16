@@ -34,6 +34,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import com.kurobello.tallybook.core.ui.theme.TallybookSpacing
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import kotlinx.coroutines.yield
 
 @Composable
 @Suppress("LongParameterList")
@@ -121,9 +122,15 @@ private fun rememberTallybookTextFieldState(
   val currentValue by rememberUpdatedState(value)
   LaunchedEffect(state) {
     snapshotFlow { state.text.toString() }
-        .collect { updatedValue ->
-          if (updatedValue != currentValue) {
-            currentOnValueChange(updatedValue)
+        .collect { editedValue ->
+          if (editedValue != currentValue) {
+            currentOnValueChange(editedValue)
+            // Yield lets a synchronous parent response become the source of truth before
+            // reconciliation.
+            yield()
+            if (state.text.toString() != currentValue) {
+              state.edit { replace(0, length, currentValue) }
+            }
           }
         }
   }
