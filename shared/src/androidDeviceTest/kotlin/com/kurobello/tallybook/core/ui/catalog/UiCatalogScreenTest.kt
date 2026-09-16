@@ -12,15 +12,16 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToKey
 import androidx.compose.ui.test.performTextInput
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -59,7 +60,6 @@ import tallybook.shared.generated.resources.ui_catalog_search_fields
 import tallybook.shared.generated.resources.ui_catalog_segmented_controls
 import tallybook.shared.generated.resources.ui_catalog_selection_fields
 import tallybook.shared.generated.resources.ui_catalog_system
-import tallybook.shared.generated.resources.ui_catalog_text_field_label
 import tallybook.shared.generated.resources.ui_catalog_text_fields
 import tallybook.shared.generated.resources.ui_catalog_text_large
 import tallybook.shared.generated.resources.ui_catalog_text_normal
@@ -73,23 +73,21 @@ class UiCatalogScreenTest {
     composeRule.setContent { UiCatalogRoute() }
 
     listOf(
-            Res.string.ui_catalog_foundations,
-            Res.string.ui_catalog_actions,
-            Res.string.ui_catalog_data_display,
+            CatalogSection("foundations", Res.string.ui_catalog_foundations),
+            CatalogSection("actions", Res.string.ui_catalog_actions),
+            CatalogSection("data-display", Res.string.ui_catalog_data_display),
         )
-        .forEach { resource ->
-          composeRule
-              .onNodeWithText(localizedString(resource))
-              .performScrollTo()
-              .assertIsDisplayed()
+        .forEach { section ->
+          scrollTo(section.key)
+          composeRule.onNodeWithText(localizedString(section.title)).assertIsDisplayed()
         }
+    scrollTo("navigation")
     composeRule
         .onNodeWithText(localizedString(Res.string.ui_catalog_navigation))
-        .performScrollTo()
         .assertIsDisplayed()
+    scrollTo("loading-states")
     composeRule
         .onNodeWithContentDescription(localizedString(Res.string.loading))
-        .performScrollTo()
         .assertIsDisplayed()
   }
 
@@ -165,14 +163,16 @@ class UiCatalogScreenTest {
   fun catalogExposesLocalizedControlFamiliesAndRepresentativeStaticStates() {
     composeRule.setContent { UiCatalogRoute() }
 
-    controlFamilyHeadings.forEach { heading ->
-      composeRule.onNodeWithText(localizedString(heading)).performScrollTo().assertIsDisplayed()
+    controlFamilyHeadings.forEach { section ->
+      scrollTo(section.key)
+      composeRule.onNodeWithText(localizedString(section.title)).assertIsDisplayed()
     }
 
+    scrollTo("icon-buttons")
     composeRule
         .onNodeWithContentDescription(localizedString(Res.string.ui_catalog_disabled_icon_button))
-        .performScrollTo()
         .assertIsNotEnabled()
+    scrollTo("selection-fields")
     composeRule
         .onNode(
             hasText(localizedString(Res.string.category)) and
@@ -181,7 +181,6 @@ class UiCatalogScreenTest {
                     localizedString(Res.string.category_required),
                 )
         )
-        .performScrollTo()
         .assertIsDisplayed()
   }
 
@@ -189,14 +188,11 @@ class UiCatalogScreenTest {
   fun catalogEditableTextAndClearableSearchUpdateTheirRenderedState() {
     composeRule.setContent { UiCatalogRoute() }
 
-    val fieldLabel = localizedString(Res.string.ui_catalog_text_field_label)
-    composeRule.onNodeWithText(localizedString(Res.string.ui_catalog_text_fields)).performScrollTo()
-    composeRule.onAllNodesWithContentDescription(fieldLabel)[0].performTextInput("Trip")
+    scrollTo("text-fields")
+    composeRule.onNodeWithTag(CATALOG_TEXT_FIELD_DEFAULT_TAG).performTextInput("Trip")
     composeRule.onNodeWithText("Trip").assertIsDisplayed()
 
-    composeRule
-        .onNodeWithText(localizedString(Res.string.ui_catalog_search_fields))
-        .performScrollTo()
+    scrollTo("search-fields")
     composeRule
         .onNode(
             hasContentDescription(localizedString(Res.string.ui_catalog_clear_search)) and
@@ -219,9 +215,7 @@ class UiCatalogScreenTest {
     composeRule.mainClock.autoAdvance = false
     composeRule.setContent { UiCatalogRoute() }
 
-    composeRule
-        .onNodeWithText(localizedString(Res.string.ui_catalog_segmented_controls))
-        .performScrollTo()
+    scrollTo("segmented-controls")
     composeRule
         .onNode(hasText(localizedString(Res.string.expense)) and isEnabled())
         .assertIsSelected()
@@ -230,9 +224,7 @@ class UiCatalogScreenTest {
         .performClick()
         .assertIsSelected()
 
-    composeRule
-        .onNodeWithText(localizedString(Res.string.ui_catalog_loading_states))
-        .performScrollTo()
+    scrollTo("loading-states")
     val loadingRegion =
         composeRule.onNodeWithTag(CATALOG_LOADING_REGION_TAG).fetchSemanticsNode().boundsInRoot
     val loadingIndicator =
@@ -249,15 +241,21 @@ class UiCatalogScreenTest {
     getString(resource)
   }
 
+  private fun scrollTo(key: String) {
+    composeRule.onNode(hasScrollAction()).performScrollToKey(key)
+  }
+
   private companion object {
     val controlFamilyHeadings =
         listOf(
-            Res.string.ui_catalog_icon_buttons,
-            Res.string.ui_catalog_text_fields,
-            Res.string.ui_catalog_search_fields,
-            Res.string.ui_catalog_segmented_controls,
-            Res.string.ui_catalog_selection_fields,
-            Res.string.ui_catalog_loading_states,
+            CatalogSection("icon-buttons", Res.string.ui_catalog_icon_buttons),
+            CatalogSection("text-fields", Res.string.ui_catalog_text_fields),
+            CatalogSection("search-fields", Res.string.ui_catalog_search_fields),
+            CatalogSection("segmented-controls", Res.string.ui_catalog_segmented_controls),
+            CatalogSection("selection-fields", Res.string.ui_catalog_selection_fields),
+            CatalogSection("loading-states", Res.string.ui_catalog_loading_states),
         )
   }
+
+  private data class CatalogSection(val key: String, val title: StringResource)
 }

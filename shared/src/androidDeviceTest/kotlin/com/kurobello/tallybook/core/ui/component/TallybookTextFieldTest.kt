@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -77,12 +78,12 @@ class TallybookTextFieldTest {
   @Test
   fun rejectedEditRetainsParentValue() {
     val parentValue = mutableStateOf("")
-    val callbackCount = mutableIntStateOf(0)
+    val emittedValues = mutableStateListOf<String>()
     composeRule.setContent {
       TallybookTheme {
         TallybookTextField(
             value = parentValue.value,
-            onValueChange = { callbackCount.intValue += 1 },
+            onValueChange = { emittedValues += it },
             label = "Description",
         )
       }
@@ -93,7 +94,7 @@ class TallybookTextFieldTest {
     composeRule.onNodeWithContentDescription("Description").assertTextEquals("")
     composeRule.runOnIdle {
       assertEquals("", parentValue.value)
-      assertEquals(1, callbackCount.intValue)
+      assertTrue("Lunch" in emittedValues)
     }
   }
 

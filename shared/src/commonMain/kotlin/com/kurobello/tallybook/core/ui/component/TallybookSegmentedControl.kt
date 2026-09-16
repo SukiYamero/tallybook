@@ -14,6 +14,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 
 @Immutable internal data class TallybookSegmentOption<T>(val value: T, val label: String)
@@ -70,18 +74,27 @@ internal fun <T> TallybookSegmentedControl(
             isSelected -> colors.selectedContent
             else -> colors.unselectedContent
           }
+      val selectionModifier =
+          if (enabled) {
+            Modifier.selectable(
+                selected = isSelected,
+                role = Role.RadioButton,
+                onClick = { onSelect(option.value) },
+            )
+          } else {
+            Modifier.semantics {
+              this.selected = isSelected
+              role = Role.RadioButton
+              disabled()
+            }
+          }
       TallybookSurface(
           modifier =
               Modifier.weight(1f)
                   .defaultMinSize(
                       minHeight = TallybookTheme.dimensions.segmentedControlMinimumHeight
                   )
-                  .selectable(
-                      selected = isSelected,
-                      enabled = enabled,
-                      role = Role.RadioButton,
-                      onClick = { onSelect(option.value) },
-                  ),
+                  .then(selectionModifier),
           style =
               TallybookSurfaceStyle(
                   color = containerColor,

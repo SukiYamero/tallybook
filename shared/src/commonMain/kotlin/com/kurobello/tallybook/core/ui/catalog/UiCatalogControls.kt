@@ -67,6 +67,7 @@ import tallybook.shared.generated.resources.ui_catalog_text_field_value
 import tallybook.shared.generated.resources.ui_catalog_text_fields
 
 internal const val CATALOG_LOADING_REGION_TAG = "catalog_loading_region"
+internal const val CATALOG_TEXT_FIELD_DEFAULT_TAG = "catalog_text_field_default"
 
 internal fun LazyListScope.catalogControlMatrices() {
   item(key = "icon-buttons") {
@@ -146,7 +147,7 @@ private fun CatalogTextFieldMatrix() {
       TallybookTextField(
           value = defaultValue,
           onValueChange = { defaultValue = it },
-          modifier = Modifier.fillMaxWidth(),
+          modifier = Modifier.fillMaxWidth().testTag(CATALOG_TEXT_FIELD_DEFAULT_TAG),
           label = label,
           placeholder = placeholder,
       )
