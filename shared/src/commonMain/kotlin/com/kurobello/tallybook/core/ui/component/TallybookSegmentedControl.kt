@@ -92,7 +92,8 @@ internal fun <T> TallybookSegmentedControl(
           modifier =
               Modifier.weight(1f)
                   .defaultMinSize(
-                      minHeight = TallybookTheme.dimensions.segmentedControlMinimumHeight
+                      minWidth = TallybookTheme.dimensions.minimumTouchTarget,
+                      minHeight = TallybookTheme.dimensions.segmentedControlMinimumHeight,
                   )
                   .then(selectionModifier),
           style =

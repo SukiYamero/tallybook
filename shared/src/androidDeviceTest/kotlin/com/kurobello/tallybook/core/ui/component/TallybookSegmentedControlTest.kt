@@ -104,6 +104,39 @@ class TallybookSegmentedControlTest {
     assertTrue(exception.message?.contains("options") == true)
   }
 
+  @Test
+  fun everySegmentMeetsMinimumTouchTarget() {
+    val compactOptions =
+        listOf(
+            TallybookSegmentOption(TransactionType.Expense, "E"),
+            TallybookSegmentOption(TransactionType.Income, "I"),
+        )
+    composeRule.setContent {
+      TallybookTheme {
+        TallybookSegmentedControl(
+            options = compactOptions,
+            selected = TransactionType.Expense,
+            onSelect = {},
+            enabled = false,
+        )
+      }
+    }
+
+    val minimumTouchTargetPx =
+        with(composeRule.density) { TallybookTheme.dimensions.minimumTouchTarget.toPx() }
+    compactOptions.forEach { option ->
+      val bounds = composeRule.onNodeWithText(option.label).fetchSemanticsNode().boundsInRoot
+      assertTrue(
+          bounds.width >= minimumTouchTargetPx,
+          "Expected ${option.label} width ${bounds.width}px to meet $minimumTouchTargetPx px",
+      )
+      assertTrue(
+          bounds.height >= minimumTouchTargetPx,
+          "Expected ${option.label} height ${bounds.height}px to meet $minimumTouchTargetPx px",
+      )
+    }
+  }
+
   private enum class TransactionType {
     Expense,
     Income,

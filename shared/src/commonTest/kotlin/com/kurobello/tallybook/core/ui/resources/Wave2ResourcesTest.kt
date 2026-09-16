@@ -34,6 +34,7 @@ class Wave2ResourcesTest {
             Res.string.ui_catalog_selection_fields,
             Res.string.ui_catalog_loading_states,
             Res.string.ui_catalog_state_default,
+            Res.string.ui_catalog_state_emphasis,
             Res.string.ui_catalog_state_populated,
             Res.string.ui_catalog_state_disabled,
             Res.string.ui_catalog_state_selected,
@@ -158,6 +159,6 @@ class Wave2ResourcesTest {
             Res.string.category_reembolso,
         )
 
-    assertEquals(146, resources.distinct().size)
+    assertEquals(147, resources.distinct().size)
   }
 }

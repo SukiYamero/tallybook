@@ -9,6 +9,7 @@ import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.X
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -49,5 +50,32 @@ class TallybookIconButtonTest {
 
     composeRule.onNodeWithContentDescription("Close sample").assertIsNotEnabled().performClick()
     composeRule.runOnIdle { assertEquals(0, clicks) }
+  }
+
+  @Test
+  fun iconButtonRootMeetsMinimumTouchTarget() {
+    composeRule.setContent {
+      TallybookTheme {
+        TallybookIconButton(
+            onClick = {},
+            icon = Lucide.X,
+            contentDescription = "Close sample",
+        )
+      }
+    }
+
+    val bounds =
+        composeRule.onNodeWithContentDescription("Close sample").fetchSemanticsNode().boundsInRoot
+    val minimumTouchTargetPx =
+        with(composeRule.density) { TallybookTheme.dimensions.minimumTouchTarget.toPx() }
+
+    assertTrue(
+        bounds.width >= minimumTouchTargetPx,
+        "Expected icon-button width ${bounds.width}px to meet $minimumTouchTargetPx px",
+    )
+    assertTrue(
+        bounds.height >= minimumTouchTargetPx,
+        "Expected icon-button height ${bounds.height}px to meet $minimumTouchTargetPx px",
+    )
   }
 }

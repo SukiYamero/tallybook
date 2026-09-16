@@ -23,6 +23,7 @@ import com.composables.icons.lucide.UtensilsCrossed
 import com.composables.icons.lucide.X
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
 import com.kurobello.tallybook.core.ui.component.TallybookIconButton
+import com.kurobello.tallybook.core.ui.component.TallybookIconButtonStyle
 import com.kurobello.tallybook.core.ui.component.TallybookLoadingState
 import com.kurobello.tallybook.core.ui.component.TallybookSearchField
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentOption
@@ -55,6 +56,7 @@ import tallybook.shared.generated.resources.ui_catalog_selection_fields
 import tallybook.shared.generated.resources.ui_catalog_selection_supporting
 import tallybook.shared.generated.resources.ui_catalog_state_default
 import tallybook.shared.generated.resources.ui_catalog_state_disabled
+import tallybook.shared.generated.resources.ui_catalog_state_emphasis
 import tallybook.shared.generated.resources.ui_catalog_state_error
 import tallybook.shared.generated.resources.ui_catalog_state_populated
 import tallybook.shared.generated.resources.ui_catalog_state_selected
@@ -70,29 +72,7 @@ internal const val CATALOG_LOADING_REGION_TAG = "catalog_loading_region"
 internal const val CATALOG_TEXT_FIELD_DEFAULT_TAG = "catalog_text_field_default"
 
 internal fun LazyListScope.catalogControlMatrices() {
-  item(key = "icon-buttons") {
-    CatalogSection(title = stringResource(Res.string.ui_catalog_icon_buttons)) {
-      CatalogSurface {
-        Row(horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space24)) {
-          CatalogSample(label = stringResource(Res.string.ui_catalog_state_default)) {
-            TallybookIconButton(
-                onClick = {},
-                icon = Lucide.X,
-                contentDescription = stringResource(Res.string.ui_catalog_icon_button),
-            )
-          }
-          CatalogSample(label = stringResource(Res.string.ui_catalog_state_disabled)) {
-            TallybookIconButton(
-                onClick = {},
-                icon = Lucide.X,
-                contentDescription = stringResource(Res.string.ui_catalog_disabled_icon_button),
-                enabled = false,
-            )
-          }
-        }
-      }
-    }
-  }
+  item(key = "icon-buttons") { catalogIconButtonMatrix() }
   item(key = "text-fields") {
     CatalogSection(title = stringResource(Res.string.ui_catalog_text_fields)) {
       CatalogTextFieldMatrix()
@@ -124,6 +104,40 @@ internal fun LazyListScope.catalogControlMatrices() {
                     .testTag(CATALOG_LOADING_REGION_TAG),
             supportingText = stringResource(Res.string.ui_catalog_loading_supporting),
         )
+      }
+    }
+  }
+}
+
+private val catalogIconButtonMatrix: @Composable () -> Unit = {
+  CatalogSection(title = stringResource(Res.string.ui_catalog_icon_buttons)) {
+    CatalogSurface {
+      Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space24)) {
+          CatalogSample(label = stringResource(Res.string.ui_catalog_state_default)) {
+            TallybookIconButton(
+                onClick = {},
+                icon = Lucide.X,
+                contentDescription = stringResource(Res.string.ui_catalog_icon_button),
+            )
+          }
+          CatalogSample(label = stringResource(Res.string.ui_catalog_state_emphasis)) {
+            TallybookIconButton(
+                onClick = {},
+                icon = Lucide.X,
+                contentDescription = stringResource(Res.string.ui_catalog_icon_button),
+                style = TallybookIconButtonStyle.Brand,
+            )
+          }
+        }
+        CatalogSample(label = stringResource(Res.string.ui_catalog_state_disabled)) {
+          TallybookIconButton(
+              onClick = {},
+              icon = Lucide.X,
+              contentDescription = stringResource(Res.string.ui_catalog_disabled_icon_button),
+              enabled = false,
+          )
+        }
       }
     }
   }

@@ -23,6 +23,7 @@
     <string name="ui_catalog_selection_fields">Selection fields</string>
     <string name="ui_catalog_loading_states">Loading states</string>
     <string name="ui_catalog_state_default">Default</string>
+    <string name="ui_catalog_state_emphasis">Emphasis</string>
     <string name="ui_catalog_state_populated">Populated</string>
     <string name="ui_catalog_state_disabled">Disabled</string>
     <string name="ui_catalog_state_selected">Selected</string>
