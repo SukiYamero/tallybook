@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Search
+import com.composables.icons.lucide.X
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 
 @Composable
