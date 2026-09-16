@@ -4,7 +4,11 @@ import androidx.compose.ui.window.ComposeUIViewController
 import com.kurobello.tallybook.di.initKoin
 import platform.UIKit.UIViewController
 
-fun MainViewController(): UIViewController {
+fun MainViewController(
+    developmentToolsEnabled: Boolean,
+    uiCatalogRequested: Boolean,
+): UIViewController {
   initKoin()
-  return ComposeUIViewController { App() }
+  val launchMode = resolveAppLaunchMode(developmentToolsEnabled, uiCatalogRequested)
+  return ComposeUIViewController { App(launchMode = launchMode) }
 }

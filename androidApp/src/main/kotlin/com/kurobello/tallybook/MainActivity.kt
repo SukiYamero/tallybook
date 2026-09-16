@@ -5,13 +5,21 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 
+private const val UI_CATALOG_EXTRA = "ui_catalog"
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        val launchMode =
+            resolveAppLaunchMode(
+                developmentToolsEnabled = BuildConfig.DEBUG,
+                uiCatalogRequested = intent.getBooleanExtra(UI_CATALOG_EXTRA, false),
+            )
+
         setContent {
-            App()
+            App(launchMode = launchMode)
         }
     }
 }

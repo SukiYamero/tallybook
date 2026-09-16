@@ -2,9 +2,20 @@ import UIKit
 import SwiftUI
 import Shared
 
+#if DEBUG
+private let developmentToolsEnabled = true
+private let uiCatalogRequested = ProcessInfo.processInfo.arguments.contains("--ui-catalog")
+#else
+private let developmentToolsEnabled = false
+private let uiCatalogRequested = false
+#endif
+
 struct ComposeView: UIViewControllerRepresentable {
     func makeUIViewController(context: Self.Context) -> UIViewController {
-        MainViewControllerKt.MainViewController()
+        MainViewControllerKt.MainViewController(
+            developmentToolsEnabled: developmentToolsEnabled,
+            uiCatalogRequested: uiCatalogRequested
+        )
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Self.Context) {}
