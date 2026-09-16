@@ -15,6 +15,12 @@
     <string name="home_load_error_title">Não foi possível carregar seus movimentos</string>
     <string name="home_load_error_body">Seus movimentos continuam salvos. Tente carregá-los novamente.</string>
 
+    <string name="navigation_home">Início</string>
+    <string name="navigation_history">Histórico</string>
+    <string name="navigation_add_movement">Adicionar movimento</string>
+    <string name="navigation_search">Pesquisar</string>
+    <string name="navigation_profile">Perfil</string>
+
     <string name="add_movimiento_pane_title">Adicionar movimento</string>
     <string name="expense">Despesa</string>
     <string name="income">Receita</string>

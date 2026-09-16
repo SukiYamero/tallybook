@@ -9,7 +9,10 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -43,6 +46,11 @@ import tallybook.shared.generated.resources.home_load_error_title
 import tallybook.shared.generated.resources.home_recent
 import tallybook.shared.generated.resources.home_search_placeholder
 import tallybook.shared.generated.resources.loading
+import tallybook.shared.generated.resources.navigation_add_movement
+import tallybook.shared.generated.resources.navigation_history
+import tallybook.shared.generated.resources.navigation_home
+import tallybook.shared.generated.resources.navigation_profile
+import tallybook.shared.generated.resources.navigation_search
 import tallybook.shared.generated.resources.retry
 
 class HomeScreenTest {
@@ -94,11 +102,54 @@ class HomeScreenTest {
   @Test
   fun loadingExposesLocalizedProgressAndAddAction() {
     val loadingDescription = localizedString(Res.string.loading)
-    val addMovementLabel = localizedString(Res.string.home_add_first)
+    val addMovementLabel = localizedString(Res.string.navigation_add_movement)
     composeRule.setContent { TallybookTheme { HomeScreen(HomeUiState.loading(), {}, {}) } }
 
     composeRule.onNodeWithContentDescription(loadingDescription).assertIsDisplayed()
     composeRule.onNodeWithContentDescription(addMovementLabel).assertIsDisplayed()
+  }
+
+  @Test
+  fun bottomNavigationShowsMonetaActionsWithHomeSelected() {
+    val homeLabel = localizedString(Res.string.navigation_home)
+    val navigationLabels =
+        listOf(
+            homeLabel,
+            localizedString(Res.string.navigation_history),
+            localizedString(Res.string.navigation_add_movement),
+            localizedString(Res.string.navigation_search),
+            localizedString(Res.string.navigation_profile),
+        )
+    composeRule.setContent { TallybookTheme { HomeScreen(HomeUiState.loading(), {}, {}) } }
+
+    navigationLabels.forEach { label ->
+      composeRule.onNodeWithContentDescription(label).assertIsDisplayed()
+    }
+    composeRule.onNodeWithContentDescription(homeLabel).assertIsSelected()
+  }
+
+  @Test
+  fun unfinishedNavigationDestinationsHaveNoClickAction() {
+    val unavailableLabels =
+        listOf(
+            Res.string.navigation_history,
+            Res.string.navigation_search,
+            Res.string.navigation_profile,
+        )
+    composeRule.setContent { TallybookTheme { HomeScreen(HomeUiState.loading(), {}, {}) } }
+
+    composeRule
+        .onNodeWithContentDescription(localizedString(Res.string.navigation_home))
+        .assertHasNoClickAction()
+    unavailableLabels.forEach { label ->
+      composeRule
+          .onNodeWithContentDescription(localizedString(label))
+          .assertHasNoClickAction()
+          .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
+    }
+    composeRule
+        .onNodeWithContentDescription(localizedString(Res.string.navigation_add_movement))
+        .assertHasClickAction()
   }
 
   @Test
@@ -113,13 +164,14 @@ class HomeScreenTest {
   }
 
   @Test
-  fun emptyCtaAndFabInvokeTheSameAddCallback() {
+  fun emptyCtaAndBottomNavigationInvokeTheSameAddCallback() {
     var additions = 0
-    val addMovementLabel = localizedString(Res.string.home_add_first)
+    val emptyCtaLabel = localizedString(Res.string.home_add_first)
+    val navigationAddLabel = localizedString(Res.string.navigation_add_movement)
     composeRule.setContent { TallybookTheme { HomeScreen(emptyState, { additions += 1 }, {}) } }
 
-    composeRule.onNodeWithText(addMovementLabel).performClick()
-    composeRule.onNodeWithContentDescription(addMovementLabel).performClick()
+    composeRule.onNodeWithText(emptyCtaLabel).performClick()
+    composeRule.onNodeWithContentDescription(navigationAddLabel).performClick()
 
     composeRule.runOnIdle { assertEquals(2, additions) }
   }

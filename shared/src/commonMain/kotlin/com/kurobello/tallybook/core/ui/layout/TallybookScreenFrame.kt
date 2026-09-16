@@ -22,6 +22,7 @@ import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 @Composable
 internal fun TallybookScreenFrame(
     modifier: Modifier = Modifier,
+    bottomBar: (@Composable () -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
   val contentPadding =
@@ -39,6 +40,13 @@ internal fun TallybookScreenFrame(
                 .padding(contentPadding),
         content = content,
     )
+    if (bottomBar != null) {
+      Box(
+          modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+      ) {
+        bottomBar()
+      }
+    }
   }
 }
 

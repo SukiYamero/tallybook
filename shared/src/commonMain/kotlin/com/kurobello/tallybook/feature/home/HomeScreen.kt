@@ -4,23 +4,19 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.layout.TallybookScreenFrame
+import com.kurobello.tallybook.core.ui.navigation.TallybookBottomNavigation
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.ui.AddMovimientoSheetRoute
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
@@ -28,7 +24,6 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_comida
-import tallybook.shared.generated.resources.home_add_first
 
 @Composable
 internal fun HomeRoute(
@@ -121,12 +116,14 @@ internal fun HomeScreen(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-  val addMovementLabel = stringResource(Res.string.home_add_first)
-  TallybookScreenFrame(modifier = modifier) {
+  TallybookScreenFrame(
+      modifier = modifier,
+      bottomBar = { TallybookBottomNavigation(onAddMovement = onAddMovimiento) },
+  ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding =
-            PaddingValues(bottom = TallybookTheme.dimensions.homeFloatingActionClearance),
+            PaddingValues(bottom = TallybookTheme.dimensions.bottomNavigationContentHeight),
     ) {
       item { HomeHeader(modifier = Modifier.padding(bottom = TallybookTheme.spacing.space20)) }
       item { HomeSearch(modifier = Modifier.padding(bottom = TallybookTheme.spacing.space18)) }
@@ -136,14 +133,6 @@ internal fun HomeScreen(
         uiState.isEmpty -> item { HomeEmpty(onAddMovimiento) }
         else -> homePopulated(uiState)
       }
-    }
-
-    FloatingActionButton(
-        modifier =
-            Modifier.align(Alignment.BottomEnd).semantics { contentDescription = addMovementLabel },
-        onClick = onAddMovimiento,
-    ) {
-      TallybookText("+")
     }
   }
 }

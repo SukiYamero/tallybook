@@ -15,6 +15,12 @@
     <string name="home_load_error_title">No pudimos cargar tus movimientos</string>
     <string name="home_load_error_body">Tus movimientos siguen guardados. Intenta cargarlos de nuevo.</string>
 
+    <string name="navigation_home">Inicio</string>
+    <string name="navigation_history">Historial</string>
+    <string name="navigation_add_movement">Agregar movimiento</string>
+    <string name="navigation_search">Buscar</string>
+    <string name="navigation_profile">Perfil</string>
+
     <string name="add_movimiento_pane_title">Agregar movimiento</string>
     <string name="expense">Gasto</string>
     <string name="income">Ingreso</string>

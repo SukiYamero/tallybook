@@ -154,6 +154,7 @@ internal data class NavigationColors(
     val surface: Color,
     val content: Color,
     val selected: Color,
+    val selectedContainer: Color,
     val divider: Color,
 )
 
@@ -222,6 +223,7 @@ internal val LightTallybookColors =
                 surface = LightSurfaceCard,
                 content = LightFgTertiary,
                 selected = LightPrimary,
+                selectedContainer = LightGreenPanel,
                 divider = LightBorderSubtle,
             ),
     )
@@ -279,6 +281,7 @@ internal val DarkTallybookColors =
                 surface = DarkSurfaceCard,
                 content = DarkFgTertiary,
                 selected = DarkPrimary,
+                selectedContainer = DarkGreenPanel,
                 divider = DarkBorderSubtle,
             ),
     )

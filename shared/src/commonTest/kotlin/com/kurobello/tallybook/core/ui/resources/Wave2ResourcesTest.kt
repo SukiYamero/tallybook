@@ -24,6 +24,11 @@ class Wave2ResourcesTest {
             Res.string.home_search_placeholder,
             Res.string.home_load_error_title,
             Res.string.home_load_error_body,
+            Res.string.navigation_home,
+            Res.string.navigation_history,
+            Res.string.navigation_add_movement,
+            Res.string.navigation_search,
+            Res.string.navigation_profile,
             Res.string.add_movimiento_pane_title,
             Res.string.expense,
             Res.string.income,
@@ -113,6 +118,6 @@ class Wave2ResourcesTest {
             Res.string.category_reembolso,
         )
 
-    assertEquals(101, resources.distinct().size)
+    assertEquals(106, resources.distinct().size)
   }
 }

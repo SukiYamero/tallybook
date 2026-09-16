@@ -349,15 +349,26 @@ The chosen structure is a hybrid architecture:
 - Keep Home as the stable entry destination.
 - Reserve the bottom navigation for a small set of proven primary destinations.
 - Put growing or administrative areas in a secondary menu.
-- Treat `Create movimiento` as a contextual action until usage proves it must be globally persistent.
+- Keep `Create movimiento` as the centered navigation action.
 
-The Home pilot still renders no bottom navigation and no global create button because it validates the
-screen shell first. `TallybookAppShell` reserves the architectural slot and the later navigation
-increment publishes its occupied space without changing Home's content components.
+The approved order and ownership are:
 
-Before implementing the bar, record the real candidate destinations, their expected frequency, and
-whether each is a destination or an action. The bar pattern is decided; its final destination set is
-not.
+| Position | Role | Expected frequency | Current behavior |
+|---|---|---:|---|
+| Home | Primary destination | Daily | Selected and visible |
+| History | Primary destination | Frequent | Reserved icon; inert until the destination exists |
+| Add movement | Contextual action | Frequent | Opens the existing movement sheet |
+| Search | Primary destination | Frequent | Reserved icon; inert until the destination exists |
+| Profile | Secondary surface | Occasional | Reserved icon; inert until the surface exists |
+
+The bar uses icons without visible labels. Every icon still has a localized accessibility description.
+Unavailable positions expose neither click nor selection semantics. The centered Add movement action
+is the only interactive item and replaces the former Home floating action button.
+
+While Home is the only implemented destination, it supplies the bar through `TallybookScreenFrame`'s
+bottom-bar slot. The bar owns the bottom safe area and publishes a tokenized content clearance. Once a
+second destination exists, `TallybookAppShell` becomes the persistent owner without changing the bar
+component or Home's content components.
 
 ## Incremental migration
 
@@ -459,6 +470,6 @@ Use this checklist in every UI pull request:
 
 ## Remaining product decisions
 
-The bottom navigation pattern is decided. Its final destination set and the global placement of
-`Create movimiento` remain open. Neither blocks the Home outer-shell pilot because the shell treats
-the bar and action as separately owned UI.
+The bottom navigation pattern, ordered positions, and centered placement of `Create movimiento` are
+decided. History, Search, and Profile remain visual reservations without actions until their features
+are implemented.
