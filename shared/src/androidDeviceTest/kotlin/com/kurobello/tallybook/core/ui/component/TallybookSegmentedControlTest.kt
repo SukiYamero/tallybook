@@ -1,15 +1,18 @@
 package com.kurobello.tallybook.core.ui.component
 
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -74,7 +77,11 @@ class TallybookSegmentedControlTest {
       }
     }
 
-    composeRule.onNodeWithText("Income").assertIsNotEnabled().performClick()
+    composeRule
+        .onNodeWithText("Income")
+        .assertIsNotEnabled()
+        .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
+        .performTouchInput { click(center) }
 
     composeRule.runOnIdle { assertEquals(0, selections) }
   }
