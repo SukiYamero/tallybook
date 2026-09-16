@@ -12,6 +12,17 @@ class Wave2ResourcesTest {
         listOf(
             Res.string.app_name,
             Res.string.ui_catalog_title,
+            Res.string.ui_catalog_foundations,
+            Res.string.ui_catalog_actions,
+            Res.string.ui_catalog_data_display,
+            Res.string.ui_catalog_navigation,
+            Res.string.ui_catalog_system,
+            Res.string.ui_catalog_light,
+            Res.string.ui_catalog_dark,
+            Res.string.ui_catalog_text_normal,
+            Res.string.ui_catalog_text_large,
+            Res.string.ui_catalog_text_extra_large,
+            Res.string.ui_catalog_sample_text,
             Res.string.startup_error_title,
             Res.string.startup_error_body,
             Res.string.retry,
@@ -119,6 +130,6 @@ class Wave2ResourcesTest {
             Res.string.category_reembolso,
         )
 
-    assertEquals(107, resources.distinct().size)
+    assertEquals(118, resources.distinct().size)
   }
 }

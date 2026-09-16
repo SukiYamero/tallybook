@@ -1,6 +1,17 @@
 <resources>
     <string name="app_name">Tallybook</string>
     <string name="ui_catalog_title">UI catalog</string>
+    <string name="ui_catalog_foundations">Foundations</string>
+    <string name="ui_catalog_actions">Actions</string>
+    <string name="ui_catalog_data_display">Data display</string>
+    <string name="ui_catalog_navigation">Navigation</string>
+    <string name="ui_catalog_system">System</string>
+    <string name="ui_catalog_light">Light</string>
+    <string name="ui_catalog_dark">Dark</string>
+    <string name="ui_catalog_text_normal">Normal</string>
+    <string name="ui_catalog_text_large">Large</string>
+    <string name="ui_catalog_text_extra_large">Extra large</string>
+    <string name="ui_catalog_sample_text">Sample text</string>
     <string name="startup_error_title">We couldn’t prepare your data</string>
     <string name="startup_error_body">Your existing data is still saved. Try opening it again.</string>
     <string name="retry">Retry</string>
