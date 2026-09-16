@@ -24,4 +24,9 @@ internal object TallybookDimensions {
   val containedLoadingMinHeight = 144.dp
   val iconButtonContainerSize = minimumTouchTarget
   val iconButtonIconSize = TallybookSpacing.space20
+  val fieldMinimumHeight = minimumTouchTarget
+  val fieldHorizontalPadding = TallybookSpacing.space12
+  val fieldVerticalPadding = TallybookSpacing.space12
+  val fieldIconSize = TallybookSpacing.space20
+  val fieldBorderWidth = borderThin
 }
