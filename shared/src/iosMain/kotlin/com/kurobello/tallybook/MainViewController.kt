@@ -10,5 +10,10 @@ fun MainViewController(
 ): UIViewController {
   initKoin()
   val launchMode = resolveAppLaunchMode(developmentToolsEnabled, uiCatalogRequested)
-  return ComposeUIViewController { App(launchMode = launchMode) }
+  return ComposeUIViewController {
+    App(
+        launchMode = launchMode,
+        developmentToolsEnabled = developmentToolsEnabled,
+    )
+  }
 }

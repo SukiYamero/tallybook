@@ -1,11 +1,9 @@
 package com.kurobello.tallybook.core.ui.catalog
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
@@ -24,7 +22,6 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToKey
 import androidx.compose.ui.test.performTextInput
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
@@ -50,7 +47,6 @@ import tallybook.shared.generated.resources.ui_catalog_disabled_icon_button
 import tallybook.shared.generated.resources.ui_catalog_foundations
 import tallybook.shared.generated.resources.ui_catalog_icon_buttons
 import tallybook.shared.generated.resources.ui_catalog_loading_states
-import tallybook.shared.generated.resources.ui_catalog_navigation
 import tallybook.shared.generated.resources.ui_catalog_sample_body_emphasis
 import tallybook.shared.generated.resources.ui_catalog_sample_body_small
 import tallybook.shared.generated.resources.ui_catalog_sample_caption
@@ -59,10 +55,8 @@ import tallybook.shared.generated.resources.ui_catalog_sample_text
 import tallybook.shared.generated.resources.ui_catalog_search_fields
 import tallybook.shared.generated.resources.ui_catalog_segmented_controls
 import tallybook.shared.generated.resources.ui_catalog_selection_fields
-import tallybook.shared.generated.resources.ui_catalog_system
+import tallybook.shared.generated.resources.ui_catalog_text_field_label
 import tallybook.shared.generated.resources.ui_catalog_text_fields
-import tallybook.shared.generated.resources.ui_catalog_text_large
-import tallybook.shared.generated.resources.ui_catalog_text_normal
 
 class UiCatalogScreenTest {
 
@@ -81,10 +75,6 @@ class UiCatalogScreenTest {
           scrollTo(section.key)
           composeRule.onNodeWithText(localizedString(section.title)).assertIsDisplayed()
         }
-    scrollTo("navigation")
-    composeRule
-        .onNodeWithText(localizedString(Res.string.ui_catalog_navigation))
-        .assertIsDisplayed()
     scrollTo("loading-states")
     composeRule
         .onNodeWithContentDescription(localizedString(Res.string.loading))
@@ -133,30 +123,15 @@ class UiCatalogScreenTest {
   }
 
   @Test
-  fun catalogThemeAndFontControlsUpdateSamplesWithoutPersistence() {
-    var showRoute by mutableStateOf(true)
-    composeRule.setContent { if (showRoute) UiCatalogRoute() }
+  fun catalogKeepsThemeControlsWithoutTemporaryPaletteOrTextScaleSelectors() {
+    composeRule.setContent { UiCatalogRoute() }
 
     val dark = localizedString(Res.string.ui_catalog_dark)
-    val system = localizedString(Res.string.ui_catalog_system)
-    val large = localizedString(Res.string.ui_catalog_text_large)
-    val normal = localizedString(Res.string.ui_catalog_text_normal)
-    val sampleText = localizedString(Res.string.ui_catalog_sample_text)
-    val normalSampleHeight =
-        composeRule.onNodeWithText(sampleText).fetchSemanticsNode().boundsInRoot.height
-
     composeRule.onNodeWithText(dark).performClick().assertIsSelected()
-    composeRule.onNodeWithText(large).performClick().assertIsSelected()
-    val largeSampleHeight =
-        composeRule.onNodeWithText(sampleText).fetchSemanticsNode().boundsInRoot.height
 
-    assertTrue(largeSampleHeight > normalSampleHeight)
-
-    composeRule.runOnIdle { showRoute = false }
-    composeRule.runOnIdle { showRoute = true }
-
-    composeRule.onNodeWithText(system).assertIsSelected()
-    composeRule.onNodeWithText(normal).assertIsSelected()
+    composeRule.onNodeWithText("Large").assertDoesNotExist()
+    composeRule.onNodeWithText("Navy · #1E3A5F").assertDoesNotExist()
+    composeRule.onNodeWithText("Soft sage · #A8C9B0").assertDoesNotExist()
   }
 
   @Test
@@ -189,7 +164,12 @@ class UiCatalogScreenTest {
     composeRule.setContent { UiCatalogRoute() }
 
     scrollTo("text-fields")
-    composeRule.onNodeWithTag(CATALOG_TEXT_FIELD_DEFAULT_TAG).performTextInput("Trip")
+    composeRule
+        .onAllNodes(
+            hasContentDescription(localizedString(Res.string.ui_catalog_text_field_label)) and
+                isEnabled()
+        )[0]
+        .performTextInput("Trip")
     composeRule.onNodeWithText("Trip").assertIsDisplayed()
 
     scrollTo("search-fields")
@@ -200,8 +180,8 @@ class UiCatalogScreenTest {
         )
         .performClick()
     composeRule
-        .onNodeWithText(localizedString(Res.string.home_search_placeholder))
-        .assertIsDisplayed()
+        .onAllNodes(hasText(localizedString(Res.string.home_search_placeholder)))
+        .assertCountEquals(2)
     composeRule
         .onNode(
             hasContentDescription(localizedString(Res.string.ui_catalog_clear_search)) and
@@ -219,9 +199,10 @@ class UiCatalogScreenTest {
     composeRule
         .onNode(hasText(localizedString(Res.string.expense)) and isEnabled())
         .assertIsSelected()
+    composeRule.onNode(hasText(localizedString(Res.string.income)) and isEnabled()).performClick()
+    composeRule.mainClock.advanceTimeByFrame()
     composeRule
         .onNode(hasText(localizedString(Res.string.income)) and isEnabled())
-        .performClick()
         .assertIsSelected()
 
     scrollTo("loading-states")

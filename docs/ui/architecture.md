@@ -101,6 +101,13 @@ feature/<name>/ui/   feature composition
 Avoid a catch-all component catalog. A component moves into `core/ui/component` only after it has a
 stable, domain-neutral API or a second real consumer.
 
+## Component catalog
+
+The concise inventory in [components.md](components.md) records the Tallybook components currently
+available and the product cases each one covers. This architecture document remains the source of truth
+for tokens, ownership, interaction policy, and review rules; the catalog does not duplicate those
+decisions.
+
 ## Design tokens
 
 Every static visual value is a token. Production composables must not contain anonymous `dp`, `sp`,
@@ -131,7 +138,8 @@ animation progress are not design literals and remain local to the logic that ca
   consume semantic roles; they never set `fontSize`, `lineHeight`, or `letterSpacing` directly.
 - **Spacing:** a finite primitive scale used for every padding, gap, offset, and layout separation.
 - **Dimensions:** named sizes for controls, icons, touch targets, screen constants, and unique component
-  measurements that do not represent spacing.
+  measurements that do not represent spacing. The shared icon scale is 16 dp, 20 dp, and 24 dp;
+  an additional semantic token preserves the established movement-summary icon size.
 - **Radii:** explicit named steps. Moneta's radii are not a geometric scale.
 - **Motion:** duration and easing roles, including the iOS-like sheet curve and reduced-motion policy.
 - **Screen layout:** semantic composition tokens such as the horizontal screen inset, top content
@@ -185,6 +193,7 @@ nearest existing value merely to avoid adding a token.
 | `size19` | 19 sp |
 | `size20` | 20 sp |
 | `size21` | 21 sp |
+| `size22` | 22 sp |
 | `size28` | 28 sp |
 | `size30` | 30 sp |
 
@@ -432,7 +441,11 @@ Motion communicates hierarchy and state; it is not decoration.
 
 - Sheets use the Moneta iOS-like easing curve and a shared duration role.
 - Navigation transitions preserve spatial direction and back behavior.
-- Press feedback is subtle and does not change layout.
+- Touch controls use a subtle, shape-clipped tonal pressed overlay. A short tap preserves that overlay
+  briefly after release so feedback remains perceptible. They do not use Material ripple or
+  layout-changing press feedback; text fields retain focus and border feedback instead.
+- On Android, a focused input requests smooth relocation into the visible viewport; iOS retains its
+  native keyboard relocation behavior. An unconsumed background tap clears focus.
 - Reduced-motion preference removes non-essential translation and scale while preserving state
   visibility.
 - Motion values live in the theme only when at least two components share the same role.

@@ -16,7 +16,10 @@ import com.kurobello.tallybook.feature.home.HomeRoute
 import kotlinx.serialization.KSerializer
 
 @Composable
-fun TallybookNavHost(startDestination: Destination = Home) {
+fun TallybookNavHost(
+    startDestination: Destination = Home,
+    developmentToolsEnabled: Boolean = false,
+) {
   val backStack =
       rememberSerializable(serializer = destinationBackStackSerializer()) {
         NavBackStack(startDestination)
@@ -29,7 +32,16 @@ fun TallybookNavHost(startDestination: Destination = Home) {
       predictivePopTransitionSpec = { navigationContentTransform() },
       entryProvider =
           entryProvider {
-            entry<Home> { HomeRoute() }
+            entry<Home> {
+              HomeRoute(
+                  onOpenCatalog =
+                      if (developmentToolsEnabled) {
+                        { backStack.add(UiCatalog) }
+                      } else {
+                        null
+                      }
+              )
+            }
             entry<UiCatalog> { UiCatalogRoute() }
           },
   )

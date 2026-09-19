@@ -1,6 +1,8 @@
 package com.kurobello.tallybook.core.ui.component
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,6 +43,15 @@ internal object TallybookButtonDefaults {
           disabledContainer = TallybookTheme.colors.surface.high,
           disabledContent = TallybookTheme.colors.foreground.disabled,
       )
+
+  @Composable
+  fun textColors(): TallybookButtonColors =
+      TallybookButtonColors(
+          container = Color.Transparent,
+          content = TallybookTheme.colors.brand.secondary,
+          disabledContainer = Color.Transparent,
+          disabledContent = TallybookTheme.colors.foreground.disabled,
+      )
 }
 
 @Composable
@@ -49,6 +62,9 @@ internal fun TallybookButton(
     colors: TallybookButtonColors = TallybookButtonDefaults.primaryColors(),
     content: @Composable RowScope.() -> Unit,
 ) {
+  val interactionSource = remember { MutableInteractionSource() }
+  val isPressed by interactionSource.collectIsPressedAsState()
+  val tapFeedback = rememberTallybookTapFeedback()
   val containerColor = if (enabled) colors.container else colors.disabledContainer
   val contentColor = if (enabled) colors.content else colors.disabledContent
   TallybookSurface(
@@ -58,7 +74,16 @@ internal fun TallybookButton(
                   minWidth = TallybookTheme.dimensions.minimumTouchTarget,
                   minHeight = TallybookTheme.dimensions.minimumTouchTarget,
               )
-              .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+              .clickable(
+                  interactionSource = interactionSource,
+                  indication = null,
+                  enabled = enabled,
+                  role = Role.Button,
+                  onClick = {
+                    tapFeedback.trigger()
+                    onClick()
+                  },
+              ),
       style =
           TallybookSurfaceStyle(
               color = containerColor,
@@ -66,6 +91,8 @@ internal fun TallybookButton(
               shape = RoundedCornerShape(TallybookTheme.radii.radius18),
               border = null,
           ),
+      isPressed = isPressed,
+      hasTapFeedback = tapFeedback.isActive,
   ) {
     Row(
         modifier = Modifier.align(Alignment.Center).padding(TallybookButtonDefaults.contentPadding),
@@ -74,4 +101,20 @@ internal fun TallybookButton(
         content = content,
     )
   }
+}
+
+@Composable
+internal fun TallybookTextButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit,
+) {
+  TallybookButton(
+      onClick = onClick,
+      modifier = modifier,
+      enabled = enabled,
+      colors = TallybookButtonDefaults.textColors(),
+      content = content,
+  )
 }

@@ -36,6 +36,7 @@ internal object TallybookTheme {
       content: @Composable () -> Unit,
   ) {
     val colors = if (darkTheme) DarkTallybookColors else LightTallybookColors
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val typography = rememberTallybookTypography()
     CompositionLocalProvider(
         LocalTallybookColors provides colors,
@@ -43,7 +44,7 @@ internal object TallybookTheme {
         LocalContentColor provides colors.foreground.primary,
     ) {
       MaterialTheme(
-          colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
+          colorScheme = colorScheme,
           typography = legacyMaterialTypography(typography),
       ) {
         Box(modifier = Modifier.fillMaxSize().background(colors.canvas)) { content() }

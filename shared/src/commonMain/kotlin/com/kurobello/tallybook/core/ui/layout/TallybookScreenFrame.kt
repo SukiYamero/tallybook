@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import com.kurobello.tallybook.core.ui.component.clearFocusOnUnconsumedTap
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 
 @Composable
@@ -30,7 +31,13 @@ internal fun TallybookScreenFrame(
           safeInsets = WindowInsets.safeDrawing.asPaddingValues(),
           layoutDirection = LocalLayoutDirection.current,
       )
-  Box(modifier = modifier.fillMaxSize().background(TallybookTheme.colors.canvas)) {
+  Box(
+      modifier =
+          modifier
+              .fillMaxSize()
+              .clearFocusOnUnconsumedTap()
+              .background(TallybookTheme.colors.canvas)
+  ) {
     Box(
         modifier =
             Modifier.align(Alignment.TopCenter)

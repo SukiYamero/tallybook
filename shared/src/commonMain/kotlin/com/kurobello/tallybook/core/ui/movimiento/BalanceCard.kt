@@ -44,7 +44,7 @@ fun BalanceCard(summary: MovimientoSummary, modifier: Modifier = Modifier) {
       Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = stringResource(Res.string.home_balance),
-            color = LocalTallybookColors.current.status.success.base,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
             style = MaterialTheme.typography.labelLarge,
         )
         Text(text = summary.balance.format(), style = MaterialTheme.typography.headlineMedium)
@@ -93,7 +93,7 @@ private fun SummaryAmount(
         Icon(
             imageVector = if (positive) Lucide.ArrowDownLeft else Lucide.ArrowUpRight,
             contentDescription = null,
-            modifier = Modifier.size(16.dp),
+            modifier = Modifier.size(TallybookTheme.dimensions.movementSummaryIcon),
             tint = accent,
         )
         Text(text = label, color = accent, style = MaterialTheme.typography.labelMedium)

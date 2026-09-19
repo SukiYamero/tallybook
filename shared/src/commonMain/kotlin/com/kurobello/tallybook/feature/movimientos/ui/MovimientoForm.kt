@@ -3,8 +3,12 @@ package com.kurobello.tallybook.feature.movimientos.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -29,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -38,6 +43,12 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.component.captureScrollableInputViewport
+import com.kurobello.tallybook.core.ui.component.centerFocusedInputIn
+import com.kurobello.tallybook.core.ui.component.clearFocusOnUnconsumedTap
+import com.kurobello.tallybook.core.ui.component.inputRevealTrailingSpace
+import com.kurobello.tallybook.core.ui.component.needsManualInputReveal
+import com.kurobello.tallybook.core.ui.component.rememberScrollableInputViewport
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoUiState
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AmountInputError
@@ -75,6 +86,10 @@ internal fun MovimientoForm(
   val categoryFocusRequester = remember { FocusRequester() }
   val amountBringIntoViewRequester = remember { BringIntoViewRequester() }
   val categoryBringIntoViewRequester = remember { BringIntoViewRequester() }
+  val focusManager = LocalFocusManager.current
+  val formScrollState = rememberScrollState()
+  val formViewport = rememberScrollableInputViewport()
+  val inputRevealTrailingSpace = inputRevealTrailingSpace()
   val amountError = uiState.amountError?.message()
   val submitLabel = uiState.tipo.saveLabel()
   val descriptionState =
@@ -93,102 +108,121 @@ internal fun MovimientoForm(
     }
   }
 
-  Column(
-      modifier = modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-      verticalArrangement = Arrangement.spacedBy(16.dp),
+  Box(
+      modifier =
+          modifier.fillMaxWidth().fillMaxHeight().captureScrollableInputViewport(formViewport),
   ) {
-    MovimientoTypeSelector(
-        selected = uiState.tipo,
-        enabled = !uiState.isSubmitting,
-        onSelected = actions::onTipoChanged,
-    )
-    MovimientoAmountField(
-        state =
-            MovimientoAmountFieldState(
-                value = uiState.amountInput,
-                moneda = uiState.moneda,
-                error = amountError,
-            ),
-        enabled = !uiState.isSubmitting,
-        onValueChange = actions::onAmountChanged,
-        focusRequester = amountFocusRequester,
-        modifier = Modifier.bringIntoViewRequester(amountBringIntoViewRequester),
-    )
-    MovimientoDateField(
-        state =
-            MovimientoDateFieldState(
-                fecha = uiState.fecha,
-                showPicker = datePickerVisible,
-                enabled = !uiState.isSubmitting,
-            ),
-        onOpenPicker = { datePickerVisible = true },
-        onDismissPicker = { datePickerVisible = false },
-        onFechaChanged = actions::onFechaChanged,
-    )
     Column(
-        modifier = Modifier.bringIntoViewRequester(categoryBringIntoViewRequester),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-      CategoryField(
-          selected = uiState.categorias.firstOrNull { it.id == uiState.selectedCategoriaId },
-          isError = uiState.isCategoriaMissing,
-          onOpen = { categoryPickerVisible = true },
-          modifier = Modifier.focusRequester(categoryFocusRequester),
-      )
-      if (uiState.isCategoriaMissing) {
-        Text(
-            text = stringResource(Res.string.category_required),
-            color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-            style = MaterialTheme.typography.bodySmall,
-        )
-      }
-    }
-    TextButton(
-        onClick = { descriptionVisible = !descriptionVisible },
         modifier =
-            Modifier.align(Alignment.CenterHorizontally).semantics {
-              stateDescription = descriptionState
-            },
-        enabled = !uiState.isSubmitting,
+            Modifier.fillMaxWidth()
+                .fillMaxHeight()
+                .then(if (needsManualInputReveal) Modifier.imePadding() else Modifier)
+                .verticalScroll(formScrollState)
+                .clearFocusOnUnconsumedTap(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-      Text(stringResource(Res.string.more_fields))
-    }
-    if (descriptionVisible) {
-      OutlinedTextField(
-          value = uiState.descripcion,
-          onValueChange = {
-            actions.onDescripcionChanged(it.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH))
-          },
-          modifier = Modifier.fillMaxWidth().testTag("movimiento_description"),
+      MovimientoTypeSelector(
+          selected = uiState.tipo,
           enabled = !uiState.isSubmitting,
-          label = { Text(stringResource(Res.string.description_optional)) },
-          supportingText = {
-            Text(
-                text = "${uiState.descripcion.length}/$MOVIMIENTO_DESCRIPTION_MAX_LENGTH",
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-            )
-          },
+          onSelected = actions::onTipoChanged,
       )
-    }
-    MovimientoFormErrorMessage(error = uiState.error, onRetry = actions::onRetryLoad)
-    if (uiState.isLoading) {
-      CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-    }
-    Button(
-        onClick = actions::onSubmit,
-        modifier =
-            Modifier.fillMaxWidth().padding(bottom = 8.dp).heightIn(min = 48.dp).semantics {
-              contentDescription = submitLabel
+      MovimientoAmountField(
+          state =
+              MovimientoAmountFieldState(
+                  value = uiState.amountInput,
+                  moneda = uiState.moneda,
+                  error = amountError,
+              ),
+          enabled = !uiState.isSubmitting,
+          onValueChange = actions::onAmountChanged,
+          focusRequester = amountFocusRequester,
+          modifier =
+              Modifier.bringIntoViewRequester(amountBringIntoViewRequester)
+                  .centerFocusedInputIn(formScrollState, formViewport),
+      )
+      MovimientoDateField(
+          state =
+              MovimientoDateFieldState(
+                  fecha = uiState.fecha,
+                  showPicker = datePickerVisible,
+                  enabled = !uiState.isSubmitting,
+              ),
+          onOpenPicker = { datePickerVisible = true },
+          onDismissPicker = { datePickerVisible = false },
+          onFechaChanged = actions::onFechaChanged,
+      )
+      Column(
+          modifier = Modifier.bringIntoViewRequester(categoryBringIntoViewRequester),
+          verticalArrangement = Arrangement.spacedBy(4.dp),
+      ) {
+        CategoryField(
+            selected = uiState.categorias.firstOrNull { it.id == uiState.selectedCategoriaId },
+            isError = uiState.isCategoriaMissing,
+            onOpen = {
+              focusManager.clearFocus(force = true)
+              categoryPickerVisible = true
             },
-        enabled = !uiState.isSubmitting && !uiState.isLoading && uiState.error == null,
-    ) {
-      Box(contentAlignment = Alignment.Center) {
-        Text(text = submitLabel, modifier = Modifier.alpha(if (uiState.isSubmitting) 0f else 1f))
-        if (uiState.isSubmitting) {
-          CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            modifier = Modifier.focusRequester(categoryFocusRequester),
+        )
+        if (uiState.isCategoriaMissing) {
+          Text(
+              text = stringResource(Res.string.category_required),
+              color = MaterialTheme.colorScheme.error,
+              modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+              style = MaterialTheme.typography.bodySmall,
+          )
         }
       }
+      TextButton(
+          onClick = { descriptionVisible = !descriptionVisible },
+          modifier =
+              Modifier.align(Alignment.CenterHorizontally).semantics {
+                stateDescription = descriptionState
+              },
+          enabled = !uiState.isSubmitting,
+      ) {
+        Text(stringResource(Res.string.more_fields))
+      }
+      if (descriptionVisible) {
+        OutlinedTextField(
+            value = uiState.descripcion,
+            onValueChange = {
+              actions.onDescripcionChanged(it.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH))
+            },
+            modifier =
+                Modifier.fillMaxWidth()
+                    .centerFocusedInputIn(formScrollState, formViewport)
+                    .testTag("movimiento_description"),
+            enabled = !uiState.isSubmitting,
+            label = { Text(stringResource(Res.string.description_optional)) },
+            supportingText = {
+              Text(
+                  text = "${uiState.descripcion.length}/$MOVIMIENTO_DESCRIPTION_MAX_LENGTH",
+                  modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+              )
+            },
+        )
+      }
+      MovimientoFormErrorMessage(error = uiState.error, onRetry = actions::onRetryLoad)
+      if (uiState.isLoading) {
+        CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+      }
+      Button(
+          onClick = actions::onSubmit,
+          modifier =
+              Modifier.fillMaxWidth().padding(bottom = 8.dp).heightIn(min = 48.dp).semantics {
+                contentDescription = submitLabel
+              },
+          enabled = !uiState.isSubmitting && !uiState.isLoading && uiState.error == null,
+      ) {
+        Box(contentAlignment = Alignment.Center) {
+          Text(text = submitLabel, modifier = Modifier.alpha(if (uiState.isSubmitting) 0f else 1f))
+          if (uiState.isSubmitting) {
+            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+          }
+        }
+      }
+      Spacer(modifier = Modifier.height(inputRevealTrailingSpace))
     }
   }
   CategoryPickerSheet(

@@ -18,6 +18,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.testTag
+import com.composables.icons.lucide.ArrowDownLeft
+import com.composables.icons.lucide.ArrowUpRight
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.UtensilsCrossed
 import com.composables.icons.lucide.X
@@ -27,6 +29,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookIconButtonStyle
 import com.kurobello.tallybook.core.ui.component.TallybookLoadingState
 import com.kurobello.tallybook.core.ui.component.TallybookSearchField
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentOption
+import com.kurobello.tallybook.core.ui.component.TallybookSegmentTone
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentedControl
 import com.kurobello.tallybook.core.ui.component.TallybookSelectionField
 import com.kurobello.tallybook.core.ui.component.TallybookSurface
@@ -69,7 +72,6 @@ import tallybook.shared.generated.resources.ui_catalog_text_field_value
 import tallybook.shared.generated.resources.ui_catalog_text_fields
 
 internal const val CATALOG_LOADING_REGION_TAG = "catalog_loading_region"
-internal const val CATALOG_TEXT_FIELD_DEFAULT_TAG = "catalog_text_field_default"
 
 internal fun LazyListScope.catalogControlMatrices() {
   item(key = "icon-buttons") { catalogIconButtonMatrix() }
@@ -161,7 +163,7 @@ private fun CatalogTextFieldMatrix() {
       TallybookTextField(
           value = defaultValue,
           onValueChange = { defaultValue = it },
-          modifier = Modifier.fillMaxWidth().testTag(CATALOG_TEXT_FIELD_DEFAULT_TAG),
+          modifier = Modifier.fillMaxWidth(),
           label = label,
           placeholder = placeholder,
       )
@@ -255,8 +257,18 @@ private fun CatalogSegmentedControlMatrix() {
   val options =
       remember(expense, income) {
         listOf(
-            TallybookSegmentOption(CatalogMovementType.Expense, expense),
-            TallybookSegmentOption(CatalogMovementType.Income, income),
+            TallybookSegmentOption(
+                value = CatalogMovementType.Expense,
+                label = expense,
+                icon = Lucide.ArrowUpRight,
+                tone = TallybookSegmentTone.Expense,
+            ),
+            TallybookSegmentOption(
+                value = CatalogMovementType.Income,
+                label = income,
+                icon = Lucide.ArrowDownLeft,
+                tone = TallybookSegmentTone.Income,
+            ),
         )
       }
   var selected by rememberSaveable { mutableStateOf(CatalogMovementType.Expense) }

@@ -2,10 +2,14 @@ package com.kurobello.tallybook.core.ui.component
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -70,7 +74,7 @@ internal object TallybookIconButtonDefaults {
                   neutralContent = TallybookTheme.colors.navigation.content,
                   brandContainer = TallybookTheme.colors.brand.primary,
                   brandContent = TallybookTheme.colors.brand.onPrimary,
-                  disabledContainer = TallybookTheme.colors.surface.high,
+                  disabledContainer = Color.Transparent,
                   disabledContent = TallybookTheme.colors.foreground.disabled,
               ),
       )
@@ -86,6 +90,9 @@ internal fun TallybookIconButton(
     enabled: Boolean = true,
     style: TallybookIconButtonStyle = TallybookIconButtonStyle.Neutral,
 ) {
+  val interactionSource = remember { MutableInteractionSource() }
+  val isPressed by interactionSource.collectIsPressedAsState()
+  val tapFeedback = rememberTallybookTapFeedback()
   val colors = TallybookIconButtonDefaults.colors(style)
   val containerColor = if (enabled) colors.container else colors.disabledContainer
   val contentColor = if (enabled) colors.content else colors.disabledContent
@@ -93,7 +100,16 @@ internal fun TallybookIconButton(
       modifier =
           modifier
               .size(TallybookTheme.dimensions.iconButtonContainerSize)
-              .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+              .clickable(
+                  interactionSource = interactionSource,
+                  indication = null,
+                  enabled = enabled,
+                  role = Role.Button,
+                  onClick = {
+                    tapFeedback.trigger()
+                    onClick()
+                  },
+              )
               .semantics { this.contentDescription = contentDescription },
       style =
           TallybookSurfaceStyle(
@@ -102,6 +118,8 @@ internal fun TallybookIconButton(
               shape = RoundedCornerShape(TallybookTheme.radii.radius12),
               border = null,
           ),
+      isPressed = isPressed,
+      hasTapFeedback = tapFeedback.isActive,
   ) {
     Image(
         imageVector = icon,

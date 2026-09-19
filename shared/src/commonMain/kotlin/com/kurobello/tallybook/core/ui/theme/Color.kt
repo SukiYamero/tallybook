@@ -1,4 +1,4 @@
-@file:Suppress("MagicNumber") // Every literal here is a moneta ARGB token, not a computed value.
+@file:Suppress("MagicNumber") // This file is the sole definition point for design-color tokens.
 
 package com.kurobello.tallybook.core.ui.theme
 
@@ -18,8 +18,12 @@ private val LightSurfaceHigh = Color(0xFFEAE9E2)
 private val LightSurfaceHighest = Color(0xFFE4E3DA)
 private val LightForeground = Color(0xFF1B1C19)
 private val LightMutedForeground = Color(0xFF71736B)
-private val LightPrimary = Color(0xFF12A873)
-private val LightPrimaryForeground = Color(0xFFFFFFFF)
+private val BrandPrimary = Color(0xFFA8C9B0)
+private val BrandPrimaryForeground = Color(0xFF06231A)
+private val BrandSecondary = Color(0xFF3F6B56)
+private val BrandSecondaryForeground = Color(0xFFFFFFFF)
+private val LightPrimary = BrandPrimary
+private val LightPrimaryForeground = BrandPrimaryForeground
 private val LightDestructive = Color(0xFFCF4B4B)
 private val LightFgSecondary = Color(0xFF3C3E39)
 private val LightFgTertiary = Color(0xFF585A52)
@@ -38,7 +42,9 @@ private val LightBorderSubtle = Color(0x0B1C1C14)
 private val LightBorderStrong = Color(0x1C1C1C14)
 private val LightBorderHover = Color(0x291C1C14)
 private val LightInput = Color(0x171C1C14)
-private val LightRing = Color(0x8012A873)
+private val LightRing = Color(0x80A8C9B0)
+private val LightInputCursor = BrandSecondary
+private val LightPressedOverlay = Color(0x0C1C1C14)
 private val LightGreenPanel = Color(0xFFDDEFE4)
 private val LightGreenChip = Color(0xFFC8E6D6)
 private val LightGreenChipForeground = Color(0xFF0E4B34)
@@ -68,8 +74,8 @@ private val DarkSurfaceHigh = Color(0xFF23262E)
 private val DarkSurfaceHighest = Color(0xFF2A2D35)
 private val DarkForeground = Color(0xFFF4F4F5)
 private val DarkMutedForeground = Color(0xFF85888F)
-private val DarkPrimary = Color(0xFF2FD896)
-private val DarkPrimaryForeground = Color(0xFF06231A)
+private val DarkPrimary = BrandPrimary
+private val DarkPrimaryForeground = BrandPrimaryForeground
 private val DarkDestructive = Color(0xFFF87171)
 private val DarkFgSecondary = Color(0xFFC9CBD0)
 private val DarkFgTertiary = Color(0xFFA8ABB2)
@@ -88,9 +94,10 @@ private val DarkBorderSubtle = Color(0x0AFFFFFF)
 private val DarkBorderStrong = Color(0x1AFFFFFF)
 private val DarkBorderHover = Color(0x29FFFFFF)
 private val DarkInput = Color(0x14FFFFFF)
-private val DarkRing = Color(0x802FD896)
+private val DarkRing = Color(0x80A8C9B0)
+private val DarkInputCursor = BrandPrimary
+private val DarkPressedOverlay = Color(0x0CFFFFFF)
 private val DarkGreenPanel = Color(0xFF1A4437)
-private val DarkGreenChipForeground = Color(0xFFDDF3E9)
 private val DarkRedChip = Color(0xFF40282A)
 private val DarkRedText = Color(0xFFE7B7B7)
 
@@ -126,7 +133,13 @@ internal data class SurfaceColors(
     val highest: Color,
 )
 
-@Immutable internal data class BrandColors(val primary: Color, val onPrimary: Color)
+@Immutable
+internal data class BrandColors(
+    val primary: Color,
+    val onPrimary: Color,
+    val secondary: Color,
+    val onSecondary: Color,
+)
 
 @Immutable
 internal data class StatusColor(val base: Color, val strong: Color, val foreground: Color)
@@ -149,6 +162,10 @@ internal data class BorderColors(
     val ring: Color,
 )
 
+@Immutable internal data class InteractionColors(val pressedOverlay: Color)
+
+@Immutable internal data class InputColors(val cursor: Color)
+
 @Immutable
 internal data class NavigationColors(
     val surface: Color,
@@ -166,6 +183,8 @@ internal data class TallybookColors(
     val foreground: ForegroundColors,
     val status: StatusColors,
     val border: BorderColors,
+    val interaction: InteractionColors,
+    val input: InputColors,
     val chart: List<Color>,
     val navigation: NavigationColors,
 )
@@ -182,7 +201,13 @@ internal val LightTallybookColors =
                 high = LightSurfaceHigh,
                 highest = LightSurfaceHighest,
             ),
-        brand = BrandColors(primary = LightPrimary, onPrimary = LightPrimaryForeground),
+        brand =
+            BrandColors(
+                primary = LightPrimary,
+                onPrimary = LightPrimaryForeground,
+                secondary = BrandSecondary,
+                onSecondary = BrandSecondaryForeground,
+            ),
         foreground =
             ForegroundColors(
                 primary = LightForeground,
@@ -217,6 +242,8 @@ internal val LightTallybookColors =
                 input = LightInput,
                 ring = LightRing,
             ),
+        interaction = InteractionColors(pressedOverlay = LightPressedOverlay),
+        input = InputColors(cursor = LightInputCursor),
         chart = LightChart,
         navigation =
             NavigationColors(
@@ -240,7 +267,13 @@ internal val DarkTallybookColors =
                 high = DarkSurfaceHigh,
                 highest = DarkSurfaceHighest,
             ),
-        brand = BrandColors(primary = DarkPrimary, onPrimary = DarkPrimaryForeground),
+        brand =
+            BrandColors(
+                primary = DarkPrimary,
+                onPrimary = DarkPrimaryForeground,
+                secondary = BrandSecondary,
+                onSecondary = BrandSecondaryForeground,
+            ),
         foreground =
             ForegroundColors(
                 primary = DarkForeground,
@@ -275,6 +308,8 @@ internal val DarkTallybookColors =
                 input = DarkInput,
                 ring = DarkRing,
             ),
+        interaction = InteractionColors(pressedOverlay = DarkPressedOverlay),
+        input = InputColors(cursor = DarkInputCursor),
         chart = DarkChart,
         navigation =
             NavigationColors(
@@ -295,14 +330,14 @@ internal val LightColorScheme: ColorScheme =
         primaryContainer = LightGreenPanel,
         onPrimaryContainer = LightGreenChipForeground,
         inversePrimary = DarkPrimary,
-        // moneta is a single-accent palette: secondary and tertiary reuse the brand green rather
-        // than leaving Material's baseline purple to leak through unmapped slots.
-        secondary = LightPrimary,
-        onSecondary = LightPrimaryForeground,
+        // Secondary and tertiary share the eucalyptus role so Material's baseline purple cannot
+        // appear in components that use either slot.
+        secondary = BrandSecondary,
+        onSecondary = BrandSecondaryForeground,
         secondaryContainer = LightSurfaceSunken,
         onSecondaryContainer = LightForeground,
-        tertiary = LightPrimary,
-        onTertiary = LightPrimaryForeground,
+        tertiary = BrandSecondary,
+        onTertiary = BrandSecondaryForeground,
         tertiaryContainer = LightGreenPanel,
         onTertiaryContainer = LightGreenChipForeground,
         background = LightCanvas,
@@ -344,17 +379,17 @@ internal val DarkColorScheme: ColorScheme =
     darkColorScheme(
         primary = DarkPrimary,
         onPrimary = DarkPrimaryForeground,
-        primaryContainer = DarkGreenPanel,
-        onPrimaryContainer = DarkGreenChipForeground,
+        primaryContainer = BrandSecondary,
+        onPrimaryContainer = BrandSecondaryForeground,
         inversePrimary = LightPrimary,
-        secondary = DarkPrimary,
-        onSecondary = DarkPrimaryForeground,
+        secondary = BrandSecondary,
+        onSecondary = BrandSecondaryForeground,
         secondaryContainer = DarkSurfaceSunken,
         onSecondaryContainer = DarkForeground,
-        tertiary = DarkPrimary,
-        onTertiary = DarkPrimaryForeground,
-        tertiaryContainer = DarkGreenPanel,
-        onTertiaryContainer = DarkGreenChipForeground,
+        tertiary = BrandSecondary,
+        onTertiary = BrandSecondaryForeground,
+        tertiaryContainer = LightGreenPanel,
+        onTertiaryContainer = LightGreenChipForeground,
         background = DarkCanvas,
         onBackground = DarkForeground,
         surface = DarkCanvas,

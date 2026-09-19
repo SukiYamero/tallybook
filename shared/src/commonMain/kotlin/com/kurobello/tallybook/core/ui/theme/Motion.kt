@@ -3,6 +3,7 @@ package com.kurobello.tallybook.core.ui.theme
 import androidx.compose.animation.core.CubicBezierEasing
 
 internal object TallybookMotion {
+  const val tapFeedbackMillis = 100
   const val navigationFadeOutMillis = 90
   const val fadeMillis = 200
   const val navigationFadeInMillis = 220

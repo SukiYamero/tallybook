@@ -2,6 +2,8 @@ package com.kurobello.tallybook.core.ui.category
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
@@ -11,6 +13,8 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.ui.component.rememberTallybookTapFeedback
+import com.kurobello.tallybook.core.ui.component.resolveTallybookSurfaceContainerColor
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
@@ -33,22 +39,41 @@ fun CategoryChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+  val interactionSource = remember { MutableInteractionSource() }
+  val isPressed by interactionSource.collectIsPressedAsState()
+  val tapFeedback = rememberTallybookTapFeedback()
   val colors = categoria.color.tintColors()
   val shape = MaterialTheme.shapes.extraLarge
+  val containerColor =
+      if (selected) colors.container else MaterialTheme.colorScheme.surfaceContainerLow
   Row(
       modifier =
           modifier
               .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
               .clip(shape)
               .background(
-                  if (selected) colors.container else MaterialTheme.colorScheme.surfaceContainerLow
+                  resolveTallybookSurfaceContainerColor(
+                      containerColor = containerColor,
+                      pressedOverlay = TallybookTheme.colors.interaction.pressedOverlay,
+                      isPressed = isPressed,
+                      hasTapFeedback = tapFeedback.isActive,
+                  )
               )
               .border(
                   width = 1.dp,
                   color = if (selected) colors.border else MaterialTheme.colorScheme.outlineVariant,
                   shape = shape,
               )
-              .selectable(selected = selected, onClick = onClick, role = Role.Button)
+              .selectable(
+                  selected = selected,
+                  interactionSource = interactionSource,
+                  indication = null,
+                  onClick = {
+                    tapFeedback.trigger()
+                    onClick()
+                  },
+                  role = Role.Button,
+              )
               .semantics(mergeDescendants = true) {}
               .padding(horizontal = 12.dp, vertical = 6.dp),
       horizontalArrangement = Arrangement.spacedBy(8.dp),

@@ -3,6 +3,8 @@ package com.kurobello.tallybook.core.ui.navigation
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,9 +22,10 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
@@ -36,6 +39,9 @@ import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Plus
 import com.composables.icons.lucide.Search
 import com.composables.icons.lucide.User
+import com.kurobello.tallybook.core.ui.component.TallybookSurface
+import com.kurobello.tallybook.core.ui.component.TallybookSurfaceStyle
+import com.kurobello.tallybook.core.ui.component.rememberTallybookTapFeedback
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
@@ -157,28 +163,45 @@ private fun BottomNavigationAdd(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+  val interactionSource = remember { MutableInteractionSource() }
+  val isPressed by interactionSource.collectIsPressedAsState()
+  val tapFeedback = rememberTallybookTapFeedback()
   Box(
       modifier = modifier.fillMaxHeight(),
       contentAlignment = Alignment.Center,
   ) {
-    Box(
+    TallybookSurface(
         modifier =
             Modifier.size(TallybookTheme.dimensions.bottomNavigationAddButton)
-                .clip(RoundedCornerShape(TallybookTheme.radii.radius18))
-                .background(
-                    color = TallybookTheme.colors.brand.primary,
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = {
+                      tapFeedback.trigger()
+                      onClick()
+                    },
+                    role = Role.Button,
                 )
-                .clickable(onClick = onClick, role = Role.Button)
                 .semantics {
                   contentDescription = label
                   role = Role.Button
                 },
-        contentAlignment = Alignment.Center,
+        style =
+            TallybookSurfaceStyle(
+                color = TallybookTheme.colors.brand.primary,
+                contentColor = TallybookTheme.colors.brand.onPrimary,
+                shape = RoundedCornerShape(TallybookTheme.radii.radius18),
+                border = null,
+            ),
+        isPressed = isPressed,
+        hasTapFeedback = tapFeedback.isActive,
     ) {
       Image(
           imageVector = Lucide.Plus,
           contentDescription = null,
-          modifier = Modifier.size(TallybookTheme.dimensions.bottomNavigationAddIcon),
+          modifier =
+              Modifier.align(Alignment.Center)
+                  .size(TallybookTheme.dimensions.bottomNavigationAddIcon),
           colorFilter = ColorFilter.tint(TallybookTheme.colors.brand.onPrimary),
       )
     }

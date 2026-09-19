@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.paneTitle
@@ -49,11 +50,23 @@ internal fun TallybookModalBottomSheet(
     layout: ModalBottomSheetLayout = ModalBottomSheetLayout(),
     content: @Composable () -> Unit,
 ) {
-  val sheetState = rememberModalBottomSheetState(initialDetent = SheetDetent.Hidden)
+  val expandedDetent =
+      remember(layout.sheetFillsAvailableHeight) {
+        if (layout.sheetFillsAvailableHeight) {
+          SheetDetent("available-height") { containerHeight, _ -> containerHeight }
+        } else {
+          SheetDetent.FullyExpanded
+        }
+      }
+  val sheetState =
+      rememberModalBottomSheetState(
+          initialDetent = SheetDetent.Hidden,
+          detents = listOf(SheetDetent.Hidden, expandedDetent),
+      )
   val currentCallbacks by rememberUpdatedState(callbacks)
 
   LaunchedEffect(visible) {
-    sheetState.targetDetent = if (visible) SheetDetent.FullyExpanded else SheetDetent.Hidden
+    sheetState.targetDetent = if (visible) expandedDetent else SheetDetent.Hidden
   }
 
   LaunchedEffect(visible, sheetState.currentDetent, sheetState.isIdle) {
@@ -64,7 +77,7 @@ internal fun TallybookModalBottomSheet(
 
   UnstyledModalBottomSheet(
       state = sheetState,
-      properties = ModalBottomSheetProperties(offsetForIme = true),
+      properties = ModalBottomSheetProperties(offsetForIme = false),
       onDismiss = currentCallbacks.onDismiss,
       overlay = { Scrim(scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f)) },
   ) {
@@ -73,6 +86,7 @@ internal fun TallybookModalBottomSheet(
             layout.modifier
                 .widthIn(max = 640.dp)
                 .fillMaxWidth()
+                .then(if (layout.sheetFillsAvailableHeight) Modifier.fillMaxHeight() else Modifier)
                 .background(
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     shape = MaterialTheme.shapes.extraLarge,
@@ -102,4 +116,7 @@ internal data class ModalBottomSheetCallbacks(
 internal data class ModalBottomSheetLayout(
     val modifier: Modifier = Modifier,
     val fillAvailableHeight: Boolean = false,
-)
+) {
+  val sheetFillsAvailableHeight: Boolean
+    get() = fillAvailableHeight
+}

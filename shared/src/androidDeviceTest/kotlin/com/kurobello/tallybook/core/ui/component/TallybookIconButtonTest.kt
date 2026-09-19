@@ -1,9 +1,17 @@
 package com.kurobello.tallybook.core.ui.component
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.X
@@ -77,5 +85,41 @@ class TallybookIconButtonTest {
         bounds.height >= minimumTouchTargetPx,
         "Expected icon-button height ${bounds.height}px to meet $minimumTouchTargetPx px",
     )
+  }
+
+  @Test
+  fun disabledIconButtonKeepsItsParentBackground() {
+    var parentColor = Color.Unspecified
+    composeRule.setContent {
+      TallybookTheme(darkTheme = true) {
+        parentColor = TallybookTheme.colors.surface.deep
+        Box(modifier = Modifier.fillMaxSize().background(parentColor)) {
+          TallybookIconButton(
+              onClick = {},
+              icon = Lucide.X,
+              contentDescription = "Disabled close sample",
+              enabled = false,
+          )
+        }
+      }
+    }
+
+    val bounds =
+        composeRule
+            .onNodeWithContentDescription("Disabled close sample")
+            .fetchSemanticsNode()
+            .boundsInRoot
+    val image = composeRule.onRoot().captureToImage().toPixelMap()
+    val backgroundPixel =
+        image[(bounds.left + bounds.width * 0.2f).toInt(), bounds.center.y.toInt()]
+
+    assertColorClose(parentColor, backgroundPixel)
+  }
+
+  private fun assertColorClose(expected: Color, actual: Color) {
+    val tolerance = 0.01f
+    assertTrue(kotlin.math.abs(expected.red - actual.red) < tolerance)
+    assertTrue(kotlin.math.abs(expected.green - actual.green) < tolerance)
+    assertTrue(kotlin.math.abs(expected.blue - actual.blue) < tolerance)
   }
 }

@@ -89,6 +89,40 @@ class TallybookSearchFieldTest {
   }
 
   @Test
+  fun populatedQueryKeepsTheSearchFieldAtTheEmptyFieldHeight() {
+    val parentQuery = mutableStateOf("")
+    composeRule.setContent {
+      TallybookTheme {
+        TallybookSearchField(
+            query = parentQuery.value,
+            onQueryChange = { parentQuery.value = it },
+            placeholder = "Search movements",
+            clearContentDescription = "Clear search",
+            onClear = { parentQuery.value = "" },
+        )
+      }
+    }
+
+    val emptyHeight =
+        composeRule
+            .onNodeWithContentDescription("Search movements")
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .height
+
+    composeRule.runOnIdle { parentQuery.value = "Lunch" }
+
+    val populatedHeight =
+        composeRule
+            .onNodeWithContentDescription("Search movements")
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .height
+
+    assertEquals(emptyHeight, populatedHeight, absoluteTolerance = 1f)
+  }
+
+  @Test
   fun disabledFieldDoesNotExposeEditingOrInvokeClear() {
     val parentQuery = mutableStateOf("Lunch")
     val queryChanges = mutableIntStateOf(0)

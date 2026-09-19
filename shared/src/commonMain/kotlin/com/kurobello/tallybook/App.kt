@@ -26,11 +26,19 @@ import tallybook.shared.generated.resources.startup_error_body
 import tallybook.shared.generated.resources.startup_error_title
 
 @Composable
-fun App(launchMode: AppLaunchMode = AppLaunchMode.Standard) {
+fun App(
+    launchMode: AppLaunchMode = AppLaunchMode.Standard,
+    developmentToolsEnabled: Boolean = false,
+) {
   TallybookTheme {
     val viewModel: AppStartupViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    AppStartupContent(uiState = uiState, launchMode = launchMode, onRetry = viewModel::onRetry)
+    AppStartupContent(
+        uiState = uiState,
+        launchMode = launchMode,
+        developmentToolsEnabled = developmentToolsEnabled,
+        onRetry = viewModel::onRetry,
+    )
   }
 }
 
@@ -38,11 +46,16 @@ fun App(launchMode: AppLaunchMode = AppLaunchMode.Standard) {
 private fun AppStartupContent(
     uiState: AppStartupUiState,
     launchMode: AppLaunchMode,
+    developmentToolsEnabled: Boolean,
     onRetry: () -> Unit,
 ) {
   when (uiState) {
     AppStartupUiState.Initializing -> StartupLoading()
-    AppStartupUiState.Ready -> TallybookNavHost(startDestination = startDestinationFor(launchMode))
+    AppStartupUiState.Ready ->
+        TallybookNavHost(
+            startDestination = startDestinationFor(launchMode),
+            developmentToolsEnabled = developmentToolsEnabled,
+        )
     AppStartupUiState.Error -> StartupError(onRetry)
   }
 }

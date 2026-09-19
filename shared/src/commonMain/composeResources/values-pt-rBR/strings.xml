@@ -8,9 +8,6 @@
     <string name="ui_catalog_system">Sistema</string>
     <string name="ui_catalog_light">Claro</string>
     <string name="ui_catalog_dark">Escuro</string>
-    <string name="ui_catalog_text_normal">Normal</string>
-    <string name="ui_catalog_text_large">Grande</string>
-    <string name="ui_catalog_text_extra_large">Extra grande</string>
     <string name="ui_catalog_sample_text">Texto de exemplo</string>
     <string name="ui_catalog_sample_caption">Texto de legenda</string>
     <string name="ui_catalog_sample_label">Texto de rótulo</string>

@@ -41,6 +41,7 @@ internal object TallybookTypeScale {
   val size19 = 19.sp
   val size20 = 20.sp
   val size21 = 21.sp
+  val size22 = 22.sp
   val size28 = 28.sp
   val size30 = 30.sp
 }
@@ -87,49 +88,49 @@ private fun createTallybookTypography(fontFamily: FontFamily): TallybookTypograp
         caption =
             TextStyle(
                 fontFamily = fontFamily,
-                fontSize = TallybookTypeScale.size11,
-                lineHeight = TallybookTypeScale.size14,
+                fontSize = TallybookTypeScale.size12,
+                lineHeight = TallybookTypeScale.size16,
                 fontWeight = FontWeight.Medium,
             ),
         label =
             TextStyle(
                 fontFamily = fontFamily,
-                fontSize = TallybookTypeScale.size12,
-                lineHeight = TallybookTypeScale.size16,
+                fontSize = TallybookTypeScale.size13,
+                lineHeight = TallybookTypeScale.size18,
                 fontWeight = FontWeight.SemiBold,
             ),
         bodySmall =
             TextStyle(
                 fontFamily = fontFamily,
-                fontSize = TallybookTypeScale.size13,
-                lineHeight = TallybookTypeScale.size18,
+                fontSize = TallybookTypeScale.size14,
+                lineHeight = TallybookTypeScale.size20,
                 fontWeight = FontWeight.Medium,
             ),
         body =
             TextStyle(
                 fontFamily = fontFamily,
-                fontSize = TallybookTypeScale.size14,
-                lineHeight = TallybookTypeScale.size20,
+                fontSize = TallybookTypeScale.size15,
+                lineHeight = TallybookTypeScale.size21,
                 fontWeight = FontWeight.Normal,
             ),
         bodyEmphasis =
             TextStyle(
                 fontFamily = fontFamily,
-                fontSize = TallybookTypeScale.size14,
-                lineHeight = TallybookTypeScale.size20,
+                fontSize = TallybookTypeScale.size15,
+                lineHeight = TallybookTypeScale.size21,
                 fontWeight = FontWeight.Bold,
             ),
         title =
             TextStyle(
                 fontFamily = fontFamily,
-                fontSize = TallybookTypeScale.size17,
-                lineHeight = TallybookTypeScale.size21,
+                fontSize = TallybookTypeScale.size18,
+                lineHeight = TallybookTypeScale.size22,
                 fontWeight = FontWeight.Bold,
             ),
         headline =
             TextStyle(
                 fontFamily = fontFamily,
-                fontSize = TallybookTypeScale.size20,
+                fontSize = TallybookTypeScale.size21,
                 lineHeight = TallybookTypeScale.size28,
                 fontWeight = FontWeight.ExtraBold,
             ),

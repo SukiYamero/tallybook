@@ -2,6 +2,7 @@ package com.kurobello.tallybook.feature.home
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
@@ -15,6 +16,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kurobello.tallybook.core.ui.component.TallybookButton
+import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.layout.TallybookScreenFrame
 import com.kurobello.tallybook.core.ui.navigation.TallybookBottomNavigation
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -24,9 +27,11 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_comida
+import tallybook.shared.generated.resources.ui_catalog_title
 
 @Composable
 internal fun HomeRoute(
+    onOpenCatalog: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel(),
 ) {
@@ -39,6 +44,7 @@ internal fun HomeRoute(
       uiState = uiState,
       onAddMovimiento = sheetSession::open,
       onRetry = viewModel::retry,
+      onOpenCatalog = onOpenCatalog,
       modifier = modifier,
   )
 
@@ -114,6 +120,7 @@ internal fun HomeScreen(
     uiState: HomeUiState,
     onAddMovimiento: () -> Unit,
     onRetry: () -> Unit,
+    onOpenCatalog: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
   TallybookScreenFrame(
@@ -132,6 +139,16 @@ internal fun HomeScreen(
         uiState.error != null -> item { HomeError(onRetry) }
         uiState.isEmpty -> item { HomeEmpty(onAddMovimiento) }
         else -> homePopulated(uiState)
+      }
+      if (onOpenCatalog != null) {
+        item {
+          TallybookButton(
+              onClick = onOpenCatalog,
+              modifier = Modifier.fillMaxWidth(),
+          ) {
+            TallybookText(text = stringResource(Res.string.ui_catalog_title))
+          }
+        }
       }
     }
   }

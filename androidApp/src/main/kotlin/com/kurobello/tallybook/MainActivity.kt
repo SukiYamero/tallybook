@@ -19,7 +19,10 @@ class MainActivity : ComponentActivity() {
             )
 
         setContent {
-            App(launchMode = launchMode)
+            App(
+                launchMode = launchMode,
+                developmentToolsEnabled = BuildConfig.DEBUG,
+            )
         }
     }
 }

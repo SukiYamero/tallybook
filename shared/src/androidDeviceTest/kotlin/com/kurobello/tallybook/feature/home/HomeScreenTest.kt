@@ -52,6 +52,7 @@ import tallybook.shared.generated.resources.navigation_home
 import tallybook.shared.generated.resources.navigation_profile
 import tallybook.shared.generated.resources.navigation_search
 import tallybook.shared.generated.resources.retry
+import tallybook.shared.generated.resources.ui_catalog_title
 
 class HomeScreenTest {
 
@@ -193,6 +194,26 @@ class HomeScreenTest {
     composeRule.onNodeWithText(retryLabel).performClick()
 
     composeRule.runOnIdle { assertEquals(1, retries) }
+  }
+
+  @Test
+  fun debugCatalogActionInvokesTheCatalogCallback() {
+    var catalogOpenings = 0
+    val catalogLabel = localizedString(Res.string.ui_catalog_title)
+    composeRule.setContent {
+      TallybookTheme {
+        HomeScreen(
+            uiState = HomeUiState.loading(),
+            onAddMovimiento = {},
+            onRetry = {},
+            onOpenCatalog = { catalogOpenings += 1 },
+        )
+      }
+    }
+
+    composeRule.onNodeWithText(catalogLabel).performClick()
+
+    composeRule.runOnIdle { assertEquals(1, catalogOpenings) }
   }
 
   @Test

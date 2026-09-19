@@ -3,6 +3,8 @@ package com.kurobello.tallybook.core.ui.component
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,13 +42,25 @@ internal fun TallybookSelectionField(
     message: TallybookFieldMessage? = null,
     leadingContent: (@Composable () -> Unit)? = null,
 ) {
+  val interactionSource = remember { MutableInteractionSource() }
+  val isPressed by interactionSource.collectIsPressedAsState()
+  val tapFeedback = rememberTallybookTapFeedback()
   val appearance = tallybookSelectionFieldAppearance(enabled = enabled, message = message)
   Column(
       modifier =
           modifier
               .then(
-                  if (enabled) Modifier.clickable(role = Role.Button, onClick = onClick)
-                  else Modifier
+                  if (enabled) {
+                    Modifier.clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        role = Role.Button,
+                        onClick = {
+                          tapFeedback.trigger()
+                          onClick()
+                        },
+                    )
+                  } else Modifier
               )
               .semantics(mergeDescendants = true) {
                 role = Role.Button
@@ -67,6 +83,7 @@ internal fun TallybookSelectionField(
         placeholder = placeholder,
         appearance = appearance,
         leadingContent = leadingContent,
+        isPressed = isPressed || tapFeedback.isActive,
     )
     if (message != null) {
       TallybookFieldMessageContent(message = message)
@@ -80,6 +97,7 @@ private fun TallybookSelectionFieldContainer(
     placeholder: String,
     appearance: TallybookSelectionFieldAppearance,
     leadingContent: (@Composable () -> Unit)?,
+    isPressed: Boolean,
 ) {
   TallybookSurface(
       style =
@@ -93,6 +111,7 @@ private fun TallybookSelectionFieldContainer(
                       color = appearance.borderColor,
                   ),
           ),
+      isPressed = isPressed,
   ) {
     Row(
         modifier =

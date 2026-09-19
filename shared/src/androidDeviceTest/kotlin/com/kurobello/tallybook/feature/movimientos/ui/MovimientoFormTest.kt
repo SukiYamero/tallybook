@@ -11,6 +11,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -42,6 +43,7 @@ import org.junit.Test
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.amount_overflow
 import tallybook.shared.generated.resources.amount_required
+import tallybook.shared.generated.resources.category
 import tallybook.shared.generated.resources.category_required
 import tallybook.shared.generated.resources.date
 import tallybook.shared.generated.resources.income
@@ -140,6 +142,18 @@ class MovimientoFormTest {
             )
         )
         .assertIsFocused()
+  }
+
+  @Test
+  fun openingTheCategoryPickerClearsFocusFromThePreviousTextField() {
+    val categoryLabel = localizedString(Res.string.category)
+
+    composeRule.setContent { TallybookTheme { MovimientoForm(state(), RecordingActions()) } }
+
+    composeRule.onNodeWithTag("movimiento_amount").performClick().assertIsFocused()
+    composeRule.onNodeWithText(categoryLabel).performClick()
+
+    composeRule.onNodeWithTag("movimiento_amount").assertIsNotFocused()
   }
 
   @Test

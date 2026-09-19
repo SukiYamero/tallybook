@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -20,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.error
@@ -58,6 +60,7 @@ internal fun TallybookTextField(
           placeholder = placeholder,
           textStyle = textStyle,
           appearance = appearance,
+          singleLine = singleLine,
           leadingContent = leadingContent,
           trailingContent = trailingContent,
       )
@@ -66,13 +69,7 @@ internal fun TallybookTextField(
       modifier = modifier,
       verticalArrangement = Arrangement.spacedBy(TallybookSpacing.space4),
   ) {
-    if (label != null) {
-      TallybookText(
-          text = label,
-          color = appearance.labelColor,
-          style = TallybookTheme.typography.label,
-      )
-    }
+    TallybookTextFieldLabel(label = label, color = appearance.labelColor)
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
@@ -88,6 +85,7 @@ internal fun TallybookTextField(
         enabled = enabled,
         readOnly = readOnly,
         textStyle = textStyle.merge(color = appearance.valueColor),
+        cursorBrush = SolidColor(TallybookTheme.colors.input.cursor),
         keyboardOptions = keyboardOptions,
         singleLine = singleLine,
         interactionSource = interactionSource,
@@ -98,10 +96,20 @@ internal fun TallybookTextField(
           )
         },
     )
-    if (message != null) {
-      TallybookFieldMessageContent(message = message)
-    }
+    TallybookTextFieldMessage(message = message)
   }
+}
+
+@Composable
+private fun TallybookTextFieldLabel(label: String?, color: Color) {
+  if (label != null) {
+    TallybookText(text = label, color = color, style = TallybookTheme.typography.label)
+  }
+}
+
+@Composable
+private fun TallybookTextFieldMessage(message: TallybookFieldMessage?) {
+  if (message != null) TallybookFieldMessageContent(message = message)
 }
 
 @Composable
@@ -112,7 +120,11 @@ private fun TallybookTextFieldDecoration(
   val shape = RoundedCornerShape(TallybookTheme.radii.radius12)
   Row(
       modifier =
-          Modifier.defaultMinSize(minHeight = TallybookTheme.dimensions.fieldMinimumHeight)
+          (if (parameters.singleLine) {
+                Modifier.height(TallybookTheme.dimensions.fieldMinimumHeight)
+              } else {
+                Modifier.defaultMinSize(minHeight = TallybookTheme.dimensions.fieldMinimumHeight)
+              })
               .clip(shape)
               .background(parameters.appearance.containerColor)
               .border(
@@ -120,9 +132,10 @@ private fun TallybookTextFieldDecoration(
                   color = parameters.appearance.borderColor,
                   shape = shape,
               )
-              .padding(
-                  horizontal = TallybookTheme.dimensions.fieldHorizontalPadding,
-                  vertical = TallybookTheme.dimensions.fieldVerticalPadding,
+              .padding(horizontal = TallybookTheme.dimensions.fieldHorizontalPadding)
+              .then(
+                  if (parameters.singleLine) Modifier
+                  else Modifier.padding(vertical = TallybookTheme.dimensions.fieldVerticalPadding)
               ),
       verticalAlignment = Alignment.CenterVertically,
   ) {
@@ -154,6 +167,7 @@ private data class TallybookTextFieldDecorationParameters(
     val placeholder: String?,
     val textStyle: TextStyle,
     val appearance: TallybookTextFieldAppearance,
+    val singleLine: Boolean,
     val leadingContent: (@Composable () -> Unit)?,
     val trailingContent: (@Composable () -> Unit)?,
 )
