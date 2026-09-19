@@ -30,6 +30,7 @@ class TallybookTypographyTest {
       assertEquals(15.sp, typography?.bodyEmphasis?.fontSize)
       assertEquals(18.sp, typography?.title?.fontSize)
       assertEquals(21.sp, typography?.headline?.fontSize)
+      assertEquals(36.sp, typography?.amount?.fontSize)
     }
   }
 

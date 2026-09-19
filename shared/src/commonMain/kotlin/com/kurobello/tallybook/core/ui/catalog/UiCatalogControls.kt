@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber", "TooManyFunctions")
+
 package com.kurobello.tallybook.core.ui.catalog
 
 import androidx.compose.foundation.Image
@@ -23,6 +25,8 @@ import com.composables.icons.lucide.ArrowUpRight
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.UtensilsCrossed
 import com.composables.icons.lucide.X
+import com.kurobello.tallybook.core.ui.component.TallybookAmountInput
+import com.kurobello.tallybook.core.ui.component.TallybookDateChipPicker
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
 import com.kurobello.tallybook.core.ui.component.TallybookIconButton
 import com.kurobello.tallybook.core.ui.component.TallybookIconButtonStyle
@@ -36,16 +40,22 @@ import com.kurobello.tallybook.core.ui.component.TallybookSurface
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextField
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.amount
+import tallybook.shared.generated.resources.amount_required
 import tallybook.shared.generated.resources.category
 import tallybook.shared.generated.resources.category_comida
 import tallybook.shared.generated.resources.category_required
+import tallybook.shared.generated.resources.date
 import tallybook.shared.generated.resources.expense
 import tallybook.shared.generated.resources.home_search_placeholder
 import tallybook.shared.generated.resources.income
 import tallybook.shared.generated.resources.loading
+import tallybook.shared.generated.resources.ui_catalog_amount_inputs
 import tallybook.shared.generated.resources.ui_catalog_clear_search
+import tallybook.shared.generated.resources.ui_catalog_date_pickers
 import tallybook.shared.generated.resources.ui_catalog_disabled_icon_button
 import tallybook.shared.generated.resources.ui_catalog_icon_button
 import tallybook.shared.generated.resources.ui_catalog_icon_buttons
@@ -85,6 +95,16 @@ internal fun LazyListScope.catalogControlMatrices() {
       CatalogSearchFieldMatrix()
     }
   }
+  item(key = "amount-inputs") {
+    CatalogSection(title = stringResource(Res.string.ui_catalog_amount_inputs)) {
+      CatalogAmountInputMatrix()
+    }
+  }
+  item(key = "date-pickers") {
+    CatalogSection(title = stringResource(Res.string.ui_catalog_date_pickers)) {
+      CatalogDatePickerMatrix()
+    }
+  }
   item(key = "segmented-controls") {
     CatalogSection(title = stringResource(Res.string.ui_catalog_segmented_controls)) {
       CatalogSegmentedControlMatrix()
@@ -107,6 +127,53 @@ internal fun LazyListScope.catalogControlMatrices() {
             supportingText = stringResource(Res.string.ui_catalog_loading_supporting),
         )
       }
+    }
+  }
+}
+
+@Composable
+private fun CatalogAmountInputMatrix() {
+  var value by rememberSaveable { mutableStateOf("") }
+  CatalogSurface {
+    CatalogSample(label = stringResource(Res.string.ui_catalog_state_default)) {
+      TallybookAmountInput(
+          value = value,
+          onValueChange = { value = it },
+          label = stringResource(Res.string.amount),
+          currencySymbol = "$",
+      )
+    }
+    CatalogSample(label = stringResource(Res.string.ui_catalog_state_error)) {
+      TallybookAmountInput(
+          value = "",
+          onValueChange = {},
+          label = stringResource(Res.string.amount),
+          currencySymbol = "$",
+          message = TallybookFieldMessage.Error(stringResource(Res.string.amount_required)),
+      )
+    }
+  }
+}
+
+@Composable
+private fun CatalogDatePickerMatrix() {
+  var value by rememberSaveable { mutableStateOf(LocalDate(2026, 9, 15)) }
+  CatalogSurface {
+    CatalogSample(label = stringResource(Res.string.ui_catalog_state_default)) {
+      TallybookDateChipPicker(
+          value = value,
+          onValueChange = { value = it },
+          label = stringResource(Res.string.date),
+          maxDate = LocalDate(2026, 9, 15),
+      )
+    }
+    CatalogSample(label = stringResource(Res.string.ui_catalog_state_disabled)) {
+      TallybookDateChipPicker(
+          value = value,
+          onValueChange = {},
+          label = stringResource(Res.string.date),
+          enabled = false,
+      )
     }
   }
 }

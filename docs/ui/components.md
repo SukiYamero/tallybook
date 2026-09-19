@@ -30,6 +30,8 @@ creating another one. Visual tokens, interaction rules, and ownership remain def
 |---|---|---|
 | `TallybookTextField` | A themed single-line or multi-line text input with label, placeholder, error, and leading or trailing content | It owns focus, cursor, border, and disabled appearance. |
 | `TallybookSearchField` | Search queries with a search affordance and optional clear action | Its outer size remains stable while the query changes. |
+| `TallybookAmountInput` | A prominent monetary value with its currency symbol, decimal keyboard, and field feedback | It does not parse, normalize, or format while the user is editing. |
+| `TallybookDateChipPicker` | Selecting one calendar date from a compact date chip | It applies a date immediately and can limit dates through `maxDate`. |
 | `TallybookFieldMessage` | Error or supporting text associated with a field | Prefer the field's `message` parameter when it is available. |
 | `InputFocusReveal` | Android-only smooth centering of an already focused form input inside a scrollable sheet | It is an implementation helper, not a feature-level component. iOS keeps its native input relocation. |
 

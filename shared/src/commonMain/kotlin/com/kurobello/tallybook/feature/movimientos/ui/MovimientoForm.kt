@@ -80,7 +80,6 @@ internal fun MovimientoForm(
     modifier: Modifier = Modifier,
 ) {
   var categoryPickerVisible by rememberSaveable { mutableStateOf(false) }
-  var datePickerVisible by rememberSaveable { mutableStateOf(false) }
   var descriptionVisible by rememberSaveable { mutableStateOf(false) }
   val amountFocusRequester = remember { FocusRequester() }
   val categoryFocusRequester = remember { FocusRequester() }
@@ -144,11 +143,8 @@ internal fun MovimientoForm(
           state =
               MovimientoDateFieldState(
                   fecha = uiState.fecha,
-                  showPicker = datePickerVisible,
                   enabled = !uiState.isSubmitting,
               ),
-          onOpenPicker = { datePickerVisible = true },
-          onDismissPicker = { datePickerVisible = false },
           onFechaChanged = actions::onFechaChanged,
       )
       Column(

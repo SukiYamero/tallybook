@@ -26,6 +26,8 @@ internal data class TallybookTypography(
     val bodyEmphasis: TextStyle,
     val title: TextStyle,
     val headline: TextStyle,
+    val amountSymbol: TextStyle,
+    val amount: TextStyle,
 )
 
 internal object TallybookTypeScale {
@@ -44,6 +46,8 @@ internal object TallybookTypeScale {
   val size22 = 22.sp
   val size28 = 28.sp
   val size30 = 30.sp
+  val amountInputL = 42.sp
+  val amountInputM = 36.sp
 }
 
 internal val LocalTallybookTypography = staticCompositionLocalOf {
@@ -83,6 +87,7 @@ internal fun legacyMaterialTypography(typography: TallybookTypography): Typograp
         displaySmall = typography.headline,
     )
 
+@Suppress("LongMethod")
 private fun createTallybookTypography(fontFamily: FontFamily): TallybookTypography =
     TallybookTypography(
         caption =
@@ -132,6 +137,20 @@ private fun createTallybookTypography(fontFamily: FontFamily): TallybookTypograp
                 fontFamily = fontFamily,
                 fontSize = TallybookTypeScale.size21,
                 lineHeight = TallybookTypeScale.size28,
+                fontWeight = FontWeight.ExtraBold,
+            ),
+        amountSymbol =
+            TextStyle(
+                fontFamily = fontFamily,
+                fontSize = TallybookTypeScale.size30,
+                lineHeight = TallybookTypeScale.size30,
+                fontWeight = FontWeight.ExtraBold,
+            ),
+        amount =
+            TextStyle(
+                fontFamily = fontFamily,
+                fontSize = TallybookTypeScale.amountInputM,
+                lineHeight = TallybookTypeScale.amountInputM,
                 fontWeight = FontWeight.ExtraBold,
             ),
     )

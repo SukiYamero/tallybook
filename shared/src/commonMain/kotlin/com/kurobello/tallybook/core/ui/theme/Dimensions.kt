@@ -32,6 +32,11 @@ internal object TallybookDimensions {
   val fieldVerticalPadding = TallybookSpacing.space12
   val fieldIconSize = iconMedium
   val fieldBorderWidth = borderThin
+  val amountInputMinimumWidth = TallybookSpacing.space48
+  val amountInputMaximumWidth = 240.dp
+  val datePickerChipIconSize = TallybookSpacing.space14
+  val datePickerDaySize = TallybookSpacing.space40
+  val datePickerMaximumWidth = 336.dp
   val segmentedControlMinimumHeight = minimumTouchTarget
   val movementSummaryIcon = iconSmall
 }

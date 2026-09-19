@@ -1,7 +1,5 @@
 package com.kurobello.tallybook.feature.movimientos.ui
 
-import androidx.compose.material3.DatePickerDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -29,7 +27,6 @@ import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoUiState
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormError
-import java.util.Locale
 import kotlin.test.assertEquals
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
@@ -53,7 +50,7 @@ import tallybook.shared.generated.resources.movimiento_save_error
 import tallybook.shared.generated.resources.retry
 import tallybook.shared.generated.resources.save_income
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
+@OptIn(ExperimentalResourceApi::class)
 class MovimientoFormTest {
 
   @get:Rule val composeRule = createComposeRule()
@@ -203,20 +200,8 @@ class MovimientoFormTest {
   fun futureDateIsDisabledAndDoesNotChangeTheSelectedDate() {
     val selectedDate = LocalDate(2026, 9, 15)
     val futureDate = LocalDate(2026, 9, 16)
-    var showPicker by mutableStateOf(false)
     var changedDate: LocalDate? = null
     val dateLabel = localizedString(Res.string.date)
-    val futureDateLabel =
-        requireNotNull(
-            DatePickerDefaults.dateFormatter()
-                .formatDate(
-                    futureDate.toUtcMillis(),
-                    Locale.getDefault(),
-                    forContentDescription = true,
-                )
-        ) {
-          "The date picker must expose the future date label"
-        }
 
     composeRule.setContent {
       TallybookTheme {
@@ -224,19 +209,16 @@ class MovimientoFormTest {
             state =
                 MovimientoDateFieldState(
                     fecha = selectedDate,
-                    showPicker = showPicker,
                     enabled = true,
                     maxSelectableDate = selectedDate,
                 ),
-            onOpenPicker = { showPicker = true },
-            onDismissPicker = { showPicker = false },
             onFechaChanged = { changedDate = it },
         )
       }
     }
 
-    composeRule.onNodeWithText("$dateLabel: $selectedDate").performClick()
-    composeRule.onNodeWithText(futureDateLabel).assertIsNotEnabled()
+    composeRule.onNodeWithContentDescription(dateLabel).performClick()
+    composeRule.onNodeWithText(futureDate.day.toString()).assertIsNotEnabled()
 
     composeRule.runOnIdle { assertEquals(null, changedDate) }
   }

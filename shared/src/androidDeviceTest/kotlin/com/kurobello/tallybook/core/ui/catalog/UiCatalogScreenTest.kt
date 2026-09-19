@@ -40,9 +40,11 @@ import tallybook.shared.generated.resources.navigation_home
 import tallybook.shared.generated.resources.navigation_profile
 import tallybook.shared.generated.resources.navigation_search
 import tallybook.shared.generated.resources.ui_catalog_actions
+import tallybook.shared.generated.resources.ui_catalog_amount_inputs
 import tallybook.shared.generated.resources.ui_catalog_clear_search
 import tallybook.shared.generated.resources.ui_catalog_dark
 import tallybook.shared.generated.resources.ui_catalog_data_display
+import tallybook.shared.generated.resources.ui_catalog_date_pickers
 import tallybook.shared.generated.resources.ui_catalog_disabled_icon_button
 import tallybook.shared.generated.resources.ui_catalog_foundations
 import tallybook.shared.generated.resources.ui_catalog_icon_buttons
@@ -232,6 +234,8 @@ class UiCatalogScreenTest {
             CatalogSection("icon-buttons", Res.string.ui_catalog_icon_buttons),
             CatalogSection("text-fields", Res.string.ui_catalog_text_fields),
             CatalogSection("search-fields", Res.string.ui_catalog_search_fields),
+            CatalogSection("amount-inputs", Res.string.ui_catalog_amount_inputs),
+            CatalogSection("date-pickers", Res.string.ui_catalog_date_pickers),
             CatalogSection("segmented-controls", Res.string.ui_catalog_segmented_controls),
             CatalogSection("selection-fields", Res.string.ui_catalog_selection_fields),
             CatalogSection("loading-states", Res.string.ui_catalog_loading_states),

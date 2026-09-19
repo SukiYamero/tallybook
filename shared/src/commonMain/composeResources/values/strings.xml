@@ -19,6 +19,8 @@
     <string name="ui_catalog_segmented_controls">Segmented controls</string>
     <string name="ui_catalog_selection_fields">Selection fields</string>
     <string name="ui_catalog_loading_states">Loading states</string>
+    <string name="ui_catalog_amount_inputs">Amount inputs</string>
+    <string name="ui_catalog_date_pickers">Date pickers</string>
     <string name="ui_catalog_state_default">Default</string>
     <string name="ui_catalog_state_emphasis">Emphasis</string>
     <string name="ui_catalog_state_populated">Populated</string>
@@ -64,6 +66,18 @@
     <string name="income">Ingreso</string>
     <string name="amount">Monto</string>
     <string name="date">Fecha</string>
+    <string name="date_chip_value">%1$d de %2$s</string>
+    <string name="calendar_previous_month">Mes anterior</string>
+    <string name="calendar_next_month">Mes siguiente</string>
+    <string name="calendar_date_content_description">%1$d de %2$s de %3$d</string>
+    <string-array name="date_picker_months">
+        <item>enero</item><item>febrero</item><item>marzo</item><item>abril</item>
+        <item>mayo</item><item>junio</item><item>julio</item><item>agosto</item>
+        <item>septiembre</item><item>octubre</item><item>noviembre</item><item>diciembre</item>
+    </string-array>
+    <string-array name="date_picker_weekdays">
+        <item>L</item><item>M</item><item>X</item><item>J</item><item>V</item><item>S</item><item>D</item>
+    </string-array>
     <string name="category">Categoría</string>
     <string name="description_optional">Descripción (opcional)</string>
     <string name="save_expense">Guardar gasto</string>
