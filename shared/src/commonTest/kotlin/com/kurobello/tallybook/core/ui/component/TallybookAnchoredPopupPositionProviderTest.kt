@@ -8,11 +8,11 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.datetime.LocalDate
 
-class TallybookDatePickerPopupPositionProviderTest {
+class TallybookAnchoredPopupPositionProviderTest {
 
   @Test
   fun positionsTheCalendarBelowWhenTheViewportHasEnoughTrailingSpace() {
-    val provider = TallybookDatePickerPopupPositionProvider(verticalOffset = 8, edgeMargin = 16)
+    val provider = TallybookAnchoredPopupPositionProvider(verticalOffset = 8, edgeMargin = 16)
 
     assertEquals(
         IntOffset(100, 140),
@@ -27,7 +27,7 @@ class TallybookDatePickerPopupPositionProviderTest {
 
   @Test
   fun flipsTheCalendarAboveWhenTheTrailingViewportSpaceIsInsufficient() {
-    val provider = TallybookDatePickerPopupPositionProvider(verticalOffset = 8, edgeMargin = 16)
+    val provider = TallybookAnchoredPopupPositionProvider(verticalOffset = 8, edgeMargin = 16)
 
     assertEquals(
         IntOffset(100, 292),

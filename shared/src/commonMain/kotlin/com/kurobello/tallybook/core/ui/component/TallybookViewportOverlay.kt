@@ -1,9 +1,6 @@
 package com.kurobello.tallybook.core.ui.component
 
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -47,17 +44,8 @@ internal fun TallybookViewportOverlayHost(
       animateFloatAsState(
           targetValue = if (overlayState.isScrimVisible) VIEWPORT_SCRIM_ALPHA else 0f,
           animationSpec =
-              if (overlayState.isScrimVisible) {
-                tween(
-                    durationMillis = VIEWPORT_OVERLAY_ENTER_DURATION_MILLIS,
-                    easing = LinearOutSlowInEasing,
-                )
-              } else {
-                tween(
-                    durationMillis = VIEWPORT_OVERLAY_EXIT_DURATION_MILLIS,
-                    easing = FastOutLinearInEasing,
-                )
-              },
+              if (overlayState.isScrimVisible) TallybookOverlayMotion.enterAnimationSpec
+              else TallybookOverlayMotion.exitAnimationSpec,
           label = "viewport overlay scrim",
       )
   CompositionLocalProvider(LocalTallybookViewportOverlayState provides overlayState) {
@@ -72,5 +60,3 @@ internal fun TallybookViewportOverlayHost(
 }
 
 private const val VIEWPORT_SCRIM_ALPHA = 0.32f
-private const val VIEWPORT_OVERLAY_ENTER_DURATION_MILLIS = 200
-private const val VIEWPORT_OVERLAY_EXIT_DURATION_MILLIS = 150

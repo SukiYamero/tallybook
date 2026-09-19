@@ -21,6 +21,13 @@
     <string name="ui_catalog_loading_states">Loading states</string>
     <string name="ui_catalog_amount_inputs">Amount inputs</string>
     <string name="ui_catalog_date_pickers">Date pickers</string>
+    <string name="ui_catalog_period_pickers">Period pickers</string>
+    <string name="ui_catalog_period_scope">Period scope</string>
+    <string name="ui_catalog_year_selector">Year selector</string>
+    <string name="ui_catalog_period_day">Day</string>
+    <string name="ui_catalog_period_week">Week</string>
+    <string name="ui_catalog_period_month">Month</string>
+    <string name="ui_catalog_period_summary">Summary</string>
     <string name="ui_catalog_state_default">Default</string>
     <string name="ui_catalog_state_emphasis">Emphasis</string>
     <string name="ui_catalog_state_populated">Populated</string>
@@ -77,6 +84,9 @@
     </string-array>
     <string-array name="date_picker_weekdays">
         <item>M</item><item>T</item><item>W</item><item>T</item><item>F</item><item>S</item><item>S</item>
+    </string-array>
+    <string-array name="date_picker_weekday_names">
+        <item>Monday</item><item>Tuesday</item><item>Wednesday</item><item>Thursday</item><item>Friday</item><item>Saturday</item><item>Sunday</item>
     </string-array>
     <string name="category">Category</string>
     <string name="description_optional">Description (optional)</string>

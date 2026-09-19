@@ -20,7 +20,10 @@ creating another one. Visual tokens, interaction rules, and ownership remain def
 | `TallybookButton` | A primary, filled action, optionally with an icon | Use the action label as the visible content; it preserves the shared subtle press feedback. |
 | `TallybookTextButton` | A secondary, low-emphasis action with text and optional icon | Use when a filled background would overstate hierarchy. |
 | `TallybookIconButton` | A compact icon-only action such as search clear or a contextual control | It requires an accessibility description and supports neutral and brand styles. |
-| `TallybookSegmentedControl` | Selecting exactly one peer option, such as Gasto or Ingreso | It behaves as a tab-like single selection; the selected option carries the tonal container. |
+| `TallybookSegmentedControl` | Selecting exactly one peer option, such as Gasto or Ingreso | Use its tonal style when the choice has a semantic color; use its neutral style for peer scopes such as Día, Semana, and Mes. |
+| `TallybookPeriodPickerHeader` | Giving the active day, week, or month its contextual title next to the year control | The caller supplies the title, optional subtitle, and year-control slot. |
+| `TallybookPeriodPickerRow` | Choosing one bounded day, week, or month period in a horizontally scrollable row | The caller owns the typed period values; optional captions and data indicators are presentational metadata. |
+| `TallybookYearMenu` | Changing the year that scopes a period picker | It is an anchored, accessible popup with the same scrim and motion as the date picker; four year rows are visible before its list scrolls. |
 | `TallybookSelectionField` | Opening a dedicated selection flow from a form | It displays a value or placeholder; it is not a free-text input or inline dropdown. |
 | `CategoryChip` | Selecting a category inside the category picker | Use it in the selection flow, not as a substitute for the form field. |
 

@@ -19,18 +19,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import com.kurobello.tallybook.core.ui.theme.TallybookColors
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 
 internal enum class TallybookSegmentTone {
   Neutral,
   Income,
   Expense,
+}
+
+internal enum class TallybookSegmentedControlStyle {
+  Tonal,
+  Neutral,
 }
 
 @Immutable
@@ -53,8 +60,21 @@ private data class TallybookSegmentedControlColors(
 
 private object TallybookSegmentedControlDefaults {
   @Composable
-  fun colors(tone: TallybookSegmentTone): TallybookSegmentedControlColors {
+  fun colors(
+      style: TallybookSegmentedControlStyle,
+      tone: TallybookSegmentTone,
+  ): TallybookSegmentedControlColors {
     val colors = TallybookTheme.colors
+    if (style == TallybookSegmentedControlStyle.Neutral) {
+      return TallybookSegmentedControlColors(
+          selectedContainer = neutralSelectedSegmentContainer(colors),
+          selectedContent = colors.foreground.primary,
+          unselectedContainer = Color.Transparent,
+          unselectedContent = colors.foreground.tertiary,
+          disabledContainer = Color.Transparent,
+          disabledContent = colors.foreground.disabled,
+      )
+    }
     val status =
         when (tone) {
           TallybookSegmentTone.Neutral -> null
@@ -74,12 +94,14 @@ private object TallybookSegmentedControlDefaults {
 }
 
 @Composable
+@Suppress("LongParameterList")
 internal fun <T> TallybookSegmentedControl(
     options: List<TallybookSegmentOption<T>>,
     selected: T,
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    style: TallybookSegmentedControlStyle = TallybookSegmentedControlStyle.Tonal,
 ) {
   require(options.isNotEmpty()) { "Segmented control options must not be empty." }
 
@@ -97,7 +119,7 @@ internal fun <T> TallybookSegmentedControl(
       TallybookSegment(
           option = option,
           isSelected = option.value == selected,
-          colors = TallybookSegmentedControlDefaults.colors(option.tone),
+          colors = TallybookSegmentedControlDefaults.colors(style, option.tone),
           enabled = enabled,
           onSelect = onSelect,
       )
@@ -106,6 +128,12 @@ internal fun <T> TallybookSegmentedControl(
 }
 
 private const val SEGMENT_TONE_CONTAINER_ALPHA = 0.15f
+private const val NEUTRAL_SELECTED_CONTAINER_DARKENING_ALPHA = 0.04f
+
+internal fun neutralSelectedSegmentContainer(colors: TallybookColors): Color =
+    colors.foreground.primary
+        .copy(alpha = NEUTRAL_SELECTED_CONTAINER_DARKENING_ALPHA)
+        .compositeOver(colors.surface.highest)
 
 @Composable
 private fun <T> RowScope.TallybookSegment(

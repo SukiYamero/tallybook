@@ -246,6 +246,29 @@ class TallybookSegmentedControlTest {
     assertColorClose(trackColor, unselectedPixel)
   }
 
+  @Test
+  fun neutralStyleSelectedSegmentUsesNeutralSurfaceInsteadOfItsTone() {
+    var selectedContainer = Color.Unspecified
+    composeRule.setContent {
+      TallybookTheme(darkTheme = true) {
+        selectedContainer =
+            TallybookTheme.colors.foreground.primary
+                .copy(alpha = neutralSelectedContainerDarkeningAlpha)
+                .compositeOver(TallybookTheme.colors.surface.highest)
+        TallybookSegmentedControl(
+            options = tintedOptions,
+            selected = TransactionType.Expense,
+            onSelect = {},
+            style = TallybookSegmentedControlStyle.Neutral,
+        )
+      }
+    }
+
+    val image = composeRule.onRoot().captureToImage().toPixelMap()
+
+    assertColorClose(selectedContainer, pixelInsideSegment(image, "Expense"))
+  }
+
   private enum class TransactionType {
     Expense,
     Income,
@@ -270,6 +293,8 @@ class TallybookSegmentedControlTest {
   }
 
   private companion object {
+    const val neutralSelectedContainerDarkeningAlpha = 0.04f
+
     val options =
         listOf(
             TallybookSegmentOption(TransactionType.Expense, "Expense"),

@@ -3,10 +3,7 @@
 package com.kurobello.tallybook.core.ui.component
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -99,7 +96,7 @@ internal fun TallybookDateChipPicker(
   }
   val popupPositionProvider =
       remember(density) {
-        TallybookDatePickerPopupPositionProvider(
+        TallybookAnchoredPopupPositionProvider(
             verticalOffset = with(density) { TallybookTheme.spacing.space8.roundToPx() },
             edgeMargin = with(density) { TallybookTheme.spacing.space16.roundToPx() },
         )
@@ -166,16 +163,16 @@ internal fun TallybookDateChipPicker(
         AnimatedVisibility(
             visibleState = popupVisibility,
             enter =
-                fadeIn(animationSpec = datePickerEnterAnimationSpec) +
+                fadeIn(animationSpec = TallybookOverlayMotion.enterAnimationSpec) +
                     scaleIn(
-                        animationSpec = datePickerEnterAnimationSpec,
-                        initialScale = DATE_PICKER_INITIAL_SCALE,
+                        animationSpec = TallybookOverlayMotion.enterAnimationSpec,
+                        initialScale = TallybookOverlayMotion.initialScale,
                     ),
             exit =
-                fadeOut(animationSpec = datePickerExitAnimationSpec) +
+                fadeOut(animationSpec = TallybookOverlayMotion.exitAnimationSpec) +
                     scaleOut(
-                        animationSpec = datePickerExitAnimationSpec,
-                        targetScale = DATE_PICKER_INITIAL_SCALE,
+                        animationSpec = TallybookOverlayMotion.exitAnimationSpec,
+                        targetScale = TallybookOverlayMotion.initialScale,
                     ),
         ) {
           TallybookDateCalendar(
@@ -446,7 +443,7 @@ internal fun selectableYears(selectedDate: LocalDate, maxDate: LocalDate?): IntR
   return FIRST_SELECTABLE_YEAR..maximum
 }
 
-internal class TallybookDatePickerPopupPositionProvider(
+internal class TallybookAnchoredPopupPositionProvider(
     private val verticalOffset: Int,
     private val edgeMargin: Int,
 ) : PopupPositionProvider {
@@ -492,18 +489,3 @@ private const val DAYS_IN_WEEK = 7
 private const val FIRST_SELECTABLE_YEAR = 2011
 private const val YEARS_AHEAD_WITHOUT_LIMIT = 1
 private const val YEARS_PER_ROW = 4
-private const val DATE_PICKER_ENTER_DURATION_MILLIS = 200
-private const val DATE_PICKER_EXIT_DURATION_MILLIS = 150
-private const val DATE_PICKER_INITIAL_SCALE = 0.985f
-
-private val datePickerEnterAnimationSpec =
-    tween<Float>(
-        durationMillis = DATE_PICKER_ENTER_DURATION_MILLIS,
-        easing = LinearOutSlowInEasing,
-    )
-
-private val datePickerExitAnimationSpec =
-    tween<Float>(
-        durationMillis = DATE_PICKER_EXIT_DURATION_MILLIS,
-        easing = FastOutLinearInEasing,
-    )

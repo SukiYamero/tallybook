@@ -49,6 +49,7 @@ import tallybook.shared.generated.resources.ui_catalog_disabled_icon_button
 import tallybook.shared.generated.resources.ui_catalog_foundations
 import tallybook.shared.generated.resources.ui_catalog_icon_buttons
 import tallybook.shared.generated.resources.ui_catalog_loading_states
+import tallybook.shared.generated.resources.ui_catalog_period_pickers
 import tallybook.shared.generated.resources.ui_catalog_sample_body_emphasis
 import tallybook.shared.generated.resources.ui_catalog_sample_body_small
 import tallybook.shared.generated.resources.ui_catalog_sample_caption
@@ -171,6 +172,17 @@ class UiCatalogScreenTest {
   }
 
   @Test
+  fun catalogExposesInteractivePeriodPickerControls() {
+    composeRule.setContent { UiCatalogRoute() }
+
+    scrollTo("period-pickers")
+    composeRule.onNodeWithTag("catalog.section.period-pickers").assertIsDisplayed()
+    composeRule.onNodeWithTag(CATALOG_PERIOD_PICKER_SCOPE_TAG).assertIsDisplayed()
+    composeRule.onNodeWithTag(CATALOG_PERIOD_PICKER_ROW_TAG).assertIsDisplayed()
+    composeRule.onNodeWithTag(CATALOG_PERIOD_PICKER_YEAR_MENU_TAG).assertIsDisplayed()
+  }
+
+  @Test
   fun catalogEditableTextAndClearableSearchUpdateTheirRenderedState() {
     composeRule.setContent { UiCatalogRoute() }
 
@@ -245,6 +257,7 @@ class UiCatalogScreenTest {
             CatalogSection("search-fields", Res.string.ui_catalog_search_fields),
             CatalogSection("amount-inputs", Res.string.ui_catalog_amount_inputs),
             CatalogSection("date-pickers", Res.string.ui_catalog_date_pickers),
+            CatalogSection("period-pickers", Res.string.ui_catalog_period_pickers),
             CatalogSection("segmented-controls", Res.string.ui_catalog_segmented_controls),
             CatalogSection("selection-fields", Res.string.ui_catalog_selection_fields),
             CatalogSection("loading-states", Res.string.ui_catalog_loading_states),

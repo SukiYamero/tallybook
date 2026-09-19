@@ -27,20 +27,39 @@ import com.composables.icons.lucide.UtensilsCrossed
 import com.composables.icons.lucide.X
 import com.kurobello.tallybook.core.ui.component.TallybookAmountInput
 import com.kurobello.tallybook.core.ui.component.TallybookDateChipPicker
+import com.kurobello.tallybook.core.ui.component.TallybookDayPeriod
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
 import com.kurobello.tallybook.core.ui.component.TallybookIconButton
 import com.kurobello.tallybook.core.ui.component.TallybookIconButtonStyle
 import com.kurobello.tallybook.core.ui.component.TallybookLoadingState
+import com.kurobello.tallybook.core.ui.component.TallybookMonthPeriod
+import com.kurobello.tallybook.core.ui.component.TallybookPeriod
+import com.kurobello.tallybook.core.ui.component.TallybookPeriodOption
+import com.kurobello.tallybook.core.ui.component.TallybookPeriodPickerHeader
+import com.kurobello.tallybook.core.ui.component.TallybookPeriodPickerRow
+import com.kurobello.tallybook.core.ui.component.TallybookPeriodScope
 import com.kurobello.tallybook.core.ui.component.TallybookSearchField
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentOption
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentTone
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentedControl
+import com.kurobello.tallybook.core.ui.component.TallybookSegmentedControlStyle
 import com.kurobello.tallybook.core.ui.component.TallybookSelectionField
 import com.kurobello.tallybook.core.ui.component.TallybookSurface
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextField
+import com.kurobello.tallybook.core.ui.component.TallybookWeekPeriod
+import com.kurobello.tallybook.core.ui.component.TallybookYearMenu
+import com.kurobello.tallybook.core.ui.component.focusedMonthForYear
+import com.kurobello.tallybook.core.ui.component.selectableDayPeriods
+import com.kurobello.tallybook.core.ui.component.selectableMonthPeriods
+import com.kurobello.tallybook.core.ui.component.selectableWeekPeriods
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import kotlin.time.Clock
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.amount
@@ -49,6 +68,9 @@ import tallybook.shared.generated.resources.category
 import tallybook.shared.generated.resources.category_comida
 import tallybook.shared.generated.resources.category_required
 import tallybook.shared.generated.resources.date
+import tallybook.shared.generated.resources.date_picker_months
+import tallybook.shared.generated.resources.date_picker_weekday_names
+import tallybook.shared.generated.resources.date_picker_weekdays
 import tallybook.shared.generated.resources.expense
 import tallybook.shared.generated.resources.home_search_placeholder
 import tallybook.shared.generated.resources.income
@@ -61,6 +83,12 @@ import tallybook.shared.generated.resources.ui_catalog_icon_button
 import tallybook.shared.generated.resources.ui_catalog_icon_buttons
 import tallybook.shared.generated.resources.ui_catalog_loading_states
 import tallybook.shared.generated.resources.ui_catalog_loading_supporting
+import tallybook.shared.generated.resources.ui_catalog_period_day
+import tallybook.shared.generated.resources.ui_catalog_period_month
+import tallybook.shared.generated.resources.ui_catalog_period_pickers
+import tallybook.shared.generated.resources.ui_catalog_period_scope
+import tallybook.shared.generated.resources.ui_catalog_period_summary
+import tallybook.shared.generated.resources.ui_catalog_period_week
 import tallybook.shared.generated.resources.ui_catalog_search_fields
 import tallybook.shared.generated.resources.ui_catalog_search_query
 import tallybook.shared.generated.resources.ui_catalog_segmented_controls
@@ -80,6 +108,7 @@ import tallybook.shared.generated.resources.ui_catalog_text_field_placeholder
 import tallybook.shared.generated.resources.ui_catalog_text_field_supporting
 import tallybook.shared.generated.resources.ui_catalog_text_field_value
 import tallybook.shared.generated.resources.ui_catalog_text_fields
+import tallybook.shared.generated.resources.ui_catalog_year_selector
 
 internal const val CATALOG_LOADING_REGION_TAG = "catalog_loading_region"
 
@@ -98,6 +127,12 @@ internal fun LazyListScope.catalogControlMatrices() {
   }
   catalogControlSection("date-pickers", { stringResource(Res.string.ui_catalog_date_pickers) }) {
     CatalogDatePickerMatrix()
+  }
+  catalogControlSection(
+      "period-pickers",
+      { stringResource(Res.string.ui_catalog_period_pickers) },
+  ) {
+    CatalogPeriodPickerMatrix()
   }
   catalogControlSection(
       "segmented-controls",
@@ -190,6 +225,191 @@ private fun CatalogDatePickerMatrix() {
     }
   }
 }
+
+@Composable
+private fun CatalogPeriodPickerMatrix() {
+  val today = remember { currentCatalogDate() }
+  val day = stringResource(Res.string.ui_catalog_period_day)
+  val week = stringResource(Res.string.ui_catalog_period_week)
+  val month = stringResource(Res.string.ui_catalog_period_month)
+  val summary = stringResource(Res.string.ui_catalog_period_summary)
+  val scopeDescription = stringResource(Res.string.ui_catalog_period_scope)
+  val yearDescription = stringResource(Res.string.ui_catalog_year_selector)
+  val weekdayNames = stringArrayResource(Res.array.date_picker_weekdays)
+  val weekdayFullNames = stringArrayResource(Res.array.date_picker_weekday_names)
+  val monthNames = stringArrayResource(Res.array.date_picker_months)
+  val copy =
+      CatalogPeriodPickerCopy(
+          scopes =
+              remember(day, week, month) {
+                listOf(
+                    TallybookSegmentOption(TallybookPeriodScope.Day, day),
+                    TallybookSegmentOption(TallybookPeriodScope.Week, week),
+                    TallybookSegmentOption(TallybookPeriodScope.Month, month),
+                )
+              },
+          scopeDescription = scopeDescription,
+          yearDescription = yearDescription,
+          week = week,
+          summary = summary,
+      )
+
+  CatalogPeriodPickerSample(today, copy, weekdayNames, weekdayFullNames, monthNames)
+}
+
+@Composable
+private fun CatalogPeriodPickerSample(
+    today: LocalDate,
+    copy: CatalogPeriodPickerCopy,
+    weekdayNames: List<String>,
+    weekdayFullNames: List<String>,
+    monthNames: List<String>,
+) {
+  val years = remember(today) { (today.year downTo CATALOG_PERIOD_FIRST_YEAR).toList() }
+  var scope by remember { mutableStateOf(TallybookPeriodScope.Day) }
+  var focusedMonth by remember(today) { mutableStateOf(YearMonth(today.year, today.month)) }
+  var selectedPeriod by
+      remember(today) { mutableStateOf<TallybookPeriod>(TallybookDayPeriod(today)) }
+  val periods = remember(scope, focusedMonth, today) { catalogPeriods(scope, focusedMonth, today) }
+  val periodOptions =
+      remember(periods, weekdayNames, monthNames) {
+        periods.map { period -> catalogPeriodOption(period, weekdayNames, monthNames) }
+      }
+  val header = rememberCatalogPeriodHeader(selectedPeriod, weekdayFullNames, monthNames, copy)
+
+  CatalogSurface {
+    TallybookPeriodPickerHeader(
+        title = header.title,
+        supportingText = header.supportingText,
+        yearControl = {
+          TallybookYearMenu(
+              years = years,
+              selectedYear = focusedMonth.year,
+              onSelect = { year ->
+                val updatedMonth = focusedMonthForYear(focusedMonth, year, today)
+                focusedMonth = updatedMonth
+                selectedPeriod = catalogDefaultPeriod(scope, updatedMonth, today)
+              },
+              contentDescription = copy.yearDescription,
+              modifier = Modifier.testTag(CATALOG_PERIOD_PICKER_YEAR_MENU_TAG),
+          )
+        },
+    )
+    TallybookSegmentedControl(
+        options = copy.scopes,
+        selected = scope,
+        onSelect = { selectedScope ->
+          scope = selectedScope
+          selectedPeriod = catalogDefaultPeriod(selectedScope, focusedMonth, today)
+        },
+        modifier = Modifier.fillMaxWidth().testTag(CATALOG_PERIOD_PICKER_SCOPE_TAG),
+        style = TallybookSegmentedControlStyle.Neutral,
+    )
+    TallybookPeriodPickerRow(
+        options = periodOptions,
+        selected = selectedPeriod,
+        onSelect = { period ->
+          selectedPeriod = period
+          if (period is TallybookMonthPeriod) focusedMonth = period.month
+        },
+        contentDescription = copy.scopeDescription,
+        modifier = Modifier.fillMaxWidth().testTag(CATALOG_PERIOD_PICKER_ROW_TAG),
+    )
+  }
+}
+
+private data class CatalogPeriodPickerCopy(
+    val scopes: List<TallybookSegmentOption<TallybookPeriodScope>>,
+    val scopeDescription: String,
+    val yearDescription: String,
+    val week: String,
+    val summary: String,
+)
+
+@Composable
+private fun rememberCatalogPeriodHeader(
+    period: TallybookPeriod,
+    weekdayNames: List<String>,
+    monthNames: List<String>,
+    copy: CatalogPeriodPickerCopy,
+): CatalogPeriodHeader =
+    remember(period, weekdayNames, monthNames, copy.week, copy.summary) {
+      catalogPeriodHeader(period, weekdayNames, monthNames, copy.week, copy.summary)
+    }
+
+private fun catalogPeriods(
+    scope: TallybookPeriodScope,
+    focusedMonth: YearMonth,
+    today: LocalDate,
+): List<TallybookPeriod> =
+    when (scope) {
+      TallybookPeriodScope.Day -> selectableDayPeriods(focusedMonth, today)
+      TallybookPeriodScope.Week -> selectableWeekPeriods(focusedMonth, today)
+      TallybookPeriodScope.Month -> selectableMonthPeriods(focusedMonth.year, today)
+    }
+
+private fun catalogDefaultPeriod(
+    scope: TallybookPeriodScope,
+    focusedMonth: YearMonth,
+    today: LocalDate,
+): TallybookPeriod =
+    when (scope) {
+      TallybookPeriodScope.Month -> TallybookMonthPeriod(focusedMonth)
+      else -> catalogPeriods(scope, focusedMonth, today).last()
+    }
+
+private fun catalogPeriodOption(
+    period: TallybookPeriod,
+    weekdayNames: List<String>,
+    monthNames: List<String>,
+): TallybookPeriodOption<TallybookPeriod> =
+    when (period) {
+      is TallybookDayPeriod ->
+          TallybookPeriodOption(
+              value = period,
+              label = period.date.day.toString(),
+              caption = weekdayNames[period.date.dayOfWeek.ordinal],
+          )
+      is TallybookWeekPeriod ->
+          TallybookPeriodOption(value = period, label = "${period.start.day}–${period.end.day}")
+      is TallybookMonthPeriod ->
+          TallybookPeriodOption(
+              value = period,
+              label = monthNames[period.month.month.ordinal].take(MONTH_LABEL_LENGTH),
+          )
+    }
+
+private fun catalogPeriodHeader(
+    period: TallybookPeriod,
+    weekdayNames: List<String>,
+    monthNames: List<String>,
+    weekLabel: String,
+    summaryLabel: String,
+): CatalogPeriodHeader =
+    when (period) {
+      is TallybookDayPeriod ->
+          CatalogPeriodHeader(
+              title = "${weekdayNames[period.date.dayOfWeek.ordinal]} ${period.date.day}",
+              supportingText = "${monthNames[period.date.month.ordinal]} ${period.date.year}",
+          )
+      is TallybookWeekPeriod ->
+          CatalogPeriodHeader(
+              title =
+                  "${period.start.day}–${period.end.day} ${monthNames[period.end.month.ordinal]}",
+              supportingText =
+                  "$weekLabel · ${monthNames[period.end.month.ordinal]} ${period.end.year}",
+          )
+      is TallybookMonthPeriod ->
+          CatalogPeriodHeader(
+              title = "${monthNames[period.month.month.ordinal]} ${period.month.year}",
+              supportingText = summaryLabel,
+          )
+    }
+
+private fun currentCatalogDate(): LocalDate =
+    Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+
+private data class CatalogPeriodHeader(val title: String, val supportingText: String?)
 
 private val catalogIconButtonMatrix: @Composable () -> Unit = {
   CatalogSection(title = stringResource(Res.string.ui_catalog_icon_buttons)) {
@@ -482,3 +702,6 @@ private enum class CatalogMovementType {
   Expense,
   Income,
 }
+
+private const val MONTH_LABEL_LENGTH = 3
+private const val CATALOG_PERIOD_FIRST_YEAR = 2017

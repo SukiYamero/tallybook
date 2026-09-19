@@ -45,6 +45,13 @@ performance, coroutines/Flow, Gradle), `android-skills` (KMP: `kmp-boundaries`, 
 - Lint (cero warnings, todos los módulos): `./gradlew detekt`
 - Formato — verificar: `./gradlew ktfmtCheck` · aplicar: `./gradlew ktfmtFormat`
 
+**Dispositivos y toolchain de verificación.** Antes de instalar, ejecutar tests instrumentados o hacer
+una revisión visual, identificar y confirmar un único dispositivo físico conectado: teléfono Xiaomi,
+tablet Android o iPhone. No se usan emuladores ni simuladores. Si no hay un dispositivo compatible y
+autorizado, detener ese paso y pedir al usuario que conecte uno. Con el dispositivo confirmado, resolver
+en la máquina actual las rutas de `adb`, Android SDK/JDK o Xcode que correspondan y usar el wrapper
+`./gradlew` del proyecto; no asumir rutas locales ni modificar `local.properties` para suplirlas.
+
 ## 3. Estilo de código — con ejemplo, no descripción
 
 Placeholder actual del wizard (`shared/src/commonMain/kotlin/.../App.kt`) — sirve como ejemplo real de
@@ -125,10 +132,11 @@ Los nombres de test siguen el estilo de su source set — camelCase en `commonTe
 `./gradlew detekt ktfmtCheck` antes de dar por terminado cualquier cambio de Kotlin — no es opcional,
 es lo que separa "compila" de "cumple la convención del repo". Build angosto primero:
 `./gradlew :androidApp:assembleDebug` o el módulo tocado, antes de un build completo. Evidencia final
-sobre el dispositivo físico real (no emulador): `adb install` + `adb shell am
-start` en Android, Cmd+R en Xcode sobre el iPhone en iOS — o vía MCP `mobile-mcp`
+sobre el dispositivo físico real confirmado (no emulador): `adb install` + `adb shell am start` en
+Android, Cmd+R en Xcode sobre el iPhone en iOS — o vía MCP `mobile-mcp`
 (`mobile_take_screenshot`, `mobile_list_elements_on_screen`) para verificación visual sin salir de la
-sesión.
+sesión. Si no hay Xiaomi, tablet Android o iPhone conectado, detener la instalación, test instrumentado
+o revisión visual y avisar al usuario antes de continuar.
 
 Para APIs recientes, experimentales, sensibles a versión o con diferencias por plataforma, aplicar antes
 de implementar el gate de evidencia definido en `docs/README.md` — versión resuelta, fuente primaria,
