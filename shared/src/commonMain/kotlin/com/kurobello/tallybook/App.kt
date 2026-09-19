@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kurobello.tallybook.core.ui.component.TallybookLoadingState
+import com.kurobello.tallybook.core.ui.component.TallybookViewportOverlayHost
 import com.kurobello.tallybook.core.ui.navigation.Destination
 import com.kurobello.tallybook.core.ui.navigation.Home
 import com.kurobello.tallybook.core.ui.navigation.TallybookNavHost
@@ -31,14 +32,16 @@ fun App(
     developmentToolsEnabled: Boolean = false,
 ) {
   TallybookTheme {
-    val viewModel: AppStartupViewModel = koinViewModel()
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    AppStartupContent(
-        uiState = uiState,
-        launchMode = launchMode,
-        developmentToolsEnabled = developmentToolsEnabled,
-        onRetry = viewModel::onRetry,
-    )
+    TallybookViewportOverlayHost {
+      val viewModel: AppStartupViewModel = koinViewModel()
+      val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+      AppStartupContent(
+          uiState = uiState,
+          launchMode = launchMode,
+          developmentToolsEnabled = developmentToolsEnabled,
+          onRetry = viewModel::onRetry,
+      )
+    }
   }
 }
 

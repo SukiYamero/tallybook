@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -219,17 +220,30 @@ private fun LazyListScope.catalogDataDisplay(title: String, fixtures: UiCatalogF
   }
 }
 
-private fun LazyListScope.catalogSection(
+internal fun LazyListScope.catalogSection(
     key: String,
     title: String,
     content: @Composable () -> Unit,
 ) {
-  item(key = key) { CatalogSection(title = title, content = content) }
+  item(key = key) {
+    CatalogSection(
+        title = title,
+        automationTag = catalogSectionAutomationTag(key),
+        content = content,
+    )
+  }
 }
 
 @Composable
-internal fun CatalogSection(title: String, content: @Composable () -> Unit) {
-  Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12)) {
+internal fun CatalogSection(
+    title: String,
+    automationTag: String? = null,
+    content: @Composable () -> Unit,
+) {
+  Column(
+      modifier = if (automationTag == null) Modifier else Modifier.testTag(automationTag),
+      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
+  ) {
     TallybookText(
         text = title,
         modifier = Modifier.semantics { heading() },

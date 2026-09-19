@@ -162,6 +162,15 @@ class UiCatalogScreenTest {
   }
 
   @Test
+  fun catalogExposesStableAutomationTagsForDatePickerSectionAndDefaultControl() {
+    composeRule.setContent { UiCatalogRoute() }
+
+    scrollTo("date-pickers")
+    composeRule.onNodeWithTag("catalog.section.date-pickers").assertIsDisplayed()
+    composeRule.onNodeWithTag("catalog.control.date-picker.default").assertIsDisplayed()
+  }
+
+  @Test
   fun catalogEditableTextAndClearableSearchUpdateTheirRenderedState() {
     composeRule.setContent { UiCatalogRoute() }
 

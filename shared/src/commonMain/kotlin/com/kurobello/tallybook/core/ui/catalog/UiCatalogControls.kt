@@ -84,49 +84,61 @@ import tallybook.shared.generated.resources.ui_catalog_text_fields
 internal const val CATALOG_LOADING_REGION_TAG = "catalog_loading_region"
 
 internal fun LazyListScope.catalogControlMatrices() {
-  item(key = "icon-buttons") { catalogIconButtonMatrix() }
-  item(key = "text-fields") {
-    CatalogSection(title = stringResource(Res.string.ui_catalog_text_fields)) {
-      CatalogTextFieldMatrix()
+  catalogControlSection("icon-buttons", { stringResource(Res.string.ui_catalog_icon_buttons) }) {
+    catalogIconButtonMatrix()
+  }
+  catalogControlSection("text-fields", { stringResource(Res.string.ui_catalog_text_fields) }) {
+    CatalogTextFieldMatrix()
+  }
+  catalogControlSection("search-fields", { stringResource(Res.string.ui_catalog_search_fields) }) {
+    CatalogSearchFieldMatrix()
+  }
+  catalogControlSection("amount-inputs", { stringResource(Res.string.ui_catalog_amount_inputs) }) {
+    CatalogAmountInputMatrix()
+  }
+  catalogControlSection("date-pickers", { stringResource(Res.string.ui_catalog_date_pickers) }) {
+    CatalogDatePickerMatrix()
+  }
+  catalogControlSection(
+      "segmented-controls",
+      { stringResource(Res.string.ui_catalog_segmented_controls) },
+  ) {
+    CatalogSegmentedControlMatrix()
+  }
+  catalogControlSection(
+      "selection-fields",
+      { stringResource(Res.string.ui_catalog_selection_fields) },
+  ) {
+    CatalogSelectionFieldMatrix()
+  }
+  catalogControlSection(
+      "loading-states",
+      { stringResource(Res.string.ui_catalog_loading_states) },
+  ) {
+    CatalogSurface {
+      TallybookLoadingState(
+          contentDescription = stringResource(Res.string.loading),
+          modifier =
+              Modifier.fillMaxWidth()
+                  .heightIn(min = TallybookTheme.dimensions.containedLoadingMinHeight)
+                  .testTag(CATALOG_LOADING_REGION_TAG),
+          supportingText = stringResource(Res.string.ui_catalog_loading_supporting),
+      )
     }
   }
-  item(key = "search-fields") {
-    CatalogSection(title = stringResource(Res.string.ui_catalog_search_fields)) {
-      CatalogSearchFieldMatrix()
-    }
-  }
-  item(key = "amount-inputs") {
-    CatalogSection(title = stringResource(Res.string.ui_catalog_amount_inputs)) {
-      CatalogAmountInputMatrix()
-    }
-  }
-  item(key = "date-pickers") {
-    CatalogSection(title = stringResource(Res.string.ui_catalog_date_pickers)) {
-      CatalogDatePickerMatrix()
-    }
-  }
-  item(key = "segmented-controls") {
-    CatalogSection(title = stringResource(Res.string.ui_catalog_segmented_controls)) {
-      CatalogSegmentedControlMatrix()
-    }
-  }
-  item(key = "selection-fields") {
-    CatalogSection(title = stringResource(Res.string.ui_catalog_selection_fields)) {
-      CatalogSelectionFieldMatrix()
-    }
-  }
-  item(key = "loading-states") {
-    CatalogSection(title = stringResource(Res.string.ui_catalog_loading_states)) {
-      CatalogSurface {
-        TallybookLoadingState(
-            contentDescription = stringResource(Res.string.loading),
-            modifier =
-                Modifier.fillMaxWidth()
-                    .heightIn(min = TallybookTheme.dimensions.containedLoadingMinHeight)
-                    .testTag(CATALOG_LOADING_REGION_TAG),
-            supportingText = stringResource(Res.string.ui_catalog_loading_supporting),
-        )
-      }
+}
+
+private fun LazyListScope.catalogControlSection(
+    key: String,
+    title: @Composable () -> String,
+    content: @Composable () -> Unit,
+) {
+  item(key = key) {
+    CatalogSection(
+        title = title(),
+        automationTag = catalogSectionAutomationTag(key),
+    ) {
+      content()
     }
   }
 }
@@ -164,6 +176,7 @@ private fun CatalogDatePickerMatrix() {
           value = value,
           onValueChange = { value = it },
           label = stringResource(Res.string.date),
+          modifier = Modifier.testTag(CATALOG_DATE_PICKER_DEFAULT_TAG),
           maxDate = LocalDate(2026, 9, 15),
       )
     }

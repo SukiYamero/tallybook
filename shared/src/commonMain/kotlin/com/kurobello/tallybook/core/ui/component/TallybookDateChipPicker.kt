@@ -2,6 +2,15 @@
 
 package com.kurobello.tallybook.core.ui.component
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,6 +81,8 @@ internal fun TallybookDateChipPicker(
     firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
 ) {
   var isOpen by remember { mutableStateOf(false) }
+  val popupVisibility = remember { MutableTransitionState(false) }
+  popupVisibility.targetState = isOpen
   var visibleMonth by remember(value) { mutableStateOf(YearMonth(value.year, value.month)) }
   var isYearSelectorOpen by remember { mutableStateOf(false) }
   val monthNames = stringArrayResource(Res.array.date_picker_months)
@@ -80,6 +92,11 @@ internal fun TallybookDateChipPicker(
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
   val density = LocalDensity.current
+  val viewportOverlayState = LocalTallybookViewportOverlayState.current
+  val viewportOverlayOwner = remember { Any() }
+  DisposableEffect(viewportOverlayState, viewportOverlayOwner) {
+    onDispose { viewportOverlayState?.hideScrim(viewportOverlayOwner) }
+  }
   val popupPositionProvider =
       remember(density) {
         TallybookDatePickerPopupPositionProvider(
@@ -96,6 +113,7 @@ internal fun TallybookDateChipPicker(
                     enabled = enabled,
                     role = Role.Button,
                     onClick = {
+                      viewportOverlayState?.showScrim(viewportOverlayOwner)
                       isOpen = true
                       visibleMonth = YearMonth(value.year, value.month)
                       isYearSelectorOpen = false
@@ -136,32 +154,52 @@ internal fun TallybookDateChipPicker(
         DatePickerIcon(icon = Lucide.ChevronDown)
       }
     }
-    if (isOpen) {
+    if (popupVisibility.currentState || popupVisibility.targetState) {
       Popup(
           popupPositionProvider = popupPositionProvider,
-          onDismissRequest = { isOpen = false },
+          onDismissRequest = {
+            viewportOverlayState?.hideScrim(viewportOverlayOwner)
+            isOpen = false
+          },
           properties = PopupProperties(focusable = true),
       ) {
-        TallybookDateCalendar(
-            visibleMonth = visibleMonth,
-            selectedDate = value,
-            maxDate = maxDate,
-            firstDayOfWeek = firstDayOfWeek,
-            monthNames = monthNames,
-            weekdayNames = weekdayNames,
-            isYearSelectorOpen = isYearSelectorOpen,
-            onPreviousMonth = { visibleMonth = visibleMonth.previous() },
-            onNextMonth = { visibleMonth = visibleMonth.next() },
-            onYearSelectorClick = { isYearSelectorOpen = true },
-            onYearSelected = { year ->
-              visibleMonth = YearMonth(year, visibleMonth.month)
-              isYearSelectorOpen = false
-            },
-            onDateSelected = {
-              onValueChange(it)
-              isOpen = false
-            },
-        )
+        AnimatedVisibility(
+            visibleState = popupVisibility,
+            enter =
+                fadeIn(animationSpec = datePickerEnterAnimationSpec) +
+                    scaleIn(
+                        animationSpec = datePickerEnterAnimationSpec,
+                        initialScale = DATE_PICKER_INITIAL_SCALE,
+                    ),
+            exit =
+                fadeOut(animationSpec = datePickerExitAnimationSpec) +
+                    scaleOut(
+                        animationSpec = datePickerExitAnimationSpec,
+                        targetScale = DATE_PICKER_INITIAL_SCALE,
+                    ),
+        ) {
+          TallybookDateCalendar(
+              visibleMonth = visibleMonth,
+              selectedDate = value,
+              maxDate = maxDate,
+              firstDayOfWeek = firstDayOfWeek,
+              monthNames = monthNames,
+              weekdayNames = weekdayNames,
+              isYearSelectorOpen = isYearSelectorOpen,
+              onPreviousMonth = { visibleMonth = visibleMonth.previous() },
+              onNextMonth = { visibleMonth = visibleMonth.next() },
+              onYearSelectorClick = { isYearSelectorOpen = true },
+              onYearSelected = { year ->
+                visibleMonth = YearMonth(year, visibleMonth.month)
+                isYearSelectorOpen = false
+              },
+              onDateSelected = {
+                onValueChange(it)
+                viewportOverlayState?.hideScrim(viewportOverlayOwner)
+                isOpen = false
+              },
+          )
+        }
       }
     }
   }
@@ -454,3 +492,18 @@ private const val DAYS_IN_WEEK = 7
 private const val FIRST_SELECTABLE_YEAR = 2011
 private const val YEARS_AHEAD_WITHOUT_LIMIT = 1
 private const val YEARS_PER_ROW = 4
+private const val DATE_PICKER_ENTER_DURATION_MILLIS = 200
+private const val DATE_PICKER_EXIT_DURATION_MILLIS = 150
+private const val DATE_PICKER_INITIAL_SCALE = 0.985f
+
+private val datePickerEnterAnimationSpec =
+    tween<Float>(
+        durationMillis = DATE_PICKER_ENTER_DURATION_MILLIS,
+        easing = LinearOutSlowInEasing,
+    )
+
+private val datePickerExitAnimationSpec =
+    tween<Float>(
+        durationMillis = DATE_PICKER_EXIT_DURATION_MILLIS,
+        easing = FastOutLinearInEasing,
+    )

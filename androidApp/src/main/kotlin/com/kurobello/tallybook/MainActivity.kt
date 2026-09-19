@@ -10,6 +10,7 @@ private const val UI_CATALOG_EXTRA = "ui_catalog"
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
+        window.isNavigationBarContrastEnforced = false
         super.onCreate(savedInstanceState)
 
         val launchMode =
