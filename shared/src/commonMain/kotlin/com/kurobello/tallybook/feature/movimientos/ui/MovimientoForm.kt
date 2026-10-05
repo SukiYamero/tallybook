@@ -105,6 +105,7 @@ internal fun MovimientoForm(
   val restingFormHeight = rememberRestingFormHeight()
   val imeBottom = WindowInsets.ime.getBottom(density)
   val isImeVisible = imeBottom > 0
+  ResetFormScrollAfterKeyboardDismissal(isImeVisible, formScrollState)
   val imeScrollPadding = with(density) { imeBottom.toDp() }
   val formMaximumHeight = formMaximumHeight(isImeVisible, restingFormHeight.value)
   val formItemSpacing = TallybookTheme.spacing.space16
@@ -146,7 +147,7 @@ internal fun MovimientoForm(
         modifier =
             Modifier.fillMaxWidth()
                 .heightIn(max = formMaximumHeight)
-                .scrollWhenImeVisible(isImeVisible, formScrollState)
+                .verticalScroll(formScrollState)
                 .captureScrollableInputViewport(formViewport)
                 .captureRestingHeight(isImeVisible, restingFormHeight),
     ) {
@@ -311,8 +312,10 @@ private fun formMaximumHeight(isImeVisible: Boolean, restingHeight: Dp?): Dp =
     if (isImeVisible) restingHeight ?: TallybookTheme.dimensions.movimientoFormMaximumHeight
     else TallybookTheme.dimensions.movimientoFormMaximumHeight
 
-private fun Modifier.scrollWhenImeVisible(isImeVisible: Boolean, state: ScrollState): Modifier =
-    if (isImeVisible) verticalScroll(state) else this
+@Composable
+private fun ResetFormScrollAfterKeyboardDismissal(isImeVisible: Boolean, state: ScrollState) {
+  LaunchedEffect(isImeVisible) { if (!isImeVisible) state.scrollTo(0) }
+}
 
 @Composable
 private fun Modifier.captureRestingHeight(

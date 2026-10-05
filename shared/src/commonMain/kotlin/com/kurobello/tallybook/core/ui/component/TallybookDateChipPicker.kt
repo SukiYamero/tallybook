@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -38,6 +39,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
@@ -67,6 +69,11 @@ import tallybook.shared.generated.resources.date_chip_value
 import tallybook.shared.generated.resources.date_picker_months
 import tallybook.shared.generated.resources.date_picker_weekdays
 
+internal enum class TallybookDateChipSize {
+  S,
+  M,
+}
+
 @Composable
 internal fun TallybookDateChipPicker(
     value: LocalDate,
@@ -76,6 +83,7 @@ internal fun TallybookDateChipPicker(
     enabled: Boolean = true,
     maxDate: LocalDate? = null,
     firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
+    size: TallybookDateChipSize = TallybookDateChipSize.S,
 ) {
   var isOpen by remember { mutableStateOf(false) }
   val popupVisibility = remember { MutableTransitionState(false) }
@@ -89,6 +97,10 @@ internal fun TallybookDateChipPicker(
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
   val density = LocalDensity.current
+  val isMedium = size == TallybookDateChipSize.M
+  val iconSize =
+      if (isMedium) TallybookTheme.dimensions.iconMedium
+      else TallybookTheme.dimensions.datePickerChipIconSize
   val viewportOverlayState = LocalTallybookViewportOverlayState.current
   val viewportOverlayOwner = remember { Any() }
   DisposableEffect(viewportOverlayState, viewportOverlayOwner) {
@@ -104,7 +116,12 @@ internal fun TallybookDateChipPicker(
   Box(modifier = modifier) {
     TallybookSurface(
         modifier =
-            Modifier.clickable(
+            Modifier.defaultMinSize(
+                    minHeight =
+                        if (isMedium) TallybookTheme.dimensions.datePickerMediumChipHeight
+                        else TallybookTheme.dimensions.minimumTouchTarget
+                )
+                .clickable(
                     interactionSource = interactionSource,
                     indication = null,
                     enabled = enabled,
@@ -130,25 +147,35 @@ internal fun TallybookDateChipPicker(
                         TallybookTheme.dimensions.fieldBorderWidth,
                         TallybookTheme.colors.border.subtle,
                     ),
+                contentAlignment = Alignment.Center,
             ),
         isPressed = isPressed,
     ) {
       Row(
           modifier =
               Modifier.padding(
-                  horizontal = TallybookTheme.spacing.space14,
-                  vertical = TallybookTheme.spacing.space8,
+                  horizontal =
+                      if (isMedium) TallybookTheme.spacing.space20
+                      else TallybookTheme.spacing.space14,
+                  vertical =
+                      if (isMedium) TallybookTheme.spacing.space12
+                      else TallybookTheme.spacing.space8,
               ),
-          horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space6),
+          horizontalArrangement =
+              Arrangement.spacedBy(
+                  if (isMedium) TallybookTheme.spacing.space8 else TallybookTheme.spacing.space6
+              ),
           verticalAlignment = Alignment.CenterVertically,
       ) {
-        DatePickerIcon(icon = Lucide.CalendarDays)
+        DatePickerIcon(icon = Lucide.CalendarDays, size = iconSize)
         TallybookText(
             text = selectedLabel,
             color = TallybookTheme.colors.foreground.secondary,
-            style = TallybookTheme.typography.bodyEmphasis,
+            style =
+                if (isMedium) TallybookTheme.typography.title
+                else TallybookTheme.typography.bodyEmphasis,
         )
-        DatePickerIcon(icon = Lucide.ChevronDown)
+        DatePickerIcon(icon = Lucide.ChevronDown, size = iconSize)
       }
     }
     if (popupVisibility.currentState || popupVisibility.targetState) {
@@ -420,11 +447,12 @@ private fun TallybookCalendarDay(
 private fun DatePickerIcon(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     color: androidx.compose.ui.graphics.Color = TallybookTheme.colors.foreground.faint,
+    size: Dp = TallybookTheme.dimensions.datePickerChipIconSize,
 ) {
   Image(
       imageVector = icon,
       contentDescription = null,
-      modifier = Modifier.size(TallybookTheme.dimensions.datePickerChipIconSize),
+      modifier = Modifier.size(size),
       colorFilter = ColorFilter.tint(color),
   )
 }

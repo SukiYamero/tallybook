@@ -27,6 +27,7 @@ import com.composables.icons.lucide.UtensilsCrossed
 import com.composables.icons.lucide.X
 import com.kurobello.tallybook.core.ui.component.TallybookAmountInput
 import com.kurobello.tallybook.core.ui.component.TallybookDateChipPicker
+import com.kurobello.tallybook.core.ui.component.TallybookDateChipSize
 import com.kurobello.tallybook.core.ui.component.TallybookDayPeriod
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
 import com.kurobello.tallybook.core.ui.component.TallybookIconButton
@@ -206,12 +207,21 @@ private fun CatalogAmountInputMatrix() {
 private fun CatalogDatePickerMatrix() {
   var value by rememberSaveable { mutableStateOf(LocalDate(2026, 9, 15)) }
   CatalogSurface {
-    CatalogSample(label = stringResource(Res.string.ui_catalog_state_default)) {
+    CatalogSample(label = "S") {
       TallybookDateChipPicker(
           value = value,
           onValueChange = { value = it },
           label = stringResource(Res.string.date),
           modifier = Modifier.testTag(CATALOG_DATE_PICKER_DEFAULT_TAG),
+          maxDate = LocalDate(2026, 9, 15),
+      )
+    }
+    CatalogSample(label = "M") {
+      TallybookDateChipPicker(
+          value = value,
+          onValueChange = { value = it },
+          label = stringResource(Res.string.date),
+          size = TallybookDateChipSize.M,
           maxDate = LocalDate(2026, 9, 15),
       )
     }

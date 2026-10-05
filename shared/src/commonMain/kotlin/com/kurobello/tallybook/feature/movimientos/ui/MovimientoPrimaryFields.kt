@@ -68,7 +68,7 @@ internal fun MovimientoPrimaryFields(
         message = categoryMessage,
         leadingContent = selectedCategoria?.let { categoria -> { CategoryAvatar(categoria) } },
     )
-    Spacer(modifier = Modifier.height(TallybookTheme.spacing.space14))
+    Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
     MovimientoDateField(
         state = MovimientoDateFieldState(fecha = uiState.fecha, enabled = !uiState.isSubmitting),
         onFechaChanged = actions::onFechaChanged,

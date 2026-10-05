@@ -27,6 +27,7 @@ class TallybookDateChipPickerTest {
             onValueChange = { selectedDate.value = it },
             label = "Date",
             maxDate = LocalDate(2026, 9, 30),
+            size = TallybookDateChipSize.M,
         )
       }
     }

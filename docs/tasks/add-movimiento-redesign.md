@@ -16,11 +16,16 @@ copy and space for future optional fields. It preserves drafts when a dismissal 
   save are unavailable before category selection. Category appears before date and amount in the form.
 - Persistent copy stays brief: category purpose in the selector, category-and-amount guidance in the
   form, and expense/income-specific amount questions. All supported locales use the same intent.
+- The date chip supports S and M sizes in the shared component and catalog. S uses a minimum 48 dp
+  touch target; M uses 56 dp with 18 sp text and 20 dp icons. Movimiento entry uses M with a visible
+  Date label, centered below category with a 24 dp section gap and a 40 dp gap before amount.
 - Opening More details lets the sheet grow by the description section plus half of one additional
   detail section, bounded by the available window height. The form body scrolls when later fields
   exceed that limit.
 - The save action stays fixed below the scrollable body while the keyboard is closed. It is not moved
   above the keyboard. It becomes available again after focus is cleared or the keyboard is dismissed.
+- The body scrolls whenever its content exceeds the height limit, including while the keyboard is
+  closed. Keyboard dismissal restores the body's scroll to the top.
 - The input method may offer a Done action, but the form never depends on its exact label or presence.
   Done clears focus; it does not submit the form.
 - A dismissal request from the sheet drag, scrim, or system back closes immediately only when the draft
@@ -79,6 +84,8 @@ copy and space for future optional fields. It preserves drafts when a dismissal 
 - Xiaomi M2012K11AG: automatic category opening, expense/income prompts, parent-only search with stable
   height, selection-to-amount keyboard focus and reveal, category cancellation, details expansion, and
   Back/scrim discard protection verified manually.
+- Medium date chip opens the anchored calendar and applies the selected day. Bounded details content
+  and its support text are reachable by scrolling without moving the save action.
 - Instrumented tests build, but the runner stalls before returning test results. Automated device
   execution remains unconfirmed; it must not be reported as passing.
 - Product review of the new wording and category-first interaction remains with the user before merging.
