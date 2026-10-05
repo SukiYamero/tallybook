@@ -68,6 +68,10 @@ Skills: `android-dev`, `compose`, `compose-state-and-effects`, `compose-componen
 6. Test same-index option changes across month/year so selected chip reveal remains correct. Preserve
    scroll unless accepted selection change requires revealing the selected chip; no blanket reset.
 7. Consume shell-published bar clearance; no permanent second bar or doubled bottom safe inset.
+   The screen accepts `bottomBarClearance: Dp` for the actual bar height including its sole bottom-safe
+   inset. Hosted frame applies top/horizontal system insets only; list adds that clearance and ordinary
+   spacing. Preserve standalone frame defaults through narrow caller-supplied WindowInsets if needed,
+   not a hosted/isHistory shape flag. Shell publishes/measures the actual occupied bar height in S5.
    Test popup dismissal/focus/Back, tablet width, compact landscape and enlarged text on real targets.
 
 ## Test-first slices and checks

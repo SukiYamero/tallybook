@@ -73,19 +73,19 @@ Skills: `android-dev`, `using-chrisbanes-skills`, `kotlin-api-design`, `kotlin-c
 
 ## Test-first slices
 
-- [ ] RED: reversed range is rejected; a one-day range is valid. GREEN: implement the value boundary.
-- [ ] RED: exact range expectations for Feb 2024/2025, 30/31-day months, today on day 1 and month end,
+- [x] RED: reversed range is rejected; a one-day range is valid. GREEN: implement the value boundary.
+- [x] RED: exact range expectations for Feb 2024/2025, 30/31-day months, today on day 1 and month end,
       and the last truncated block. GREEN: centralize the accepted range builders.
-- [ ] RED: Day -> Week -> Month preserves anchor; year/month changes clamp Jan 31 and Feb 29 correctly.
+- [x] RED: Day -> Week -> Month preserves anchor; year/month changes clamp Jan 31 and Feb 29 correctly.
       GREEN: implement pure selection transitions.
-- [ ] RED: different Week-chip selection anchors its block start; selected Week-chip tap preserves an
+- [x] RED: different Week-chip selection anchors its block start; selected Week-chip tap preserves an
       interior anchor; Month-chip selection preserves/clamps valid day. GREEN: explicit chip transitions.
-- [ ] RED: resuming after midnight/year rollover advances only a live-today selection; backward clock
+- [x] RED: resuming after midnight/year rollover advances only a live-today selection; backward clock
       and timezone changes never leave a future anchor. GREEN: implement date-refresh policy.
-- [ ] RED: valid saved input round trip plus malformed/future/unknown-version recovery. GREEN: implement
+- [x] RED: valid saved input round trip plus malformed/future/unknown-version recovery. GREEN: implement
       input validation without saving any repository data.
-- [ ] Confirm the catalog and existing picker tests use the same boundary rules.
-- [ ] Run focused host tests, Native test compilation, Detekt and ktfmt; attach outcomes before review.
+- [x] Confirm the catalog and existing picker tests use the same boundary rules.
+- [x] Run focused host tests, Native test compilation, Detekt and ktfmt; attach outcomes before review.
 
 Validate: `./gradlew :shared:testAndroidHostTest --tests '*MovimientoDateRangeTest' --tests '*HistorySelectionTest' --tests '*TallybookPeriodSelectionTest'`.
 Then `./gradlew :shared:compileTestKotlinIosSimulatorArm64 detekt ktfmtCheck`.

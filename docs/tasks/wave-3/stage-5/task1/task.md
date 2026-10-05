@@ -22,6 +22,11 @@ checks the early diff/probe before S3. Full Stage 5 review later covers the accu
 - Check exact resolved decorators/typed serializer/Koin/SavedStateHandle source contracts under the
   repository API gate. Primary decorators/saveable holders stay above active display; popup/visual
   proof is later. The audit's source feasibility is not real integration evidence.
+- Stable parent creation extras are required: capture default extras with `remember(parentOwner)`,
+  use the official `rememberViewModelStoreProvider` and `ViewModelStoreNavEntryDecorator(provider)`.
+  Real Activity Intent extras otherwise produce fresh DEFAULT_ARGS Bundles and reset entry stores on
+  recomposition. Preserve the verified provider seam in the full shell, including catalog launch mode;
+  do not copy the default decorator helper without proving equivalent stable extras.
 - Own a focused `shared/src/androidHostTest/kotlin/com/kurobello/tallybook/core/ui/navigation/HistorySavedOwnerHostTest.kt`
   (proposed name; existing nonvisual Composition/UnitApplier harness may be reused). Use real runtime
   decorators → entry owner → Koin → injected SavedStateHandle and actual save/restore registry owners.

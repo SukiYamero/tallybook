@@ -28,6 +28,9 @@ Produces StateFlow<HistoryUiState> and HistoryActions for scope/period/year, ret
 and explicit localized fallback-label presentation updates. Route supplies the same label rows use;
 label changes rebuild presentation without requiring SQL invalidation.
 
+UiState derives full picker options and selected-period identity separately from its today-clamped
+read range. Selection remains their sole authority; Compose does not calculate ranges.
+
 UiState owns selection/today/known years, current range request, content/empty/loading/read/calculation
 failure, projected groups/period count/totals and independent global-summary status. Derived values
 cannot be independently copied into disagreement. No query, filter, debounce, matching status/count,
@@ -48,10 +51,14 @@ normalized candidates, predicted count or effect stream is created.
 5. Durable failures preserve selection. Retain stale content only for the same request with explicit
    status; new request labels never show old-date rows as current. Retry resubscribes affected reads,
    without reset/infinite retries/snackbar-only error.
-6. One shared StateFlow uses WhileSubscribed with the agreed five-second timeout when no production
-   synchronous fresh `.value` contract is needed. Mark/revalidate cached data on activation before
-   claiming freshness; prove first re-entry state after hidden writes/timeout. Retain editable
-   selection independently of replay. Dispose/cancel jobs with entry; no independent init collectors.
+6. One readonly UiState StateFlow projects private typed inputs, their sole editable authority.
+   Use the official WhileSubscribed command policy with five-second timeout and one owned producer;
+   do not observe output as an input or retain subscriptions through a self-subscribing pipeline.
+   STOP invalidates cached freshness/request epoch before waiting for read cancellation, preserving
+   current selection and known years. START revalidates; prove the first observed re-entry state after
+   hidden writes/timeout. A fixed initial replay value must not reset a historical selection to Day/today.
+   Dispose/cancel the owned producer/provider with the entry, preserving any injected caller scope;
+   no independent eager collectors or generic derived-StateFlow framework.
 7. Resume captures Clock/timezone together and uses S1's transition; no background midnight timer.
    SQL invalidation handles creation: never append/refresh manually or reset period.
 8. Restore validated small input into new entry owners using early verified transport. Android supported
@@ -60,18 +67,18 @@ normalized candidates, predicted count or effect stream is created.
 
 ## Test-first slices
 
-- [ ] RED/GREEN loading/content/empty, upstream failure before peers, startup error and partial/global
+- [x] RED/GREEN loading/content/empty, upstream failure before peers, startup error and partial/global
       summary failure; explicit fallback change updates row text without SQL emission.
-- [ ] RED/GREEN rapid A→B period/currency changes, late A emissions rejected and old collectors canceled.
-- [ ] RED/GREEN retry preserves selection, overflow/recovery, years invalidation and selected-year
+- [x] RED/GREEN rapid A→B period/currency changes, late A emissions rejected and old collectors canceled.
+- [x] RED/GREEN retry preserves selection, overflow/recovery, years invalidation and selected-year
       retention after last row deletion.
-- [ ] RED/GREEN first re-entry state after timeout/hidden write, shutdown counts and reactivation reads;
+- [x] RED/GREEN first re-entry state after timeout/hidden write, shutdown counts and reactivation reads;
       use explicit active collectors rather than weakening fresh `.value` assertions.
-- [ ] RED/GREEN date/timezone/year rollover and validated restored input reload repository data.
-- [ ] Inside/outside range inserts update period/global summaries appropriately without manual refresh;
+- [x] RED/GREEN date/timezone/year rollover and validated restored input reload repository data.
+- [x] Inside/outside range inserts update period/global summaries appropriately without manual refresh;
       controls/selection remain unchanged. No matching/nonmatching distinction exists in History.
-- [ ] One TestCoroutineScheduler for scope/dispatchers/runTest; no wall-clock sleeps.
-- [ ] Focused/full host regression, Native test compilation, Detekt/ktfmt and real Koin wiring evidence.
+- [x] One TestCoroutineScheduler for scope/dispatchers/runTest; no wall-clock sleeps.
+- [x] Focused/full host regression, Native test compilation, Detekt/ktfmt and real Koin wiring evidence.
 
 Validate: `./gradlew :shared:testAndroidHostTest --tests '*HistoryViewModelTest' --tests '*HistoryProjectionTest'`.
 Then `./gradlew :shared:testAndroidHostTest :shared:compileTestKotlinIosSimulatorArm64 detekt ktfmtCheck`.

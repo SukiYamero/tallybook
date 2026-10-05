@@ -28,6 +28,11 @@ Skills: `android-dev`, `android-data-layer`, `kotlin-flows`, `kotlin-coroutines`
 - Produces `observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>>`, distinct persisted years only,
   descending. The ViewModel adds today/current selection; the repository never reads the clock.
 - Existing `observeRecent`, `observeSummary`, insert/getAll/delete remain compatible.
+- Preserve LocalDate-supported canonical signed/extended years in metadata and same-year reads.
+  Stored ISO TEXT ordering cannot represent negative/extended cross-year intervals reliably: reject
+  those requests explicitly as `InvalidInput`, never return a silently partial list. Ordinary
+  `0000`–`9999` cross-year ranges remain supported. All active History ranges stay within one year;
+  broader future Search intervals require storage/order evidence before extending that contract.
 
 ## Specific approach
 
@@ -52,17 +57,17 @@ Skills: `android-dev`, `android-data-layer`, `kotlin-flows`, `kotlin-coroutines`
 
 ## Test-first slices
 
-- [ ] RED: inclusive first/last dates, adjacent excluded dates, one-day and empty ranges, mixed
+- [x] RED: inclusive first/last dates, adjacent excluded dates, one-day and empty ranges, mixed
       currencies and stable existing tie order. GREEN: implement the bounded range query and mapping.
-- [ ] RED: empty years, duplicates, multiple years/currencies and a write introducing a new year.
+- [x] RED: empty years, duplicates, multiple years/currencies and a write introducing a new year.
       GREEN: implement year observation.
-- [ ] Begin collectors before insert/delete; verify second emissions and cancellation of subscriptions.
+- [x] Begin collectors before insert/delete; verify second emissions and cancellation of subscriptions.
       Calling `first()` only after a write is insufficient evidence of query invalidation.
-- [ ] Force collection/storage failures, invalid mapper data and cancellation; assert failure versus
+- [x] Force collection/storage failures, invalid mapper data and cancellation; assert failure versus
       cancellation separately. Test a construction-time exception if the adapter permits injection.
-- [ ] Exercise a 10,000-row selected-month fixture plus many excluded-date/currency rows; record query
+- [x] Exercise a 10,000-row selected-month fixture plus many excluded-date/currency rows; record query
       plan and processing observation without using wall-clock timing assertions in unit tests.
-- [ ] Run focused repository tests, full host regression, target compilation and lint/format checks.
+- [x] Run focused repository tests, full host regression, target compilation and lint/format checks.
 
 Validate: `./gradlew :shared:testAndroidHostTest --tests '*HistoryRepositoryTest' --tests '*MovimientoRepositoryTest'`.
 Then `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosArm64 detekt ktfmtCheck`.

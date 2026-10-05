@@ -40,14 +40,14 @@ count, query/index/filter arguments or all-history total belongs here.
 
 ## Test-first slices
 
-- [ ] RED/GREEN zero/income-only/expense-only/mixed/CLP/COP totals and count/group consistency.
-- [ ] RED/GREEN income/expense subtotal overflow is explicit calculation failure. Valid nonnegative
+- [x] RED/GREEN zero/income-only/expense-only/mixed/CLP/COP totals and count/group consistency.
+- [x] RED/GREEN income/expense subtotal overflow is explicit calculation failure. Valid nonnegative
       subtotals support balances plus/minus Long.MAX_VALUE; do not invent negative movement amounts
       to create an unreachable balance-overflow case.
-- [ ] RED/GREEN description title, null/blank fallback, missing category, fallback update without changed
+- [x] RED/GREEN description title, null/blank fallback, missing category, fallback update without changed
       rows, stable equal-date order/header keys/count, typed civil dates and unit/range invariants.
-- [ ] Verify the projection has no dependency on text normalization or future Search types.
-- [ ] Run focused host tests, Native test compilation, Detekt and ktfmt before task2.
+- [x] Verify the projection has no dependency on text normalization or future Search types.
+- [x] Run focused host tests, Native test compilation, Detekt and ktfmt before task2.
 
 Validate: `./gradlew :shared:testAndroidHostTest --tests '*HistoryProjectionTest'`.
 Then `./gradlew :shared:compileTestKotlinIosSimulatorArm64 detekt ktfmtCheck`.
