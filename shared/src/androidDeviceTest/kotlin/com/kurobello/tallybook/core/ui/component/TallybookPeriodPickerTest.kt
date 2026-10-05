@@ -143,6 +143,26 @@ class TallybookPeriodPickerTest {
   }
 
   @Test
+  fun selectingAnAlreadyVisiblePeriodPreservesItsPosition() {
+    var selected by mutableStateOf(22)
+    composeRule.setContent {
+      TallybookTheme {
+        TallybookPeriodPickerRow(
+            options = (1..30).map { TallybookPeriodOption(it, it.toString()) },
+            selected = selected,
+            onSelect = { selected = it },
+            contentDescription = "Day periods",
+            modifier = Modifier.width(240.dp),
+        )
+      }
+    }
+    val nextPeriod = composeRule.onNodeWithText("23").assertIsDisplayed()
+    val before = nextPeriod.fetchSemanticsNode().boundsInRoot
+    nextPeriod.performClick().assertIsSelected()
+    assertEquals(before, nextPeriod.fetchSemanticsNode().boundsInRoot)
+  }
+
+  @Test
   fun contextChangeAtSameIndexRevealsTheSelectedFullDate() {
     var month by mutableStateOf(6)
     composeRule.setContent {

@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,6 +56,7 @@ import com.composables.icons.lucide.Check
 import com.composables.icons.lucide.ChevronDown
 import com.composables.icons.lucide.Lucide
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import kotlinx.coroutines.flow.first
 
 @Immutable
 internal data class TallybookPeriodOption<T : Any>(
@@ -110,7 +112,23 @@ internal fun <T : Any> TallybookPeriodPickerRow(
   val listState = rememberLazyListState()
   val selectedIndex = remember(options, selected) { options.indexOfFirst { it.value == selected } }
   LaunchedEffect(selectedIndex, options.getOrNull(selectedIndex)?.key) {
-    if (selectedIndex >= 0) listState.animateScrollToItem(selectedIndex)
+    if (selectedIndex >= 0) {
+      // Replacement options can arrive before the previous keys have been remeasured.
+      val layout =
+          snapshotFlow { listState.layoutInfo }
+              .first { info ->
+                info.visibleItemsInfo.isNotEmpty() &&
+                    info.visibleItemsInfo.all { options.getOrNull(it.index)?.key == it.key }
+              }
+      val item = layout.visibleItemsInfo.firstOrNull { it.index == selectedIndex }
+      if (
+          item == null ||
+              item.offset < layout.viewportStartOffset ||
+              item.offset + item.size > layout.viewportEndOffset
+      ) {
+        listState.animateScrollToItem(selectedIndex)
+      }
+    }
   }
 
   LazyRow(
