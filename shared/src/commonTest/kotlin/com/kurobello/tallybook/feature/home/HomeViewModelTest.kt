@@ -13,6 +13,7 @@ import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
@@ -236,6 +237,15 @@ class HomeViewModelTest {
       summarySubscriptions += 1
       emitAll(summaryValues.filterNotNull())
     }
+
+    override fun observeRange(
+        moneda: Moneda,
+        range: MovimientoDateRange,
+    ): Flow<DataOutcome<List<Movimiento>>> =
+        error("History range reads are not expected in this fixture")
+
+    override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> =
+        error("History year reads are not expected in this fixture")
 
     override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> {
       insertCalls += 1

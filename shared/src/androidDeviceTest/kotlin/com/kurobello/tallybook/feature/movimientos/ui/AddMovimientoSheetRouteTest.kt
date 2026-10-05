@@ -18,6 +18,7 @@ import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoRepositories
@@ -124,6 +125,15 @@ class AddMovimientoSheetRouteTest {
     override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = emptyFlow()
 
     override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> = emptyFlow()
+
+    override fun observeRange(
+        moneda: Moneda,
+        range: MovimientoDateRange,
+    ): Flow<DataOutcome<List<Movimiento>>> =
+        error("History range reads are not expected in this fixture")
+
+    override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> =
+        error("History year reads are not expected in this fixture")
 
     override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> {
       inserted += movimiento

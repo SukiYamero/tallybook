@@ -3,6 +3,7 @@ package com.kurobello.tallybook.core.data
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import kotlinx.coroutines.flow.Flow
 
@@ -11,6 +12,16 @@ interface MovimientoRepository {
   fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>>
 
   fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>>
+
+  /**
+   * Cross-year intervals require unsigned four-digit years because SQLite compares fecha as text.
+   */
+  fun observeRange(moneda: Moneda, range: MovimientoDateRange): Flow<DataOutcome<List<Movimiento>>>
+
+  /**
+   * Year metadata validates the canonical ISO year, without deserializing the remaining row fields.
+   */
+  fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>>
 
   suspend fun insert(movimiento: Movimiento): DataOutcome<Unit>
 

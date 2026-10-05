@@ -8,13 +8,15 @@ import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 
-internal fun DatabaseMovimiento.toDomain(): Movimiento =
-    Movimiento(
-        id = id,
-        tipo = TipoMovimiento.valueOf(tipo),
-        monto = Money(monto_minor, Moneda.valueOf(monto_moneda)),
-        fecha = LocalDate.parse(fecha),
-        categoriaId = categoria_id,
-        descripcion = descripcion,
-        createdAt = Instant.parse(created_at),
-    )
+internal fun DatabaseMovimiento.toDomain(): Movimiento {
+  require(monto_minor > 0) { "Persisted movimiento amount must be positive" }
+  return Movimiento(
+      id = id,
+      tipo = TipoMovimiento.valueOf(tipo),
+      monto = Money(monto_minor, Moneda.valueOf(monto_moneda)),
+      fecha = LocalDate.parse(fecha),
+      categoriaId = categoria_id,
+      descripcion = descripcion,
+      createdAt = Instant.parse(created_at),
+  )
+}

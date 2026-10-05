@@ -35,6 +35,15 @@ class MovimientoMapperTest {
     assertFailsWith<IllegalArgumentException> { databaseMovimiento("not-an-instant").toDomain() }
   }
 
+  @Test
+  fun `toDomain rejects zero and negative persisted movimiento amounts`() {
+    for (amount in listOf(0L, -1L, Long.MIN_VALUE)) {
+      assertFailsWith<IllegalArgumentException> {
+        databaseMovimiento("2026-09-03T12:00:00Z").copy(monto_minor = amount).toDomain()
+      }
+    }
+  }
+
   private fun databaseMovimiento(createdAt: String) =
       DatabaseMovimiento(
           id = "mov1",

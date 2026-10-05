@@ -25,6 +25,13 @@ SELECT *
 FROM movimiento
 ORDER BY fecha DESC, created_at DESC, id DESC;
 
+-- SQLite date functions have a narrower year domain than the canonical LocalDate text we persist.
+selectMovimientoYears:
+SELECT DISTINCT substr(fecha, 1, length(fecha) - 6) AS movimiento_year
+FROM movimiento
+WHERE monto_moneda = ?
+ORDER BY CAST(movimiento_year AS INTEGER) DESC;
+
 selectRecentMovimientos:
 SELECT *
 FROM movimiento
@@ -35,6 +42,12 @@ selectMovimientoById:
 SELECT *
 FROM movimiento
 WHERE id = ?;
+
+selectMovimientosInRange:
+SELECT *
+FROM movimiento
+WHERE monto_moneda = ? AND fecha >= ? AND fecha <= ?
+ORDER BY fecha DESC, created_at DESC, id DESC;
 
 deleteMovimiento:
 DELETE FROM movimiento

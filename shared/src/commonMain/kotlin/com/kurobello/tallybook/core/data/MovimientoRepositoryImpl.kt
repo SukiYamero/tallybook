@@ -9,17 +9,80 @@ import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.datetime.LocalDate
 
 internal class MovimientoRepositoryImpl(
     private val database: TallybookDatabase,
     private val dispatcher: CoroutineDispatcher,
 ) : MovimientoRepository {
+
+  override fun observeRange(
+      moneda: Moneda,
+      range: MovimientoDateRange,
+  ): Flow<DataOutcome<List<Movimiento>>> {
+    if (
+        range.start.year != range.end.year &&
+            (range.start.year < 0 || range.end.year > MAX_FOUR_DIGIT_YEAR)
+    ) {
+      return flowOf(
+          DataOutcome.Failure(
+              DataError.InvalidInput(
+                  "Cross-year movimiento ranges require years from 0000 through 9999"
+              )
+          )
+      )
+    }
+    return flow {
+          emitAll(
+              database.movimientoQueries
+                  .selectMovimientosInRange(
+                      moneda.name,
+                      range.start.toString(),
+                      range.end.toString(),
+                  )
+                  .asFlow()
+                  .mapToList(dispatcher)
+                  .map { rows ->
+                    rows.map { row ->
+                      currentCoroutineContext().ensureActive()
+                      row.toDomain()
+                    }
+                  }
+          )
+        }
+        .flowOn(dispatcher)
+        .asLocalDataOutcome()
+  }
+
+  override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> =
+      flow {
+            emitAll(
+                database.movimientoQueries
+                    .selectMovimientoYears(moneda.name)
+                    .asFlow()
+                    .mapToList(dispatcher)
+                    .map { rows ->
+                      rows.map { row ->
+                        currentCoroutineContext().ensureActive()
+                        parseStoredYear(row)
+                      }
+                    }
+            )
+          }
+          .flowOn(dispatcher)
+          .asLocalDataOutcome()
 
   override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> =
       if (limit <= 0) {
@@ -99,4 +162,15 @@ internal class MovimientoRepositoryImpl(
             DataError.InvalidInput("Movimiento description is too long")
         else -> null
       }
+
+  private fun parseStoredYear(value: String): Int {
+    val canonicalDate = "$value-01-01"
+    val date = LocalDate.parse(canonicalDate)
+    require(date.toString() == canonicalDate) {
+      "Persisted movimiento year must use canonical ISO representation"
+    }
+    return date.year
+  }
 }
+
+private const val MAX_FOUR_DIGIT_YEAR = 9999
