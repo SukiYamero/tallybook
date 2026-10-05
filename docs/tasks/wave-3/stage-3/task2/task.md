@@ -1,95 +1,83 @@
-# Wave 3 / Stage 3 / Task 2 — ViewModel, cancellation and retained input
+# Wave 3 / Stage 3 / Task 2 — History state, cancellation and retained selection
 
 ## Objective and context
 
-Own History's screen state and reconnect accepted selection/search rules to real repository streams.
-Read the [wave contract](../../README.md), task1 projection and current Home/form state patterns.
-Requires task1 complete and reviewed Stage 2.
+Own History state and connect accepted selection to real repository observations. Read the
+[wave contract](../../README.md), task1 projection and current Home/form state patterns. Requires
+reviewed Stage 2, task1, and the real [early S5.T1 probe](../../stage-5/task1/task.md#early-gate-before-stage-3)
+before choosing saved-input transport.
 
 Skills: `android-dev`, `using-chrisbanes-skills`, `kotlin-concurrency-and-flow`,
 `compose-state-and-effects`, `koin`, `android-testing`, `test-driven-development`, `gradle-run`.
 
-## Files and responsibility
+## Files and responsibilities
 
-- Create `shared/src/commonMain/kotlin/com/kurobello/tallybook/feature/history/viewmodel/HistoryUiState.kt`:
-  screen contract only, separate from row/group models.
-- Create adjacent `HistoryActions.kt` and `HistoryViewModel.kt`: typed intents, observation and state.
-- Keep saved input beside `HistorySelection.kt`, or create `HistorySavedInput.kt` if serialization is
-  an independent unit of change. Do not add a new storage repository for screen preferences.
-- Modify `shared/src/commonMain/kotlin/com/kurobello/tallybook/di/ViewModelModule.kt` for the real consumer.
+- Create `shared/src/commonMain/kotlin/com/kurobello/tallybook/feature/history/viewmodel/HistoryUiState.kt`,
+  `HistoryActions.kt`, `HistoryViewModel.kt`: immutable screen state, typed actions, observations.
+- Keep saved input beside `HistorySelection.kt` or separate `HistorySavedInput.kt` if warranted;
+  small version/scope/ISO anchor only, no storage repository/preferences/query field.
+- Modify `shared/src/commonMain/kotlin/com/kurobello/tallybook/di/ViewModelModule.kt` for History only.
 - Create `shared/src/commonTest/kotlin/com/kurobello/tallybook/feature/history/viewmodel/HistoryViewModelTest.kt`.
 
 ## Consumed and produced contracts
 
-- Consumes `MovimientoRepository.observeRange/observeYears/observeSummary`, category observation,
-  initialized preferences, the pure projection, injected Clock/TimeZoneProvider and computation
-  dispatcher. A test scope follows existing injection precedent without leaking into production API.
-- Produces `StateFlow<HistoryUiState>` and `HistoryActions`: scope/period/year selection, raw query
-  changes, clear search, retry and resume/date refresh. The UI supplies the resolved fallback label
-  through a deliberate presentation input, not a composable resource call inside the ViewModel.
-  Both consultation holders accept an explicit fallback-label update; a label change invalidates
-  searchable candidates even without a database emission, and indexed rows render that same label.
-- UI state includes selection inputs, today/available years, data status, matching status, projection,
-  overall balance status and typed failure. Derived empty/no-results/readiness values cannot be copied
-  into disagreement with their inputs.
-- Saved input contains only the Stage 1 validated small fields. Its entry lifetime is integrated and
-  proven by Stage 5; a serializer unit test alone does not promise navigation retention.
+Consumes observeRange/observeYears/observeSummary, categories, initialized preferences, pure
+projection, injected Clock/TimeZoneProvider/computation dispatcher and the verified entry saved-owner
+transport. Test scope injection follows existing precedent without leaking a test type into production.
+Produces StateFlow<HistoryUiState> and HistoryActions for scope/period/year, retry, activation/resume
+and explicit localized fallback-label presentation updates. Route supplies the same label rows use;
+label changes rebuild presentation without requiring SQL invalidation.
 
-## Specific approach
+UiState owns selection/today/known years, current range request, content/empty/loading/read/calculation
+failure, projected groups/period count/totals and independent global-summary status. Derived values
+cannot be independently copied into disagreement. No query, filter, debounce, matching status/count,
+normalized candidates, predicted count or effect stream is created.
 
-1. Observe initialized preferences first. Only `Ready` selects a currency; uninitialized startup state
-   is a real failure. Do not manufacture a default currency or empty content during startup errors.
-2. Form one immutable request identity from currency and resolved range. Switch observations using
-   latest-only cancellation. Tag/loading data by request identity so old results cannot accompany new
-   filter labels. Map on the injected computation dispatcher when needed for the measured volume.
-3. Observe categories and years without letting metadata emissions reset selection. Initial failures
-   render immediately even when another source has not emitted. If year metadata fails, retain known
-   options/current selection and expose an actionable failure; do not misreport an empty year menu.
-4. Keep typed query visible immediately. Normalize and debounce nonempty matching by 250 ms with the
-   shared virtual scheduler; blank/clear bypasses delay. Period changes match the current raw query
-   against the new range without briefly showing results for an old query.
-5. A pending query marks its result area as updating; stale rows/counts are either withheld or clearly
-   represented as belonging to the previous settled query. The UI cannot announce them as current.
-6. Summary and groups use one range snapshot. Overall balance is independently labelled and has its
-   own loading/failure status; do not substitute the period balance on a global-summary error.
-7. A read/calculation failure is durable. Preserve selection/query and the last successful snapshot
-   only for the same request; mark stale content and avoid claiming it is current. On a changed request,
-   show loading/error instead of rows with the wrong dates. Retry resubscribes the affected reads, not
-   resets inputs; no infinite auto-retry or snackbar-only errors.
-8. Use one deliberate shared StateFlow. With lifecycle-scoped consumers and no required background
-   `.value` freshness, choose `WhileSubscribed` with a 5-second stop timeout. If synchronous fresh
-   reads become necessary, revise sharing explicitly.
-   Cancel active jobs on entry disposal; no `GlobalScope`, independent init collectors or lost errors.
-   Entry activation revalidates cached content before it is presented
-   as current; test the first re-entry state after timeout and a hidden database write. Retain editable
-   inputs independently of upstream sharing/replay.
-9. On resume/entry refresh today through the accepted pure transition; no midnight background ticker.
-   A movement insert only invalidates SQL; it never appends a row, clears search or jumps to another day.
-10. Prefer direct Actions callbacks for durable input. Add no effect stream unless an actual one-shot
-    behavior emerges; a real effect then uses one buffered Channel collected by one lifecycle owner.
+## Approach
+
+1. Observe preferences first; only Ready chooses currency. Uninitialized/error startup is a real
+   failure, not invented currency or empty content.
+2. Build immutable request identity from currency and resolved range. Latest-only switching cancels
+   previous collectors; tag loading/current/stale content by that identity. Use injected computation
+   dispatcher where real volume warrants it.
+3. Category/year metadata cannot reset scope/anchor. Each initial upstream failure is visible even
+   when another source has not emitted. Retain known options/current year on metadata error and
+   provide retry; never claim a false empty menu or empty currency from failed metadata.
+4. Period totals/count/groups use one range snapshot. Independently labelled global summary has
+   its own loading/error/retry; never replace unavailable global balance with period balance.
+5. Durable failures preserve selection. Retain stale content only for the same request with explicit
+   status; new request labels never show old-date rows as current. Retry resubscribes affected reads,
+   without reset/infinite retries/snackbar-only error.
+6. One shared StateFlow uses WhileSubscribed with the agreed five-second timeout when no production
+   synchronous fresh `.value` contract is needed. Mark/revalidate cached data on activation before
+   claiming freshness; prove first re-entry state after hidden writes/timeout. Retain editable
+   selection independently of replay. Dispose/cancel jobs with entry; no independent init collectors.
+7. Resume captures Clock/timezone together and uses S1's transition; no background midnight timer.
+   SQL invalidation handles creation: never append/refresh manually or reset period.
+8. Restore validated small input into new entry owners using early verified transport. Android supported
+   saved-owner/Activity recreation differs from iOS retained-controller/saveable scope; a new iOS
+   process starts normally. Repository observations restart; no saved rows, draft, focus or jobs.
 
 ## Test-first slices
 
-- [ ] RED: loading -> content/empty, each upstream failing before others emit, initialized preference
-      failure and partial/global-summary error. GREEN: model the pipeline and statuses.
-- [ ] RED: rapid A -> B period/currency changes and late A emissions never overwrite B. GREEN: use
-      cancellation plus request identity; confirm old repository collectors terminate.
-- [ ] RED: debounce boundaries at 249/250 ms, immediate clear, query change during read, period change
-      during pending match and no SQL request per keystroke. GREEN: implement the matching pipeline.
-- [ ] RED: retry preserves selection/query, recoverable failure, arithmetic overflow, years update and
-      selected-year retention after data deletion. GREEN: handle explicit recovery.
-- [ ] RED: resume after date/zone/year change and saved input recreation restores inputs while
-      repository content reloads. GREEN: wire accepted temporal/restoration transitions.
-- [ ] Observe insert inside/outside active period and match/nonmatch query. Assert unchanged inputs,
-      correct summary and filtered rows without calling refresh.
-- [ ] Use one `TestCoroutineScheduler` for scope, injected dispatchers and `runTest`; no wall-clock sleeps.
-- [ ] Run full host regression, Native test compilation and lint/format checks; confirm Koin wiring.
+- [ ] RED/GREEN loading/content/empty, upstream failure before peers, startup error and partial/global
+      summary failure; explicit fallback change updates row text without SQL emission.
+- [ ] RED/GREEN rapid A→B period/currency changes, late A emissions rejected and old collectors canceled.
+- [ ] RED/GREEN retry preserves selection, overflow/recovery, years invalidation and selected-year
+      retention after last row deletion.
+- [ ] RED/GREEN first re-entry state after timeout/hidden write, shutdown counts and reactivation reads;
+      use explicit active collectors rather than weakening fresh `.value` assertions.
+- [ ] RED/GREEN date/timezone/year rollover and validated restored input reload repository data.
+- [ ] Inside/outside range inserts update period/global summaries appropriately without manual refresh;
+      controls/selection remain unchanged. No matching/nonmatching distinction exists in History.
+- [ ] One TestCoroutineScheduler for scope/dispatchers/runTest; no wall-clock sleeps.
+- [ ] Focused/full host regression, Native test compilation, Detekt/ktfmt and real Koin wiring evidence.
 
 Validate: `./gradlew :shared:testAndroidHostTest --tests '*HistoryViewModelTest' --tests '*HistoryProjectionTest'`.
 Then `./gradlew :shared:testAndroidHostTest :shared:compileTestKotlinIosSimulatorArm64 detekt ktfmtCheck`.
 
-## Completion / blockers
+## Completion and blockers
 
-Complete when latest-state, failure, cancellation and saved-input contracts are proven. Blocks Stage 4.
-Unavailable KMP saved-state APIs require an explicit compatible approach under the evidence gate;
-do not quietly weaken restoration or move screen state to an ambient app-wide ViewModel.
+Latest state, failures, selection/restoration and cancellation are proven; reviewed Stage 3 enables
+Stage 4. A failed actual saved-owner integration requires evidence-based re-planning, not app-wide
+screen state or unrequested persistence to promise broader iOS restoration.

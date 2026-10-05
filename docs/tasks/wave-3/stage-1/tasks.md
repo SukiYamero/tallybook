@@ -1,31 +1,27 @@
-# Wave 3 / Stage 1 — Contracts and pure rules
+# Wave 3 / Stage 1 — History contracts and pure rules
 
 ## Objective
 
-Settle the product proposals in the [wave contract](../README.md), establish typed date ranges and
-selection transitions, and extract the existing search normalization for its second real consumer.
+Implement the accepted [History contract](../README.md): typed civil ranges, Day/Week/Month selection
+and year context; align canonical business/picker wording. No product decision remains pending.
 
 ## Tasks and ownership
 
-- [task1 — Period and product contract](task1/task.md): period invariants, canonical rule alignment and
-  fixed-date tests. Owns changes to shared domain documentation.
-- [task2 — Shared search semantics](task2/task.md): normalization and matching, preserving category
-  search behavior. May run in parallel because it touches different files; no domain-document edits.
-- [task3 — Search filter contracts](task3/task.md): confirmed Apply/dismiss semantics, date presets,
-  type/category predicates and custom-range validation. Follows task1 for canonical document ownership.
+- [task1 — Period and product contract](task1/task.md): active; pure transitions/fixed-date tests;
+  owns canonical business/picker alignment. No query field or Search filter specification.
+- [task2 — Shared normalization](task2/task.md): completed/reviewed at `e0d667b`; preserve category
+  behavior and tests. History does not consume normalization.
+- [task3 — Search filter contracts](task3/task.md): deferred; no current edits or stage gate.
 
-## Exit gate
+## Exit gate and review
 
-- Week and annual proposals are explicitly settled before dependent implementation.
-- Domain ranges contain civil dates, never UI types or platform timezone objects.
-- Selection transitions have exact expected outcomes, including leap-year and current-date clamps.
-- Search has one normalization owner and category search retains its empty-query behavior.
-- Existing picker tests/catalog remain coherent with the accepted behavior.
-- Applied Search filters and temporary draft have explicit, tested ownership and recovery rules.
-- Common tests run on the Android host and compile for Native; Kotlin edits pass Detekt and ktfmt.
+- Month-bound Week blocks and three scopes/year context agree with canonical wording/picker tests.
+- Domain ranges contain civil dates, no UI/platform types; raw saved dates validate before construction.
+- Leap/year/month/current-date clamps and resume/restored input have exact fixed-date expectations.
+- Small History saved input contains scope/anchor/version only; no query, rows or new persistence.
+- Existing picker/catalog and reviewed category-search behavior remain compatible.
+- Focused host tests, Native test compilation, Detekt/ktfmt and fresh cumulative review pass.
 
-## Dedicated review
-
-Reject duplicated calendar logic, a domain import of `TallybookPeriod`, an assumed ISO/calendar week,
-platform-specific normalization, live filter writes from a draft sheet and untested saved-input
-validation. task1/task3 update canonical documents sequentially, not through duplicate rule files.
+Reject duplicated range calculations, `core.ui` importing History, a guessed calendar week/fourth
+scope, impossible reversed-range repository tests and untested recovery. This gate enables S2.T1;
+S5.T1's early real navigation probe separately precedes Stage 3 transport selection.

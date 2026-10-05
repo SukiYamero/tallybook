@@ -2,9 +2,9 @@
 
 ## Objective and context
 
-Give History and category selection one KMP normalization implementation without changing their
-different empty-query policies. Read the [wave contract](../../README.md), current `CategorySearch.kt`
-and its tests. This task may run beside task1 with separate file ownership.
+Preserve the reviewed KMP normalization used by category selection and available to future Search.
+This task is completed at `e0d667b`; active History has no text-search consumer. Read the [wave contract](../../README.md), current `CategorySearch.kt`
+and its tests. Do not re-execute or revert the reviewed work for the History-only scope.
 
 Skills: `android-dev`, `kotlin-api-design`, `android-testing`, `test-driven-development`; use
 `gradle-run` for commands.
@@ -20,8 +20,8 @@ Skills: `android-dev`, `kotlin-api-design`, `android-testing`, `test-driven-deve
 
 Produces `normalizeSearchText(value: String): String` and
 `matchesSearchText(query: String, fields: List<String>): Boolean`.
-An empty normalized query matches every candidate in History; category-search short-circuits before
-calling the matcher. Fields are supplied by the projection using the exact displayed text.
+An empty normalized query matches every candidate for a future text-search consumer; category-search short-circuits before
+calling the matcher. Future consumers supply the exact displayed text; History builds no searchable fields.
 
 `matchesSearchText` is a raw-input convenience. Snapshot consumers normalize query once and use
 `matchesNormalizedSearchText(normalizedQuery, normalizedFields)` over fields indexed once per snapshot.
@@ -39,7 +39,7 @@ calling the matcher. Fields are supplied by the projection using the exact displ
   punctuation. Do not split tokens, treat SQL wildcards specially or match raw category IDs.
 - No maximum query length or truncation is introduced without a product reason. Do not echo search
   text into logs or exceptions. Normalization remains a pure value-to-value operation.
-- The eventual History projection precomputes normalized searchable fields per range/category
+- A future Search projection can precompute normalized fields per data/category
   snapshot; it does not rebuild them on every keystroke or mutate persisted names.
 
 ## Test-first slices
@@ -47,7 +47,7 @@ calling the matcher. Fields are supplied by the projection using the exact displ
 - [x] RED: case/outer whitespace and composed/decomposed café, ação and reimbursed descriptions match.
       GREEN: extract and complete the shared normalizer.
 - [x] RED: `%`, `_`, quotes and emoji remain literal; composed/decomposed ñ does not match n; empty query
-      matches all History candidates. GREEN: implement matching with explicit field inputs.
+      matches all generic candidates. GREEN: implement matching with explicit field inputs.
 - [x] Category-search regression: empty query still returns no suggestions; existing accents and order
       are preserved. Fix only touched duplication, not the picker tree or category model.
 - [x] Run focused host tests and Native test compilation, then Detekt and ktfmt.
@@ -57,5 +57,6 @@ Then `./gradlew :shared:compileTestKotlinIosSimulatorArm64 detekt ktfmtCheck`.
 
 ## Completion / blockers
 
-Complete when both consumers can share deterministic normalization without behavior regression.
-Blocks Stage 3 projection. Does not change the canonical product document owned by task1.
+Completed and independently reviewed at `e0d667b`; preserve category-search behavior and regression
+coverage. No active History task depends on normalization. It does not change canonical rules owned
+by task1; its recorded checks do not prove History runtime behavior.

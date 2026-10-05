@@ -2,41 +2,59 @@
 
 Worktree: `/Users/sukiyamero/.codex/worktrees/history-search/tallybook`  
 Branch: `feat/history-search`  
-Baseline: `32cf78a`
+Scope-revision baseline: `cfae0954d5749b00138c27999d92ceb1cae3d761`
 
 ## Current gate
 
-Stage 1 cannot close until the user defines History week boundaries, annual scope and Search global
-balance policy, as required by the [execution contract](README.md#decisions-pending-before-dependent-implementation).
-Dependent period/filter behavior has not been implemented. No merge or physical acceptance is claimed.
+History scope is accepted: Day/Week/Month plus year context, existing month-bound week blocks,
+compact separately labelled global balance, no text search/filter UI. Search is a separate later
+destination. No product decision remains pending for active History; the revised contract still needs
+its document review, then S1.T1 execution and fresh cumulative Stage 1 review. No merge, current-tree
+implementation completion or physical acceptance is claimed by this scope revision.
 
 ## Implemented and verified
 
-| Task | Owner | Evidence | Review |
-| --- | --- | --- | --- |
-| S1.T2 shared search normalization | GPT-6.1 Sol / Medium | `e0d667b`; expected category regression RED; 13 focused host tests GREEN; Native test compilation, Detekt and ktfmt pass | Independent Sol / Medium review approved; no findings |
+| Task | Evidence | Review |
+| --- | --- | --- |
+| S1.T2 shared normalization, preserved | `e0d667b`; expected category regression RED; 13 focused host tests GREEN; Native test compilation, Detekt and ktfmt pass; full shared host suite and Android debug build passed at the recorded implementation tree | Independent review approved; no findings |
 
-Baseline shared host tests, Detekt and ktfmt passed before implementation. Native compilation is not
-iPhone runtime evidence. No emulator/simulator was run. The existing generic Gradle 10 deprecation
-notice is present; no checks were suppressed.
-The reviewed implementation also passes the complete shared host suite and Android debug build.
+These checks belong to the recorded implementation tree, not to unimplemented History behavior.
+The normalization still serves category search and future Search; History does not consume it.
+Native compilation is not iPhone runtime evidence. No emulator/simulator was run; the generic Gradle
+10 deprecation notice was not suppressed.
 
-## Coordination
+## Active task mapping
 
-- GPT-6.1 Sol / High audited all tasks and shared interfaces. Its bounded engineering clarifications
-  are reflected in the responsible task files: raw/validated date ownership, positive persisted amount
-  validation, normalized matching, token-bound filter sessions, fallback invalidation and re-entry readiness.
-- Early navigation feasibility audit verifies resolved APIs before Stage 3 restoration transport.
-  Before Stage 3 transport is selected, add the matching official Lifecycle navigation adapter,
-  resolve its graph and run the real decorated-entry/saved-owner/Koin restoration probe. That early
-  probe remains unverified; full-shell/scroll/Back/device evidence remains in Stage 5. Current iOS
-  controller saveable state does not prove process-relaunch restoration. Settle that platform contract
-  before Stage 3 chooses its transport.
-- One physical Xiaomi `M2012K11AG` was discovered. Installation and visual acceptance have not run.
-- Implementation and Gradle runs have one owner at a time; independent read-only audits may overlap.
+| Task | Status / next dependency |
+| --- | --- |
+| S1.T1 | Next after scope-doc review; pure selection/range and canonical business/picker alignment |
+| S1.T2 | Completed/reviewed; retain code and category regression coverage |
+| S2.T1 | After reviewed Stage 1; bounded range/year observation and positive read validation |
+| S5.T1 early gate | After Stage 1, by Stage 2 closure; add official adapter, resolve graph, real saved-owner/Koin probe before S3 chooses transport |
+| S3.T1 | After reviewed Stage 2 and early probe; pure History rows/count/totals |
+| S3.T2 | After S3.T1; History state/selection/retry/resume/presentation input |
+| S4.T1 | After reviewed Stage 3; pure History/reference rows and Home compatibility |
+| S5.T1 full shell | After reviewed Stage 4; Home/History navigation, scroll/Back/lifecycle and one sheet/bar |
+| S6.T1 | After reviewed Stage 5; production graph, physical evidence, full-wave review/History closure |
+| S1.T3 / S2.T2 / S3.T3 / S4.T2 | Deferred Search proposals; no implementation or current dependency |
+
+## Coordination and evidence boundaries
+
+- Accepted engineering rulings remain in their active owners: validated raw date boundary, positive
+  persisted movement amount, scoped year validation, fallback input, five-second timeout/re-entry,
+  originating creation-session callback identity and real navigation ownership integration.
+- Early S5.T1 probe is still unverified. Its actual decorated-entry/Koin/saved-owner evidence is required
+  before Stage 3 transport; full-shell NavDisplay/scroll/Back/device proof remains later. Do not enable
+  Search or build a Search ViewModel just to exercise the early probe; Home/History suffice.
+- Android saved-owner/Activity restoration and iOS retained-controller/saveable scope are separate
+  contracts. A fresh iOS process starts normally; no cross-process bridge or new persistence is planned.
+- One physical Xiaomi `M2012K11AG` was previously discovered; reconfirm authorized inventory before
+  installation/visual work. Installation and physical acceptance have not run.
+- One owner runs implementation/Gradle at a time. Every stage receives a fresh cumulative reviewer.
+- Temporary audit reports live in ignored `.superpowers/sdd/README/`; this revision records its own
+  document checks in `history-scope-report.md`. Those checks do not prove runtime behavior.
 
 ## Next action
 
-Obtain the three pending product decisions, then execute S1.T1 and S1.T3.
-Every stage requires a fresh cumulative review before its successor starts. Detailed temporary
-reports and verification references live in this worktree's ignored `.superpowers/sdd/README/` ledger.
+Review this revised History execution contract, execute S1.T1, then review Stage 1. Execute S2.T1 and
+the early S5.T1 probe before Stage 3. Continue through active stages; deferred Search tasks are not gates.

@@ -1,289 +1,201 @@
-# Wave 3 — Movement consultation: History and Search
+# Wave 3 — History
 
 > **For implementing agents:** use `subagent-driven-development`, one task per fresh context.
-> Read this contract and the task file together. A fresh reviewer must review and correct each stage
-> before the next stage starts. Unchecked items are planned work, not completed implementation.
+> Read this contract and the active task together. A fresh reviewer must review and correct each
+> stage before its successor starts. Unchecked items are planned work, not implementation evidence.
 
-**Goal:** browse persisted movimientos in History and find them in Search with text, date, type and
-category filters, retaining screen state and preserving the accepted creation flow.
+**Goal:** browse persisted movimientos by Day/Week/Month and year context in History, with exact
+period totals, compact global balance, retained selection/scroll and the accepted creation flow.
+Search is a separate later destination; History has no text search or non-date filters.
 
-**Architecture:** SQLDelight owns persisted data; separate shared History/Search ViewModels own
-screen inputs; pure projections build display data; stateless Compose content emits actions. The
-app shell owns primary navigation and the single creation sheet. Search uses a temporary filter
-draft committed atomically through Apply.
+**Architecture:** SQLDelight owns persisted data; the History ViewModel owns scope/anchor selection;
+a pure projection builds groups and period totals from one bounded snapshot; pure Compose content
+emits actions. The app shell owns Home/History navigation and the single creation sheet.
 
-**Tech stack:** reuse declared/resolved repository versions. The planning baseline declares Kotlin
+**Tech stack:** reuse repository versions; no upgrade is authorized. The catalog declares Kotlin
 2.4.10, Compose Multiplatform 1.11.1, Material3 1.11.0-alpha07, Navigation 3 1.1.1, Lifecycle
 2.11.0-beta01, SQLDelight 2.3.2, Koin 4.2.2, DataStore 1.2.1, Compose Unstyled 2.9.0, coroutines
-1.9.0 and datetime 0.8.0. No upgrade is authorized by this wave; resolve versions at execution.
+1.9.0 and datetime 0.8.0. Resolve affected versions again when integrating them.
 
-**Spec:** this execution contract, [business rules](../../business-logic.md),
-[UI architecture](../../ui/architecture.md), [component inventory](../../ui/components.md),
-[wording](../../wording.md) and [methodology](../../README.md).
+**Canonical owners:** [business rules](../../business-logic.md),
+[UI architecture](../../ui/architecture.md), [components](../../ui/components.md),
+[wording](../../wording.md), [methodology](../../README.md). This is the active execution plan;
+Stage 1 updates canonical business/picker wording before implementation diverges from those documents.
 
-**Planning baseline:** clean `main` at `e32ac3c1593139882b63321a3524fdf0708138f5`, ahead of its remote.
-This documentation task does not push existing commits or establish a fresh passing runtime baseline.
+**Execution tree:** `/Users/sukiyamero/.codex/worktrees/history-search/tallybook`, branch
+`feat/history-search`, scope-revision baseline `cfae0954d5749b00138c27999d92ceb1cae3d761`.
+Use the existing worktree. Planning checks do not establish a passing runtime baseline.
 
-## Approved scope and reference
+## Accepted scope and reference
 
-The user confirmed both History and Search in this wave. The supplied Search images are approximate
-visual references, preserved as [Search screen](references/search-screen.png) and
-[filter sheet](references/search-filters.png). Their illustrative data/categories/device dimensions
-are not production defaults.
-
-The user's explicit CTA instruction overrides the image: **Aplicar**, without a result count in
-visible text or its accessibility label. The count stays below the Search screen title.
-The user also confirmed transactional filter editing: **Apply commits; dismissal discards changes**.
-
-The actual Moneta reference is at `/Users/sukiyamero/Desktop/programacion/web/moneta/src/features/`.
-Read `history/` and `search/`, especially their README, screens, filter hooks, date builders and tests.
-Moneta is read-only context. Its live-filter behavior is deliberately not copied; its row layout and
-calendar-week behavior also differ from the approved Tallybook guides in ways described below.
+The supplied [History image](references/history-screen.png) is the period/header/totals/read-only-list
+reference. It confirms three scopes and a year selector. Its data, currencies, pixel dimensions,
+category breakdown and eye control do not authorize production defaults or added functionality.
+No demo data is seeded. Moneta at
+`/Users/sukiyamero/Desktop/programacion/web/moneta/src/features/history/` remains read-only context;
+its calendar weeks and fourth Year scope are not copied.
 
 Included:
 
-- Real History and Search primary destinations alongside Home.
-- History Day/Week/Month context, year menu, date-grouped rows and exact period totals.
-- Search text plus All history / Last 7 days / Last 30 days / This month / This year / Custom dates.
-- Search Todos/Gastos/Ingresos and multi-select categories from the real persisted catalog.
-- Active filter chips, applied/draft state, clear/apply/dismiss behavior and result counts.
-- Reactive updates, explicit error/retry states, retained inputs/scroll and restoration.
-- Creation from any enabled primary destination through the same accepted sheet/session.
-- Targeted shared-row/token and shell/inset changes required by these actual consumers.
-- Supported locale resources, accessibility and separate Android/iPhone verification evidence.
+- Home and History as real retained primary destinations; Search/Profile stay inert reservations.
+- Day/Week/Month, year context, exact date-grouped rows and exact selected-period totals.
+- Compact separately labelled global balance/currency, visible independently of list scrolling.
+- Description-first History rows with date subtitle, category fallback/avatar and shared signed Money
+  layout. Preserve Home's category-first public row API and visual behavior.
+- Reactive SQL invalidation, explicit loading/empty/error/retry, retained selection/scroll and supported
+  restoration; creation through the same shell-owned accepted sheet/session.
+- Targeted shared row/tokens, shell/insets, localization/accessibility and separate physical targets.
 
-Excluded: detail/edit/delete/undo; category management; charts/category breakdown; amount/date/ID
-text search; currency conversion; login/Drive/sync; export; persisting filters/query in DataStore;
-new Paging/FTS libraries or migrations without measured need. This remains a local increment, not a
-completed MVP: Google Sign-In + Drive are required by the canonical business rules.
+Excluded: text search in History; any query/debounce/matching-count/index state; type/category filters;
+Search UI, filter/session contracts, criteria, structural SQL, projection, DI or navigation; charts/
+category breakdown; a fourth Year scope; balance visibility toggle; detail/edit/delete/undo; currency
+conversion; auth/Drive/sync/export; persisted screen preferences; new modules/generic abstractions;
+Paging/FTS or schema migration without demonstrated need. Auth + Drive remain required for the MVP.
+The reviewed normalization at `e0d667b` stays intact for the existing category picker and future Search;
+it does not add a History consumer or become a dependency of active History projection.
 
-## Decisions pending before dependent implementation
+## Accepted temporal and presentation contract
 
-The user will provide more detail about History periods. Do not treat the following proposals as
-approval or infer calendar-week behavior from the Search screenshots.
+S1.T1 publishes the durable rules in the canonical business document and aligns period-picker wording.
+No period or Search-balance decision remains pending for this wave.
 
-| Decision | Proposed default | Required resolution |
-| --- | --- | --- |
-| History Week | Preserve current month-bound blocks: 1–7, 8–14, etc.; show explicit dates | User-supplied detail determines blocks versus calendar weeks, cross-month behavior and Monday/Sunday policy |
-| History Year scope | Day/Week/Month now; year menu changes their context | Decide whether Year becomes a fourth scope; Search This year does not cover arbitrary past annual browsing |
-| Overall balance in Search | Follow the supplied header/count composition | Reconcile the durable “overall balance always visible” rule with this screen; no large unsolicited card or silent claim of compliance |
+- Fresh History entry starts Day at today. Scope and anchor are the only editable selection inputs;
+  range, month/year context, selected chips and options are derived.
+- Week means month-bound blocks 1–7, 8–14, 15–21, 22–28 and 29–month end. Blocks never cross months.
+  Current-month Day/Week options stop at today; historical months are complete. Current-month totals
+  end at today; full calendar-month picker representation remains distinct from the History read range.
+- Scope changes preserve anchor. Year/month transitions preserve a valid day, clamp month-end/leap
+  dates and future anchors; a future month in the current year clamps to the current month.
+- Allowed years are persisted distinct years for the primary currency plus current year, descending.
+  Selected/restored past years remain selectable during this entry even if their last row disappears;
+  metadata invalidation never resets selection. Fresh entries derive the menu again from persisted years.
+- Capture Clock/timezone together on date refresh. If the anchor was previous today, follow new today;
+  historical selection stays fixed unless it becomes future. No background midnight timer is needed.
+- Period rows/count/totals describe all rows in the inclusive civil-date/currency range. Global balance
+  describes all dates in that currency and is labelled separately, with its own loading/error/retry.
+- Group by movement `fecha`; preserve `fecha DESC, created_at DESC, id DESC`. Rows are read-only.
+  Description is the title when nonblank, category label/fallback otherwise; date is the subtitle.
+  Date headers and row subtitles use localized civil dates. Category remains meaningful in avatar/
+  accessibility content; no Search-style date-plus-category subtitle is required.
 
-`docs/tasks/period-picker.md` says calendar week, but its implementation and tests assert blocks kept
-inside a month. Stage 1 must align canonical wording and tests with the accepted rule. Moneta uses
-calendar weeks and has four scopes; do not claim full behavioral parity.
-The stage may finish independent work while a decision is pending; it cannot close its gate or start
-dependent period/UI behavior until that decision is settled.
-
-## Proposed History contract
-
-Stage 1 publishes accepted domain rules in `docs/business-logic.md`; task files reference that owner
-instead of creating permanent duplicate rules. These are planning inputs pending period confirmation.
-
-- First entry: Day at today, empty query. One scope and anchor are editable; selected period,
-  focused month/year and available options are derived.
-- Scope changes preserve anchor. Month/year changes preserve a valid day and clamp month-end/leap
-  dates and future anchors; a current-year future month clamps to the current month.
-- Allowed years: distinct persisted years for the primary currency plus current year, descending.
-  A selected/restored year stays available during the entry lifetime even if its last row disappears.
-  A fresh entry uses persisted metadata again; years never reset selection during invalidation.
-- Proposed current-month day/week options end at today; historical months are complete. Current
-  month totals end at today. Exact week and annual behavior follows the pending decision.
-- Changing period preserves query; clear query restores the full period list.
-- Period totals describe all rows in the selected date/currency range, regardless of text search.
-  Overall balance describes all dates in that currency; label it separately from period totals.
-- Group by the civil movement `fecha`. Preserve storage order `fecha DESC, created_at DESC, id DESC`.
-  No rows are clickable until detail exists.
-- Search descriptions and the category label actually rendered, including supplied unknown-category
-  fallback. Matching is shared with Search; it is not amount/date/ID/type matching.
-
-## Confirmed Search editing and proposed filter rules
-
-The Apply/dismiss contract and count-free CTA are confirmed. Stage 1 validates the remaining defaults
-against canonical product requirements and publishes their accepted form before implementation.
-
-- Fresh Search: All history, all types, no selected category IDs, empty text. Search and History have
-  independent inputs; changing one never silently constrains the other.
-- Opening filters copies applied non-text filters into a draft. Controls change only that draft;
-  chips/results behind the sheet keep the applied state.
-- Aplicar validates, atomically commits all draft dimensions and closes. Zero results and an unchanged
-  valid draft still allow Apply. No count-preview query or live-results CTA is necessary.
-- Back/scrim/drag dismissal drops the draft. Limpiar resets draft date/type/categories and custom
-  bounds to today, preserving text query; the reset commits only through Apply.
-- Apply/cancel ends editing once, then enters Closing with disabled render data until `onHidden`.
-  Reject reopen during Closing; only Hidden allows global creation. Render data retained for animation
-  is neither an applied filter copy nor an editable draft.
-- Clear input removes only text. Removing a screen chip immediately removes only its applied
-  dimension. The next draft copies that latest applied state.
-- Inclusive presets: Last 7 = today minus 6 through today; Last 30 = today minus 29 through today;
-  This month/year use full calendar boundaries as in Moneta. All history has no date predicate,
-  represented by an explicit optional range, not fabricated minimum/maximum dates.
-- Custom uses required valid civil dates. Proposed Moneta-compatible policy swaps reversed bounds
-  before display/apply; proposed max custom date is today, matching creation. Cross-year custom
-  labels include the year, even though the current compact date chip omits it.
-- Date, type and category dimensions combine with AND; multiple categories combine with OR. No
-  selected categories means all. Match exact stable category IDs; a parent does not automatically
-  include descendants. Categories do not determine the movement type.
-- Render the real 58-category catalog, including retained children, with deterministic ordering and
-  a scrollable/filter-group presentation. Do not copy the image's older flat category list. Missing
-  selected IDs use the same visible fallback and are not invisibly cleared during a live refresh.
-- Text matches description or currently displayed category name as a literal normalized substring.
-  Keep raw input intact; trim outer whitespace, lowercase and fold supported Latin accents, including
-  decomposed forms. Preserve ñ versus n to retain current Tallybook category-search semantics; this
-  is an explicit difference from Moneta's broader Unicode fold.
-- Empty text matches all rows; category-picker empty text still means no suggestions. `%` and `_`
-  are literal; no token language, ranking, parent expansion or SQL wildcard matching.
-- Input updates immediately; nonempty matching settles after 250 ms; clear is immediate. A pending
-  query cannot show/announce an older count as current. Only settled current results publish count.
-- Search row: description-first title when nonblank, category fallback otherwise; subtitle has date
-  and category; signed amount and unambiguous currency; read-only semantics. Preserve Home's row
-  presentation rather than silently changing it to the Search variant.
-- Filter active dot/chips derive from applied non-text filters. Each removable chip has an accessible
-  removal label; active state does not rely only on color or a dot.
-
-## Ownership and strategy
+## Ownership and lifecycle
 
 | Value | Single owner / lifetime |
 | --- | --- |
-| Movimientos/categories | SQLDelight through cold repositories; persisted and shared across consumers |
-| Primary currency | Existing preferences repository; no copied screen/navigation preference |
-| History selection and query | History ViewModel for its retained navigation entry |
-| Applied Search filters and query | Search ViewModel for its separate retained entry |
-| Search filter session | Hidden/Editing/Closing owned by Search state; closing render snapshot until onHidden |
-| Today | ViewModel, injected Clock + TimeZoneProvider captured together on operation/resume |
-| Row data, groups, matching/counts and period totals | Pure projection of the current request snapshot; never persisted/optimistically appended |
-| Scroll and focus | Saved composition state by entry; focus/keyboard are transient |
-| Navigation and creation sheet/store | Shared app shell; typed routes and exactly one creation session |
-| Read/calculation failures | Durable UiState; retry preserves inputs |
+| Movimientos/categories | SQLDelight via cold repositories |
+| Primary currency | Existing preferences repository |
+| History scope/anchor | History ViewModel for its retained navigation entry |
+| Today | Injected Clock/TimeZoneProvider captured together on operation/resume |
+| Groups, period count/totals, row text | Pure projection of the current range/category/presentation snapshot |
+| Global summary | Existing all-date repository summary; separate labelled status |
+| Scroll/year popup | Entry saveable composition state / transient local popup |
+| Navigation and creation sheet/store | Shared app shell; typed Home/History routes and one creation session |
+| Read/calculation failures | Durable UiState; retry preserves selection |
 
-SQL filters currency/date/type/category before domain mapping. Kotlin matches supported-locale text
-on the resulting snapshot using the shared normalizer, with normalized fields built once per data/
-category update. No query-per-keystroke, duplicated all-history cache or Compose business calculations.
+SQL filters currency/date before mapping. List and period totals use one bounded snapshot and checked
+Money arithmetic; overflow is a typed failure, never a partial/zero/wrapped total. No separate period
+summary query, all-history cache, normalized text index or business calculation in Compose is needed.
+One immutable History UiState/Actions contract uses latest-only request switching; no effect stream is
+needed for this read-only screen. Use the established injected dispatchers and cancellation boundary.
 
-History derives list and exact totals from the same bounded snapshot already required for display,
-using checked Money arithmetic. This avoids independently emitted list/total revisions. The existing
-all-date SQL summary continues to own overall balance. Overflow has an explicit typed projection
-failure; it never becomes a wrapped number, partial total or zero.
+Lifecycle collectors plus `WhileSubscribed` use the agreed five-second stop timeout. Re-entry after
+inactive timeout must mark/revalidate cached content before presenting it as current. Editable
+selection survives independently of upstream replay; hidden writes are re-read on activation.
 
-Search All history is not date-bounded. LazyColumn limits composition, not database materialization.
-Stage 2/6 profile both selected-month and All history 10,000-row stress fixtures plus exclusions.
-These are stress cases, not an advertised data limit. If inadequate, re-plan paging, accent matching
-and exact global result count together before closure. Never add a silent LIMIT or guess the count.
+Restoration has an explicit platform boundary: Android supported Activity/saved-owner recreation;
+iOS retained-controller/saveable scene recreation supported by the actual host. A newly launched iOS
+process has no persisted host restoration bridge here and starts with normal cold-launch defaults.
+A fresh app without saved navigation starts Home; first History entry starts Day/today. Save only typed
+navigation, small validated scope/anchor input and scroll, never rows/jobs/focus/submission/sheet drafts.
+No new DataStore/preferences/host persistence is authorized to extend iOS cross-process restoration.
 
-One immutable UiState/Actions contract per screen; latest-only request switching and deliberate
-StateFlow sharing. Repositories use injected dispatchers and preserve cancellation. Add buffered
-Channel effects only for an actual one-shot need, not a speculative generic event layer.
+## Active tasks and dependency order
 
-Navigation retains actual per-primary entry stores/saveable state. Switching tabs does not destroy
-History/Search, duplicate routes or accidentally share Activity-owned ViewModels. Root Back selects
-Home from either screen; transient surfaces get first dismissal; Home delegates platform exit.
-The filter sheet and global create sheet are coordinated and cannot overlap. The accepted creation
-session survives hide animation, releases after hidden and starts a fresh draft on a new session.
-Retained Home currently shares eagerly; Stage 5 adjusts sharing after checking synchronous consumers
-and proves inactive screen subscriptions stop after the agreed timeout.
-
-## Stages and dependencies
-
-| Stage | Deliverable and order |
-| --- | --- |
-| [1 — Contracts and pure rules](stage-1/tasks.md) | task1 periods + task2 normalization may run in parallel; task3 filters follows task1 for shared range/document ownership |
-| [2 — Reactive consultation reads](stage-2/tasks.md) | task1 range/years then task2 structural Search reads; one repository/schema owner |
-| [3 — State and projections](stage-3/tasks.md) | task1 projection then task2 History / task3 Search with separate feature ownership |
-| [4 — Pure screen composition](stage-4/tasks.md) | task1 History/shared row migration then task2 Search/filter sheet |
-| [5 — Shared shell/navigation](stage-5/tasks.md) | task1 connects Home/History/Search and one creation flow |
-| [6 — Integration/physical acceptance](stage-6/tasks.md) | task1 real graph, target evidence, full-wave review and closure |
-
-## Execution methodology
-
-1. Re-read baseline/AGENTS at execution; create one feature worktree `feat/history-search`. No
-   implementation or worktree creation is performed by this documentation task.
-2. Orchestrator owns cross-task decisions; fresh implementer context per task and fresh reviewer per
-   stage. No dedicated installed planner role file was found in the checked local agent locations;
-   planning skills and bounded read-only audits supplied the analysis.
-3. RED -> GREEN -> REFACTOR: fail for the actual missing behavior, implement the smallest contract,
-   then simplify. Tests are grouped by meaningful seams, not one file per assertion.
-4. Reuse error boundaries, money, injected clock/timezone, components and session lifecycle. No
-   use-case layer for a single consumer, new module, generic mapper framework or redundant flags.
-5. Shared rules stay in commonMain; domain has no Compose/platform imports. English identifiers/docs
-   retain existing Spanish domain vocabulary. Do not migrate all Home packages for symmetry.
-6. Follow gradle-run before wrapper invocation. Run narrow checks before full regression and retain
-   failure fingerprints; do not suppress warnings/skip tests or repeat unchanged failed checks.
-7. Review contracts, simplification, concurrency, accessibility and ownership before physical product
-   acceptance. A detailed plan does not replace current-tree checks or guarantee flawless code.
-
-## External API evidence
-
-Before version-sensitive integration, resolve the dependency version, verify primary docs/source for
-that version, test the complete connection and execute affected targets. Current references guide
-research; their sample dependency versions do not authorize upgrades:
-
-- [KMP Navigation 3](https://kotlinlang.org/docs/multiplatform/compose-navigation-3.html)
-- [KMP ViewModel/entry ownership](https://kotlinlang.org/docs/multiplatform/compose-viewmodel.html)
-- [SQLDelight coroutine queries](https://sqldelight.github.io/sqldelight/latest/2.x/extensions/coroutines-extensions/index.html)
-- [KMP lifecycle](https://kotlinlang.org/docs/multiplatform/compose-lifecycle.html)
-
-Gate entry saveable-state/ViewModel-store decorators, typed back-stack serializer and Koin ownership
-as one integration. Add matching KMP lifecycle-navigation coordinates only if resolved artifacts
-require them; no Android-only artifacts in commonMain. Also verify variable-arity category query
-bindings, coroutine debounce/latest operators on 1.9.0, custom calendar max-date and popup nesting.
-
-## Acceptance coverage
-
-| Criterion | Task owner | Evidence |
+| Stage | Active deliverable | Deferred work |
 | --- | --- | --- |
-| Period/year/today/restoration boundaries | Stage 1 / task1 | Fixed-date common tests with exact ranges |
-| Shared literal accent/case matching | Stage 1 / task2 | Normalizer and existing category-search regressions |
-| Presets/type/category and filter edit transactions | Stage 1 / task3 | Pure filter-transition tests |
-| SQL range/currency/order/years/invalidation | Stage 2 / task1 | Real SQLite collectors active before writes |
-| Structural Search predicates/count eligibility | Stage 2 / task2 | Mixed-filter real SQLite tests + query-plan/volume evidence |
-| Exact History totals/search-independent summary | Stage 3 / task1 | Pure projection, subtotal overflow and valid extreme-balance tests |
-| Latest History state/retry/resume | Stage 3 / task2 | One virtual scheduler and request identity tests |
-| Search Apply/cancel/clear/debounce/count | Stage 3 / task3 | State machine/real observation tests |
-| History states and shared row compatibility | Stage 4 / task1 | Pure screen semantics, fixed previews and Home regressions |
-| User visual guide and count-free Aplicar | Stage 4 / task2 | Search/sheet semantics + reference comparison |
-| Entry retention, Back, one bar/sheet | Stage 5 / task1 | Real shell lifecycle/restoration integration |
-| Create -> database -> all three consumers | Stage 6 / task1 | Real graph, file-backed persistence and physical scenarios |
-| Keyboard, insets, accessibility, performance | Stage 6 / task1 | Separate confirmed physical Android/iPhone evidence |
+| [1 — Contracts](stage-1/tasks.md) | S1.T1 accepted periods/canonical alignment; S1.T2 completed normalization retained | S1.T3 Search filters |
+| [2 — Reads](stage-2/tasks.md) | S2.T1 bounded range/years/read validation | S2.T2 structural Search SQL |
+| Early navigation gate | S5.T1 early adapter/resolution/decorated-entry/Koin/saved-owner probe before S3 transport | No Search route or model in probe |
+| [3 — State](stage-3/tasks.md) | S3.T1 History projection, then S3.T2 History ViewModel | S3.T3 Search projection/state |
+| [4 — UI](stage-4/tasks.md) | S4.T1 pure History screen and minimal shared row wrapper | S4.T2 Search/filter sheet |
+| [5 — Shell](stage-5/tasks.md) | Remaining S5.T1 Home/History retention, Back, one sheet/bar | Search enablement/focus/modal handshake |
+| [6 — Acceptance](stage-6/tasks.md) | S6.T1 Home/History graph, physical verification and History closure | Search integration/closure |
 
-Execution checks (not run by this documentation task):
+Each reviewed stage gates its successor. The early S5.T1 slice is explicitly executable before Stage 3
+and reviewed before transport selection; the remaining full-shell slice follows reviewed Stage 4.
+Deferred task files retain useful future proposals, but their checklists/dependencies are inactive and
+must be rebased into a separately authorized Search plan. They do not gate History completion.
+
+## External API gate and verification
+
+Use [repository methodology](../../README.md) for version-sensitive APIs: actual resolved version,
+primary documentation/source, complete integration check and target-specific execution. The scratch
+navigation audit identifies the matching official `lifecycle-viewmodel-navigation3` adapter as absent;
+S5.T1 owns adding it under the existing Lifecycle version, resolving the graph again and exercising
+real decorators → entry owners → Koin → SavedStateHandle with fresh restored registry/store owners.
+Source/API feasibility and serializer-only tests do not close that gate. No Koin navigation framework
+or general app store is needed. Full NavDisplay/scroll/Back/device evidence remains in Stage 5/6.
+
+Primary research anchors: [KMP Navigation 3](https://kotlinlang.org/docs/multiplatform/compose-navigation-3.html),
+[KMP ViewModel ownership](https://kotlinlang.org/docs/multiplatform/compose-viewmodel.html),
+[SQLDelight observation](https://sqldelight.github.io/sqldelight/latest/2.x/extensions/coroutines-extensions/index.html),
+[KMP lifecycle](https://kotlinlang.org/docs/multiplatform/compose-lifecycle.html).
+Revalidate actual resolved artifacts before integration; these links authorize no upgrades.
+
+| Requirement | Task owner | Meaningful evidence |
+| --- | --- | --- |
+| Three scopes, blocks, year/today/restored boundaries | S1.T1 | Fixed civil-date ranges/transitions, picker regressions |
+| Category search normalization preserved | Completed S1.T2 | Existing reviewed `e0d667b` evidence; current regression suite at closure |
+| Currency/date/order/year/invalidation/read corruption | S2.T1 | Real SQLite collectors before writes, positive amount/year validation |
+| Exact same-snapshot rows/count/totals and overflow | S3.T1 | Pure projection and valid extreme/subtotal failure tests |
+| Latest state, retry, presentation updates, resume | S3.T2 | Shared virtual scheduler, late request emissions, first re-entry state |
+| Global balance separate/visible; History rows/Home preserved | S4.T1 | Screen semantics/previews/row regressions, physical reference comparison |
+| Actual entry/Koin/saved-input ownership | Early S5.T1 | Real adapter + fresh-owner registry restoration probe |
+| Back/tab/scroll/store lifetime, one bar/sheet | Remaining S5.T1 | Full-shell/physical lifecycle and creation-session tests |
+| Creation → persisted data → Home/History | S6.T1 | File-backed production graph and separate confirmed physical targets |
+| Locales/accessibility/insets/selected-month scale | S6.T1 | Reproducible target/build/fixture observations and physical review |
+
+Execution checks (not run by this planning revision):
 
 - `./gradlew :shared:testAndroidHostTest`
 - `./gradlew :shared:compileKotlinIosArm64 :shared:compileTestKotlinIosSimulatorArm64`
-  (the latter compiles common tests, without running a simulator).
+  (Native test compilation only; no simulator runtime).
 - `./gradlew detekt ktfmtCheck`
-- `./gradlew :androidApp:assembleDebug`
-- Discover exact device compile/run and SQLDelight migration tasks from the actual AGP/source-set
-  configuration. Query-only additions do not require a fabricated migration.
+- `./gradlew :androidApp:assembleDebug :shared:compileAndroidDeviceTest`
+- `:shared:assembleAndroidDeviceTest` assembles the test APK; `:shared:connectedAndroidDeviceTest`
+  executes it only against a confirmed authorized physical Android target.
 
-Confirm one authorized physical Xiaomi/tablet/iPhone before installing or running device checks;
-resolve local tool paths without editing local.properties/signing files. Verify targets sequentially.
-AGENTS prohibits emulator/simulator runtime even where older docs suggest it. Missing device/stalled
-runner means explicitly unconfirmed execution, never an inferred pass from compilation.
+Follow `gradle-run`; discover exact device/SQLDelight tasks when needed. Confirm one authorized physical
+Xiaomi/tablet/iPhone before device work, resolve tool paths and use its serial without modifying
+local.properties/signing/project.pbxproj. Never run a simulator/emulator. Missing hardware gates only
+that phase; report execution/compile/host evidence separately. Preserve the instrumented-runner stall
+as unconfirmed until diagnosed. User physical acceptance precedes merge.
 
-## Gaps and re-plan boundaries
+## Focused risks and re-plan triggers
 
-| Gap/risk | Required treatment |
-| --- | --- |
-| Week wording/annual History | Pending user detail; no calendar-week claim or silent annual omission |
-| Search versus always-visible global balance | Resolve in Stage 1; document explicit screen policy before visual implementation |
-| 58 categories versus screenshot | Use real catalog with exact-ID matching and reachable scrolling; parent expansion is a separate product decision |
-| Persisted category language | Search what rows display; current bootstrap names do not auto-localize after system-language change |
-| Material row/category chip literals | Targeted token migration/compact presentation; preserve existing Home/category picker behavior |
-| All-history volume | Profile real reads/projection/typing; re-plan paging/count/normalization if required |
-| Home currency filtering after LIMIT | Do not copy into History/Search; integration identifies any needed focused consistency fix |
-| createdAt variable-precision TEXT order | Preserve current stable SQL order; do not claim universal chronological instant sorting. Normalization/migration is separate work |
-| Instrumented runner stall | Diagnose execution before relying on automatic device results; preserve manual target evidence separately |
-| iPhone/tooling/backlog inconsistencies | Use existing backlog; reconcile stale simulator/TEAM_ID instructions without changing signing configuration |
-| Auth/Drive, annual History, charts and detail/edit/delete | Later MVP/features, not implied complete by this wave |
+S2.T1 owns positive stored amount validation (Money stays signed) and scalar year metadata validation;
+year metadata is not a full row corruption scan. Preserve current created_at TEXT secondary order
+without claiming normalized instant sorting. S3.T2/S4.T1 explicitly update the localized unknown-category
+presentation input so visible fallback stays current without requiring a database emission.
+S5.T1 keeps originating creation-session identity on delayed hidden callbacks and protects re-entry
+readiness. Search filter token/availability rulings remain in deferred files only.
 
-Re-plan if period scope changes, category parent semantics expand, All history needs paging, declared
-KMP APIs cannot meet saved-entry lifetime, or a schema/data migration becomes necessary. Helpers/file
-names may adapt; approved behavior, single ownership and verification may not silently change.
+Profile a reproducible 10,000-row selected-month fixture with excluded dates/currencies, query plan,
+read/projection timing, retained-memory observation and physical scroll responsiveness; no brittle
+unit timing assertion or advertised cap. All-history Search typing/count profiling is deferred.
+Re-plan bounded list/totals together if volume is inadequate; no silent LIMIT/partial financial total.
+Home's post-LIMIT currency filtering is an existing seam; S6 checks compatibility and owns only a
+necessary focused fix/regression if it violates the accepted behavior. Do not redesign Home.
+
+Re-plan on changed scope/period policy, incompatible actual retained-entry APIs, needed schema changes
+or demonstrated scale failure. Backlog simulator/signing wording is stale; AGENTS physical-only and
+shared TEAM_ID constraints control execution. Auth/Drive, charts and Search remain later work.
 
 ## Closure
 
-- [ ] Pending period/global-balance decisions are settled and canonical owners agree with behavior.
-- [ ] All task/stage evidence belongs to the current feature tree; no open correctness findings.
-- [ ] Android acceptance and iPhone execution status are explicit and separate.
-- [ ] User accepts the physical feature before merge.
-- [ ] Compact into `docs/features/history.md` and `docs/features/search.md`, update canonical owners,
-      remove resolved backlog entries and archive the feature worktree through the repo workflow.
+- [ ] Canonical business/picker/UI owners agree with accepted History behavior.
+- [ ] Active tasks and current-tree checks/reviews are complete; deferred Search is not a closure gate.
+- [ ] Separate Android and iPhone runtime/restoration limitations are explicit.
+- [ ] User accepts History and creation on a physical device before merge.
+- [ ] Compact History into `docs/features/history.md`; preserve future Search specs for its later plan,
+      update canonical owners/backlog as applicable and archive the worktree through the repo workflow.

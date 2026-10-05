@@ -1,27 +1,21 @@
-# Wave 3 / Stage 4 — History and Search composition
+# Wave 3 / Stage 4 — Pure History composition
 
-## Objective
+## Objective and tasks
 
-Render pure History and Search state with Tallybook controls and the user-supplied visual guide.
-Read the [wave contract](../README.md) and canonical UI architecture. Shell integration is Stage 5.
+Render pure History state using the [accepted image](../references/history-screen.png) and Tallybook
+components, after reviewed Stage 3. Follow the [wave contract](../README.md); shell wiring is Stage 5.
 
-## Tasks and order
+- [task1 — History screen and minimal row renderer](task1/task.md): active.
+- [task2 — Search/filter UI](task2/task.md): deferred; no UI/session/popup extension for Search now.
 
-- [task1 — Pure screen and row migration](task1/task.md): screen states, resources, targeted shared-row
-  token migration, previews and semantics tests.
-- [task2 — Search screen and transactional filter sheet](task2/task.md): reference-based search
-  composition, active chips and Aplicar without quantity. Requires task1/shared row verified.
+## Exit gate and review
 
-## Exit gate
+Context/date title, period count, year selector and neutral Day/Week/Month controls follow the guide.
+Compact global and period summaries are distinct; global remains visible. Description/date History
+rows share rendering with the unchanged category-first Home wrapper. Pure states/resources/previews,
+read-only semantics, callback contracts and current host/device-test compilation checks are verified.
+No search/no-results/matching/clear-query/type-category filter/chart/breakdown/eye action is introduced.
 
-- Every visible state and new string works in supported locales, themes and enlarged text.
-- Filter selections edit draft only; Apply/clear/dismiss callbacks implement their distinct meanings.
-- Search row follows the reference while Home's presentation remains compatible.
-- Existing creation validation, keyboard, category entry and discard protection remain accepted.
-- Both screens remain pure/previewable; only Stage 5 routes own wiring/navigation.
-
-## Dedicated review
-
-Reject cloned movement rows, anonymous visual literals, duplicate bars/sheets, app-wide History state,
-live filter writes disguised as Apply and click semantics for unavailable movement detail.
-Final visual acceptance remains a physical-device gate in Stage 6.
+Reject cloned avatars/amount formatting, anonymous visual literals, second bar/sheet, app-wide state
+and detail click semantics. Preserve accepted creation behavior and supported locales/large text.
+Stage 5 owns wiring/insets; Stage 6 owns physical visual/accessibility acceptance.

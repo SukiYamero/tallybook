@@ -66,10 +66,15 @@ Skills: `android-dev`, `android-data-layer`, `kotlin-flows`, `kotlin-coroutines`
 
 Validate: `./gradlew :shared:testAndroidHostTest --tests '*HistoryRepositoryTest' --tests '*MovimientoRepositoryTest'`.
 Then `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosArm64 detekt ktfmtCheck`.
-If schema changes, first discover the exact generated SQLDelight tasks and run migration verification.
+If a measured need changes schema/indexes, use discovered
+`./gradlew :shared:generateCommonMainTallybookDatabaseSchema :shared:verifyCommonMainTallybookDatabaseMigration`;
+`:shared:verifySqlDelightMigration` is also available. Query-only additions need no migration.
 
 ## Completion / blockers
 
 Complete when real SQL streams meet the bounded read contract. Blocks Stage 3. If measured volume
-requires pagination, stop the affected design and revise list/summary/search contracts together;
+requires pagination, stop the affected design and revise the bounded list/period-total contracts together;
 do not introduce arbitrary LIMIT truncation or partial financial totals.
+
+Search criteria/structural predicates remain deferred; do not extend repository contracts for them.
+Stage 3 additionally requires the early S5.T1 real saved-owner/Koin probe, not only this data gate.

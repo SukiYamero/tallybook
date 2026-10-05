@@ -1,109 +1,104 @@
-# Wave 3 / Stage 6 / Task 1 — Real-graph regression and closure
+# Wave 3 / Stage 6 / Task 1 — Real History graph and closure
 
 ## Objective and context
 
-Verify the full [wave contract](../../README.md), review its diff and obtain physical acceptance without
-regressing the accepted creation flow. Requires Stage 5 reviewed. Read the existing
-`FirstMovimientoIntegrationTest`, creation acceptance notes and backlog evidence boundaries.
+Verify the complete [History contract](../../README.md), review the diff and obtain physical acceptance
+without regressing the accepted creation flow. Requires reviewed Stage 5. Read FirstMovimientoIntegrationTest,
+creation acceptance notes and backlog evidence boundaries. Search remains a separate later destination.
 
-Skills: `android-dev`, `android-testing`, `android-debugging` if a real failure occurs,
-`gradle-run`, `verification-before-completion`, `requesting-code-review`.
+Skills: `android-dev`, `android-testing`, `android-debugging` for actual failure, `gradle-run`,
+`verification-before-completion`, `requesting-code-review`.
 
 ## Files and responsibility
 
-- Create `shared/src/androidHostTest/kotlin/com/kurobello/tallybook/HistoryIntegrationTest.kt` using
-  real SQLDelight repositories, initialized preferences and production History/form state holders.
-- Create adjacent `SearchIntegrationTest.kt` for real structural filters plus normalized text,
-  draft isolation and creation invalidation. Reuse fixtures only where they are real shared setup.
-- Extend existing `FirstMovimientoIntegrationTest.kt` only for a relevant cross-screen regression.
-- Complete History/Search screen device tests in Stage 4 and navigation device tests in Stage 5.
-- Update task checkboxes with exact current evidence, canonical `docs/business-logic.md`,
-  `docs/ui/architecture.md`/`components.md` when their contracts change, and `docs/backlog.md` only for
-  actual unresolved/resolved items. After user acceptance, create compact `docs/features/history.md`
-  and `docs/features/search.md`; keep canonical domain/UI rules in their existing owners.
-- Source changes outside History are limited to verified wave defects; do not broaden into auth,
-  dashboard redesign, coroutine upgrades or unrelated baseline cleanup.
+- Create `shared/src/androidHostTest/kotlin/com/kurobello/tallybook/HistoryIntegrationTest.kt` with real
+  SQLDelight repositories, initialized preferences and production History/form holders.
+- Extend FirstMovimientoIntegrationTest only for relevant cross-screen regressions; share fixtures
+  only when real common setup warrants it. No SearchIntegrationTest or Search projection/query is built.
+- Finish History screen/navigation/device tests and precise task/progress evidence.
+- Update canonical business/UI/component owners only when final implemented contracts require it;
+  backlog only for actual unresolved/resolved items. After user acceptance compact delivered History
+  into `docs/features/history.md`. Preserve deferred Search specs/reference images for its later plan;
+  do not publish a Search feature document or delete useful future specs during History closure.
+- Source changes outside History are limited to verified wave defects. Do not broaden into auth,
+  dashboard redesign, dependency upgrades or unrelated baseline cleanup.
 
-## Real-graph integration cases
+## Real-graph cases
 
-Use a file-backed SQLite test for persistence, not only a fresh wrapper around an in-memory driver.
-Use active collectors before writes and the same virtual scheduler for all test dispatchers.
+Use file-backed SQLite for persistence, collectors active before writes and one shared virtual scheduler.
+Close scopes/preferences factory/drivers/collectors and delete only test-owned fixtures.
 
-- [ ] Bootstrap actual categories/preferences and collect Home + History against the same database.
-- [ ] Create a gasto and ingreso inside the selected period through AddMovimientoViewModel: both
-      collectors react, period/overall totals are exact and query/selection stay unchanged.
-- [ ] Create an item outside the active range: overall balance changes; period rows/totals do not.
-- [ ] Search a description/category, create matching and nonmatching items and clear the query:
-      filtering/counts change correctly while the period summary remains independent of search.
-- [ ] Search all/date/type/multiple-category predicates across exact parent/child IDs. Open/edit a
-      draft and verify no query/results change; Apply changes all dimensions once, cancel changes none,
-      Clear preserves query and header count settles without appearing inside Aplicar.
-- [ ] From Home's search entry, retained Search focuses once; normal tab/restoration preserves filters
-      without focus loops. Search and History inputs remain independent.
-- [ ] Insert foreign-currency rows interleaved with recent matching rows. History never mixes units;
-      test Home's observable consistency and address its post-LIMIT filtering only if this fails the
-      accepted regression contract, preserving a focused fix and regression test.
-- [ ] Introduce a previous/current/new year, observe metadata and confirm it does not reset selection.
-- [ ] Close collectors, scopes, preferences factory and database driver; reopen the same on-disk file
-      and verify persistence plus clean repository subscriptions. Delete only test-owned fixtures.
-- [ ] Verify save/read failure retains draft or filters as applicable; retry cannot duplicate a save.
+- [ ] Bootstrap actual categories/preferences; collect Home/History using the same database.
+- [ ] Create gasto/ingreso inside selected period through AddMovimientoViewModel; both observers react,
+      exact period/global totals update, period count/groups agree and selection remains unchanged.
+- [ ] Create outside-range item; global changes, period rows/count/totals do not. No manual refresh.
+- [ ] Interleave foreign currencies with recent matching rows; History never mixes units. Check Home
+      compatibility and fix its post-LIMIT filter seam only if a focused accepted regression fails.
+- [ ] Insert/remove previous/current year rows; available years update without resetting selection or
+      removing selected retained year. Date/timezone resume follows accepted live-today policy.
+- [ ] Update category/unknown-label presentation without changing amounts; visible fallback/row title
+      stays correct, no normalization/matching/index is required.
+- [ ] Save/read failures preserve draft/selection as relevant; retry cannot duplicate save or reset dates.
+- [ ] Reopen the same on-disk file to prove movement persistence and clean repository subscriptions.
+- [ ] Actual shell state retains/restores route/selection/scroll under supported platform scope and keeps
+      one creation owner. Search/Profile remain inert; Home search does not open History.
 
-## Physical verification protocol
+## Physical protocol
 
-Identify one authorized physical Xiaomi, Android tablet or iPhone before each device phase. Do not
-use emulators/simulators or modify local SDK/signing files. Discover adb/SDK/JDK/Xcode on this host.
-When Android is selected, use its confirmed serial explicitly for installation and launch:
-`adb -s <confirmed-serial> install -r androidApp/build/outputs/apk/debug/androidApp-debug.apk` followed
-by `adb -s <confirmed-serial> shell am start -n com.kurobello.tallybook/.MainActivity`.
-The placeholder is resolved from device inventory; never run it as a literal command.
+Identify one authorized physical Xiaomi/tablet/iPhone before each phase; no emulator/simulator or SDK/
+signing edits. Resolve adb/SDK/JDK/Xcode on this host. For Android use its confirmed serial explicitly:
+`adb -s <confirmed-serial> install -r androidApp/build/outputs/apk/debug/androidApp-debug.apk`, then
+`adb -s <confirmed-serial> shell am start -n com.kurobello.tallybook/.MainActivity`.
+Resolve the placeholder from actual inventory, never run it literally.
 
 | Scenario | Concrete observation |
 | --- | --- |
-| Existing-data upgrade and empty install | Existing rows survive; fresh History has current-year context and an honest empty-period state |
-| Period selection | Accepted exact boundary dates, historical months, leap February and year changes produce the expected rows |
-| Search | Case/accent/clear behavior, literal punctuation, matching indicator and no-results copy agree with the visible row text |
-| Search filter draft | All six presets, custom cross-year dates, type/category selection, Apply/Clear/cancel and reopen have their defined semantics |
-| Search guide/CTA | Description-first date/category rows, active chips and header count match the guide; primary footer says Aplicar without quantity |
-| Financial summary | Global and period labels/currency are distinct; query changes do not change period totals |
-| Tab/back retention | Repeated tab switches retain filters/query/scroll; popup, IME, sheet and root Back follow their defined hierarchy |
-| Creation from History | One sheet, accepted validation/discard protection, successful write and correct filtered result without reset |
-| Process recreation/relaunch | Saveable recreation restores agreed inputs; ordinary cold launch uses its defined defaults; movements remain persisted |
-| Date/timezone resume | On next resume, today/options refresh without unexpected changes to historical selection |
-| Accessibility/locales | Supported translations, TalkBack/VoiceOver order, clear/retry semantics, large text and ambiguous currency symbols are understandable |
-| Layout | Light/dark portrait, compact landscape, keyboard open, last item above bottom bar and available Android navigation modes work |
-| Volume | Use a test-owned dataset to inspect selected-month query, typing and scroll responsiveness; no production demo seeding |
+| Existing data/fresh entry | Existing rows survive; fresh History Day/today/current year and honest empty selected period |
+| Period/year | Exact blocks, historical month, truncated current block, leap February, clamp/no-op chip rules and accepted year context |
+| Reference | Context/header/count, three scopes/year, compact totals and description/date read-only rows; no search/filter/chart/breakdown/eye action |
+| Global/period money | Separately labelled currency/totals; global stays visible while rows scroll; unavailable status is not false zero |
+| Tab/Back | Repeated Home/History preserves selection/scroll; year popup/sheet first, History→Home, normal root exit; inert Search/Profile |
+| Creation from History | One accepted sheet/validation/guard, successful write, correct period membership without reset |
+| Android restore/cold launch | Actual Activity/saved-owner recreation restores small input/scroll; cold launch uses defaults and persisted rows |
+| iOS retained controller/fresh launch | Actual supported saveable scene recreation retains small state; fresh process uses defaults with no persistence bridge claim |
+| Resume | Midnight/year/timezone refresh updates live-today options while preserving valid historical selection |
+| Accessibility/locales | Supported language text, TalkBack/VoiceOver order, complete period dates, retry/read-only sign/currency, large text and long descriptions |
+| Layout | Light/dark portrait/tablet/compact landscape, creation keyboard, last row above sole bar and available Android nav modes |
+| Bounded volume | Test-owned selected-month fixture, query/projection/scroll responsiveness and retained-memory observation |
 
-Also inspect All history/This year with the 10,000-row stress fixture. Do not mistake LazyColumn for
-bounded database memory or announce a count from a truncated page. Failure triggers the wave's
-explicit paging/count/normalization re-plan gate.
+Use a reproducible 10,000-row selected-month fixture plus excluded dates/currencies; record target/build
+mode, distribution, query plan, read/projection timing/memory and physical scrolling. No production demo
+seeding, brittle timing tests, advertised cap or silent LIMIT. All-history/typing/Search counts are later.
+A demonstrated bounded-scale failure requires list/period-total re-plan before closure.
 
-Force-stop/relaunch demonstrates persistence and cold-launch behavior, not Android saved-state process
-restoration. Use an actual recreation/restore scenario for that contract and report its setup.
-Do not erase a user's existing data to obtain an empty-install scenario; use an explicitly disposable
-test install/device or an authorized clean installation.
+Force-stop/relaunch proves persistence/defaults, not saved process restoration. Use actual recreated
+Activity/new-owner setup for Android restore and separate retained-controller saveable setup for iOS.
+Do not erase existing user data for empty-install evidence; use a disposable/authorized clean install.
+Run iPhone through Xcode on a confirmed physical target; Native compile/Android screenshots cannot prove
+its lifecycle/popup/safe areas. Missing hardware stops only that phase; runner stall stays unconfirmed
+until bounded diagnosis, with manual target evidence recorded separately. Do not promise new iOS
+cross-process host persistence just to make acceptance wording pass.
 
-Run the corresponding iPhone flow through Xcode on the confirmed physical target. Native compilation,
-host tests and Android screenshots cannot prove iOS keyboard, lifecycle, popup or safe-area behavior.
-If no compatible device is connected, stop only that phase and request the required device. If the
-runner stalls, diagnose the runner with bounded evidence and retain manual target evidence separately.
+## Final checks, review and closure
 
-## Final checks and review
+- [ ] `./gradlew :shared:testAndroidHostTest`.
+- [ ] `./gradlew :shared:compileKotlinIosArm64 :shared:compileTestKotlinIosSimulatorArm64` (compilation only).
+- [ ] `./gradlew detekt ktfmtCheck`.
+- [ ] `./gradlew :androidApp:assembleDebug :shared:compileAndroidDeviceTest`;
+      `:shared:assembleAndroidDeviceTest` and `:shared:connectedAndroidDeviceTest` for assembled test APK/
+      execution on the confirmed physical target. Do not claim unavailable/stalled execution passed.
+- [ ] Schema tasks only if measured schema/index change: `:shared:generateCommonMainTallybookDatabaseSchema`
+      and `:shared:verifyCommonMainTallybookDatabaseMigration`; `:shared:verifySqlDelightMigration` available.
+- [ ] Record tree/command/target/result/limitations without financial data, credentials or local signing
+      material. Task evidence is current; historical S1.T2 report alone does not prove new History.
+- [ ] Fresh whole-wave reviewer fixes in-scope findings and verifies relevant checks.
+- [ ] User tries this worktree's concrete History/creation scenarios on physical device and approves.
+- [ ] With approval compact delivered History/canonical owners, retain useful deferred Search proposals,
+      preserve unresolved MVP gaps, commit/merge/archive under documented repository workflow.
 
-- [ ] Run `./gradlew :shared:testAndroidHostTest`.
-- [ ] Run `./gradlew :shared:compileKotlinIosArm64 :shared:compileTestKotlinIosSimulatorArm64`.
-- [ ] Run `./gradlew detekt ktfmtCheck`.
-- [ ] Run `./gradlew :androidApp:assembleDebug`; run discovered device compile/execution tasks on the
-      confirmed target when available. Verify migrations only if this wave changed schema.
-- [ ] Record target, commit/tree, command, result and blocked checks without exposing financial data,
-      descriptions/search terms, credentials or local signing material in logs/screenshots.
-- [ ] Fresh reviewer fixes wave findings and verifies relevant checks before requesting product review.
-- [ ] Ask the user to try the actual worktree and concrete History/creation scenarios on device.
-- [ ] With user approval, compact active specs, preserve unresolved MVP gaps, commit/merge and archive
-      the feature worktree through the repository's documented workflow.
+## Completion boundary
 
-## Completion / blockers
-
-The wave is functionally accepted only with current checks, review and explicit physical product
-approval. Android and iPhone evidence are separate statuses. Missing iPhone or instrumented execution
-is reported precisely; it cannot be converted into a claim that both platforms are runtime-verified.
-If the user accepts a narrower target boundary, preserve that limitation in the feature/backlog docs.
+Accepted only with current checks/review and explicit physical product approval. Android/iPhone statuses
+are separate; missing target or stalled execution remains precisely unconfirmed. If the user accepts
+a narrower target boundary, preserve it in final feature/backlog documentation. Deferred Search tasks
+are not History closure requirements, and no full MVP claim is made.

@@ -1,5 +1,13 @@
 # Wave 3 / Stage 4 / Task 2 — Search screen and transactional filter sheet
 
+> **DEFERRED — separate later Search destination.** This file preserves useful future proposals,
+> not an active Wave 3 task. Its original checklist, dependencies, shared-file permissions and
+> unresolved Search decisions are inactive. Rebase them against delivered History/canonical rules
+> in a separately authorized Search plan before execution. It neither blocks nor enables History;
+> no Search UI, filter/criteria, structural SQL, projection, DI or navigation work is authorized now.
+> Use the [active History contract](../../README.md) and stage overview for current dependencies.
+
+
 ## Objective and context
 
 Implement the user-supplied Search composition and confirmed Apply semantics from the

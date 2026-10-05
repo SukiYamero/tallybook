@@ -1,129 +1,136 @@
-# Wave 3 / Stage 5 / Task 1 — Shared navigation and sheet lifetime
+# Wave 3 / Stage 5 / Task 1 — Home/History navigation and sheet lifetime
 
-## Objective and context
+## Objective and execution slices
 
-Enable History and Search as real primary destinations while preserving one creation session and
-retained History inputs. Read the [wave contract](../../README.md), canonical UI architecture,
-`TallybookNavHost`, `HomeRoute` and the current sheet-session tests. Requires Stage 4 reviewed.
+Enable only History beside Home while preserving one creation session and retained selection/scroll.
+Read the [wave contract](../../README.md), canonical UI architecture, current TallybookNavHost,
+HomeRoute/session tests and scratch navigation audit. Search remains a reserved later destination.
 
 Skills: `android-dev`, `compose`, `compose-state-and-effects`, `kotlin-concurrency-and-flow`, `koin`,
 `compose-ui-testing-patterns`, `android-testing`, `test-driven-development`, `gradle-run`.
-Complete the navigation API evidence gate before changing entry ownership.
-Before Stage 3 selects a restoration transport, add the matching KMP
-`lifecycle-viewmodel-navigation3` adapter, confirm post-addition resolution and execute a focused real
-decorators → entry owner → Koin → SavedStateHandle save/restore probe with newly created registry/store
-owners. API/source feasibility alone does not close that early gate. Verify the exact resolved
-decorator APIs and keep primary decorators above active display. Full-shell NavDisplay, scroll,
-lifecycle, Back and physical-target proof remains in Stage 5; the early probe does not substitute it.
-An iOS controller's in-memory saveable registry is not evidence of cross-process restoration: record
-the supported platform lifecycle scope explicitly and prove the real integration rather than treating
-route serialization or Android restoration as iPhone process-relaunch evidence.
 
-## Files and responsibility
+This task has two dependency points: **early gate after Stage 1, by Stage 2 closure, before S3
+transport selection**; **remaining full-shell integration after reviewed Stage 4**. A fresh reviewer
+checks the early diff/probe before S3. Full Stage 5 review later covers the accumulated shell diff.
 
-- Modify `core/ui/navigation/Destinations.kt`, `TallybookNavHost.kt` and `TallybookBottomNavigation.kt`
-  under `shared/src/commonMain/kotlin/com/kurobello/tallybook/`.
-- Create `core/ui/layout/TallybookAppShell.kt` and a small internal navigation state holder if needed.
-  Own enabled primary destinations, selected route, saved entry state and shared creation wiring.
-- Create `feature/history/ui/HistoryRoute.kt`: lifecycle collection, presentation resources and the
-  pure HistoryScreen boundary. The content composable still sees only immutable state/callbacks.
-- Create `feature/search/ui/SearchRoute.kt`: Search state collection and filter draft lifecycle.
-- Modify `feature/home/HomeScreen.kt`, its `HomeSheetSessionLifecycle.kt` and
-  `core/ui/layout/TallybookScreenFrame.kt` for the targeted ownership transfer.
-- Modify `feature/home/HomeViewModel.kt` sharing for retained-entry visibility after checking its
-  production `.value` consumers. Update `HomeViewModelTest.kt` and `FirstMovimientoIntegrationTest.kt`
-  with active test collectors, preserving their existing assertions and shared scheduler.
-- Move/generalize `AddMovimientoSheetSession` to `core/ui/movimiento/AddMovimientoSheetSession.kt`
-  because it now serves all enabled primary destinations. Move tests without weakening assertions.
-- Extend `core/ui/navigation/DestinationSerializationTest.kt` in commonTest; create
-  `core/ui/navigation/PrimaryNavigationTest.kt` there and
-  `TallybookAppShellLifecycleHostTest.kt` in androidHostTest.
+## Early gate before Stage 3
+
+- Add the matching official KMP `lifecycle-viewmodel-navigation3` adapter using the existing Lifecycle
+  version reference in `gradle/libs.versions.toml` and `shared/build.gradle.kts`. Current audit identifies
+  it as absent; resolve the updated Android/Native graph, especially savedstate wrappers, before use.
+  No dependency version upgrade, Koin navigation DSL or generic navigation framework is required.
+- Check exact resolved decorators/typed serializer/Koin/SavedStateHandle source contracts under the
+  repository API gate. Primary decorators/saveable holders stay above active display; popup/visual
+  proof is later. The audit's source feasibility is not real integration evidence.
+- Own a focused `shared/src/androidHostTest/kotlin/com/kurobello/tallybook/core/ui/navigation/HistorySavedOwnerHostTest.kt`
+  (proposed name; existing nonvisual Composition/UnitApplier harness may be reused). Use real runtime
+  decorators → entry owner → Koin → injected SavedStateHandle and actual save/restore registry owners.
+  Small test-only History input is sufficient to prove typed scope/anchor transport before S3 exists.
+- Exercise Home/History, no Search route/ViewModel/filter for the probe. Switch away/back: distinct
+  primary owners, same retained History VM/input, bounded store count. Save while History inactive;
+  clear/destroy original parent owners; construct fresh registry/store owners from saved state and
+  recreate entries/Koin VMs. Assert restored selected route/scope/anchor, new VM identities and reads
+  restarting. Reusing the old parent store only proves retention.
+- Remove a primary key/dispose shell and prove exactly-once clearance/cancellation. Merely not displaying
+  History must not pop/clear its retained entry. Saveable/VM decorators are one integrated chain.
+- Record target boundary: Android supported saved-owner/Activity recreation; iOS retained-controller/
+  saveable scene scope. Fresh iOS process launches without a restoration bridge and starts normally.
+  No new persistence/host bridge or cross-process restoration promise is authorized.
+- Run focused probe plus Native production/test compilation, Detekt/ktfmt and fresh bounded review.
+  If real integration fails, revise transport with evidence before S3. Full NavDisplay/scroll/Back and
+  affected physical targets remain later gates; the nonvisual host probe cannot substitute them.
+
+## Remaining files and responsibilities
+
+CommonMain paths below are relative to `shared/src/commonMain/kotlin/com/kurobello/tallybook/`.
+
+- Modify `core/ui/navigation/Destinations.kt`, `TallybookNavHost.kt`, `TallybookBottomNavigation.kt`.
+- Create `core/ui/layout/TallybookAppShell.kt` and small internal primary-state holder only as needed:
+  actual Home/History typed primary selection/entries/saveable ownership and shared creation wiring.
+- Create `feature/history/ui/HistoryRoute.kt`: lifecycle state collection, explicit fallback-label
+  presentation updates, activation/date refresh and pure HistoryScreen boundary.
+- Modify `feature/home/HomeScreen.kt`, `HomeSheetSessionLifecycle.kt`,
+  `core/ui/layout/TallybookScreenFrame.kt` only for targeted ownership/inset transfer.
+- Modify `feature/home/HomeViewModel.kt` sharing after checking production synchronous `.value` usage;
+  preserve its UiState cache while marking/revalidating re-entry. Update existing HomeViewModelTest/
+  FirstMovimientoIntegrationTest fixtures with real active collectors rather than weakening assertions.
+- Move/generalize `AddMovimientoSheetSession` into `core/ui/movimiento/AddMovimientoSheetSession.kt`
+  for the two real consumers; move its tests with assertions intact and bind hidden callback identity.
+- Extend commonTest `core/ui/navigation/DestinationSerializationTest.kt`; create
+  `PrimaryNavigationTest.kt` nearby and `TallybookAppShellLifecycleHostTest.kt` in androidHostTest.
 - Create `core/ui/navigation/HistoryNavigationTest.kt` in androidDeviceTest; extend sheet route tests.
-- Update `docs/ui/architecture.md` to describe the now-real primary destinations and shell ownership.
+- Update `docs/ui/architecture.md` for real History, inert Search/Profile and actual shell ownership.
 
-The paths above are relative to the existing `com/kurobello/tallybook` package in their named source
-sets. Resolve exact filenames before moving tests; do not broaden this task into package cleanup.
+No SearchRoute, Search destination registration, Search DI/model, filter handshake or Home search
+focus/navigation wiring belongs to this task. Preserve Home's current inert search surface until its
+separate destination is implemented; do not redirect it to History.
 
-## Navigation and retention contract
+## Navigation, retention and restoration contract
 
-1. Add serializable `History : Destination` and `Search : Destination`. The active route determines
-   selection. Home/History/Search receive callbacks; Profile remains a reservation with no click role.
-2. Retain one navigation entry/store/saveable-state scope per enabled primary destination. Use a
-   small Navigation 3 primary-state pattern with typed saved back stacks and selected primary key,
-   keeping decorators/state holders above the active display. Lazily create History/Search on first visit.
-   Do not create a general navigation framework or stacks for unimplemented destinations.
-3. Switching tabs selects retained primary entries instead of popping/destroying them. Each screen's
-   ViewModel and scroll owner remain scoped to that entry, not the Activity or app root. Inactive
-   screen collectors follow their actual visibility/lifecycle; measure that they do not leak work.
-   Home currently uses Eagerly, so lifecycle UI collection alone does not stop its upstream reads.
-   After confirming production has no uncollected fresh `.value` contract, use WhileSubscribed with
-   the agreed timeout and retain UiState cache. Tests reading `.value` add a real collector rather
-   than weakening assertions. Prove inactive upstream counts reach zero after the timeout and that
-   reactivation re-reads changes made while hidden without an unmarked stale success state.
-4. Tapping the selected destination is a no-op: no duplicate route, forced scroll reset or filter reset.
-   Repeated Home/History/Search cycles have bounded entry/store counts.
-5. System Back first dismisses a year popup/IME or the sheet under its existing guard. From History
-   or Search without a transient surface, select Home while preserving retained entries. From root
-   Home, let the platform handle its normal exit/back behavior; never empty the root stack into a blank UI.
-6. UiCatalog remains a development-only secondary route. Its return restores the previously active
-   primary destination. Preserve explicit catalog launch mode; do not expose production catalog actions.
-7. Persist typed route and each screen's small input/scroll state through supported saveable/entry-store
-   integration. Process restoration recreates repository observations; it does not persist live rows,
-   jobs, keyboard focus or an in-progress sheet submission.
-8. Fresh app entry without saved navigation starts Home; a saved entry may restore History or Search.
-   A cold start deliberately creates new screen state rather than copying filters to DataStore.
-9. If the declared KMP artifacts cannot retain/decorate inactive primary entries as required, stop and
-   revise the ownership design with evidence. Do not silently replace it with ambient ViewModels or
-   a second live copy of editable filter state in the shell.
+1. Add serializable History : Destination. Enable only Home/History callbacks and selected semantics;
+   Search/Profile stay reservations with no click/selection role. UiCatalog remains secondary/dev-only.
+2. Retain one visited primary entry/store/saveable scope per enabled destination using a small typed
+   Navigation 3 primary pattern. Home always exists; History is visited lazily. Hoist stable decorated
+   entries/keys above active display; decoration alone must not compose screens/resolve their VMs.
+3. Switching tabs selects existing entries rather than popping them. VMs/scroll are scoped to actual
+   entries, not ambient Activity/app root. Keep Home plus the active primary in displayed navigation
+   where needed by resolved NavDisplay Back handling. Returning Home does not remove retained History.
+4. Selected tab tap is no-op; repeated cycles do not duplicate routes/reset selection/scroll or grow
+   entry/store counts. Outgoing animation can retain lifecycle briefly; assert upstream shutdown after
+   settling plus the agreed five-second timeout. Home's current Eagerly upstream must be addressed
+   based on actual consumers, not assumed fixed by lifecycle UI collection alone.
+5. First activation after hidden write/timeout marks/revalidates cached data before claiming success.
+   Do not confuse eventual correct data or eventual zero collectors with correct first re-entry state.
+6. Back dismisses year popup or creation sheet with its existing guard before primary navigation.
+   At History root select Home, preserving History entry. At Home root delegate normal platform
+   exit/back; never empty the root into blank UI. UiCatalog return restores selected primary and explicit
+   catalog launch mode remains supported without production catalog actions.
+7. Save only typed visited/selected navigation, validated scope/anchor and entry composition scroll.
+   New owners recreate repository reads; no saved rows/jobs/keyboard/submission/changed creation draft.
+   Android Activity/new saved-owner recreation must run through the actual shell. iOS proof exercises
+   retained-controller/saveable scope, while a new process uses cold launch defaults.
+8. Fresh launch without saved navigation starts Home; first History starts Day/today. Force-stop/
+   relaunch is a persistence/default check, not proof of Android saved-state process restoration.
+   If actual APIs cannot meet retained lifetime, re-plan with evidence rather than ambient VMs or
+   another live editable input copy in shell/preferences.
 
-## Sheet and inset contract
+## Creation and insets
 
-- Shell owns one `AddMovimientoSheetSession`, one ViewModelStore and one AddMovimientoSheetRoute.
-  Home/History/Search add callbacks delegate to that owner; there is no second creation form.
-- Keep the accepted category-first entry, initial cancellation, save validation/retry, keyboard
-  behavior, detail disclosure and changed-draft dismissal guard untouched.
-- The session remains alive throughout the hide transition, releases after `onHidden`, rejects reopen
-  during closing and clears once on disposal. Opening a new session starts a new draft as today.
-  Hidden callbacks carry the creation session identity so a late callback cannot clear a newer
-  Closing session; retain the existing guard/cleanup regression assertions when generalizing ownership.
-- While the modal is open, underlying primary navigation cannot change destination via tap. Saving
-  returns to the same destination/filter; a newly dated item outside the current period need not appear.
-- Do not append movements, refresh History manually or reset search after save; SQL invalidation owns it.
-- Shell owns the persistent bottom bar and its safe inset. Screens reserve its published clearance;
-  screen/frame and bar must not both add bottom safe space. The sheet retains its own IME/safe policy.
-- Home's search surface now opens retained Search. A deliberate Home entry focuses its input once;
-  ordinary tab selection and restoration do not repeatedly request focus.
-- Search's filter sheet and global creation sheet are mutually exclusive. Dismiss/apply completes
-  editing but creation waits until onHidden finishes Closing. No filter reopen during Closing.
-  The shell coordinates availability, without owning filter values or another create session.
+- Shell owns one AddMovimientoSheetSession/store/route. Home/History add callbacks use it, preserving
+  category-first flow, initial cancellation, save validation/retry/detail/keyboard/discard guard.
+- Session stays alive through hide, releases once after onHidden, rejects reopening while closing;
+  new opening creates a fresh draft. Disposal clears once. Bind each hidden callback to its originating
+  session token; an old A callback cannot clear a newer Closing B. Do not read the latest token to
+  relabel an old completion. Existing cleanup tests remain meaningful when ownership moves.
+- Navigation taps cannot change underlying destination while modal is open. Saving returns to the same
+  selection; outside-range creation changes global summary only. SQL invalidation owns refresh.
+- One shell bar owns bottom safe inset and publishes occupied clearance; screens consume it without
+  adding the same inset again. Creation sheet retains its own safe/IME policy. No filter modal exists.
 
-## Test-first slices
+## Test-first slices and checks
 
-- [ ] RED: primary selection/no-op taps, bounded entries, Back History -> Home -> platform root and
-      secondary catalog return. GREEN: implement navigation holder and typed History/Search routes.
-- [ ] RED: full serialized primary navigation state restores the active route. GREEN: integrate the
-      existing sealed serializer plus verified per-entry state/store APIs for the resolved versions.
-- [ ] RED: actual Home/History/Search switching preserves each input/scroll and creates distinct entry
-      ViewModels. GREEN: wire entry owners; serializer-only tests do not complete this step.
-- [ ] RED: recreation restores small History input and scroll while data reloads; removed/disposed
-      owners clear exactly once and cancel subscriptions. GREEN: connect saved-state lifecycle.
-- [ ] RED: inactive Home/History/Search reads stop after virtual-time timeout, reactivation catches
-      database changes and distinct owners do not leak collectors. GREEN: sharing/lifecycle integration;
-      retain existing Home assertions with explicit active collectors in their fixtures.
-- [ ] Move sheet/session ownership and run existing lifecycle regressions unchanged; test creation
-      from all primary destinations, scrim/drag/Back guard, close/reopen and save failure retry.
-- [ ] Test one bar, disabled reservations, selected semantics and content clearance/IME behavior.
-- [ ] Test filter Closing blocks global creation/reopen until hidden, then permits exactly one fresh
-      creation session; stale hidden callbacks cannot clear a newer modal session.
-- [ ] Verify resolved Nav3/Lifecycle/Koin coordinates and execute the actual entry integration on Android
-      and iPhone when available; report each target separately.
-- [ ] Run host regression, Android build, Native test compilation, Detekt and ktfmt.
+- [ ] Early actual adapter/decorator/Koin/saved-owner probe + fresh review before S3 transport.
+- [ ] RED/GREEN bounded Home/History selection, selected-tab no-op, actual entry/VM/scroll retention,
+      inert Search/Profile, History→Home→root Back and catalog return.
+- [ ] RED/GREEN serialized complete primary state restores active route; actual recreated shell restores
+      History scope/anchor/scroll while repository data reloads. Serializer alone is insufficient.
+- [ ] RED/GREEN disposed/removed owners clear/cancel once, hidden Home/History reads stop after timeout,
+      first re-entry state is marked/revalidated and catches hidden writes with distinct owners.
+- [ ] Move sheet ownership and run unchanged regressions; create from both primaries, scrim/drag/Back
+      guards, save failure/retry/close/reopen and delayed A hidden callback during Closing B.
+- [ ] One bar, correct occupied clearance, inert reservations, selected semantics, physical popup/IME
+      in creation sheet, supported Android/iPhone lifecycle evidence recorded separately.
+- [ ] Full host regression, Native test compilation, Android build, device-test compilation, Detekt/ktfmt.
 
-Validate: `./gradlew :shared:testAndroidHostTest --tests '*PrimaryNavigationTest' --tests '*DestinationSerializationTest' --tests '*TallybookAppShellLifecycleHostTest' --tests '*SheetSession*'`.
+Early validate: `./gradlew :shared:testAndroidHostTest --tests '*HistorySavedOwnerHostTest'`.
+Full focused: `./gradlew :shared:testAndroidHostTest --tests '*PrimaryNavigationTest' --tests '*DestinationSerializationTest' --tests '*TallybookAppShellLifecycleHostTest' --tests '*SheetSession*'`.
 Then `./gradlew :shared:testAndroidHostTest :shared:compileTestKotlinIosSimulatorArm64 detekt ktfmtCheck`
-and `./gradlew :androidApp:assembleDebug`. Discover exact instrumentation tasks before execution.
+and `./gradlew :androidApp:assembleDebug :shared:compileAndroidDeviceTest`.
+`:shared:connectedAndroidDeviceTest` requires one confirmed authorized physical Android device;
+`:shared:assembleAndroidDeviceTest` assembles test APK. No simulator/emulator runtime.
 
-## Completion / blockers
+## Completion and dependencies
 
-Complete when entry/state/sheet lifetime is proven through the real shell. Blocks Stage 6.
-A missing physical iPhone leaves that runtime evidence pending; compile success is explicitly separate.
+Early slice/probe reviewed → S3 may choose transport. Full shell reviewed → Stage 6. Report missing
+physical iPhone/unavailable runner precisely; compilation/host harness does not imply iPhone runtime.
+No Search work is required to close this task.

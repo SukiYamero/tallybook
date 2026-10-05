@@ -1,24 +1,19 @@
-# Wave 3 / Stage 6 — Integration and physical acceptance
+# Wave 3 / Stage 6 — History integration and physical acceptance
 
-## Objective
+## Objective and task
 
-Prove the [wave contract](../README.md) through the real graph, supported targets and user acceptance,
-then compact the active planning documents into canonical feature documentation.
+Prove the [History contract](../README.md) with real production graph, separate physical targets and
+user acceptance after reviewed Stage 5, then compact active History documentation.
 
-## Tasks
+- [task1 — Real-graph regression and closure](task1/task.md): Home/History/creation only; Search deferred.
 
-- [task1 — Real-graph regression and closure](task1/task.md).
+## Exit gate and review
 
-## Exit gate
+Create → database invalidation → Home/History works without manual refresh. Physical review exercises
+accepted periods/year, separate global/period money, retention, sheet guards, persistence, lifecycle,
+locales/accessibility/insets and selected-month scale. Current checks/fresh full-wave review have no
+open correctness findings. Missing/stalled device execution and iPhone boundary remain explicit.
 
-- Create -> storage invalidation -> Home/History/Search works without manual refresh.
-- Physical checks exercise selection, search, retention, sheet guards, money and persistence.
-- Checks and dedicated review correspond to the actual feature tree; no open correctness findings.
-- Blocked checks and iPhone status remain explicit; a stalled runner is not passing evidence.
-- User approval precedes merge and doc compaction follows the repository workflow.
-
-## Dedicated review
-
-A fresh reviewer examines the whole wave against the canonical domain/UI docs and every task, fixes
-findings in scope and reruns relevant checks. Refuse weakened assertions, unlabelled partial evidence,
-simulator substitution and a local-only feature being called a complete MVP.
+User physical acceptance precedes merge. Compact only delivered History/canonical updates; future
+Search proposals remain available but are no gate. Reject weakened assertions, simulator substitution,
+serializer-only ownership evidence or this local increment being called the completed auth/Drive MVP.

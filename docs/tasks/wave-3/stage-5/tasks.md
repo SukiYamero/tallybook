@@ -1,23 +1,24 @@
-# Wave 3 / Stage 5 — Shared shell and navigation
+# Wave 3 / Stage 5 — Home/History shell and navigation
 
-## Objective
+## Objective and task
 
-Integrate Home, History and Search as retained primary destinations, with one bottom bar and one
-accepted creation flow. Read the [wave contract](../README.md); requires reviewed Stage 4.
+Integrate Home/History as retained primary destinations with one bar and the accepted creation sheet.
+Follow the [wave contract](../README.md).
 
-## Tasks
+- [task1 — Shared navigation and sheet lifetime](task1/task.md): split into an early real adapter/
+  saved-owner/Koin probe before Stage 3, and full-shell integration after reviewed Stage 4.
 
-- [task1 — Shared navigation and sheet lifetime](task1/task.md).
+## Exit gate and review
 
-## Exit gate
+Home/History selection has bounded entries/correct semantics; Search/Profile remain inert. Actual
+entry scope preserves selection/scroll with Android supported saved-owner restoration and iOS
+retained-controller/saveable scope. Fresh cold launch defaults are explicit; no unimplemented iOS
+cross-process bridge is assumed. One owner handles bar/insets and one session owns creation.
 
-- Home/History/Search navigate with bounded entries and correct active semantics; Profile stays inert.
-- Input and scroll retention is proven through actual entry lifetime and saveable restoration.
-- One owner manages bottom insets and one session owns global movement creation.
-- Filter and creation modals cannot overlap or leak edit sessions.
-- Typed route serialization, Koin entry owners and saved screen input work together on this KMP stack.
+Inactive subscriptions stop after transition settling and five-second timeout; first re-entry state
+marks/revalidates stale cache. Back handles year popup/sheet before selecting Home, then normal root
+platform behavior. Originating creation-session callbacks cannot clear a newer Closing session.
 
-## Dedicated review
-
-Reject app-wide screen ViewModels, duplicate sheet/bar owners, filters lost on tab changes, root Back
-producing an empty stack, focus loops and untested assumptions about Android-only navigation APIs.
+Fresh reviewer checks early probe and later shell separately. Reject ambient app-wide ViewModels,
+second sheet/bar, duplicate/reset History entries, root blank stack, Search enablement/focus routing
+and serializer-only ownership claims. Stage 6 still needs actual physical target evidence.
