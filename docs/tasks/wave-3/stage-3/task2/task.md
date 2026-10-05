@@ -27,6 +27,8 @@ Skills: `android-dev`, `using-chrisbanes-skills`, `kotlin-concurrency-and-flow`,
 - Produces `StateFlow<HistoryUiState>` and `HistoryActions`: scope/period/year selection, raw query
   changes, clear search, retry and resume/date refresh. The UI supplies the resolved fallback label
   through a deliberate presentation input, not a composable resource call inside the ViewModel.
+  Both consultation holders accept an explicit fallback-label update; a label change invalidates
+  searchable candidates even without a database emission, and indexed rows render that same label.
 - UI state includes selection inputs, today/available years, data status, matching status, projection,
   overall balance status and typed failure. Derived empty/no-results/readiness values cannot be copied
   into disagreement with their inputs.
@@ -55,9 +57,12 @@ Skills: `android-dev`, `using-chrisbanes-skills`, `kotlin-concurrency-and-flow`,
    show loading/error instead of rows with the wrong dates. Retry resubscribes the affected reads, not
    resets inputs; no infinite auto-retry or snackbar-only errors.
 8. Use one deliberate shared StateFlow. With lifecycle-scoped consumers and no required background
-   `.value` freshness, choose `WhileSubscribed` with the repository's justified retention interval
-   (proposed 5 seconds). If synchronous fresh reads become necessary, revise sharing explicitly.
+   `.value` freshness, choose `WhileSubscribed` with a 5-second stop timeout. If synchronous fresh
+   reads become necessary, revise sharing explicitly.
    Cancel active jobs on entry disposal; no `GlobalScope`, independent init collectors or lost errors.
+   Entry activation revalidates cached content before it is presented
+   as current; test the first re-entry state after timeout and a hidden database write. Retain editable
+   inputs independently of upstream sharing/replay.
 9. On resume/entry refresh today through the accepted pure transition; no midnight background ticker.
    A movement insert only invalidates SQL; it never appends a row, clears search or jumps to another day.
 10. Prefer direct Actions callbacks for durable input. Add no effect stream unless an actual one-shot

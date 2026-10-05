@@ -9,6 +9,15 @@ retained History inputs. Read the [wave contract](../../README.md), canonical UI
 Skills: `android-dev`, `compose`, `compose-state-and-effects`, `kotlin-concurrency-and-flow`, `koin`,
 `compose-ui-testing-patterns`, `android-testing`, `test-driven-development`, `gradle-run`.
 Complete the navigation API evidence gate before changing entry ownership.
+Before Stage 3 selects a restoration transport, add the matching KMP
+`lifecycle-viewmodel-navigation3` adapter, confirm post-addition resolution and execute a focused real
+decorators → entry owner → Koin → SavedStateHandle save/restore probe with newly created registry/store
+owners. API/source feasibility alone does not close that early gate. Verify the exact resolved
+decorator APIs and keep primary decorators above active display. Full-shell NavDisplay, scroll,
+lifecycle, Back and physical-target proof remains in Stage 5; the early probe does not substitute it.
+An iOS controller's in-memory saveable registry is not evidence of cross-process restoration: record
+the supported platform lifecycle scope explicitly and prove the real integration rather than treating
+route serialization or Android restoration as iPhone process-relaunch evidence.
 
 ## Files and responsibility
 
@@ -75,6 +84,8 @@ sets. Resolve exact filenames before moving tests; do not broaden this task into
   behavior, detail disclosure and changed-draft dismissal guard untouched.
 - The session remains alive throughout the hide transition, releases after `onHidden`, rejects reopen
   during closing and clears once on disposal. Opening a new session starts a new draft as today.
+  Hidden callbacks carry the creation session identity so a late callback cannot clear a newer
+  Closing session; retain the existing guard/cleanup regression assertions when generalizing ownership.
 - While the modal is open, underlying primary navigation cannot change destination via tap. Saving
   returns to the same destination/filter; a newly dated item outside the current period need not appear.
 - Do not append movements, refresh History manually or reset search after save; SQL invalidation owns it.

@@ -32,8 +32,10 @@ Skills: `android-dev`, `using-chrisbanes-skills`, `kotlin-api-design`, `kotlin-c
 - Produces internal `HistoryScope` and `HistorySelection(scope, anchor)`; range/context are derived.
 - Produces pure scope, year, month and period-selection transitions. Other tasks consume these names
   and invariant meanings; local helper names may be chosen during implementation.
-- Repository entry points validate invalid restored/requested ranges and return `InvalidInput` rather
-  than throwing across the boundary. UI builders do not silently repair reversed intervals.
+- Saved/raw date inputs are validated before constructing a range; invalid restored input follows the
+  documented recovery rule. Repository methods consume already-valid ranges and validate remaining
+  criteria at their boundary. Do not add raw-range overloads or invalid sentinels. UI builders do not
+  silently repair reversed intervals.
 
 ## Specific approach
 

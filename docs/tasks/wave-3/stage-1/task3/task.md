@@ -42,6 +42,8 @@ The raw text query is separate and is not changed by clearing filter dimensions.
    once, disables controls and retains read-only render data until `onHidden` releases it. Reject
    reopen while Closing. Clear edits only an Editing draft; Apply is atomic/idempotent at zero results.
    Late hidden callbacks cannot close a newer session. No phase is saved as persistent input.
+   Editing/Closing carry a session identity; edit/apply/cancel/hidden actions carry that identity and
+   ignore an old session even when the newer session is also Closing. Test that exact ordering.
 6. Saved Search input restores only applied filters and raw query. Unknown version/preset/type or
    invalid custom dates recover deterministically to default applied filters; never restore an open
    draft, predicted count or live result list. Retain valid stable IDs even if their labels are missing.

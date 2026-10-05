@@ -35,11 +35,16 @@ filter session is Hidden/Editing/Closing; optional editable draft derives only f
    changes Editing to Closing; cancel changes to Closing without applying. Closing retains disabled
    immutable render data until onHidden, then Hidden releases it. Reject reopen during Closing and
    ignore duplicate/late actions. No per-field intermediate commits or count-dependent enablement.
+   Bind every session action/hidden callback to its session identity; an old callback cannot release
+   a newer Closing session. Expose synchronous authoritative session availability for shell requests,
+   independent of asynchronously collected UiState; the shell keeps no copy of filter values.
 3. Clear draft preserves raw query; dismiss discards draft. Clear input preserves applied filters.
    Reopening always starts from the latest applied values, including screen chip removals.
 4. Use latest-only cancellation/request identity for structural reads and 250 ms text matching,
    immediate clear, one shared scheduler in tests. Normalize candidates once per data/category update;
    no full-history copy besides the one active repository snapshot or database read per character.
+   Use the shared pre-normalized matcher. The route updates an explicit fallback-label input; a label
+   change rebuilds candidates without requiring a database emission and rows display that same label.
 5. Count is exactly the current settled matching list size. While matching/loading/error is current,
    mark count unavailable/updating; never report cached or preview count as current. Filter draft
    changes do not cause a count preview or result query.

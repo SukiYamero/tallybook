@@ -11,6 +11,9 @@ Skills: `android-dev`, `android-data-layer`, `kotlin-flows`, `kotlin-coroutines`
 ## Files and responsibility
 
 - Modify `shared/src/commonMain/sqldelight/com/kurobello/tallybook/core/database/Movimiento.sq`.
+- Add focused positive-amount validation to the existing `MovimientoMapper.kt` read boundary; signed
+  `Money` remains valid for balances. Zero/negative persisted movement amounts produce `DataError.Local`
+  through the existing repository wrapper, with malformed-row regressions.
 - Extend `shared/src/commonMain/kotlin/com/kurobello/tallybook/core/data/MovimientoRepository.kt` and
   its `MovimientoRepositoryImpl.kt`, reusing `MovimientoMapper.kt` and `FlowDataOperation.kt`.
 - Create `shared/src/androidHostTest/kotlin/com/kurobello/tallybook/core/data/HistoryRepositoryTest.kt`.
@@ -31,8 +34,11 @@ Skills: `android-dev`, `android-data-layer`, `kotlin-flows`, `kotlin-coroutines`
 1. Range query selects `monto_moneda = ?` and `fecha >= ? AND fecha <= ?`; preserves the existing
    descending date/createdAt/id order. Query-only additions need no schema migration.
 2. Year query reads distinct years for the active currency from canonical stored civil dates. Do not
-   load every movement to obtain a short menu. Reject invalid persisted data through the mapper/error
-   boundary instead of manufacturing year zero or a silently empty list.
+   load every movement to obtain a short menu. Reject invalid/out-of-range returned year metadata
+   through a focused metadata validator/error boundary instead of manufacturing year zero or a
+   silently empty list. A year projection is not a full movement mapper: document its validation scope
+   and cover malformed year representations; complete stored-date validation remains the row mapper's
+   responsibility.
 3. Use SQLDelight observable Query support and the existing dispatcher/error wrappers. Guard query
    construction as well as collection where it can throw. A failed stream can be resubscribed by retry.
 4. Preserve cancellation, including during large reads. Close test drivers and collectors. No
