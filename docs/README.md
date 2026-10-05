@@ -45,6 +45,14 @@ parciales.
 
 ## Roles
 
+Use the global `task-planner` and `operator-orchestrator` skills for planning and execution when
+available. Their portable instructions live under `~/.agents/skills/`; this document remains the
+source for Tallybook-specific workflow and acceptance gates. Invoke `$task-planner` to define/revise
+a plan or `$operator-orchestrator` to execute authorized work. Native Codex agent adapters, when
+available, are global and inherit session settings; the role instructions never grant extra scope.
+If a runtime has no role/skill selector, load the corresponding SKILL.md as role instructions rather
+than inventing a tool parameter or claiming native activation.
+
 - **Vos** — última palabra: probás en dispositivo físico real y das el ok o pedís cambios. Nada se
   mergea sin tu confirmación.
 - **Yo (orquestador)** — reparto el trabajo entre worktrees/subagentes, hago seguimiento proactivo sin

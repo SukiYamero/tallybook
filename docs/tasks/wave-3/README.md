@@ -196,9 +196,9 @@ and proves inactive screen subscriptions stop after the agreed timeout.
 
 1. Re-read baseline/AGENTS at execution; create one feature worktree `feat/history-search`. No
    implementation or worktree creation is performed by this documentation task.
-2. Orchestrator owns cross-task decisions; fresh implementer context per task and fresh reviewer per
-   stage. No dedicated installed planner role file was found in the checked local agent locations;
-   planning skills and bounded read-only audits supplied the analysis.
+2. Use the global `task-planner` and `operator-orchestrator` roles documented in `docs/README.md`.
+   Orchestrator owns cross-task decisions; fresh implementer context per task and fresh reviewer per
+   stage, with bounded read-only audits when independent discovery is useful.
 3. RED -> GREEN -> REFACTOR: fail for the actual missing behavior, implement the smallest contract,
    then simplify. Tests are grouped by meaningful seams, not one file per assertion.
 4. Reuse error boundaries, money, injected clock/timezone, components and session lifecycle. No
