@@ -1,8 +1,10 @@
 package com.kurobello.tallybook.core.ui.component
 
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -10,9 +12,12 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.unit.dp
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.test.assertEquals
 import kotlinx.datetime.LocalDate
@@ -135,6 +140,33 @@ class TallybookPeriodPickerTest {
     composeRule.onNodeWithText("Tuesday 23").assertIsDisplayed()
     composeRule.onNodeWithText("June").assertIsDisplayed()
     composeRule.onNodeWithText("2026").assertIsDisplayed()
+  }
+
+  @Test
+  fun contextChangeAtSameIndexRevealsTheSelectedFullDate() {
+    var month by mutableStateOf(6)
+    composeRule.setContent {
+      TallybookTheme {
+        TallybookPeriodPickerRow(
+            options =
+                (1..30).map { day ->
+                  TallybookPeriodOption(
+                      LocalDate(2026, month, day),
+                      day.toString(),
+                      contentDescription = "2026-$month-$day",
+                  )
+                },
+            selected = LocalDate(2026, month, 23),
+            onSelect = {},
+            contentDescription = "Day periods",
+            modifier = Modifier.width(240.dp),
+        )
+      }
+    }
+    composeRule.onNodeWithContentDescription("2026-6-23").assertIsDisplayed().assertIsSelected()
+    composeRule.onNodeWithContentDescription("Day periods").performScrollToIndex(0)
+    composeRule.runOnIdle { month = 9 }
+    composeRule.onNodeWithContentDescription("2026-9-23").assertIsDisplayed().assertIsSelected()
   }
 
   private companion object {

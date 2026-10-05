@@ -9,6 +9,20 @@ import kotlin.test.assertEquals
 class TallybookScreenFrameTest {
 
   @Test
+  fun hostedFrameLeavesBottomSpaceToThePublishedBarClearance() {
+    val padding =
+        screenContentPadding(
+            PaddingValues(top = 40.dp, start = 8.dp, end = 10.dp),
+            LayoutDirection.Ltr,
+            bottomPaddingFloor = 0.dp,
+        )
+    assertEquals(0.dp, padding.calculateBottomPadding())
+    assertEquals(40.dp, padding.calculateTopPadding())
+    assertEquals(28.dp, padding.calculateLeftPadding(LayoutDirection.Ltr))
+    assertEquals(30.dp, padding.calculateRightPadding(LayoutDirection.Ltr))
+  }
+
+  @Test
   fun zeroSafeInsetsUseScreenFloors() {
     val padding = screenContentPadding(PaddingValues(0.dp), LayoutDirection.Ltr)
 

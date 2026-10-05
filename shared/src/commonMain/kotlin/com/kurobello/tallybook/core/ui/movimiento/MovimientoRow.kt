@@ -1,22 +1,10 @@
 package com.kurobello.tallybook.core.ui.movimiento
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.composables.icons.lucide.CircleQuestionMark
-import com.composables.icons.lucide.Lucide
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
@@ -24,9 +12,6 @@ import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.TipoMovimiento
-import com.kurobello.tallybook.core.ui.category.CategoryAvatar
-import com.kurobello.tallybook.core.ui.category.neutralCategoryTintColors
-import com.kurobello.tallybook.core.ui.theme.LocalTallybookColors
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
@@ -41,64 +26,18 @@ fun MovimientoRow(
     categoria: Categoria?,
     modifier: Modifier = Modifier,
 ) {
-  val amountText = movimiento.signedAmountText()
-  val amountColor =
-      when (movimiento.tipo) {
-        TipoMovimiento.INGRESO -> LocalTallybookColors.current.status.success.base
-        TipoMovimiento.GASTO -> MaterialTheme.colorScheme.onSurface
-      }
-  Surface(
-      modifier = modifier.semantics(mergeDescendants = true) {},
-      shape = MaterialTheme.shapes.large,
-      color = MaterialTheme.colorScheme.surfaceContainerLow,
-      border = BorderStroke(1.dp, LocalTallybookColors.current.border.subtle),
-  ) {
-    Row(
-        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-      if (categoria == null) {
-        CategoryAvatar(
-            imageVector = Lucide.CircleQuestionMark,
-            colors = neutralCategoryTintColors(),
-        )
-      } else {
-        CategoryAvatar(categoria)
-      }
-      Column(modifier = Modifier.weight(1f)) {
-        Text(
-            text = categoria?.nombre ?: stringResource(Res.string.unknown_category),
-            style = MaterialTheme.typography.titleSmall,
-        )
-        movimiento.descripcion?.takeIf(String::isNotBlank)?.let { description ->
-          Text(
-              text = description,
-              color = LocalTallybookColors.current.foreground.tertiary,
-              style = MaterialTheme.typography.bodySmall,
-              maxLines = 1,
-          )
-        }
-      }
-      Text(
-          text = amountText,
-          color = amountColor,
-          style = MaterialTheme.typography.titleMedium,
-      )
-    }
-  }
-}
-
-private fun Movimiento.signedAmountText(): String {
-  val signedMonto =
-      when (tipo) {
-        TipoMovimiento.INGRESO -> monto
-        TipoMovimiento.GASTO -> -monto
-      }
-  val formatted = signedMonto.format()
-  if (tipo != TipoMovimiento.INGRESO || monto.minorUnits == 0L) return formatted
-  val prefix = monto.moneda.symbol + monto.moneda.symbolSeparator
-  return prefix + "+" + formatted.removePrefix(prefix)
+  val categoryLabel = categoria?.nombre ?: stringResource(Res.string.unknown_category)
+  MovimientoRowContent(
+      movimiento = movimiento,
+      categoria = categoria,
+      text =
+          MovimientoRowText(
+              categoryLabel,
+              movimiento.descripcion?.takeIf(String::isNotBlank),
+              categoryLabel,
+          ),
+      modifier = modifier,
+  )
 }
 
 @Preview

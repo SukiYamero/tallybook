@@ -1,14 +1,22 @@
 package com.kurobello.tallybook.core.ui.movimiento
 
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
@@ -20,6 +28,7 @@ import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.category.CategoryChip
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.time.Instant
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
@@ -103,6 +112,48 @@ class MovimientoComponentsTest {
     composeRule.onNodeWithText("$\u00A010.000,00").assertExists()
     composeRule.onNodeWithText("$\u00A02.500,00").assertExists()
     composeRule.onNodeWithText("$\u00A07.500,00").assertExists()
+  }
+
+  @Test
+  fun homeRowKeepsCategoryFirstAndFullDescriptionWithoutAnAction() {
+    val description = "A very long meal description that remains available to accessibility"
+    composeRule.setContent {
+      TallybookTheme {
+        MovimientoRow(movimiento(TipoMovimiento.GASTO, 100).copy(descripcion = description), comida)
+      }
+    }
+    composeRule.onNodeWithText("Comida").assertExists().assertHasNoClickAction()
+    composeRule
+        .onNodeWithContentDescription("Comida, $description", substring = true)
+        .assertHasNoClickAction()
+  }
+
+  @Test
+  fun largeTextAndMaximumPositiveAmountKeepTitleAndAmountApart() {
+    val description = "Long description that must remain fully available to accessibility"
+    val amount =
+        signedMovimientoAmountText(Money(Long.MAX_VALUE, Moneda.COP), TipoMovimiento.INGRESO)
+    composeRule.setContent {
+      val density = LocalDensity.current
+      CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
+        TallybookTheme {
+          MovimientoRow(
+              movimiento(TipoMovimiento.INGRESO, Long.MAX_VALUE).copy(descripcion = description),
+              comida,
+              Modifier.width(240.dp),
+          )
+        }
+      }
+    }
+    val titleBounds =
+        composeRule
+            .onNodeWithText("Comida", useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
+    val amountBounds =
+        composeRule.onNodeWithText(amount, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+    assertTrue(!titleBounds.overlaps(amountBounds))
+    composeRule.onNodeWithContentDescription(description, substring = true).assertHasNoClickAction()
   }
 
   private fun movimiento(tipo: TipoMovimiento, minorUnits: Long) =

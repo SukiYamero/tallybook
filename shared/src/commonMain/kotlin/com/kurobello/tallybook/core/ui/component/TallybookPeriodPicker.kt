@@ -46,7 +46,9 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.composables.icons.lucide.Check
@@ -61,6 +63,7 @@ internal data class TallybookPeriodOption<T : Any>(
     val caption: String? = null,
     val hasData: Boolean = false,
     val key: String = value.toString(),
+    val contentDescription: String? = null,
 )
 
 @Composable
@@ -69,6 +72,7 @@ internal fun TallybookPeriodPickerHeader(
     yearControl: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     supportingText: String? = null,
+    titleStyle: TextStyle = TallybookTheme.typography.title,
 ) {
   Row(
       modifier = modifier.fillMaxWidth(),
@@ -79,7 +83,7 @@ internal fun TallybookPeriodPickerHeader(
         modifier = Modifier.weight(1f),
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space2),
     ) {
-      TallybookText(text = title, style = TallybookTheme.typography.title)
+      TallybookText(text = title, style = titleStyle, modifier = Modifier.semantics { heading() })
       if (supportingText != null) {
         TallybookText(
             text = supportingText,
@@ -105,7 +109,7 @@ internal fun <T : Any> TallybookPeriodPickerRow(
 
   val listState = rememberLazyListState()
   val selectedIndex = remember(options, selected) { options.indexOfFirst { it.value == selected } }
-  LaunchedEffect(selectedIndex) {
+  LaunchedEffect(selectedIndex, options.getOrNull(selectedIndex)?.key) {
     if (selectedIndex >= 0) listState.animateScrollToItem(selectedIndex)
   }
 
@@ -150,6 +154,7 @@ private fun <T : Any> TallybookPeriodPickerChip(
       modifier =
           Modifier.widthIn(min = TallybookTheme.dimensions.minimumTouchTarget)
               .defaultMinSize(minHeight = TallybookTheme.dimensions.minimumTouchTarget)
+              .semantics { option.contentDescription?.let { contentDescription = it } }
               .selectable(
                   selected = selected,
                   interactionSource = interactionSource,
