@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,6 +20,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -33,6 +35,8 @@ internal fun TallybookAmountInput(
     enabled: Boolean = true,
     message: TallybookFieldMessage? = null,
     focusRequester: FocusRequester? = null,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    inputModifier: Modifier = Modifier,
 ) {
   val appearance = tallybookAmountInputAppearance(enabled = enabled, message = message)
   Column(
@@ -63,6 +67,7 @@ internal fun TallybookAmountInput(
                       if (focusRequester == null) Modifier
                       else Modifier.focusRequester(focusRequester)
                   )
+                  .then(inputModifier)
                   .semantics {
                     contentDescription = label
                     if (message is TallybookFieldMessage.Error) {
@@ -76,7 +81,9 @@ internal fun TallybookAmountInput(
                   color = appearance.valueColor,
                   textAlign = TextAlign.Center,
               ),
-          keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+          keyboardOptions =
+              KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+          keyboardActions = keyboardActions,
           cursorBrush = SolidColor(TallybookTheme.colors.input.cursor),
           decorationBox = { innerTextField ->
             Box(contentAlignment = Alignment.Center) {

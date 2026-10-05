@@ -43,18 +43,26 @@ internal class AddMovimientoViewModel(
 
   private val coroutineScope = scope ?: viewModelScope
   private val retryLoadRequests = MutableStateFlow(0)
+  private val initialDraft =
+      MovimientoDraft(
+          tipo = TipoMovimiento.GASTO,
+          amountInput = "",
+          fecha = clock.todayIn(timeZoneProvider.current()),
+          selectedCategoriaId = null,
+          descripcion = "",
+      )
 
   val uiState: StateFlow<AddMovimientoUiState>
     field =
         MutableStateFlow(
             AddMovimientoUiState(
-                tipo = TipoMovimiento.GASTO,
-                amountInput = "",
-                fecha = clock.todayIn(timeZoneProvider.current()),
+                tipo = initialDraft.tipo,
+                amountInput = initialDraft.amountInput,
+                fecha = initialDraft.fecha,
                 moneda = Moneda.COP,
                 categorias = emptyList(),
-                selectedCategoriaId = null,
-                descripcion = "",
+                selectedCategoriaId = initialDraft.selectedCategoriaId,
+                descripcion = initialDraft.descripcion,
                 isLoading = true,
                 isSubmitting = false,
                 submitAttempted = false,
@@ -108,6 +116,25 @@ internal class AddMovimientoViewModel(
     updateFields { copy(descripcion = value.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH)) }
   }
 
+  override fun onDiscardChanges() {
+    uiState.update { current ->
+      if (current.isSubmitting) {
+        current
+      } else {
+        current.copy(
+            tipo = initialDraft.tipo,
+            amountInput = initialDraft.amountInput,
+            fecha = initialDraft.fecha,
+            selectedCategoriaId = initialDraft.selectedCategoriaId,
+            descripcion = initialDraft.descripcion,
+            submitAttempted = false,
+            error = current.error?.takeUnless { it == MovimientoFormError.SAVE_FAILED },
+            hasUnsavedChanges = false,
+        )
+      }
+    }
+  }
+
   override fun onRetryLoad() {
     retryLoadRequests.update { it + 1 }
   }
@@ -116,7 +143,9 @@ internal class AddMovimientoViewModel(
     if (uiState.value.isSubmitting) return
 
     uiState.update { it.copy(submitAttempted = true) }
-    val movement = movimientoForSubmit(uiState.value) ?: return
+    val timeZone = timeZoneProvider.current()
+    val createdAt = clock.now()
+    val movement = uiState.value.toMovimientoOrNull(idGenerator, createdAt, timeZone) ?: return
     uiState.update { it.copy(isSubmitting = true) }
     coroutineScope.launch {
       var saved = false
@@ -137,34 +166,16 @@ internal class AddMovimientoViewModel(
     }
   }
 
-  private fun movimientoForSubmit(state: AddMovimientoUiState): Movimiento? {
-    val timeZone = timeZoneProvider.current()
-    val createdAt = clock.now()
-    val today = createdAt.toLocalDateTime(timeZone).date
-    return MovimientoCandidate(
-            amount =
-                (parseAmountInput(state.amountInput, state.moneda) as? AmountInputResult.Valid)
-                    ?.money,
-            categoriaId = state.selectedCategoriaId,
-            isCategoriaValid = state.categorias.any { it.id == state.selectedCategoriaId },
-            isFechaValid = state.fecha <= today,
-            isReadyToSave = !state.isLoading && state.error == null,
-        )
-        .toMovimientoOrNull(
-            idGenerator = idGenerator,
-            tipo = state.tipo,
-            fecha = state.fecha,
-            descripcion = state.descripcion.normalizeDescription(),
-            createdAt = createdAt,
-        )
-  }
-
   private fun updateFields(transform: AddMovimientoUiState.() -> AddMovimientoUiState) {
     uiState.update { current ->
       transform(current)
           .copy(error = current.error?.takeUnless { it == MovimientoFormError.SAVE_FAILED })
+          .withDirtyState()
     }
   }
+
+  private fun AddMovimientoUiState.withDirtyState(): AddMovimientoUiState =
+      copy(hasUnsavedChanges = toDraft() != initialDraft)
 }
 
 internal data class AddMovimientoRepositories(
@@ -208,6 +219,26 @@ private data class MovimientoCandidate(
             )
           }
 }
+
+private fun AddMovimientoUiState.toMovimientoOrNull(
+    idGenerator: IdGenerator,
+    createdAt: kotlin.time.Instant,
+    timeZone: kotlinx.datetime.TimeZone,
+): Movimiento? =
+    MovimientoCandidate(
+            amount = (parseAmountInput(amountInput, moneda) as? AmountInputResult.Valid)?.money,
+            categoriaId = selectedCategoriaId,
+            isCategoriaValid = categorias.any { it.id == selectedCategoriaId },
+            isFechaValid = fecha <= createdAt.toLocalDateTime(timeZone).date,
+            isReadyToSave = !isLoading && error == null,
+        )
+        .toMovimientoOrNull(
+            idGenerator = idGenerator,
+            tipo = tipo,
+            fecha = fecha,
+            descripcion = descripcion.normalizeDescription(),
+            createdAt = createdAt,
+        )
 
 private sealed interface LoadState<out T> {
   data object Loading : LoadState<Nothing>

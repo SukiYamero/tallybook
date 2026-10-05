@@ -71,6 +71,8 @@ private object PreviewAddMovimientoActions : AddMovimientoActions {
 
   override fun onDescripcionChanged(value: String) = Unit
 
+  override fun onDiscardChanges() = Unit
+
   override fun onRetryLoad() = Unit
 
   override fun onSubmit() = Unit

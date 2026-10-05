@@ -1,38 +1,41 @@
 package com.kurobello.tallybook.feature.movimientos.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -40,15 +43,23 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.Dp
+import com.composables.icons.lucide.ChevronDown
+import com.composables.icons.lucide.Lucide
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.component.TallybookButton
+import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
+import com.kurobello.tallybook.core.ui.component.TallybookProgressIndicator
+import com.kurobello.tallybook.core.ui.component.TallybookText
+import com.kurobello.tallybook.core.ui.component.TallybookTextButton
+import com.kurobello.tallybook.core.ui.component.TallybookTextField
 import com.kurobello.tallybook.core.ui.component.captureScrollableInputViewport
 import com.kurobello.tallybook.core.ui.component.centerFocusedInputIn
 import com.kurobello.tallybook.core.ui.component.clearFocusOnUnconsumedTap
-import com.kurobello.tallybook.core.ui.component.inputRevealTrailingSpace
-import com.kurobello.tallybook.core.ui.component.needsManualInputReveal
 import com.kurobello.tallybook.core.ui.component.rememberScrollableInputViewport
+import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoUiState
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AmountInputError
@@ -60,10 +71,11 @@ import tallybook.shared.generated.resources.amount_not_positive
 import tallybook.shared.generated.resources.amount_overflow
 import tallybook.shared.generated.resources.amount_required
 import tallybook.shared.generated.resources.amount_too_many_decimals
-import tallybook.shared.generated.resources.category_required
+import tallybook.shared.generated.resources.category
 import tallybook.shared.generated.resources.collapsed
 import tallybook.shared.generated.resources.description_optional
 import tallybook.shared.generated.resources.expanded
+import tallybook.shared.generated.resources.loading
 import tallybook.shared.generated.resources.more_fields
 import tallybook.shared.generated.resources.movimiento_categories_error
 import tallybook.shared.generated.resources.movimiento_preferences_error
@@ -72,166 +84,254 @@ import tallybook.shared.generated.resources.retry
 import tallybook.shared.generated.resources.save_expense
 import tallybook.shared.generated.resources.save_income
 
-@Suppress("LongMethod")
+@Suppress("LongMethod", "LongParameterList")
 @Composable
 internal fun MovimientoForm(
     uiState: AddMovimientoUiState,
     actions: AddMovimientoActions,
+    detailsExpanded: Boolean = false,
+    onDetailsExpandedChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
+    startWithCategory: Boolean = false,
 ) {
-  var categoryPickerVisible by rememberSaveable { mutableStateOf(false) }
-  var descriptionVisible by rememberSaveable { mutableStateOf(false) }
-  val amountFocusRequester = remember { FocusRequester() }
-  val categoryFocusRequester = remember { FocusRequester() }
-  val amountBringIntoViewRequester = remember { BringIntoViewRequester() }
-  val categoryBringIntoViewRequester = remember { BringIntoViewRequester() }
+  val fieldFocus = remember { MovimientoFieldFocus() }
+  val categoryEntry =
+      rememberMovimientoCategoryEntry(uiState, actions, startWithCategory, fieldFocus.amount)
   val focusManager = LocalFocusManager.current
+  val detailsScrollState = rememberScrollState()
   val formScrollState = rememberScrollState()
   val formViewport = rememberScrollableInputViewport()
-  val inputRevealTrailingSpace = inputRevealTrailingSpace()
-  val amountError = uiState.amountError?.message()
+  val density = LocalDensity.current
+  val restingFormHeight = rememberRestingFormHeight()
+  val imeBottom = WindowInsets.ime.getBottom(density)
+  val isImeVisible = imeBottom > 0
+  val imeScrollPadding = with(density) { imeBottom.toDp() }
+  val formMaximumHeight = formMaximumHeight(isImeVisible, restingFormHeight.value)
+  val formItemSpacing = TallybookTheme.spacing.space16
   val submitLabel = uiState.tipo.saveLabel()
+  val selectedCategoria = uiState.categorias.firstOrNull { it.id == uiState.selectedCategoriaId }
   val descriptionState =
-      stringResource(if (descriptionVisible) Res.string.expanded else Res.string.collapsed)
+      stringResource(if (detailsExpanded) Res.string.expanded else Res.string.collapsed)
+  val detailsChevronRotation by
+      animateFloatAsState(
+          targetValue = if (detailsExpanded) 180f else 0f,
+          animationSpec = tween(durationMillis = TallybookTheme.motion.sheetDownMillis),
+          label = "movement details chevron",
+      )
 
-  LaunchedEffect(uiState.submitAttempted, uiState.amountError, uiState.isCategoriaMissing) {
+  LaunchedEffect(
+      uiState.submitAttempted,
+      uiState.amountError,
+      uiState.isCategoriaMissing,
+  ) {
     when {
-      uiState.amountError != null -> {
-        amountFocusRequester.requestFocus()
-        amountBringIntoViewRequester.bringIntoView()
-      }
+      categoryEntry.blocksValidationFocus -> Unit
       uiState.isCategoriaMissing -> {
-        categoryFocusRequester.requestFocus()
-        categoryBringIntoViewRequester.bringIntoView()
+        fieldFocus.category.requestFocus()
+      }
+      uiState.amountError != null -> {
+        fieldFocus.amount.requestFocus()
       }
     }
   }
 
-  Box(
+  Column(
       modifier =
-          modifier.fillMaxWidth().fillMaxHeight().captureScrollableInputViewport(formViewport),
+          modifier
+              .fillMaxWidth()
+              .padding(horizontal = TallybookTheme.dimensions.screenHorizontal)
+              .clearFocusOnUnconsumedTap(),
   ) {
     Column(
         modifier =
             Modifier.fillMaxWidth()
-                .fillMaxHeight()
-                .then(if (needsManualInputReveal) Modifier.imePadding() else Modifier)
-                .verticalScroll(formScrollState)
-                .clearFocusOnUnconsumedTap(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+                .heightIn(max = formMaximumHeight)
+                .scrollWhenImeVisible(isImeVisible, formScrollState)
+                .captureScrollableInputViewport(formViewport)
+                .captureRestingHeight(isImeVisible, restingFormHeight),
     ) {
-      MovimientoTypeSelector(
-          selected = uiState.tipo,
-          enabled = !uiState.isSubmitting,
-          onSelected = actions::onTipoChanged,
-      )
-      MovimientoAmountField(
-          state =
-              MovimientoAmountFieldState(
-                  value = uiState.amountInput,
-                  moneda = uiState.moneda,
-                  error = amountError,
-              ),
-          enabled = !uiState.isSubmitting,
-          onValueChange = actions::onAmountChanged,
-          focusRequester = amountFocusRequester,
-          modifier =
-              Modifier.bringIntoViewRequester(amountBringIntoViewRequester)
-                  .centerFocusedInputIn(formScrollState, formViewport),
-      )
-      MovimientoDateField(
-          state =
-              MovimientoDateFieldState(
-                  fecha = uiState.fecha,
-                  enabled = !uiState.isSubmitting,
-              ),
-          onFechaChanged = actions::onFechaChanged,
-      )
       Column(
-          modifier = Modifier.bringIntoViewRequester(categoryBringIntoViewRequester),
-          verticalArrangement = Arrangement.spacedBy(4.dp),
+          modifier = Modifier.fillMaxWidth().paddingForImeScroll(isImeVisible, imeScrollPadding),
+          verticalArrangement = Arrangement.spacedBy(formItemSpacing),
       ) {
-        CategoryField(
-            selected = uiState.categorias.firstOrNull { it.id == uiState.selectedCategoriaId },
-            isError = uiState.isCategoriaMissing,
-            onOpen = {
-              focusManager.clearFocus(force = true)
-              categoryPickerVisible = true
-            },
-            modifier = Modifier.focusRequester(categoryFocusRequester),
+        MovimientoPrimaryFields(
+            uiState = uiState,
+            actions = actions,
+            categoryEntry = categoryEntry,
+            fieldFocus = fieldFocus,
+            amountModifier = Modifier.centerFocusedInputIn(formScrollState, formViewport),
         )
-        if (uiState.isCategoriaMissing) {
-          Text(
-              text = stringResource(Res.string.category_required),
-              color = MaterialTheme.colorScheme.error,
-              modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-              style = MaterialTheme.typography.bodySmall,
+        Spacer(modifier = Modifier.height(TallybookTheme.spacing.space8))
+        Column(modifier = Modifier.fillMaxWidth()) {
+          TallybookTextButton(
+              onClick = { onDetailsExpandedChange(!detailsExpanded) },
+              modifier =
+                  Modifier.align(Alignment.CenterHorizontally).semantics {
+                    stateDescription = descriptionState
+                  },
+              enabled = !uiState.isSubmitting,
+          ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+              TallybookText(stringResource(Res.string.more_fields))
+              androidx.compose.foundation.Image(
+                  imageVector = Lucide.ChevronDown,
+                  contentDescription = null,
+                  modifier =
+                      Modifier.size(TallybookTheme.dimensions.datePickerChipIconSize)
+                          .graphicsLayer { rotationZ = detailsChevronRotation },
+                  colorFilter = ColorFilter.tint(TallybookTheme.colors.foreground.tertiary),
+              )
+            }
+          }
+        }
+        AnimatedVisibility(
+            visible = detailsExpanded,
+            enter =
+                fadeIn(animationSpec = tween(durationMillis = TallybookTheme.motion.fadeMillis)) +
+                    slideInVertically(
+                        animationSpec = tween(durationMillis = TallybookTheme.motion.fadeMillis),
+                        initialOffsetY = { height -> height / 8 },
+                    ),
+            exit =
+                fadeOut(
+                    animationSpec = tween(durationMillis = TallybookTheme.motion.sheetDownMillis)
+                ) +
+                    slideOutVertically(
+                        animationSpec =
+                            tween(durationMillis = TallybookTheme.motion.sheetDownMillis),
+                        targetOffsetY = { height -> height / 8 },
+                    ),
+        ) {
+          Column(
+              modifier =
+                  Modifier.fillMaxWidth()
+                      .then(
+                          if (isImeVisible) {
+                            Modifier
+                          } else {
+                            Modifier.heightIn(
+                                    max = TallybookTheme.dimensions.movimientoDetailsMaximumHeight
+                                )
+                                .verticalScroll(detailsScrollState)
+                          }
+                      )
+                      .testTag("movimiento_details"),
+          ) {
+            TallybookTextField(
+                value = uiState.descripcion,
+                onValueChange = {
+                  actions.onDescripcionChanged(it.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH))
+                },
+                modifier =
+                    Modifier.fillMaxWidth().centerFocusedInputIn(formScrollState, formViewport),
+                enabled = !uiState.isSubmitting,
+                label = stringResource(Res.string.description_optional),
+                message =
+                    TallybookFieldMessage.Supporting(
+                        "${uiState.descripcion.length}/$MOVIMIENTO_DESCRIPTION_MAX_LENGTH"
+                    ),
+                singleLine = false,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+            )
+          }
+        }
+        MovimientoFormErrorMessage(error = uiState.error, onRetry = actions::onRetryLoad)
+        if (uiState.isLoading) {
+          TallybookProgressIndicator(
+              contentDescription = stringResource(Res.string.loading),
+              modifier = Modifier.align(Alignment.CenterHorizontally),
           )
         }
       }
-      TextButton(
-          onClick = { descriptionVisible = !descriptionVisible },
+    }
+    Spacer(modifier = Modifier.height(TallybookTheme.spacing.space18))
+    if (isImeVisible) {
+      Spacer(
           modifier =
-              Modifier.align(Alignment.CenterHorizontally).semantics {
-                stateDescription = descriptionState
-              },
-          enabled = !uiState.isSubmitting,
-      ) {
-        Text(stringResource(Res.string.more_fields))
-      }
-      if (descriptionVisible) {
-        OutlinedTextField(
-            value = uiState.descripcion,
-            onValueChange = {
-              actions.onDescripcionChanged(it.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH))
-            },
-            modifier =
-                Modifier.fillMaxWidth()
-                    .centerFocusedInputIn(formScrollState, formViewport)
-                    .testTag("movimiento_description"),
-            enabled = !uiState.isSubmitting,
-            label = { Text(stringResource(Res.string.description_optional)) },
-            supportingText = {
-              Text(
-                  text = "${uiState.descripcion.length}/$MOVIMIENTO_DESCRIPTION_MAX_LENGTH",
-                  modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-              )
-            },
-        )
-      }
-      MovimientoFormErrorMessage(error = uiState.error, onRetry = actions::onRetryLoad)
-      if (uiState.isLoading) {
-        CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-      }
-      Button(
+              Modifier.fillMaxWidth()
+                  .height(
+                      TallybookTheme.dimensions.minimumTouchTarget + TallybookTheme.spacing.space8
+                  )
+      )
+    } else {
+      TallybookButton(
           onClick = actions::onSubmit,
           modifier =
-              Modifier.fillMaxWidth().padding(bottom = 8.dp).heightIn(min = 48.dp).semantics {
+              Modifier.fillMaxWidth().padding(bottom = TallybookTheme.spacing.space8).semantics {
                 contentDescription = submitLabel
               },
-          enabled = !uiState.isSubmitting && !uiState.isLoading && uiState.error == null,
+          enabled =
+              !uiState.isSubmitting &&
+                  !uiState.isLoading &&
+                  uiState.error == null &&
+                  selectedCategoria != null,
       ) {
         Box(contentAlignment = Alignment.Center) {
-          Text(text = submitLabel, modifier = Modifier.alpha(if (uiState.isSubmitting) 0f else 1f))
           if (uiState.isSubmitting) {
-            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            TallybookProgressIndicator(
+                contentDescription = stringResource(Res.string.loading),
+                modifier = Modifier.size(TallybookTheme.dimensions.iconLarge),
+            )
+          } else {
+            TallybookText(text = submitLabel)
           }
         }
       }
-      Spacer(modifier = Modifier.height(inputRevealTrailingSpace))
     }
   }
   CategoryPickerSheet(
-      visible = categoryPickerVisible,
+      visible = categoryEntry.isPickerVisible,
       categorias = uiState.categorias,
       selectedId = uiState.selectedCategoriaId,
-      onSelect = actions::onCategoriaSelected,
-      onDismiss = { categoryPickerVisible = false },
+      onSelect = categoryEntry.onSelect,
+      onDismiss = categoryEntry.onDismiss,
+      onHidden = categoryEntry.onHidden,
+      allowSubcategories = false,
+      headerContent = {
+        Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space20)) {
+          MovimientoTypeSelector(
+              selected = uiState.tipo,
+              enabled = !uiState.isSubmitting,
+              onSelected = actions::onTipoChanged,
+          )
+          MovimientoCategoryGuidance(uiState.tipo)
+        }
+      },
   )
 }
 
 @Composable
-private fun AmountInputError.message(): String =
+private fun rememberRestingFormHeight(): MutableState<Dp?> = remember { mutableStateOf(null) }
+
+private fun formMaximumHeight(isImeVisible: Boolean, restingHeight: Dp?): Dp =
+    if (isImeVisible) restingHeight ?: TallybookTheme.dimensions.movimientoFormMaximumHeight
+    else TallybookTheme.dimensions.movimientoFormMaximumHeight
+
+private fun Modifier.scrollWhenImeVisible(isImeVisible: Boolean, state: ScrollState): Modifier =
+    if (isImeVisible) verticalScroll(state) else this
+
+@Composable
+private fun Modifier.captureRestingHeight(
+    isImeVisible: Boolean,
+    restingHeight: MutableState<Dp?>,
+): Modifier {
+  val density = LocalDensity.current
+  return onSizeChanged { size ->
+    if (!isImeVisible) {
+      restingHeight.value = with(density) { size.height.toDp() }
+    }
+  }
+}
+
+private fun Modifier.paddingForImeScroll(isImeVisible: Boolean, padding: Dp): Modifier =
+    if (isImeVisible) padding(bottom = padding) else this
+
+@Composable
+internal fun AmountInputError.message(): String =
     when (this) {
       AmountInputError.EMPTY -> stringResource(Res.string.amount_required)
       AmountInputError.MALFORMED -> stringResource(Res.string.amount_malformed)
@@ -249,25 +349,25 @@ private fun MovimientoFormErrorMessage(error: MovimientoFormError?, onRetry: () 
     MovimientoFormError.CATEGORIES_UNAVAILABLE ->
         MovimientoFormRetryError(stringResource(Res.string.movimiento_categories_error), onRetry)
     MovimientoFormError.SAVE_FAILED ->
-        Text(
+        TallybookText(
             text = stringResource(Res.string.movimiento_save_error),
-            color = MaterialTheme.colorScheme.error,
+            color = TallybookTheme.colors.status.danger.base,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-            style = MaterialTheme.typography.bodyMedium,
+            style = TallybookTheme.typography.body,
         )
   }
 }
 
 @Composable
 private fun MovimientoFormRetryError(message: String, onRetry: () -> Unit) {
-  Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-    Text(
+  Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4)) {
+    TallybookText(
         text = message,
-        color = MaterialTheme.colorScheme.error,
+        color = TallybookTheme.colors.status.danger.base,
         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-        style = MaterialTheme.typography.bodyMedium,
+        style = TallybookTheme.typography.body,
     )
-    TextButton(onClick = onRetry) { Text(stringResource(Res.string.retry)) }
+    TallybookTextButton(onClick = onRetry) { TallybookText(stringResource(Res.string.retry)) }
   }
 }
 

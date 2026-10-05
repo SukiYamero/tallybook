@@ -15,10 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filter
@@ -32,11 +31,15 @@ internal fun rememberScrollableInputViewport(): ScrollableInputViewport = rememb
 
 internal class ScrollableInputViewport {
   var boundsInRoot: Rect = Rect.Zero
+  var rootBottom: Float = 0f
 }
 
 internal fun Modifier.captureScrollableInputViewport(
     viewport: ScrollableInputViewport,
-): Modifier = onGloballyPositioned { viewport.boundsInRoot = it.boundsInRoot() }
+): Modifier = onGloballyPositioned {
+  viewport.boundsInRoot = it.boundsInRoot()
+  viewport.rootBottom = it.findRootCoordinates().size.height.toFloat()
+}
 
 @Composable
 internal fun Modifier.centerFocusedInputIn(
@@ -59,7 +62,15 @@ internal fun Modifier.centerFocusedInputIn(
           withFrameNanos {}
           val inputBounds = inputGeometry.boundsInRoot ?: return@collectLatest
           val viewportBounds = viewport.boundsInRoot
-          val visibleViewportBottom = maxOf(viewportBounds.top, viewportBounds.bottom - imeBottom)
+          val visibleViewportBottom =
+              maxOf(
+                  viewportBounds.top,
+                  visibleViewportBottom(
+                      viewportBottom = viewportBounds.bottom,
+                      rootBottom = viewport.rootBottom,
+                      imeBottom = imeBottom,
+                  ),
+              )
           val target =
               centeredScrollTarget(
                   currentScroll = scrollState.value,
@@ -82,15 +93,11 @@ internal fun centeredScrollTarget(
     visibleViewportCenter: Float,
 ): Int = (currentScroll + inputCenter - visibleViewportCenter).roundToInt().coerceIn(0, maxScroll)
 
-@Composable
-internal fun inputRevealTrailingSpace(): Dp {
-  if (!needsManualInputReveal) return 0.dp
-
-  val density = LocalDensity.current
-  return with(density) { inputRevealTrailingSpace(WindowInsets.ime.getBottom(density)).toDp() }
-}
-
-internal fun inputRevealTrailingSpace(imeBottom: Int): Int = imeBottom.coerceAtLeast(0)
+internal fun visibleViewportBottom(
+    viewportBottom: Float,
+    rootBottom: Float,
+    imeBottom: Int,
+): Float = minOf(viewportBottom, rootBottom - imeBottom)
 
 private class FocusedInputGeometry {
   var boundsInRoot: Rect? = null

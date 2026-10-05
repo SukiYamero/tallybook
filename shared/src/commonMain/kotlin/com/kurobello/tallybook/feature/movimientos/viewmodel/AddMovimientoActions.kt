@@ -16,6 +16,8 @@ internal interface AddMovimientoActions {
 
   fun onDescripcionChanged(value: String)
 
+  fun onDiscardChanges()
+
   fun onRetryLoad()
 
   fun onSubmit()

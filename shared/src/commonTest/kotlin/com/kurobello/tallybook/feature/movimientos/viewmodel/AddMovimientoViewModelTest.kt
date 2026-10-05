@@ -95,6 +95,30 @@ class AddMovimientoViewModelTest {
   }
 
   @Test
+  fun changingADraftFieldMarksTheFormAsHavingUnsavedChanges() = runTest {
+    val viewModel = createViewModel(scope = backgroundScope)
+    runCurrent()
+
+    viewModel.onAmountChanged("12.34")
+
+    assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+  }
+
+  @Test
+  fun discardingChangesRestoresTheOpeningDraft() = runTest {
+    val viewModel = createViewModel(scope = backgroundScope)
+    runCurrent()
+    viewModel.onAmountChanged("12.34")
+    viewModel.onDescripcionChanged("Lunch")
+
+    viewModel.onDiscardChanges()
+
+    assertEquals("", viewModel.uiState.value.amountInput)
+    assertEquals("", viewModel.uiState.value.descripcion)
+    assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+  }
+
+  @Test
   fun validationFailuresNeverInsertAMovimiento() = runTest {
     val repository = FakeMovimientoRepository()
     val category = testCategoria("food")

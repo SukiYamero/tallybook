@@ -10,9 +10,9 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
@@ -37,14 +37,117 @@ import org.jetbrains.compose.resources.getString
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.amount_required
-import tallybook.shared.generated.resources.category_required
+import tallybook.shared.generated.resources.add_movimiento_pane_title
+import tallybook.shared.generated.resources.date
 import tallybook.shared.generated.resources.more_fields
+import tallybook.shared.generated.resources.movimiento_amount_expense_prompt
+import tallybook.shared.generated.resources.movimiento_category_expense_prompt
 import tallybook.shared.generated.resources.save_expense
 
 class AddMovimientoSheetTest {
 
   @get:Rule val composeRule = createComposeRule()
+
+  @Test
+  fun initialFormUsesContentHeightSheet() {
+    composeRule.setContent {
+      TallybookTheme {
+        AddMovimientoSheet(
+            visible = true,
+            uiState = state(),
+            actions = SubmitCountingActions(),
+            onDismiss = {},
+        )
+      }
+    }
+
+    val sheet =
+        composeRule.onNode(
+            SemanticsMatcher.expectValue(
+                SemanticsProperties.PaneTitle,
+                resourceString(Res.string.add_movimiento_pane_title),
+            )
+        )
+    val sheetNode = sheet.fetchSemanticsNode()
+    val rootHeight = sheetNode.layoutInfo.coordinates.findRootCoordinates().size.height.toFloat()
+
+    composeRule.runOnIdle {
+      assertTrue(
+          sheetNode.boundsInRoot.height < rootHeight,
+          "Expected the compact form sheet to remain shorter than the window",
+      )
+    }
+  }
+
+  @Test
+  fun openingDetailsKeepsTheSheetAtItsCompactPositionUntilMotionAdvances() {
+    composeRule.setContent {
+      TallybookTheme {
+        AddMovimientoSheet(
+            visible = true,
+            uiState = state(),
+            actions = SubmitCountingActions(),
+            onDismiss = {},
+        )
+      }
+    }
+
+    val paneTitle = resourceString(Res.string.add_movimiento_pane_title)
+    val compactTop =
+        composeRule
+            .onNode(SemanticsMatcher.expectValue(SemanticsProperties.PaneTitle, paneTitle))
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .top
+    composeRule.mainClock.autoAdvance = false
+
+    composeRule.onNodeWithText(resourceString(Res.string.more_fields)).performClick()
+
+    val openingTop =
+        composeRule
+            .onNode(SemanticsMatcher.expectValue(SemanticsProperties.PaneTitle, paneTitle))
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .top
+
+    assertEquals(
+        compactTop,
+        openingTop,
+        "Expected sheet position to animate from the compact detent instead of jumping",
+    )
+  }
+
+  @Test
+  fun dateAppearsAboveAmount() {
+    composeRule.setContent {
+      TallybookTheme {
+        AddMovimientoSheet(
+            visible = true,
+            uiState = state(),
+            actions = SubmitCountingActions(),
+            onDismiss = {},
+        )
+      }
+    }
+
+    val dateBounds =
+        composeRule
+            .onNodeWithContentDescription(resourceString(Res.string.date))
+            .fetchSemanticsNode()
+            .boundsInRoot
+    val amountBounds =
+        composeRule
+            .onNodeWithContentDescription(
+                resourceString(Res.string.movimiento_amount_expense_prompt)
+            )
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+    assertTrue(
+        dateBounds.bottom <= amountBounds.top,
+        "Expected date to be above amount: date=$dateBounds, amount=$amountBounds",
+    )
+  }
 
   @Test
   fun submittingDisablesTheCtaSoItCannotSubmitTwice() {
@@ -88,10 +191,9 @@ class AddMovimientoSheetTest {
   }
 
   @Test
-  fun invalidSubmitShowsErrorsAndDoesNotDismissTheSheet() {
-    var submitAttempted by mutableStateOf(false)
+  fun newEntryStartsWithCategoryWithoutSubmittingOrDismissing() {
     var dismissCount = 0
-    val actions = SubmitCountingActions { submitAttempted = true }
+    val actions = SubmitCountingActions()
 
     composeRule.setContent {
       TallybookTheme {
@@ -102,7 +204,6 @@ class AddMovimientoSheetTest {
                     .copy(
                         amountInput = "",
                         selectedCategoriaId = null,
-                        submitAttempted = submitAttempted,
                     ),
             actions = actions,
             onDismiss = { dismissCount += 1 },
@@ -110,26 +211,11 @@ class AddMovimientoSheetTest {
       }
     }
 
-    composeRule.onNodeWithContentDescription(resourceString(Res.string.save_expense)).performClick()
-
     composeRule
-        .onNode(
-            SemanticsMatcher.expectValue(
-                SemanticsProperties.Error,
-                resourceString(Res.string.amount_required),
-            )
-        )
-        .assertIsDisplayed()
-    composeRule
-        .onNode(
-            SemanticsMatcher.expectValue(
-                SemanticsProperties.Error,
-                resourceString(Res.string.category_required),
-            )
-        )
+        .onNodeWithText(resourceString(Res.string.movimiento_category_expense_prompt))
         .assertIsDisplayed()
     composeRule.runOnIdle {
-      assertEquals(1, actions.submitCount)
+      assertEquals(0, actions.submitCount)
       assertEquals(0, dismissCount)
     }
   }
@@ -196,12 +282,12 @@ class AddMovimientoSheetTest {
   }
 
   @Test
-  fun expandedFormScrollsCtaIntoReachableBounds() {
+  fun expandedDetailsScrollWithoutMovingTheSaveAction() {
     composeRule.setContent {
       TallybookTheme {
         AddMovimientoSheet(
             visible = true,
-            uiState = state(),
+            uiState = state(descripcion = "Details ".repeat(100)),
             actions = SubmitCountingActions(),
             onDismiss = {},
             modifier = Modifier.height(400.dp),
@@ -213,7 +299,7 @@ class AddMovimientoSheetTest {
     val cta = composeRule.onNodeWithContentDescription(resourceString(Res.string.save_expense))
     val initialBounds = cta.fetchSemanticsNode().boundsInRoot
 
-    composeRule.onNode(hasScrollAction()).performTouchInput { swipeUp() }
+    composeRule.onNodeWithTag("movimiento_details").performTouchInput { swipeUp() }
     composeRule.waitForIdle()
 
     val ctaNode = cta.fetchSemanticsNode()
@@ -221,9 +307,10 @@ class AddMovimientoSheetTest {
     val rootHeight = ctaNode.layoutInfo.coordinates.findRootCoordinates().size.height.toFloat()
     cta.assertIsDisplayed()
     composeRule.runOnIdle {
-      assertTrue(
-          ctaBounds != initialBounds,
-          "Expected CTA bounds to change after scrolling: initial=$initialBounds, after=$ctaBounds",
+      assertEquals(
+          initialBounds,
+          ctaBounds,
+          "Expected the fixed CTA to keep its bounds while details scroll",
       )
       assertTrue(ctaBounds.height >= with(composeRule.density) { 48.dp.toPx() })
       assertTrue(
@@ -255,7 +342,7 @@ class AddMovimientoSheetTest {
     }
   }
 
-  private fun state(isSubmitting: Boolean = false) =
+  private fun state(isSubmitting: Boolean = false, descripcion: String = "") =
       AddMovimientoUiState(
           tipo = TipoMovimiento.GASTO,
           amountInput = "1",
@@ -263,7 +350,7 @@ class AddMovimientoSheetTest {
           moneda = Moneda.COP,
           categorias = listOf(category),
           selectedCategoriaId = category.id,
-          descripcion = "",
+          descripcion = descripcion,
           isLoading = false,
           isSubmitting = isSubmitting,
           submitAttempted = false,
@@ -294,6 +381,8 @@ class AddMovimientoSheetTest {
     override fun onCategoriaSelected(id: String) = Unit
 
     override fun onDescripcionChanged(value: String) = Unit
+
+    override fun onDiscardChanges() = Unit
 
     override fun onRetryLoad() = Unit
 

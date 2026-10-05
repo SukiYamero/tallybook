@@ -66,6 +66,7 @@ kotlin {
       implementation(libs.compose.components.resources)
       implementation(libs.compose.uiToolingPreview)
       implementation(libs.compose.unstyled.modal.bottom.sheet)
+      implementation(libs.compose.unstyled.dialog)
       implementation(libs.composables.icons.lucide)
       implementation(libs.androidx.datastore.preferences.core)
       implementation(libs.androidx.lifecycle.viewmodelCompose)

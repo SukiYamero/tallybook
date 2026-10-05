@@ -96,9 +96,14 @@
     <string name="confirm">Confirm</string>
     <string name="back">Back</string>
     <string name="more_fields">More details</string>
+    <string name="discard_changes_title">Discard changes?</string>
+    <string name="discard_changes_message">What you entered will be lost.</string>
+    <string name="discard_changes_confirm">Discard</string>
+    <string name="continue_editing">Continue</string>
     <string name="expanded">expanded</string>
     <string name="collapsed">collapsed</string>
     <string name="search_categories">Search categories</string>
+    <string name="clear_search">Clear search</string>
     <string name="no_categories_found">No categories found</string>
     <string name="unknown_category">No category</string>
     <string name="loading">Loading…</string>
@@ -172,4 +177,10 @@
     <string name="category_ventas">Sales</string>
     <string name="category_regalo">Gift</string>
     <string name="category_reembolso">Refund</string>
+    <string name="movimiento_entry_hint">Choose a category and enter the amount.</string>
+    <string name="movimiento_category_expense_prompt">What was the expense for?</string>
+    <string name="movimiento_category_income_prompt">Where did the income come from?</string>
+    <string name="movimiento_category_hint">Choose a category to keep your records organized.</string>
+    <string name="movimiento_amount_expense_prompt">How much did you spend?</string>
+    <string name="movimiento_amount_income_prompt">How much did you receive?</string>
 </resources>

@@ -45,6 +45,7 @@ private val LightInput = Color(0x171C1C14)
 private val LightRing = Color(0x80A8C9B0)
 private val LightInputCursor = BrandSecondary
 private val LightPressedOverlay = Color(0x0C1C1C14)
+private val LightScrim = Color(0x991B1C19)
 private val LightGreenPanel = Color(0xFFDDEFE4)
 private val LightGreenChip = Color(0xFFC8E6D6)
 private val LightGreenChipForeground = Color(0xFF0E4B34)
@@ -97,6 +98,7 @@ private val DarkInput = Color(0x14FFFFFF)
 private val DarkRing = Color(0x80A8C9B0)
 private val DarkInputCursor = BrandPrimary
 private val DarkPressedOverlay = Color(0x0CFFFFFF)
+private val DarkScrim = Color(0x990C0D10)
 private val DarkGreenPanel = Color(0xFF1A4437)
 private val DarkRedChip = Color(0xFF40282A)
 private val DarkRedText = Color(0xFFE7B7B7)
@@ -162,7 +164,7 @@ internal data class BorderColors(
     val ring: Color,
 )
 
-@Immutable internal data class InteractionColors(val pressedOverlay: Color)
+@Immutable internal data class InteractionColors(val pressedOverlay: Color, val scrim: Color)
 
 @Immutable internal data class InputColors(val cursor: Color)
 
@@ -242,7 +244,7 @@ internal val LightTallybookColors =
                 input = LightInput,
                 ring = LightRing,
             ),
-        interaction = InteractionColors(pressedOverlay = LightPressedOverlay),
+        interaction = InteractionColors(pressedOverlay = LightPressedOverlay, scrim = LightScrim),
         input = InputColors(cursor = LightInputCursor),
         chart = LightChart,
         navigation =
@@ -308,7 +310,7 @@ internal val DarkTallybookColors =
                 input = DarkInput,
                 ring = DarkRing,
             ),
-        interaction = InteractionColors(pressedOverlay = DarkPressedOverlay),
+        interaction = InteractionColors(pressedOverlay = DarkPressedOverlay, scrim = DarkScrim),
         input = InputColors(cursor = DarkInputCursor),
         chart = DarkChart,
         navigation =

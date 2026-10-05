@@ -45,7 +45,26 @@ class InputFocusRevealGeometryTest {
   }
 
   @Test
-  fun reservesTheKeyboardHeightAsTrailingScrollableSpace() {
-    assertEquals(640, inputRevealTrailingSpace(640))
+  fun usesTheKeyboardBoundaryWhenTheViewportExtendsBehindTheKeyboard() {
+    assertEquals(
+        1_800f,
+        visibleViewportBottom(
+            viewportBottom = 2_400f,
+            rootBottom = 2_400f,
+            imeBottom = 600,
+        ),
+    )
+  }
+
+  @Test
+  fun keepsTheViewportBoundaryWhenTheSheetIsAlreadyAboveTheKeyboard() {
+    assertEquals(
+        1_200f,
+        visibleViewportBottom(
+            viewportBottom = 1_200f,
+            rootBottom = 2_400f,
+            imeBottom = 600,
+        ),
+    )
   }
 }

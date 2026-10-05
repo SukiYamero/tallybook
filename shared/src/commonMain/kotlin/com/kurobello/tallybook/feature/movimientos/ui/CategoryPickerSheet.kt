@@ -8,32 +8,39 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.ui.category.CategoryChip
+import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
+import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
 import com.kurobello.tallybook.core.ui.component.TallybookModalBottomSheet
+import com.kurobello.tallybook.core.ui.component.TallybookSearchField
+import com.kurobello.tallybook.core.ui.component.TallybookText
+import com.kurobello.tallybook.core.ui.component.TallybookTextButton
+import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.back
 import tallybook.shared.generated.resources.category
+import tallybook.shared.generated.resources.clear_search
 import tallybook.shared.generated.resources.no_categories_found
 import tallybook.shared.generated.resources.search_categories
 
-@Suppress("LongParameterList")
+@Suppress("LongMethod", "LongParameterList")
 @Composable
 fun CategoryPickerSheet(
     visible: Boolean,
@@ -42,23 +49,31 @@ fun CategoryPickerSheet(
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    allowSubcategories: Boolean = true,
+    onHidden: () -> Unit = {},
+    headerContent: (@Composable () -> Unit)? = null,
 ) {
   val tree = remember(categorias) { buildCategoryTree(categorias) }
   var query by rememberSaveable { mutableStateOf("") }
   var parentId by rememberSaveable { mutableStateOf<String?>(null) }
+  var shownContentHeightPx by remember { mutableIntStateOf(0) }
+  var searchMinimumHeightPx by remember { mutableIntStateOf(0) }
 
   LaunchedEffect(visible) {
     if (visible) {
       query = ""
       parentId = null
+      shownContentHeightPx = 0
+      searchMinimumHeightPx = 0
     }
   }
 
   val parent = tree.roots.firstOrNull { it.id == parentId }
   val isSearching = query.isNotBlank()
+  val searchableCategories = if (allowSubcategories) categorias else tree.roots
   val shownCategories =
       when {
-        isSearching -> searchCategorias(categorias, query)
+        isSearching -> searchCategorias(searchableCategories, query)
         parent != null -> listOf(parent) + tree.childrenByParent[parent.id].orEmpty()
         else -> tree.roots
       }
@@ -70,36 +85,62 @@ fun CategoryPickerSheet(
           shownCategories = shownCategories,
           selectedId = selectedId,
           paneTitle = paneTitle,
+          searchMinimumHeight = with(LocalDensity.current) { searchMinimumHeightPx.toDp() },
+      )
+  val callbacks =
+      CategoryPickerContentCallbacks(
+          onQueryChange = { value ->
+            if (value.isNotBlank() && query.isBlank()) {
+              searchMinimumHeightPx = shownContentHeightPx
+            }
+            query = value
+            if (value.isNotBlank()) {
+              parentId = null
+            } else {
+              searchMinimumHeightPx = 0
+            }
+          },
+          onBack = { parentId = null },
+          onCategoryClick = { categoria ->
+            if (tree.shouldOpenChildren(categoria, allowSubcategories, isSearching, parent)) {
+              onSelect(categoria.id)
+              parentId = categoria.id
+            } else {
+              onSelect(categoria.id)
+              onDismiss()
+            }
+          },
+          onShownContentHeightChanged = { height ->
+            if (!isSearching && shownContentHeightPx != height) {
+              shownContentHeightPx = height
+            }
+          },
       )
 
   TallybookModalBottomSheet(
       visible = visible,
       paneTitle = paneTitle,
-      onDismiss = onDismiss,
-      modifier = modifier,
+      callbacks = ModalBottomSheetCallbacks(onDismiss = onDismiss, onHidden = onHidden),
+      layout = ModalBottomSheetLayout(modifier = modifier),
   ) {
     CategoryPickerContent(
         state = contentState,
-        onQueryChange = { value ->
-          query = value
-          if (value.isNotBlank()) parentId = null
-        },
-        onBack = { parentId = null },
-        onCategoryClick = { categoria ->
-          val hasChildren =
-              !isSearching &&
-                  parent == null &&
-                  tree.childrenByParent[categoria.id].orEmpty().isNotEmpty()
-          if (hasChildren) {
-            parentId = categoria.id
-          } else {
-            onSelect(categoria.id)
-            onDismiss()
-          }
-        },
+        callbacks = callbacks,
+        headerContent = headerContent,
     )
   }
 }
+
+private fun CategoryTree.shouldOpenChildren(
+    categoria: Categoria,
+    allowSubcategories: Boolean,
+    isSearching: Boolean,
+    parent: Categoria?,
+): Boolean =
+    allowSubcategories &&
+        !isSearching &&
+        parent == null &&
+        childrenByParent[categoria.id].orEmpty().isNotEmpty()
 
 private data class CategoryPickerContentState(
     val query: String,
@@ -107,29 +148,56 @@ private data class CategoryPickerContentState(
     val shownCategories: List<Categoria>,
     val selectedId: String?,
     val paneTitle: String,
+    val searchMinimumHeight: Dp,
 ) {
   val isSearching: Boolean
     get() = query.isNotBlank()
 }
 
+private data class CategoryPickerContentCallbacks(
+    val onQueryChange: (String) -> Unit,
+    val onBack: () -> Unit,
+    val onCategoryClick: (Categoria) -> Unit,
+    val onShownContentHeightChanged: (Int) -> Unit,
+)
+
 @Composable
 private fun CategoryPickerContent(
     state: CategoryPickerContentState,
-    onQueryChange: (String) -> Unit,
-    onBack: () -> Unit,
-    onCategoryClick: (Categoria) -> Unit,
+    callbacks: CategoryPickerContentCallbacks,
+    headerContent: (@Composable () -> Unit)?,
 ) {
+  val shouldPreserveHeight = state.isSearching
   Column(
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-      verticalArrangement = Arrangement.spacedBy(16.dp),
+      modifier =
+          Modifier.fillMaxWidth()
+              .heightIn(
+                  min =
+                      if (shouldPreserveHeight) {
+                        state.searchMinimumHeight
+                      } else {
+                        Dp.Unspecified
+                      }
+              )
+              .onSizeChanged { size ->
+                if (!state.isSearching) callbacks.onShownContentHeightChanged(size.height)
+              }
+              .testTag("category_picker_content")
+              .padding(horizontal = TallybookTheme.spacing.space22),
+      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16),
   ) {
-    CategoryPickerHeader(
-        paneTitle = state.paneTitle,
-        parent = state.parent.takeUnless { state.isSearching },
-        onBack = onBack,
+    if (headerContent != null) headerContent()
+    else
+        CategoryPickerHeader(
+            paneTitle = state.paneTitle,
+            parent = state.parent.takeUnless { state.isSearching },
+            onBack = callbacks.onBack,
+        )
+    CategoryPickerSearchField(query = state.query, onQueryChange = callbacks.onQueryChange)
+    CategoryPickerResults(
+        state = state,
+        onCategoryClick = callbacks.onCategoryClick,
     )
-    CategoryPickerSearchField(query = state.query, onQueryChange = onQueryChange)
-    CategoryPickerResults(state = state, onCategoryClick = onCategoryClick)
   }
 }
 
@@ -140,21 +208,22 @@ private fun CategoryPickerHeader(
     onBack: () -> Unit,
 ) {
   if (parent != null) CategoryPickerBackButton(onClick = onBack)
-  Text(
+  TallybookText(
       text = parent?.nombre ?: paneTitle,
       modifier = Modifier.semantics { heading() },
-      style = MaterialTheme.typography.titleLarge,
+      style = TallybookTheme.typography.title,
   )
 }
 
 @Composable
 private fun CategoryPickerSearchField(query: String, onQueryChange: (String) -> Unit) {
-  OutlinedTextField(
-      value = query,
-      onValueChange = onQueryChange,
+  TallybookSearchField(
+      query = query,
+      onQueryChange = onQueryChange,
+      placeholder = stringResource(Res.string.search_categories),
+      clearContentDescription = stringResource(Res.string.clear_search),
       modifier = Modifier.fillMaxWidth(),
-      singleLine = true,
-      label = { Text(stringResource(Res.string.search_categories)) },
+      onClear = { onQueryChange("") },
   )
 }
 
@@ -164,16 +233,19 @@ private fun CategoryPickerResults(
     onCategoryClick: (Categoria) -> Unit,
 ) {
   if (state.shownCategories.isEmpty() && state.isSearching) {
-    Text(
+    TallybookText(
         text = stringResource(Res.string.no_categories_found),
-        modifier = Modifier.padding(vertical = 24.dp),
-        style = MaterialTheme.typography.bodyLarge,
+        modifier = Modifier.padding(vertical = TallybookTheme.spacing.space24),
+        style = TallybookTheme.typography.body,
     )
   } else {
     LazyColumn(
-        modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
-        contentPadding = PaddingValues(bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .heightIn(max = TallybookTheme.dimensions.categoryPickerResultsMaximumHeight)
+                .testTag("category_picker_results"),
+        contentPadding = PaddingValues(bottom = TallybookTheme.spacing.space24),
+        verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
     ) {
       items(state.shownCategories, key = Categoria::id) { categoria ->
         CategoryChip(
@@ -189,5 +261,5 @@ private fun CategoryPickerResults(
 
 @Composable
 private fun CategoryPickerBackButton(onClick: () -> Unit) {
-  TextButton(onClick = onClick) { Text(stringResource(Res.string.back)) }
+  TallybookTextButton(onClick = onClick) { TallybookText(stringResource(Res.string.back)) }
 }

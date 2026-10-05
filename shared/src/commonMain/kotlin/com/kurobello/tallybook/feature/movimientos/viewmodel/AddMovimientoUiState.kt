@@ -23,6 +23,7 @@ internal data class AddMovimientoUiState(
     val isSubmitting: Boolean,
     val submitAttempted: Boolean,
     val error: MovimientoFormError?,
+    val hasUnsavedChanges: Boolean = false,
 ) {
   private val amountResult by lazy { parseAmountInput(amountInput, moneda) }
 
@@ -43,3 +44,20 @@ internal data class AddMovimientoUiState(
   private val hasSelectedCategoria: Boolean
     get() = categorias.any { it.id == selectedCategoriaId }
 }
+
+internal data class MovimientoDraft(
+    val tipo: TipoMovimiento,
+    val amountInput: String,
+    val fecha: LocalDate,
+    val selectedCategoriaId: String?,
+    val descripcion: String,
+)
+
+internal fun AddMovimientoUiState.toDraft(): MovimientoDraft =
+    MovimientoDraft(
+        tipo = tipo,
+        amountInput = amountInput,
+        fecha = fecha,
+        selectedCategoriaId = selectedCategoriaId,
+        descripcion = descripcion,
+    )
