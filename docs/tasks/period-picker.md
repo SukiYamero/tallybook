@@ -2,8 +2,8 @@
 
 ## Goal
 
-Turn the catalog period picker into a reusable date-selection component for the future history
-screen. It selects a day, calendar week, or month; it does not calculate balances or movement
+Turn the catalog period picker into a reusable date-selection component for History.
+It selects a day, month-bound week block, or month; it does not calculate balances or movement
 counts.
 
 ## Approved behavior
@@ -14,6 +14,9 @@ counts.
   month. Selecting the current year clamps a future month to the current month.
 - Day and week options are limited to `today` only in the current month. Historical months are
   complete.
+- Week blocks are 1–7, 8–14, 15–21, 22–28 and 29–month end, never crossing months. Month chips
+  represent the full calendar month. History read-range and anchor rules live in
+  [business logic](../business-logic.md#tracking-and-history).
 - Selecting a month makes it the context used by the day and week scopes.
 - A contextual title and optional subtitle render to the left of the year menu.
 - The three scope options remain neutral. The active period chip retains the brand selection
@@ -21,9 +24,12 @@ counts.
 
 ## Ownership
 
-The future history ViewModel owns `today`, allowed years, the selected typed period, and movement
-data. The component remains stateless and renders values plus callbacks. The catalog captures the
-device date once and injects it into the pure range builders; tests use fixed dates.
+The History ViewModel owns scope and anchor, derives the selected typed period and receives `today`,
+allowed years and movement data from their owners. The component remains stateless and renders
+values plus callbacks. Shared framework-free range calculation lives in
+`core.model.MovimientoPeriodRanges`; core UI adapts those ranges without importing History.
+The catalog captures the device date once and injects it into the pure range builders; tests use
+fixed dates.
 
 ## Validation environment
 

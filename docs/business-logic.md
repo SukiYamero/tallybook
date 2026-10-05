@@ -45,12 +45,39 @@ tener una segunda copia que se desincronice; fuente real: `web/moneta/src/lib/sc
 - Nombres de categoría traducidos por idioma en moneta (`src/lib/seedConfig.ts`,
   `SEED_CATEGORY_NAMES`) — mismo criterio a portar, ver `docs/wording.md`.
 
-## Tracking y consulta
+## Tracking and History
 
-- Ver y filtrar movimientos por día, semana, mes o año.
-- Buscar movimientos dentro de esos rangos de fecha.
-- Balance general (ingresos − gastos) siempre visible.
-- Vista de gráfico semanal de movimientos/balance.
+History browses movimientos with three scopes: Day, Week and Month. A year selector supplies
+calendar context; Year is not a fourth scope. Search is a separate future destination. Text search,
+non-date filters and charts are later capabilities and do not belong to History selection.
+
+- Fresh History entry selects Day at today. Scope and one civil-date anchor own selection; context,
+  selected chips, options and read range are derived.
+- Week uses month-bound blocks 1–7, 8–14, 15–21, 22–28 and 29–month end. Blocks never cross months.
+  Current-month Day and Week options stop at today; historical months are complete. Month chips
+  represent full calendar months, while History's current-month read range ends at today.
+- Scope changes preserve anchor. Choosing a different Week chip anchors at that block's start;
+  choosing the selected chip preserves its interior anchor. A Day chip selects its exact date.
+  Year/month changes and Month-chip selection preserve day-of-month where valid, clamp month-end
+  and leap dates, and clamp future dates. A future month in the current year uses the current month.
+- Allowed years come from persisted movimientos in the primary currency plus the current year,
+  descending. Selected/restored past years remain available for the retained entry even after their
+  last row disappears and another year is selected. Future years are excluded after backward date
+  refresh. Fresh entries derive years again; metadata changes never reset selection.
+- Each date refresh captures the clock and timezone once. An anchor equal to the previous today
+  follows the new today; historical anchors stay fixed unless they become future, then clamp to
+  today. Resume refresh makes newly available years visible without a background midnight timer.
+- Reads use inclusive civil dates in `Movimiento.fecha`, with no UTC-instant conversion. Group by
+  `fecha`, preserving `fecha DESC, created_at DESC, id DESC`; `createdAt` is only the secondary order.
+- Period count, income, expense and balance describe every movimiento in the selected
+  date/currency range, derived from the same bounded snapshot. Period balance is income minus
+  expense. The separately labelled global balance describes all dates in the primary currency,
+  remains visible independently of scrolling and has its own loading/error/retry state.
+- Saved selection contains only schema version, scope and ISO anchor. Unknown versions/scopes or
+  malformed/future anchors recover to Day/today; valid inputs recompute derived state against current
+  today/currency. Repository rows and query state are never saved. Android supported saved-owner
+  recreation and iOS retained-controller/saveable recreation define restoration; fresh cold launches
+  use normal defaults, with no iOS cross-process persistence bridge.
 
 ## Tema
 

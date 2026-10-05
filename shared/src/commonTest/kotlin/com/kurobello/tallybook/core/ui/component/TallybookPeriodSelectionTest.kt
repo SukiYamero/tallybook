@@ -30,6 +30,10 @@ class TallybookPeriodSelectionTest {
 
     assertEquals(LocalDate(2026, 6, 1), periods.first().start)
     assertEquals(LocalDate(2026, 6, 23), periods.last().end)
+    assertEquals(
+        listOf(1 to 7, 8 to 14, 15 to 21, 22 to 23),
+        periods.map { it.start.day to it.end.day },
+    )
   }
 
   @Test
@@ -38,6 +42,10 @@ class TallybookPeriodSelectionTest {
 
     assertEquals(LocalDate(2026, 9, 1), periods.first().start)
     assertEquals(LocalDate(2026, 9, 30), periods.last().end)
+    assertEquals(
+        listOf(1 to 7, 8 to 14, 15 to 21, 22 to 28, 29 to 30),
+        periods.map { it.start.day to it.end.day },
+    )
   }
 
   @Test
@@ -46,6 +54,7 @@ class TallybookPeriodSelectionTest {
 
     assertEquals(6, periods.size)
     assertEquals(TallybookMonthPeriod(YearMonth(2026, 6)), periods.last())
+    assertEquals(LocalDate(2026, 6, 30), periods.last().end)
   }
 
   @Test

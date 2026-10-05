@@ -481,6 +481,15 @@ Use this checklist in every UI pull request:
   unnecessary orientation-specific complexity?
 - Was the result compared with the Moneta source and verified on Android and iOS?
 
+## History presentation
+
+History presentation uses the existing period picker with three scopes and a year context.
+The temporal and selection rules live in [business logic](../business-logic.md#tracking-and-history).
+Its compact, separately labelled global balance and currency remain visible independently of list
+scrolling. Selected-period totals belong to the period content and retain their own state; they never
+replace the global balance. History has no text-search field, non-date filters, balance-visibility
+toggle or fourth annual scope. Search remains a separate future destination.
+
 ## Remaining product decisions
 
 The bottom navigation pattern, ordered positions, and centered placement of `Create movimiento` are
