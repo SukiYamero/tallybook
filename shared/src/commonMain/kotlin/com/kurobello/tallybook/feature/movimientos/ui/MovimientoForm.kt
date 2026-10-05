@@ -95,6 +95,7 @@ internal fun MovimientoForm(
     onDetailsExpandedChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
     startWithCategory: Boolean = false,
+    onCategoryLayerReady: () -> Unit = {},
 ) {
   val fieldFocus = remember { MovimientoFieldFocus() }
   val categoryEntry =
@@ -296,8 +297,15 @@ internal fun MovimientoForm(
       visible = categoryEntry.isPickerVisible,
       categorias = uiState.categorias,
       selectedId = uiState.selectedCategoriaId,
-      onSelect = categoryEntry.onSelect,
-      onDismiss = categoryEntry.onDismiss,
+      onSelect = {
+        onCategoryLayerReady()
+        categoryEntry.onSelect(it)
+      },
+      onDismiss = {
+        onCategoryLayerReady()
+        categoryEntry.onDismiss()
+      },
+      onShown = onCategoryLayerReady,
       onHidden = categoryEntry.onHidden,
       allowSubcategories = false,
       headerContent = {

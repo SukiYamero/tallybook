@@ -71,7 +71,7 @@ internal fun TallybookSelectionField(
                   error(message.text)
                 }
               },
-      verticalArrangement = Arrangement.spacedBy(TallybookSpacing.space4),
+      verticalArrangement = Arrangement.spacedBy(TallybookTheme.dimensions.fieldLabelSpacing),
   ) {
     TallybookText(
         text = label,

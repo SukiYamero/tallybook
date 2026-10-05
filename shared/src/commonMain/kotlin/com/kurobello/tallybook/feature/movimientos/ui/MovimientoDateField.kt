@@ -33,7 +33,7 @@ internal fun MovimientoDateField(
   Column(
       modifier = modifier,
       horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+      verticalArrangement = Arrangement.spacedBy(TallybookTheme.dimensions.fieldLabelSpacing),
   ) {
     TallybookText(
         text = stringResource(Res.string.date),

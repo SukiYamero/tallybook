@@ -10,6 +10,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -47,6 +48,26 @@ import tallybook.shared.generated.resources.save_expense
 class AddMovimientoSheetTest {
 
   @get:Rule val composeRule = createComposeRule()
+
+  @Test
+  fun preparedFormCannotOpenTheCalendarWhileInitialDataIsLoading() {
+    composeRule.setContent {
+      TallybookTheme {
+        AddMovimientoSheet(
+            visible = true,
+            uiState = state().copy(selectedCategoriaId = null, isLoading = true),
+            actions = SubmitCountingActions(),
+            onDismiss = {},
+        )
+      }
+    }
+
+    composeRule.onNodeWithContentDescription(resourceString(Res.string.date)).performTouchInput {
+      click()
+    }
+
+    composeRule.onNodeWithText("16").assertDoesNotExist()
+  }
 
   @Test
   fun initialFormUsesContentHeightSheet() {

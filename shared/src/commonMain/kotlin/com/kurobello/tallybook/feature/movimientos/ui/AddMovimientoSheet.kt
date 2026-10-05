@@ -8,6 +8,12 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,7 +66,9 @@ private fun AddMovimientoSheet(
     modifier: Modifier = Modifier,
 ) {
   var detailsExpanded by rememberSaveable { mutableStateOf(false) }
-  var isFormReady by rememberSaveable { mutableStateOf(false) }
+  var isCategoryLayerReady by rememberSaveable { mutableStateOf(false) }
+  val showForm =
+      isCategoryLayerReady || uiState.selectedCategoriaId != null || uiState.error != null
   val dismissGuard =
       rememberDismissGuard(
           hasUnsavedChanges = uiState.hasUnsavedChanges,
@@ -74,11 +82,10 @@ private fun AddMovimientoSheet(
       callbacks =
           callbacks.copy(
               onDismissRequest = dismissGuard::requestDismiss,
-              onShown = { isFormReady = true },
           ),
       layout =
           ModalBottomSheetLayout(
-              modifier = modifier,
+              modifier = modifier.preparedFormVisibility(showForm),
               contentDetentIdentifiers =
                   listOf(MOVIMIENTO_COMPACT_DETENT, MOVIMIENTO_DETAILS_DETENT),
               activeContentDetentIdentifier = addMovimientoDetentIdentifier(detailsExpanded),
@@ -87,7 +94,8 @@ private fun AddMovimientoSheet(
     MovimientoForm(
         uiState = uiState,
         actions = actions,
-        startWithCategory = isFormReady && visible,
+        startWithCategory = visible,
+        onCategoryLayerReady = { isCategoryLayerReady = true },
         detailsExpanded = detailsExpanded,
         onDetailsExpandedChange = { detailsExpanded = it },
         modifier = Modifier,
@@ -106,6 +114,22 @@ private fun AddMovimientoSheet(
       onDismiss = dismissGuard::continueEditing,
   )
 }
+
+private fun Modifier.preparedFormVisibility(isVisible: Boolean): Modifier =
+    alpha(if (isVisible) 1f else 0f)
+        .focusProperties { canFocus = isVisible }
+        .semantics { if (!isVisible) hideFromAccessibility() }
+        .then(
+            if (isVisible) Modifier
+            else
+                Modifier.pointerInput(Unit) {
+                  awaitPointerEventScope {
+                    while (true) {
+                      awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+                    }
+                  }
+                }
+        )
 
 private fun addMovimientoDetentIdentifier(detailsExpanded: Boolean): String =
     if (detailsExpanded) MOVIMIENTO_DETAILS_DETENT else MOVIMIENTO_COMPACT_DETENT

@@ -41,6 +41,7 @@ internal object TallybookDimensions {
   val movimientoFormMaximumHeight = 600.dp
   val fieldHorizontalPadding = TallybookSpacing.space12
   val fieldVerticalPadding = TallybookSpacing.space12
+  val fieldLabelSpacing = TallybookSpacing.space10
   val fieldIconSize = iconMedium
   val fieldBorderWidth = borderThin
   val amountInputMinimumWidth = TallybookSpacing.space48

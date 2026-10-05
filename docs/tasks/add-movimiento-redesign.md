@@ -8,8 +8,10 @@ copy and space for future optional fields. It preserves drafts when a dismissal 
 ## Approved behavior
 
 - The collapsed form uses its content height.
-- Once the main sheet is shown and data is loaded, a new entry opens category selection once. Canceling
-  it returns to the form without reopening or moving focus.
+- A new entry opens category selection as soon as its data is ready, without waiting for the main
+  sheet's entrance animation. The main sheet is prepared invisibly underneath until the category layer
+  is shown, selected, or canceled. Category remains the top modal layer, so the initial entrance only
+  presents the selector. Canceling returns to the prepared form without reopening or moving focus.
 - The selector includes expense/income controls and contextual guidance. In this entry flow, only parent
   categories can be selected or searched; subcategory data and the generic picker drill-in are retained.
 - Selecting a category closes the selector and focuses amount after its closing animation. Amount and
@@ -22,6 +24,7 @@ copy and space for future optional fields. It preserves drafts when a dismissal 
   Movimiento entry uses M with a visible
   Date label, centered below category with a 24 dp section gap and a 40 dp gap before amount.
 - The amount question uses the body-emphasis typography token with 10 dp between label and input.
+- Category, date, and amount share the field-label spacing token (10 dp).
 - Opening More details lets the sheet grow by the description section plus half of one additional
   detail section, bounded by the available window height. The form body scrolls when later fields
   exceed that limit.
@@ -80,6 +83,13 @@ copy and space for future optional fields. It preserves drafts when a dismissal 
 - `FocusRequester` is attached to the actual amount input and requested from a keyed effect after
   selector dismissal:
   https://developer.android.com/develop/ui/compose/touch-input/focus/request-focus
+- Compose Unstyled 2.9.0 mounts each modal in an independent native window without a ModalHost.
+  Preparing the movement sheet invisibly preserves its measurement while the nested category window
+  remains above it:
+  https://github.com/composablehorizons/compose-unstyled/blob/2.9.0/composeunstyled-modal/src/commonMain/kotlin/com/composeunstyled/Modal.kt
+- The invisible prepared form consumes pointer events, disallows focus, and uses
+  `hideFromAccessibility` (available since Compose UI 1.8.0; resolved UI version 1.11.2):
+  https://developer.android.com/reference/kotlin/androidx/compose/ui/semantics/SemanticsProperties#HideFromAccessibility()
 
 ## Validation status
 
@@ -89,6 +99,9 @@ copy and space for future optional fields. It preserves drafts when a dismissal 
   Back/scrim discard protection verified manually.
 - Medium date chip opens the anchored calendar and applies the selected day. Bounded details content
   and its support text are reachable by scrolling without moving the save action.
+- Frame-by-frame Xiaomi capture confirms category is the first visible sheet. Canceling reveals the
+  prepared form, reopening works, and selecting a category still focuses amount. All three field
+  labels use the shared 10 dp gap.
 - Instrumented tests build, but the runner stalls before returning test results. Automated device
   execution remains unconfirmed; it must not be reported as passing.
 - Product review of the new wording and category-first interaction remains with the user before merging.

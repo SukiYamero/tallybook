@@ -51,6 +51,7 @@ fun CategoryPickerSheet(
     modifier: Modifier = Modifier,
     allowSubcategories: Boolean = true,
     onHidden: () -> Unit = {},
+    onShown: () -> Unit = {},
     headerContent: (@Composable () -> Unit)? = null,
 ) {
   val tree = remember(categorias) { buildCategoryTree(categorias) }
@@ -120,7 +121,8 @@ fun CategoryPickerSheet(
   TallybookModalBottomSheet(
       visible = visible,
       paneTitle = paneTitle,
-      callbacks = ModalBottomSheetCallbacks(onDismiss = onDismiss, onHidden = onHidden),
+      callbacks =
+          ModalBottomSheetCallbacks(onDismiss = onDismiss, onHidden = onHidden, onShown = onShown),
       layout = ModalBottomSheetLayout(modifier = modifier),
   ) {
     CategoryPickerContent(
