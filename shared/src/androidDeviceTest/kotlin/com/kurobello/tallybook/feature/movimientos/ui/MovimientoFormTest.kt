@@ -8,6 +8,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
@@ -207,11 +208,43 @@ class MovimientoFormTest {
   }
 
   @Test
-  fun amountCannotBeEditedBeforeCategorySelection() {
-    composeRule.setContent { TallybookTheme { MovimientoForm(state(), RecordingActions()) } }
+  fun amountCanBeEditedWithoutCategorySelection() {
+    val actions = RecordingActions()
+    composeRule.setContent { TallybookTheme { MovimientoForm(state(), actions) } }
     composeRule
         .onNodeWithContentDescription(localizedString(Res.string.movimiento_amount_expense_prompt))
-        .assertIsNotEnabled()
+        .assertIsEnabled()
+        .performTextInput("12.34")
+
+    composeRule.runOnIdle { assertEquals("12.34", actions.amount) }
+  }
+
+  @Test
+  fun correctingAmountAfterValidationDoesNotMoveFocusToMissingCategory() {
+    var amountInput by mutableStateOf("")
+    val actions =
+        object : AddMovimientoActions by RecordingActions() {
+          override fun onAmountChanged(value: String) {
+            amountInput = value
+          }
+        }
+    composeRule.setContent {
+      TallybookTheme {
+        MovimientoForm(
+            uiState = state(amountInput = amountInput, submitAttempted = true),
+            actions = actions,
+        )
+      }
+    }
+    val amount =
+        composeRule.onNodeWithContentDescription(
+            localizedString(Res.string.movimiento_amount_expense_prompt)
+        )
+
+    amount.performClick().performTextInput("1")
+    amount.assertIsFocused().performTextInput("2")
+
+    composeRule.runOnIdle { assertEquals("12", amountInput) }
   }
 
   @Test

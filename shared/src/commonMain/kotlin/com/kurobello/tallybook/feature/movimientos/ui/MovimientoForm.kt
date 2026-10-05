@@ -113,7 +113,6 @@ internal fun MovimientoForm(
   val formMaximumHeight = formMaximumHeight(isImeVisible, restingFormHeight.value)
   val formItemSpacing = TallybookTheme.spacing.space16
   val submitLabel = uiState.tipo.saveLabel()
-  val selectedCategoria = uiState.categorias.firstOrNull { it.id == uiState.selectedCategoriaId }
   val descriptionState =
       stringResource(if (detailsExpanded) Res.string.expanded else Res.string.collapsed)
   val detailsChevronRotation by
@@ -123,11 +122,7 @@ internal fun MovimientoForm(
           label = "movement details chevron",
       )
 
-  LaunchedEffect(
-      uiState.submitAttempted,
-      uiState.amountError,
-      uiState.isCategoriaMissing,
-  ) {
+  LaunchedEffect(uiState.submitAttempted) {
     when {
       categoryEntry.blocksValidationFocus -> Unit
       uiState.isCategoriaMissing -> {
@@ -155,6 +150,7 @@ internal fun MovimientoForm(
     Column(
         modifier =
             Modifier.fillMaxWidth()
+                .weight(1f, fill = false)
                 .heightIn(max = formMaximumHeight)
                 .verticalScroll(formScrollState)
                 .captureScrollableInputViewport(formViewport)
@@ -274,11 +270,7 @@ internal fun MovimientoForm(
               Modifier.fillMaxWidth().padding(bottom = TallybookTheme.spacing.space8).semantics {
                 contentDescription = submitLabel
               },
-          enabled =
-              !uiState.isSubmitting &&
-                  !uiState.isLoading &&
-                  uiState.error == null &&
-                  selectedCategoria != null,
+          enabled = !uiState.isSubmitting,
       ) {
         Box(contentAlignment = Alignment.Center) {
           if (uiState.isSubmitting) {

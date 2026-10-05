@@ -11,6 +11,7 @@ import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentOption
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentTone
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentedControl
+import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.expense
@@ -48,5 +49,6 @@ internal fun MovimientoTypeSelector(
       onSelect = onSelected,
       modifier = modifier.fillMaxWidth(),
       enabled = enabled,
+      labelStyle = TallybookTheme.typography.bodySmall,
   )
 }

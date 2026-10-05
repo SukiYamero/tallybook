@@ -142,7 +142,12 @@ internal class AddMovimientoViewModel(
   override fun onSubmit() {
     if (uiState.value.isSubmitting) return
 
-    uiState.update { it.copy(submitAttempted = true) }
+    uiState.update {
+      it.copy(
+          submitAttempted = true,
+          error = it.error?.takeUnless { error -> error == MovimientoFormError.SAVE_FAILED },
+      )
+    }
     val timeZone = timeZoneProvider.current()
     val createdAt = clock.now()
     val movement = uiState.value.toMovimientoOrNull(idGenerator, createdAt, timeZone) ?: return

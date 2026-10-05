@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -17,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +36,7 @@ import androidx.compose.ui.unit.Dp
 import com.composeunstyled.DragIndication
 import com.composeunstyled.ModalBottomSheetProperties
 import com.composeunstyled.ModalBottomSheetScope
+import com.composeunstyled.ModalBottomSheetState
 import com.composeunstyled.Scrim
 import com.composeunstyled.Sheet
 import com.composeunstyled.SheetDetent
@@ -67,7 +70,8 @@ internal fun TallybookModalBottomSheet(
 ) {
   val currentCallbacks = rememberUpdatedState(callbacks)
   val currentVisible = rememberUpdatedState(visible)
-  val detentHeights = rememberContentDetentHeights(layout)
+  val detentHeights =
+      remember(layout.contentDetentIdentifiers) { mutableStateOf(emptyMap<String, Dp>()) }
   val expandedDetents = rememberContentDetents(layout, detentHeights.value)
   val expandedDetent = expandedDetents.first {
     it.identifier == layout.activeContentDetentIdentifier
@@ -83,13 +87,7 @@ internal fun TallybookModalBottomSheet(
     sheetState.targetDetent = if (visible) expandedDetent else SheetDetent.Hidden
   }
 
-  LaunchedEffect(visible, sheetState.currentDetent, sheetState.isIdle) {
-    if (!visible && sheetState.currentDetent == SheetDetent.Hidden && sheetState.isIdle) {
-      currentCallbacks.value.onHidden()
-    } else if (visible && sheetState.currentDetent == expandedDetent && sheetState.isIdle) {
-      currentCallbacks.value.onShown()
-    }
-  }
+  ModalBottomSheetVisibilityEffect(visible, sheetState, expandedDetent, currentCallbacks)
 
   UnstyledModalBottomSheet(
       state = sheetState,
@@ -118,7 +116,32 @@ internal fun TallybookModalBottomSheet(
                 .captureContentDetentHeight(layout, detentHeights)
                 .semantics { this.paneTitle = paneTitle },
     ) {
-      TallybookModalSheetBody(layout = layout, content = content)
+      TallybookModalSheetBody(
+          layout = layout,
+          maximumHeight =
+              detentHeights.value[layout.activeContentDetentIdentifier]?.takeIf {
+                sheetState.isIdle &&
+                    sheetState.bottomSheetState.currentDetent == expandedDetent &&
+                    it.value > 0f
+              } ?: Dp.Unspecified,
+          content = content,
+      )
+    }
+  }
+}
+
+@Composable
+private fun ModalBottomSheetVisibilityEffect(
+    visible: Boolean,
+    state: ModalBottomSheetState,
+    expandedDetent: SheetDetent,
+    callbacks: State<ModalBottomSheetCallbacks>,
+) {
+  LaunchedEffect(visible, state.currentDetent, state.isIdle) {
+    if (!visible && state.currentDetent == SheetDetent.Hidden && state.isIdle) {
+      callbacks.value.onHidden()
+    } else if (visible && state.currentDetent == expandedDetent && state.isIdle) {
+      callbacks.value.onShown()
     }
   }
 }
@@ -175,11 +198,13 @@ private fun modalBottomSheetProperties() =
 @Composable
 private fun ModalBottomSheetScope.TallybookModalSheetBody(
     layout: ModalBottomSheetLayout,
+    maximumHeight: Dp,
     content: @Composable () -> Unit,
 ) {
   Column(
       modifier =
-          (if (layout.fillAvailableHeight) Modifier.fillMaxHeight() else Modifier)
+          (if (layout.fillAvailableHeight) Modifier.fillMaxHeight()
+              else Modifier.heightIn(max = maximumHeight))
               .navigationBarsPadding()
               .padding(bottom = TallybookTheme.dimensions.modalSheetBottomPadding)
   ) {
@@ -236,13 +261,6 @@ internal data class ModalBottomSheetLayout(
 
   val hasContentDetentTransitions: Boolean
     get() = contentDetentIdentifiers.size > 1
-}
-
-@Composable
-private fun rememberContentDetentHeights(
-    layout: ModalBottomSheetLayout,
-): MutableState<Map<String, Dp>> {
-  return remember(layout.contentDetentIdentifiers) { mutableStateOf(emptyMap<String, Dp>()) }
 }
 
 @Composable

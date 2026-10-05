@@ -1,14 +1,20 @@
 package com.kurobello.tallybook.feature.movimientos.ui
 
+import android.view.KeyEvent
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.findRootCoordinates
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -16,9 +22,12 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
+import androidx.test.platform.app.InstrumentationRegistry
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
@@ -39,6 +48,8 @@ import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.add_movimiento_pane_title
+import tallybook.shared.generated.resources.amount_required
+import tallybook.shared.generated.resources.category_required
 import tallybook.shared.generated.resources.date
 import tallybook.shared.generated.resources.more_fields
 import tallybook.shared.generated.resources.movimiento_amount_expense_prompt
@@ -242,6 +253,85 @@ class AddMovimientoSheetTest {
   }
 
   @Test
+  fun cancelingInitialCategoryKeepsAmountEditableAndSaveAvailable() {
+    val actions = SubmitCountingActions()
+    composeRule.setContent {
+      TallybookTheme {
+        AddMovimientoSheet(
+            visible = true,
+            uiState = state().copy(amountInput = "", selectedCategoriaId = null),
+            actions = actions,
+            onDismiss = {},
+        )
+      }
+    }
+    composeRule
+        .onNodeWithText(resourceString(Res.string.movimiento_category_expense_prompt))
+        .assertIsDisplayed()
+
+    InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+    composeRule
+        .onNodeWithContentDescription(resourceString(Res.string.movimiento_amount_expense_prompt))
+        .assertIsEnabled()
+        .performTextInput("12.34")
+    composeRule
+        .onNodeWithContentDescription(resourceString(Res.string.movimiento_amount_expense_prompt))
+        .performImeAction()
+    composeRule
+        .onNodeWithText(resourceString(Res.string.save_expense))
+        .assertIsEnabled()
+        .performClick()
+
+    composeRule.runOnIdle {
+      assertEquals("12.34", actions.lastAmountInput)
+      assertEquals(1, actions.submitCount)
+    }
+  }
+
+  @Test
+  fun savingAnIncompleteFormShowsBothFieldErrors() {
+    var formState by mutableStateOf(state().copy(amountInput = "", selectedCategoriaId = null))
+    val actions = SubmitCountingActions { formState = formState.copy(submitAttempted = true) }
+    composeRule.setContent {
+      TallybookTheme { MovimientoForm(uiState = formState, actions = actions) }
+    }
+
+    composeRule
+        .onNodeWithText(resourceString(Res.string.save_expense))
+        .assertIsEnabled()
+        .performClick()
+
+    assertRequiredFieldErrors()
+  }
+
+  @Test
+  fun validationErrorsKeepTheSaveActionInsideTheWindow() {
+    var navigationBarBottom = 0
+    var formState by mutableStateOf(state().copy(amountInput = "", selectedCategoriaId = null))
+    val actions = SubmitCountingActions { formState = formState.copy(submitAttempted = true) }
+    composeRule.setContent {
+      TallybookTheme {
+        navigationBarBottom = WindowInsets.navigationBars.getBottom(LocalDensity.current)
+        AddMovimientoSheet(
+            visible = true,
+            uiState = formState,
+            actions = actions,
+            onDismiss = {},
+        )
+      }
+    }
+    composeRule
+        .onNodeWithText(resourceString(Res.string.movimiento_category_expense_prompt))
+        .assertIsDisplayed()
+    InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+
+    composeRule.onNodeWithText(resourceString(Res.string.save_expense)).performClick()
+
+    assertRequiredFieldErrors()
+    assertSaveFullyReachable(navigationBarBottom)
+  }
+
+  @Test
   fun submittingCtaKeepsTheIdleCtaHeight() {
     var isSubmitting by mutableStateOf(false)
 
@@ -277,8 +367,10 @@ class AddMovimientoSheetTest {
 
   @Test
   fun closedKeyboardCtaIsFullyReachable() {
+    var navigationBarBottom = 0
     composeRule.setContent {
       TallybookTheme {
+        navigationBarBottom = WindowInsets.navigationBars.getBottom(LocalDensity.current)
         AddMovimientoSheet(
             visible = true,
             uiState = state(),
@@ -288,18 +380,7 @@ class AddMovimientoSheetTest {
       }
     }
 
-    val cta = composeRule.onNodeWithContentDescription(resourceString(Res.string.save_expense))
-    val ctaNode = cta.fetchSemanticsNode()
-    val ctaBounds = ctaNode.boundsInRoot
-    val rootHeight = ctaNode.layoutInfo.coordinates.findRootCoordinates().size.height.toFloat()
-    cta.assertIsDisplayed()
-    composeRule.runOnIdle {
-      assertTrue(ctaBounds.height >= with(composeRule.density) { 48.dp.toPx() })
-      assertTrue(
-          ctaBounds.bottom <= rootHeight,
-          "Expected CTA bottom ${ctaBounds.bottom} to be within root height $rootHeight",
-      )
-    }
+    assertSaveFullyReachable(navigationBarBottom)
   }
 
   @Test
@@ -363,6 +444,24 @@ class AddMovimientoSheetTest {
     }
   }
 
+  private fun assertRequiredFieldErrors() {
+    listOf(Res.string.category_required, Res.string.amount_required).forEach { message ->
+      composeRule
+          .onNode(SemanticsMatcher.expectValue(SemanticsProperties.Error, resourceString(message)))
+          .assertExists()
+    }
+  }
+
+  private fun assertSaveFullyReachable(navigationBarBottom: Int) {
+    val cta = composeRule.onNodeWithContentDescription(resourceString(Res.string.save_expense))
+    cta.assertIsDisplayed()
+    val coordinates = cta.fetchSemanticsNode().layoutInfo.coordinates
+    val bottom = coordinates.positionInRoot().y + coordinates.size.height
+    val usableBottom = coordinates.findRootCoordinates().size.height - navigationBarBottom
+    assertTrue(coordinates.size.height >= with(composeRule.density) { 48.dp.toPx() })
+    assertTrue(bottom <= usableBottom, "Expected complete CTA bottom $bottom above $usableBottom")
+  }
+
   private fun state(isSubmitting: Boolean = false, descripcion: String = "") =
       AddMovimientoUiState(
           tipo = TipoMovimiento.GASTO,
@@ -392,10 +491,13 @@ class AddMovimientoSheetTest {
   private class SubmitCountingActions(private val onSubmitRequested: () -> Unit = {}) :
       AddMovimientoActions {
     var submitCount = 0
+    var lastAmountInput: String? = null
 
     override fun onTipoChanged(tipo: TipoMovimiento) = Unit
 
-    override fun onAmountChanged(value: String) = Unit
+    override fun onAmountChanged(value: String) {
+      lastAmountInput = value
+    }
 
     override fun onFechaChanged(value: LocalDate) = Unit
 

@@ -74,7 +74,7 @@ internal fun MovimientoPrimaryFields(
                 error = uiState.amountError?.message(),
                 prompt = movimientoAmountPrompt(uiState.tipo),
             ),
-        enabled = !uiState.isSubmitting && !uiState.isLoading && selectedCategoria != null,
+        enabled = !uiState.isSubmitting && !uiState.isLoading,
         callbacks =
             MovimientoAmountFieldCallbacks(
                 onValueChange = actions::onAmountChanged,

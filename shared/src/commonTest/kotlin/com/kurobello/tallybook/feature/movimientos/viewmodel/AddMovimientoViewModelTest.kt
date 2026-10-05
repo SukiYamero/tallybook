@@ -134,6 +134,7 @@ class AddMovimientoViewModelTest {
     viewModel.onSubmit()
     assertTrue(repository.inserted.isEmpty())
     assertEquals(AmountInputError.EMPTY, viewModel.uiState.value.amountError)
+    assertTrue(viewModel.uiState.value.isCategoriaMissing)
     viewModel.onAmountChanged("0")
     viewModel.onCategoriaSelected(category.id)
     viewModel.onSubmit()
@@ -246,7 +247,7 @@ class AddMovimientoViewModelTest {
   }
 
   @Test
-  fun saveFailurePreservesFieldsAndClearsOnlyAfterAnotherEdit() = runTest {
+  fun saveFailurePreservesFieldsAndClearsAfterAnotherEdit() = runTest {
     val repository =
         FakeMovimientoRepository(DataOutcome.Failure(DataError.Local(IllegalStateException())))
     val category = testCategoria("food")
@@ -268,6 +269,29 @@ class AddMovimientoViewModelTest {
 
     assertNull(viewModel.uiState.value.error)
     assertTrue(viewModel.uiState.value.submitAttempted)
+  }
+
+  @Test
+  fun retryAfterSaveFailureUsesTheUnchangedDraft() = runTest {
+    val repository =
+        FakeMovimientoRepository(DataOutcome.Failure(DataError.Local(IllegalStateException())))
+    val category = testCategoria("food")
+    val viewModel = createValidViewModel(repository, category, backgroundScope)
+    runCurrent()
+    populateValidFields(viewModel, category)
+    viewModel.onDescripcionChanged("Keep this")
+    viewModel.onSubmit()
+    runCurrent()
+    assertEquals(MovimientoFormError.SAVE_FAILED, viewModel.uiState.value.error)
+
+    repository.insertResult = DataOutcome.Success(Unit)
+    viewModel.onSubmit()
+    runCurrent()
+
+    assertEquals(2, repository.inserted.size)
+    assertEquals(repository.inserted.first(), repository.inserted.last())
+    assertNull(viewModel.uiState.value.error)
+    assertEquals(AddMovimientoEffect.Saved, viewModel.effects.first())
   }
 
   @Test
@@ -392,7 +416,7 @@ class AddMovimientoViewModelTest {
   }
 
   private open class FakeMovimientoRepository(
-      private val insertResult: DataOutcome<Unit> = DataOutcome.Success(Unit),
+      var insertResult: DataOutcome<Unit> = DataOutcome.Success(Unit),
   ) : MovimientoRepository {
     val inserted = mutableListOf<Movimiento>()
 

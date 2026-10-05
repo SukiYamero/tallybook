@@ -15,8 +15,6 @@ internal object TallybookDimensions {
   val modalSheetDragAreaHeight = minimumTouchTarget
   val modalSheetDragHandleWidth = TallybookSpacing.space40
   val modalSheetDragHandleHeight = TallybookSpacing.space4
-  val modalSheetDragHorizontalPadding = TallybookSpacing.space24
-  val modalSheetDragVerticalPadding = TallybookSpacing.space20
   val modalSheetBottomPadding = TallybookSpacing.space12
   val iconSmall = 16.dp
   val iconMedium = 20.dp

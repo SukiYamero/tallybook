@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import com.kurobello.tallybook.core.ui.theme.TallybookColors
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 
@@ -102,6 +103,7 @@ internal fun <T> TallybookSegmentedControl(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     style: TallybookSegmentedControlStyle = TallybookSegmentedControlStyle.Tonal,
+    labelStyle: TextStyle = TallybookTheme.typography.label,
 ) {
   require(options.isNotEmpty()) { "Segmented control options must not be empty." }
 
@@ -117,12 +119,17 @@ internal fun <T> TallybookSegmentedControl(
   ) {
     options.forEach { option ->
       TallybookSegment(
-          option = option,
           isSelected = option.value == selected,
           colors = TallybookSegmentedControlDefaults.colors(style, option.tone),
           enabled = enabled,
-          onSelect = onSelect,
-      )
+          onSelect = { onSelect(option.value) },
+      ) { contentColor ->
+        TallybookSegmentContent(
+            option = option,
+            contentColor = contentColor,
+            labelStyle = labelStyle,
+        )
+      }
     }
   }
 }
@@ -136,12 +143,12 @@ internal fun neutralSelectedSegmentContainer(colors: TallybookColors): Color =
         .compositeOver(colors.surface.highest)
 
 @Composable
-private fun <T> RowScope.TallybookSegment(
-    option: TallybookSegmentOption<T>,
+private fun RowScope.TallybookSegment(
     isSelected: Boolean,
     colors: TallybookSegmentedControlColors,
     enabled: Boolean,
-    onSelect: (T) -> Unit,
+    onSelect: () -> Unit,
+    content: @Composable (Color) -> Unit,
 ) {
   val interactionSource = remember { MutableInteractionSource() }
   val containerColor =
@@ -163,7 +170,7 @@ private fun <T> RowScope.TallybookSegment(
             interactionSource = interactionSource,
             indication = null,
             role = Role.RadioButton,
-            onClick = { onSelect(option.value) },
+            onClick = onSelect,
         )
       } else {
         Modifier.semantics(mergeDescendants = true) {
@@ -189,12 +196,16 @@ private fun <T> RowScope.TallybookSegment(
               contentAlignment = Alignment.Center,
           ),
   ) {
-    TallybookSegmentContent(option = option, contentColor = contentColor)
+    content(contentColor)
   }
 }
 
 @Composable
-private fun TallybookSegmentContent(option: TallybookSegmentOption<*>, contentColor: Color) {
+private fun TallybookSegmentContent(
+    option: TallybookSegmentOption<*>,
+    contentColor: Color,
+    labelStyle: TextStyle,
+) {
   Row(
       horizontalArrangement =
           Arrangement.spacedBy(
@@ -213,7 +224,7 @@ private fun TallybookSegmentContent(option: TallybookSegmentOption<*>, contentCo
     }
     TallybookText(
         text = option.label,
-        style = TallybookTheme.typography.label,
+        style = labelStyle,
     )
   }
 }
