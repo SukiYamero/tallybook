@@ -48,6 +48,29 @@ import kotlinx.datetime.TimeZone
 @OptIn(ExperimentalCoroutinesApi::class)
 class HistoryViewModelTest {
   @Test
+  fun exposesCompleteSelectedPeriodIdentityAlongsideBoundedReadRange() {
+    val month = HistoryUiState(HistorySelection(HistoryScope.Month, TODAY), TODAY)
+    val fullMonth = MovimientoDateRange(LocalDate(2026, 10, 1), LocalDate(2026, 10, 31))
+
+    assertEquals(fullMonth, month.selectedPeriod)
+    assertEquals(MovimientoDateRange(LocalDate(2026, 10, 1), TODAY), month.range)
+    assertEquals(fullMonth, month.periods.last())
+    assertEquals(10, month.periods.size)
+
+    val week = month.copy(selection = HistorySelection(HistoryScope.Week, LocalDate(2024, 2, 24)))
+    assertEquals(
+        MovimientoDateRange(LocalDate(2024, 2, 22), LocalDate(2024, 2, 28)),
+        week.selectedPeriod,
+    )
+    assertEquals(5, week.periods.size)
+
+    val day = week.copy(selection = week.selection.selectScope(HistoryScope.Day))
+    val selectedDay = LocalDate(2024, 2, 24)
+    assertEquals(MovimientoDateRange(selectedDay, selectedDay), day.selectedPeriod)
+    assertEquals(29, day.periods.size)
+  }
+
+  @Test
   fun startsOneReadGraphOnlyWhilePublicConsumersExist() = runTest {
     val fixture = HistoryFixture(this, listOf(movimiento("today", TODAY)))
     val vm = fixture.create()

@@ -2,6 +2,7 @@ package com.kurobello.tallybook.feature.history.viewmodel
 
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import kotlinx.datetime.LocalDate
 
@@ -16,6 +17,12 @@ internal data class HistoryUiState(
 ) {
   val range
     get() = selection.range(today)
+
+  val periods: List<MovimientoDateRange>
+    get() = selection.periods(today)
+
+  val selectedPeriod: MovimientoDateRange
+    get() = selection.selectedPeriod(today)
 
   val availableYears
     get() = selection.availableYears(years.persisted, today, years.retained)

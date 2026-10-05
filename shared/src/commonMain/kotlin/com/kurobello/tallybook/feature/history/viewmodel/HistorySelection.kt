@@ -17,9 +17,12 @@ internal data class HistorySelection(val scope: HistoryScope, val anchor: LocalD
     get() = YearMonth(anchor.year, anchor.month)
 
   fun range(today: LocalDate): MovimientoDateRange {
-    val period = periods(today).first { anchor >= it.start && anchor <= it.end }
+    val period = selectedPeriod(today)
     return period.copy(end = minOf(period.end, today))
   }
+
+  fun selectedPeriod(today: LocalDate): MovimientoDateRange =
+      periods(today).first { anchor >= it.start && anchor <= it.end }
 
   fun periods(today: LocalDate): List<MovimientoDateRange> {
     require(anchor <= today) { "History anchor must not be in the future" }
