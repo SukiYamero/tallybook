@@ -99,7 +99,7 @@ internal fun TallybookDateChipPicker(
   val density = LocalDensity.current
   val isMedium = size == TallybookDateChipSize.M
   val iconSize =
-      if (isMedium) TallybookTheme.dimensions.iconMedium
+      if (isMedium) TallybookTheme.dimensions.iconSmall
       else TallybookTheme.dimensions.datePickerChipIconSize
   val viewportOverlayState = LocalTallybookViewportOverlayState.current
   val viewportOverlayOwner = remember { Any() }
@@ -155,25 +155,20 @@ internal fun TallybookDateChipPicker(
           modifier =
               Modifier.padding(
                   horizontal =
-                      if (isMedium) TallybookTheme.spacing.space20
+                      if (isMedium) TallybookTheme.spacing.space16
                       else TallybookTheme.spacing.space14,
                   vertical =
-                      if (isMedium) TallybookTheme.spacing.space12
+                      if (isMedium) TallybookTheme.spacing.space10
                       else TallybookTheme.spacing.space8,
               ),
-          horizontalArrangement =
-              Arrangement.spacedBy(
-                  if (isMedium) TallybookTheme.spacing.space8 else TallybookTheme.spacing.space6
-              ),
+          horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space6),
           verticalAlignment = Alignment.CenterVertically,
       ) {
         DatePickerIcon(icon = Lucide.CalendarDays, size = iconSize)
         TallybookText(
             text = selectedLabel,
             color = TallybookTheme.colors.foreground.secondary,
-            style =
-                if (isMedium) TallybookTheme.typography.title
-                else TallybookTheme.typography.bodyEmphasis,
+            style = TallybookTheme.typography.bodyEmphasis,
         )
         DatePickerIcon(icon = Lucide.ChevronDown, size = iconSize)
       }

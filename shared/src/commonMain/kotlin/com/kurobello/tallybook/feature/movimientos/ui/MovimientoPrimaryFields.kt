@@ -14,7 +14,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import com.kurobello.tallybook.core.ui.category.CategoryAvatar
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
 import com.kurobello.tallybook.core.ui.component.TallybookSelectionField
-import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoUiState
@@ -22,7 +21,6 @@ import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category
 import tallybook.shared.generated.resources.category_required
-import tallybook.shared.generated.resources.movimiento_entry_hint
 
 internal data class MovimientoFieldFocus(
     val amount: FocusRequester = FocusRequester(),
@@ -51,13 +49,7 @@ internal fun MovimientoPrimaryFields(
         onSelected = actions::onTipoChanged,
         modifier = Modifier.padding(top = TallybookTheme.spacing.space8),
     )
-    Spacer(modifier = Modifier.height(TallybookTheme.spacing.space16))
-    TallybookText(
-        text = stringResource(Res.string.movimiento_entry_hint),
-        style = TallybookTheme.typography.bodySmall,
-        color = TallybookTheme.colors.foreground.secondary,
-    )
-    Spacer(modifier = Modifier.height(TallybookTheme.spacing.space12))
+    Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
     TallybookSelectionField(
         label = stringResource(Res.string.category),
         value = selectedCategoria?.nombre,

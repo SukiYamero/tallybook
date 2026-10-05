@@ -177,7 +177,6 @@
     <string name="category_ventas">Ventas</string>
     <string name="category_regalo">Regalo</string>
     <string name="category_reembolso">Reembolso</string>
-    <string name="movimiento_entry_hint">Elige una categoría y agrega el monto.</string>
     <string name="movimiento_category_expense_prompt">¿En qué gastaste?</string>
     <string name="movimiento_category_income_prompt">¿De dónde vino el ingreso?</string>
     <string name="movimiento_category_hint">Elige una categoría para organizar tus registros.</string>

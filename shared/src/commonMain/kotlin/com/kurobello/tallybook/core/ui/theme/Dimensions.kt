@@ -46,7 +46,7 @@ internal object TallybookDimensions {
   val amountInputMinimumWidth = TallybookSpacing.space48
   val amountInputMaximumWidth = 240.dp
   val datePickerChipIconSize = TallybookSpacing.space14
-  val datePickerMediumChipHeight = 56.dp
+  val datePickerMediumChipHeight = minimumTouchTarget
   val datePickerDaySize = TallybookSpacing.space40
   val datePickerMaximumWidth = 336.dp
   val categoryPickerResultsMaximumHeight = 420.dp

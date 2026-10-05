@@ -177,7 +177,6 @@
     <string name="category_ventas">Sales</string>
     <string name="category_regalo">Gift</string>
     <string name="category_reembolso">Refund</string>
-    <string name="movimiento_entry_hint">Choose a category and enter the amount.</string>
     <string name="movimiento_category_expense_prompt">What was the expense for?</string>
     <string name="movimiento_category_income_prompt">Where did the income come from?</string>
     <string name="movimiento_category_hint">Choose a category to keep your records organized.</string>

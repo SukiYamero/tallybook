@@ -40,6 +40,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -66,6 +67,7 @@ import com.kurobello.tallybook.feature.movimientos.viewmodel.AmountInputError
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormError
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.add_movimiento_pane_title
 import tallybook.shared.generated.resources.amount_malformed
 import tallybook.shared.generated.resources.amount_not_positive
 import tallybook.shared.generated.resources.amount_overflow
@@ -143,6 +145,12 @@ internal fun MovimientoForm(
               .padding(horizontal = TallybookTheme.dimensions.screenHorizontal)
               .clearFocusOnUnconsumedTap(),
   ) {
+    TallybookText(
+        text = stringResource(Res.string.add_movimiento_pane_title),
+        style = TallybookTheme.typography.title,
+        modifier = Modifier.semantics { heading() },
+    )
+    Spacer(modifier = Modifier.height(TallybookTheme.spacing.space16))
     Column(
         modifier =
             Modifier.fillMaxWidth()
@@ -294,6 +302,11 @@ internal fun MovimientoForm(
       allowSubcategories = false,
       headerContent = {
         Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space20)) {
+          TallybookText(
+              text = stringResource(Res.string.add_movimiento_pane_title),
+              style = TallybookTheme.typography.title,
+              modifier = Modifier.semantics { heading() },
+          )
           MovimientoTypeSelector(
               selected = uiState.tipo,
               enabled = !uiState.isSubmitting,

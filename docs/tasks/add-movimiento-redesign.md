@@ -14,11 +14,14 @@ copy and space for future optional fields. It preserves drafts when a dismissal 
   categories can be selected or searched; subcategory data and the generic picker drill-in are retained.
 - Selecting a category closes the selector and focuses amount after its closing animation. Amount and
   save are unavailable before category selection. Category appears before date and amount in the form.
-- Persistent copy stays brief: category purpose in the selector, category-and-amount guidance in the
-  form, and expense/income-specific amount questions. All supported locales use the same intent.
+- Persistent copy stays brief: category purpose in the selector and expense/income-specific amount
+  questions. The sheet and initial selector display an Add movement title. All supported locales use
+  the same intent.
 - The date chip supports S and M sizes in the shared component and catalog. S uses a minimum 48 dp
-  touch target; M uses 56 dp with 18 sp text and 20 dp icons. Movimiento entry uses M with a visible
+  touch target; M uses 48 dp with 15 sp text and 16 dp icons, plus slightly larger padding than S.
+  Movimiento entry uses M with a visible
   Date label, centered below category with a 24 dp section gap and a 40 dp gap before amount.
+- The amount question uses the body-emphasis typography token with 10 dp between label and input.
 - Opening More details lets the sheet grow by the description section plus half of one additional
   detail section, bounded by the available window height. The form body scrolls when later fields
   exceed that limit.

@@ -42,12 +42,12 @@ internal fun TallybookAmountInput(
   Column(
       modifier = modifier.fillMaxWidth(),
       horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space10),
   ) {
     TallybookText(
         text = label,
         color = appearance.labelColor,
-        style = TallybookTheme.typography.label,
+        style = TallybookTheme.typography.bodyEmphasis,
     )
     Row(
         modifier = Modifier.fillMaxWidth(),
