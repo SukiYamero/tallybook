@@ -19,6 +19,7 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
@@ -234,21 +235,21 @@ internal class HistoryNavigationTest {
 
   @Test
   fun focusedYearPopupConsumesBackBeforeHistoryRootAndCatalogReturnsHome() {
-    withShell { fixture ->
-      composeRule.runOnIdle { fixture.movimientos.addPriorYear() }
+    withShell {
       historyTab().performClick()
       val year = runBlocking { getString(Res.string.history_year_description, 2026) }
       composeRule.onNodeWithContentDescription(year).performClick()
       recordPopupWindows("before-popup-focus")
       composeRule.onNode(isPopup()).assertExists()
-      composeRule.onNodeWithText("2025").assertIsDisplayed()
+      val popupYear = hasText("2026") and hasAnyAncestor(isPopup())
+      composeRule.onNode(popupYear).assertIsDisplayed()
       try {
         composeRule.waitUntil(5_000) { popupWindowState().isReady }
       } finally {
         recordPopupWindows("after-popup-focus-wait")
       }
       systemBack()
-      composeRule.onNodeWithText("2025").assertDoesNotExist()
+      composeRule.onNode(popupYear).assertDoesNotExist()
       composeRule.onNode(isPopup()).assertDoesNotExist()
       composeRule.waitUntil(5_000) { popupWindowState().count == 0 }
       historyTab().assertIsSelected()
@@ -474,17 +475,6 @@ private class NavigationMovimientos : MovimientoRepository {
   val starts = AtomicInteger()
   val activeRanges = AtomicInteger()
   val activeRecent = AtomicInteger()
-
-  fun addPriorYear() {
-    rows.value +=
-        rows.value
-            .first()
-            .copy(
-                id = "prior-year",
-                fecha = LocalDate(2025, 10, 5),
-                createdAt = Instant.parse("2025-10-05T12:00:00Z"),
-            )
-  }
 
   override fun observeRange(
       moneda: Moneda,
