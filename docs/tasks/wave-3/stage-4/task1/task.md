@@ -70,23 +70,25 @@ Skills: `android-dev`, `compose`, `compose-state-and-effects`, `compose-componen
 7. Consume shell-published bar clearance; no permanent second bar or doubled bottom safe inset.
    The screen accepts `bottomBarClearance: Dp` for the actual bar height including its sole bottom-safe
    inset. Hosted frame applies top/horizontal system insets only; list adds that clearance and ordinary
-   spacing. Preserve standalone frame defaults through narrow caller-supplied WindowInsets if needed,
-   not a hosted/isHistory shape flag. Shell publishes/measures the actual occupied bar height in S5.
+   spacing. Preserve standalone frame defaults through narrow caller-supplied WindowInsets and a Dp
+   bottom-padding-floor input where the existing max(inset, floor) policy requires it; hosted content
+   uses zero floor. No hosted/isHistory shape flag. Shell measures actual occupied bar height in S5.
    Test popup dismissal/focus/Back, tablet width, compact landscape and enlarged text on real targets.
 
 ## Test-first slices and checks
 
 - [ ] RED/GREEN exact loading/content/empty/error/global-error states, retained controls, callback
       arguments/year/scope selection, period count, stable date/row keys and read-only semantics.
-- [ ] Add pure content, deterministic previews and all supported localized resources.
+- [x] Add pure content, deterministic previews and all supported localized resources.
 - [ ] Home row API/copy regression plus History description/date/fallback/sign/currency/long-text
       semantics; one shared renderer with no cloned amount formatter.
 - [ ] Year popup semantics/dismissal and selected-chip context change visibility; use tags only where
       nodes are genuinely ambiguous. No search focus/IME tests are added to History.
-- [ ] Compile device tests with `./gradlew :shared:compileAndroidDeviceTest`;
-      `:shared:assembleAndroidDeviceTest` assembles the test APK. Execute
-      `:shared:connectedAndroidDeviceTest` only against one confirmed authorized physical device.
-- [ ] Host regression, Android build, Native production compilation, Detekt/ktfmt and fresh review.
+- [x] Compile device tests with `./gradlew :shared:compileAndroidDeviceTest`.
+- [ ] Execute behavioral device assertions against one confirmed awake/unlocked physical device;
+      `:shared:assembleAndroidDeviceTest` assembles the test APK and
+      `:shared:connectedAndroidDeviceTest` executes it.
+- [x] Host regression, Android build, Native production compilation, Detekt/ktfmt and independent review.
 
 Validate: `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosArm64 detekt ktfmtCheck`.
 Then `./gradlew :androidApp:assembleDebug :shared:compileAndroidDeviceTest`.
@@ -94,6 +96,11 @@ Unavailable/stalled device execution remains explicitly unconfirmed; no emulator
 
 ## Completion and dependencies
 
-Pure rendering/resources/callbacks have current build/test evidence and Home remains compatible.
+Source-stage gate approved at `7ca41d4`: 240 host tests, Android/Native build/compile, device fixture
+compilation and style checks pass. UI behavioral assertions and physical geometry remain unexecuted;
+the earlier runner blocked in host Activity startup before its test body. The unchecked runtime
+checklists above continue into Stage 6; source review is not physical acceptance.
+
+Pure rendering/resources/callbacks have current source/build evidence and Home API compatibility.
 Reviewed Stage 4 enables full S5.T1 shell integration. Physical visual/accessibility/keyboard-in-sheet/
 inset acceptance remains Stage 6; deferred Search UI does not block this stage.

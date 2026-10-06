@@ -12,7 +12,8 @@ destination. No product decision remains pending. The revised contract passed in
 review and is committed at `bebf1c5`. Stage 1 is implemented, checked and independently approved.
 S2.T1 consultation reads are implemented, checked and independently approved. The early S5.T1
 saved-owner/Koin probe and S3.T1 projection are independently approved. S3.T2 and cumulative Stage 3 are independently approved at `343fb1d`;
-pure History UI is the next implementation increment. No whole-wave completion, merge or physical acceptance
+S4.T1 source-stage is independently approved at `7ca41d4`; full shell integration is next.
+Compiled device assertions remain unexecuted and continue into Stage 6. No whole-wave completion, merge or physical acceptance
 is claimed.
 
 ## Implemented and verified
@@ -25,6 +26,7 @@ is claimed.
 | S5.T1 early transport | `ace07b9`; four executed host probes, Native/host compilation/regression boundary in report, Detekt/ktfmt pass | Independent review approved; full shell/device proof remains later |
 | S3.T1 projection | `f70a363`; 16 focused host tests, Native test compilation, Detekt/ktfmt pass | Independent review approved; no findings |
 | S3.T2 state | `343fb1d`; 236 host tests, Android build, Native production/test compilation, Detekt/ktfmt pass | Independent cumulative Stage 3 review approved after readonly picker contract fix |
+| S4.T1 UI | `7ca41d4`; 240 host tests, Android build, Native production/test compilation, device fixture compilation, Detekt/ktfmt pass | Independent source-stage review approved after visibility-aware chip fix; device assertions unconfirmed |
 
 These checks belong to the recorded implementation tree, not to unimplemented History behavior.
 The normalization still serves category search and future Search; History does not consume it.
@@ -41,8 +43,8 @@ Native compilation is not iPhone runtime evidence. No emulator/simulator was run
 | S5.T1 early gate | Implemented/checked/reviewed; stable parent creation extras required in full shell |
 | S3.T1 | Implemented/checked/reviewed; pure History rows/count/totals |
 | S3.T2 | Implemented/checked/reviewed; full picker identity distinct from read range |
-| S4.T1 | Active next increment; pure History/reference rows and Home compatibility |
-| S5.T1 full shell | After reviewed Stage 4; Home/History navigation, scroll/Back/lifecycle and one sheet/bar |
+| S4.T1 | Source implemented/checked/reviewed; runtime assertion checklists continue into Stage 6 |
+| S5.T1 full shell | Active next increment; Home/History navigation, scroll/Back/lifecycle and one sheet/bar |
 | S6.T1 | After reviewed Stage 5; production graph, physical evidence, full-wave review/History closure |
 | S1.T3 / S2.T2 / S3.T3 / S4.T2 | Deferred Search proposals; no implementation or current dependency |
 
@@ -56,8 +58,12 @@ Native compilation is not iPhone runtime evidence. No emulator/simulator was run
   full shell must retain that tested seam. Full-shell NavDisplay/scroll/Back/device proof remains later.
 - Android saved-owner/Activity restoration and iOS retained-controller/saveable scope are separate
   contracts. A fresh iOS process starts normally; no cross-process bridge or new persistence is planned.
-- One physical Xiaomi `M2012K11AG` was previously discovered; reconfirm authorized inventory before
-  installation/visual work. Installation and physical acceptance have not run.
+- Physical Xiaomi `M2012K11AG` / `aaa9cea2` was confirmed for a focused self-targeted test APK attempt.
+  The runner started one case but completed none before interruption; no assertion pass is claimed.
+  Diagnosis located host Activity startup before the test body, with locked/off device state and a
+  matching vendor rejection. Test-only orphan/debugger cleanup completed; production data untouched.
+  Awake/unlocked launch readiness is pending. No production installation/physical acceptance has run.
+- iPhone 15 Pro currently reports unavailable; Native compilation supplies no runtime evidence.
 - One owner runs implementation/Gradle at a time. Each stage receives independent cumulative review;
   the runtime thread limit requires reusing the dedicated reviewer with a bounded assignment.
 - Temporary audit reports live in ignored `.superpowers/sdd/README/`; this revision records its own
@@ -65,5 +71,5 @@ Native compilation is not iPhone runtime evidence. No emulator/simulator was run
 
 ## Next action
 
-Implement/review S4.T1, then integrate/review the S5.T1 shell and
+Integrate/review the S5.T1 shell, then
 execute S6 verification/physical acceptance. Deferred Search tasks are not gates.
