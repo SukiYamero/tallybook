@@ -40,10 +40,13 @@ Close scopes/preferences factory/drivers/collectors and delete only test-owned f
       stays correct, no normalization/matching/index is required.
 - [x] Save/read failures preserve draft/selection as relevant; retry cannot duplicate save or reset dates.
 - [x] Reopen the same on-disk file to prove movement persistence and clean repository subscriptions.
-- [ ] Actual shell state retains/restores route/selection/scroll under supported platform scope and keeps
+- [x] Actual Android shell state retains/restores route/selection/scroll under supported platform scope and keeps
       one creation owner. Search/Profile remain inert; Home search does not open History.
 
 ## Physical protocol
+
+The current acceptance round targets Android/Xiaomi. The user explicitly deferred iOS runtime
+verification; preserve that follow-up and do not claim iPhone behavior from Android results.
 
 Identify one authorized physical Xiaomi/tablet/iPhone before each phase; no emulator/simulator or SDK/
 signing edits. Resolve adb/SDK/JDK/Xcode on this host. For Android use its confirmed serial explicitly:
@@ -86,11 +89,14 @@ cross-process host persistence just to make acceptance wording pass.
 - [x] `./gradlew detekt ktfmtCheck`.
 - [x] `./gradlew :androidApp:assembleDebug :shared:compileAndroidDeviceTest
       :shared:assembleAndroidDeviceTest` (app/test APK build and fixture compilation).
-- [ ] `:shared:connectedAndroidDeviceTest` executes on a confirmed awake/unlocked physical target;
-      the prior interrupted host-launch attempt proves no assertion pass.
+- [x] Device assertions pass on a confirmed awake/unlocked physical target. The default
+      `:shared:connectedAndroidDeviceTest` host launch is blocked by this Xiaomi's background-start
+      policy; the supported fresh-foreground-process `am instrument --no-restart` protocol executed
+      the UI/navigation cases, with passing corrective checks for all six initial fixture failures.
+      The single shortened 10,000-row volume case also passed; independent reviews match checked source.
 - [ ] Schema tasks only if measured schema/index change: `:shared:generateCommonMainTallybookDatabaseSchema`
       and `:shared:verifyCommonMainTallybookDatabaseMigration`; `:shared:verifySqlDelightMigration` available.
-- [ ] Record tree/command/target/result/limitations without financial data, credentials or local signing
+- [x] Record tree/command/target/result/limitations without financial data, credentials or local signing
       material. Task evidence is current; historical S1.T2 report alone does not prove new History.
 - [x] Independent whole-wave source reviewer fixes in-scope findings and verifies relevant checks.
 - [ ] User tries this worktree's concrete History/creation scenarios on physical device and approves.
@@ -104,10 +110,21 @@ production/test compilation, Detekt0 and ktfmtCheck pass. Real form/SQL/DataStor
 closed-file persistence cases pass. Whole-wave review fixed supported wrong-type checkpoint fallback.
 No schema/index change occurred, so migration/schema tasks are not applicable.
 
-All actual UI/target assertions, Android MainActivity restoration, physical volume observations,
-accessibility/visual acceptance and iPhone retained-controller proof remain unexecuted. Host owner
-helpers and compiled fixtures do not close those checklists. Xiaomi remains locked/off; iPhone is
-paired over local network with passcode/developer-image readiness pending. Production data untouched.
+The confirmed Xiaomi Android round passed the UI/navigation corrective gates and the single shortened
+volume case at `12c5541` (8.669s; indexed read308.784ms/projection62.835ms). All 10,000 selected rows,
+currency/date exclusions, totals, three direct-key checkpoints, actual swipe and bar clearance passed.
+Independent source/artifact/runtime review is clean. These are debug target observations, not a cap
+or a leak verdict.
+
+The installed production artifact was independently matched. Actual MainActivity rotation recreation,
+saved-Activity restoration after background process death, cold defaults/persisted visible financial
+values, historical blocks/tab retention/year popup Back, category/form/keyboard Back, Spanish/light
+configuration and the real midnight resume were checked. Original locale/theme/rotation were restored.
+No production fixture seeding, synthetic save or vendor permission change occurred.
+
+User product acceptance remains pending. iPhone runtime is deferred by explicit user instruction;
+TalkBack, additional physical devices and every supported locale are not claimed as exercised. Keep
+these boundaries explicit in final feature/backlog documentation after approval.
 
 Accepted only with current checks/review and explicit physical product approval. Android/iPhone statuses
 are separate; missing target or stalled execution remains precisely unconfirmed. If the user accepts

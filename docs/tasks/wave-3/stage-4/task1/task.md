@@ -97,9 +97,12 @@ Unavailable/stalled device execution remains explicitly unconfirmed; no emulator
 ## Completion and dependencies
 
 Source-stage gate approved at `7ca41d4`: 240 host tests, Android/Native build/compile, device fixture
-compilation and style checks pass. UI behavioral assertions and physical geometry remain unexecuted;
-the earlier runner blocked in host Activity startup before its test body. The unchecked runtime
-checklists above continue into Stage 6; source review is not physical acceptance.
+compilation and style checks pass. The Xiaomi device gate executed UI cases: History 11/12, shared
+movement components 6/6 and period picker 7/8 in the initial round. The offscreen-year correction
+passed in the reviewed eight-case round; full compact-control visibility and its typed callback
+passed at `30cba01`. Focused single-year popup Back also passed in the navigation gate. Current runtime status is
+tracked in [progress](../../progress.md). Compound unchecked checklists continue into Stage 6;
+source review is not physical acceptance.
 
 Pure rendering/resources/callbacks have current source/build evidence and Home API compatibility.
 Reviewed Stage 4 enables full S5.T1 shell integration. Physical visual/accessibility/keyboard-in-sheet/

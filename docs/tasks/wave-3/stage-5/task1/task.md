@@ -143,9 +143,13 @@ and `./gradlew :androidApp:assembleDebug :shared:compileAndroidDeviceTest`.
 
 Source-stage gate approved at `5126f53`: 251 host tests, Android app/test APK builds, Native
 production/test compilation and style checks pass. Production-helper/Koin/registry/Parcel/lifecycle
-host assertions passed; actual NavDisplay, physical first draw, list geometry/restore, Back/IME and
-MainActivity/iPhone assertions remain unexecuted. The compound runtime checklists above remain
-unchecked and continue into Stage 6; source review does not establish physical acceptance.
+host assertions passed. The Xiaomi navigation gate executed six cases: outgoing reader shutdown
+and catalog return passed. The reviewed corrective round passed fresh-owner restoration and
+category/form/popup Back guards, plus both navigation neighbors. Home compatibility 11/11 and shared
+creation route 2/2 passed. MainActivity restoration and manual IME/visual acceptance remain pending;
+iPhone runtime is deferred by the user. Current runtime status is tracked in
+[progress](../../progress.md). Compound unchecked checklists continue into Stage 6; source review
+does not establish physical acceptance.
 
 Early slice/probe reviewed → S3 may choose transport. Full shell source reviewed → Stage 6. Report missing
 physical iPhone/unavailable runner precisely; compilation/host harness does not imply iPhone runtime.

@@ -6,18 +6,28 @@ Scope-revision baseline: `cfae0954d5749b00138c27999d92ceb1cae3d761`
 
 ## Current gate
 
-History scope is accepted: Day/Week/Month plus year context, existing month-bound week blocks,
-compact separately labelled global balance, no text search/filter UI. Search is a separate later
-destination. No product decision remains pending. The revised contract passed independent document
-review and is committed at `bebf1c5`. Stage 1 is implemented, checked and independently approved.
-S2.T1 consultation reads are implemented, checked and independently approved. The early S5.T1
-saved-owner/Koin probe and S3.T1 projection are independently approved. S3.T2 and cumulative Stage 3 are independently approved at `343fb1d`;
-S4.T1 source-stage is independently approved at `7ca41d4`. Full S5.T1 shell is implemented/checked
-at `5126f53`; cumulative source review is approved. S6 real-graph integration and whole-wave source
-review are approved at `e093eb4`.
-Source work is ready for the remaining physical verification; no product acceptance is claimed.
-Compiled device assertions remain unexecuted and continue into Stage 6. No whole-wave completion, merge or physical acceptance
-is claimed.
+History is implemented and independently source-reviewed: Day/Week/Month, year context, month-bound
+week blocks and a separately labelled compact global balance. Search remains deferred. Whole-wave
+production source is approved at `e093eb4`; reviewed Android fixture corrections finish at `12c5541`.
+
+The Android/Xiaomi round is verified; the user explicitly ended further testing after the important
+checks. Integration approval remains a separate step. The six UI/navigation
+assertions that initially failed now have passing corrective checks, with no weakened visibility or
+navigation guards. The shortened isolated volume case passed once in 8.669s, preserving all 10,000
+selected rows and excluding 4,000 foreign-currency and 4,000 outside-date rows. Indexed read took
+308.784ms and projection 62.835ms on the debug test APK; these are target observations, not a capacity
+limit or a leak claim. Source, artifact and runtime results received independent focused review.
+
+The installed production APK matches the built artifact. Actual MainActivity checks confirmed
+historical blocks, Home/History selection retention, year-menu Back, category cancellation, amount
+keyboard dismissal, landscape/portrait recreation and saved-Activity restoration in a new process.
+Cold launch restored Home and fresh History Day/today defaults while visible financial values
+persisted. Spanish resources/light mode were exercised and original locale/theme/rotation restored.
+The real midnight resume followed October 5→6 without a fabricated date or production test data.
+
+The user explicitly deferred iPhone runtime verification. iOS remains a follow-up; Native compilation
+is not runtime proof. TalkBack, additional physical devices and every supported locale are not claimed
+as exercised in this round. Product approval, merge and feature compaction remain pending.
 
 ## Implemented and verified
 
@@ -29,9 +39,9 @@ is claimed.
 | S5.T1 early transport | `ace07b9`; four executed host probes, Native/host compilation/regression boundary in report, Detekt/ktfmt pass | Independent review approved; full shell/device proof remains later |
 | S3.T1 projection | `f70a363`; 16 focused host tests, Native test compilation, Detekt/ktfmt pass | Independent review approved; no findings |
 | S3.T2 state | `343fb1d`; 236 host tests, Android build, Native production/test compilation, Detekt/ktfmt pass | Independent cumulative Stage 3 review approved after readonly picker contract fix |
-| S4.T1 UI | `7ca41d4`; 240 host tests, Android build, Native production/test compilation, device fixture compilation, Detekt/ktfmt pass | Independent source-stage review approved after visibility-aware chip fix; device assertions unconfirmed |
-| S5.T1 shell | `5126f53`; 251 host tests, Android app/test APK builds, Native production/test compilation, Detekt/ktfmt pass | Independent source-stage review approved after compatible Home cache fix; device assertions unexecuted |
-| S6.T1 graph | `e093eb4`; 258 host tests, Android app/test APK builds, Native production/test compilation, Detekt/ktfmt pass | Whole-wave source review approved after wrong-type checkpoint fix; targets/profile/product approval open |
+| S4.T1 UI | `7ca41d4`; 240 host tests, Android build, Native production/test compilation, device fixture compilation, Detekt/ktfmt pass | Independent source-stage review approved after visibility-aware chip fix; Android behavioral gate passed; user acceptance pending |
+| S5.T1 shell | `5126f53`; 251 host tests, Android app/test APK builds, Native production/test compilation, Detekt/ktfmt pass | Independent source-stage review approved after compatible Home cache fix; Android navigation gate passed; user acceptance pending |
+| S6.T1 graph | `e093eb4`; 258 host tests, Android app/test APK builds, Native production/test compilation, Detekt/ktfmt pass | Whole-wave source review approved after wrong-type checkpoint fix; Android round passed; iOS deferred; user acceptance pending |
 
 These checks belong to the recorded implementation tree, not to unimplemented History behavior.
 The normalization still serves category search and future Search; History does not consume it.
@@ -48,9 +58,9 @@ Native compilation is not iPhone runtime evidence. No emulator/simulator was run
 | S5.T1 early gate | Implemented/checked/reviewed; stable parent creation extras required in full shell |
 | S3.T1 | Implemented/checked/reviewed; pure History rows/count/totals |
 | S3.T2 | Implemented/checked/reviewed; full picker identity distinct from read range |
-| S4.T1 | Source implemented/checked/reviewed; runtime assertion checklists continue into Stage 6 |
-| S5.T1 full shell | Source implemented/checked/reviewed; runtime assertions continue into Stage 6 |
-| S6.T1 | Source implemented/checked/reviewed; target/runtime/profile/user acceptance pending |
+| S4.T1 | Source and Android UI checks reviewed; product acceptance pending |
+| S5.T1 full shell | Source and Android navigation checks reviewed; product acceptance pending |
+| S6.T1 | Source/Android runtime/volume reviewed; iOS deferred; user acceptance pending |
 | S1.T3 / S2.T2 / S3.T3 / S4.T2 | Deferred Search proposals; no implementation or current dependency |
 
 ## Coordination and evidence boundaries
@@ -60,17 +70,17 @@ Native compilation is not iPhone runtime evidence. No emulator/simulator was run
   originating creation-session callback identity and real navigation ownership integration.
 - Early S5.T1 establishes decorated-entry/Koin/saved-owner restoration with new owners/stores and lazy
   typed-input checkpoints. Actual Activity Intent extras require stable parent creation extras; the
-  full shell must retain that tested seam. Full-shell NavDisplay/scroll/Back/device proof remains later.
+  full shell retains that tested seam. Actual Android shell/Back/new-owner and MainActivity recreation
+  checks passed; iOS runtime remains deferred.
 - Android saved-owner/Activity restoration and iOS retained-controller/saveable scope are separate
   contracts. A fresh iOS process starts normally; no cross-process bridge or new persistence is planned.
-- Physical Xiaomi `M2012K11AG` / `aaa9cea2` was confirmed for a focused self-targeted test APK attempt.
-  The runner started one case but completed none before interruption; no assertion pass is claimed.
-  Diagnosis located host Activity startup before the test body, with locked/off device state and a
-  matching vendor rejection. Test-only orphan/debugger cleanup completed; production data untouched.
-  Awake/unlocked launch readiness is pending. No production installation/physical acceptance has run.
-- iPhone 15 Pro now reports available/paired over local network, developer mode enabled, but requires
-  passcode and DDI services remain unavailable. Xcode 26.6/device 26.7.1 were read-only discoveries;
-  no installation/signing/SDK change or runtime pass. Native compilation supplies no runtime evidence.
+- Physical Xiaomi `M2012K11AG` / `aaa9cea2` ran the UI/navigation and bounded volume checks through
+  a fresh foreground self-test process and the supported `--no-restart` option. The default runner's
+  MIUI background-start block was bypassed through normal foreground launch, with no permission change.
+  Failed fixtures were diagnosed and corrected; only affected cases/neighbors and one shortened volume
+  repeat were run. Production data was preserved; no production fixture seeding or synthetic save.
+- iPhone runtime is deferred by explicit user instruction. No iPhone installation, signing, SDK or
+  developer-image change occurred. Existing Native compilation is the available iOS evidence.
 - One owner runs implementation/Gradle at a time. Each stage receives independent cumulative review;
   the runtime thread limit requires reusing the dedicated reviewer with a bounded assignment.
 - Temporary audit reports live in ignored `.superpowers/sdd/README/`; this revision records its own
@@ -78,6 +88,6 @@ Native compilation is not iPhone runtime evidence. No emulator/simulator was run
 
 ## Next action
 
-Provide an awake/unlocked authorized physical target, verify the test-host launch gate and execute
-the pending UI/visual/profile checks. Then obtain user product approval before merge/feature
-compaction. Deferred Search tasks are not gates.
+The testing round is closed at the user's request. Keep the implementation and evidence committed;
+handle integration approval separately under `docs/README.md`, retaining deferred Search/iOS work.
+No additional testing, merge or worktree cleanup is implied by ending this round.
