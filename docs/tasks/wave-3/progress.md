@@ -13,7 +13,9 @@ review and is committed at `bebf1c5`. Stage 1 is implemented, checked and indepe
 S2.T1 consultation reads are implemented, checked and independently approved. The early S5.T1
 saved-owner/Koin probe and S3.T1 projection are independently approved. S3.T2 and cumulative Stage 3 are independently approved at `343fb1d`;
 S4.T1 source-stage is independently approved at `7ca41d4`. Full S5.T1 shell is implemented/checked
-at `5126f53`; cumulative source review is approved. S6 real-graph integration is next.
+at `5126f53`; cumulative source review is approved. S6 real-graph integration and whole-wave source
+review are approved at `e093eb4`.
+Source work is ready for the remaining physical verification; no product acceptance is claimed.
 Compiled device assertions remain unexecuted and continue into Stage 6. No whole-wave completion, merge or physical acceptance
 is claimed.
 
@@ -29,6 +31,7 @@ is claimed.
 | S3.T2 state | `343fb1d`; 236 host tests, Android build, Native production/test compilation, Detekt/ktfmt pass | Independent cumulative Stage 3 review approved after readonly picker contract fix |
 | S4.T1 UI | `7ca41d4`; 240 host tests, Android build, Native production/test compilation, device fixture compilation, Detekt/ktfmt pass | Independent source-stage review approved after visibility-aware chip fix; device assertions unconfirmed |
 | S5.T1 shell | `5126f53`; 251 host tests, Android app/test APK builds, Native production/test compilation, Detekt/ktfmt pass | Independent source-stage review approved after compatible Home cache fix; device assertions unexecuted |
+| S6.T1 graph | `e093eb4`; 258 host tests, Android app/test APK builds, Native production/test compilation, Detekt/ktfmt pass | Whole-wave source review approved after wrong-type checkpoint fix; targets/profile/product approval open |
 
 These checks belong to the recorded implementation tree, not to unimplemented History behavior.
 The normalization still serves category search and future Search; History does not consume it.
@@ -47,7 +50,7 @@ Native compilation is not iPhone runtime evidence. No emulator/simulator was run
 | S3.T2 | Implemented/checked/reviewed; full picker identity distinct from read range |
 | S4.T1 | Source implemented/checked/reviewed; runtime assertion checklists continue into Stage 6 |
 | S5.T1 full shell | Source implemented/checked/reviewed; runtime assertions continue into Stage 6 |
-| S6.T1 | Active next increment; real form/database/Home/History graph and persistence, then target/full-wave review |
+| S6.T1 | Source implemented/checked/reviewed; target/runtime/profile/user acceptance pending |
 | S1.T3 / S2.T2 / S3.T3 / S4.T2 | Deferred Search proposals; no implementation or current dependency |
 
 ## Coordination and evidence boundaries
@@ -65,7 +68,9 @@ Native compilation is not iPhone runtime evidence. No emulator/simulator was run
   Diagnosis located host Activity startup before the test body, with locked/off device state and a
   matching vendor rejection. Test-only orphan/debugger cleanup completed; production data untouched.
   Awake/unlocked launch readiness is pending. No production installation/physical acceptance has run.
-- iPhone 15 Pro currently reports unavailable; Native compilation supplies no runtime evidence.
+- iPhone 15 Pro now reports available/paired over local network, developer mode enabled, but requires
+  passcode and DDI services remain unavailable. Xcode 26.6/device 26.7.1 were read-only discoveries;
+  no installation/signing/SDK change or runtime pass. Native compilation supplies no runtime evidence.
 - One owner runs implementation/Gradle at a time. Each stage receives independent cumulative review;
   the runtime thread limit requires reusing the dedicated reviewer with a bounded assignment.
 - Temporary audit reports live in ignored `.superpowers/sdd/README/`; this revision records its own
@@ -73,4 +78,6 @@ Native compilation is not iPhone runtime evidence. No emulator/simulator was run
 
 ## Next action
 
-Execute S6 real-graph integration/verification, then physical acceptance and full-wave review. Deferred Search tasks are not gates.
+Provide an awake/unlocked authorized physical target, verify the test-host launch gate and execute
+the pending UI/visual/profile checks. Then obtain user product approval before merge/feature
+compaction. Deferred Search tasks are not gates.

@@ -28,18 +28,18 @@ Skills: `android-dev`, `android-testing`, `android-debugging` for actual failure
 Use file-backed SQLite for persistence, collectors active before writes and one shared virtual scheduler.
 Close scopes/preferences factory/drivers/collectors and delete only test-owned fixtures.
 
-- [ ] Bootstrap actual categories/preferences; collect Home/History using the same database.
-- [ ] Create gasto/ingreso inside selected period through AddMovimientoViewModel; both observers react,
+- [x] Bootstrap actual categories/preferences; collect Home/History using the same database.
+- [x] Create gasto/ingreso inside selected period through AddMovimientoViewModel; both observers react,
       exact period/global totals update, period count/groups agree and selection remains unchanged.
-- [ ] Create outside-range item; global changes, period rows/count/totals do not. No manual refresh.
-- [ ] Interleave foreign currencies with recent matching rows; History never mixes units. Check Home
+- [x] Create outside-range item; global changes, period rows/count/totals do not. No manual refresh.
+- [x] Interleave foreign currencies with recent matching rows; History never mixes units. Check Home
       compatibility and fix its post-LIMIT filter seam only if a focused accepted regression fails.
-- [ ] Insert/remove previous/current year rows; available years update without resetting selection or
+- [x] Insert/remove previous/current year rows; available years update without resetting selection or
       removing selected retained year. Date/timezone resume follows accepted live-today policy.
-- [ ] Update category/unknown-label presentation without changing amounts; visible fallback/row title
+- [x] Update category/unknown-label presentation without changing amounts; visible fallback/row title
       stays correct, no normalization/matching/index is required.
-- [ ] Save/read failures preserve draft/selection as relevant; retry cannot duplicate save or reset dates.
-- [ ] Reopen the same on-disk file to prove movement persistence and clean repository subscriptions.
+- [x] Save/read failures preserve draft/selection as relevant; retry cannot duplicate save or reset dates.
+- [x] Reopen the same on-disk file to prove movement persistence and clean repository subscriptions.
 - [ ] Actual shell state retains/restores route/selection/scroll under supported platform scope and keeps
       one creation owner. Search/Profile remain inert; Home search does not open History.
 
@@ -81,22 +81,33 @@ cross-process host persistence just to make acceptance wording pass.
 
 ## Final checks, review and closure
 
-- [ ] `./gradlew :shared:testAndroidHostTest`.
-- [ ] `./gradlew :shared:compileKotlinIosArm64 :shared:compileTestKotlinIosSimulatorArm64` (compilation only).
-- [ ] `./gradlew detekt ktfmtCheck`.
-- [ ] `./gradlew :androidApp:assembleDebug :shared:compileAndroidDeviceTest`;
-      `:shared:assembleAndroidDeviceTest` and `:shared:connectedAndroidDeviceTest` for assembled test APK/
-      execution on the confirmed physical target. Do not claim unavailable/stalled execution passed.
+- [x] `./gradlew :shared:testAndroidHostTest`.
+- [x] `./gradlew :shared:compileKotlinIosArm64 :shared:compileTestKotlinIosSimulatorArm64` (compilation only).
+- [x] `./gradlew detekt ktfmtCheck`.
+- [x] `./gradlew :androidApp:assembleDebug :shared:compileAndroidDeviceTest
+      :shared:assembleAndroidDeviceTest` (app/test APK build and fixture compilation).
+- [ ] `:shared:connectedAndroidDeviceTest` executes on a confirmed awake/unlocked physical target;
+      the prior interrupted host-launch attempt proves no assertion pass.
 - [ ] Schema tasks only if measured schema/index change: `:shared:generateCommonMainTallybookDatabaseSchema`
       and `:shared:verifyCommonMainTallybookDatabaseMigration`; `:shared:verifySqlDelightMigration` available.
 - [ ] Record tree/command/target/result/limitations without financial data, credentials or local signing
       material. Task evidence is current; historical S1.T2 report alone does not prove new History.
-- [ ] Fresh whole-wave reviewer fixes in-scope findings and verifies relevant checks.
+- [x] Independent whole-wave source reviewer fixes in-scope findings and verifies relevant checks.
 - [ ] User tries this worktree's concrete History/creation scenarios on physical device and approves.
 - [ ] With approval compact delivered History/canonical owners, retain useful deferred Search proposals,
       preserve unresolved MVP gaps, commit/merge/archive under documented repository workflow.
 
 ## Completion boundary
+
+Source gate is approved at `e093eb4`: 258 host tests/58 suites, Android app/test APK builds, Native
+production/test compilation, Detekt0 and ktfmtCheck pass. Real form/SQL/DataStore/Home/History and
+closed-file persistence cases pass. Whole-wave review fixed supported wrong-type checkpoint fallback.
+No schema/index change occurred, so migration/schema tasks are not applicable.
+
+All actual UI/target assertions, Android MainActivity restoration, physical volume observations,
+accessibility/visual acceptance and iPhone retained-controller proof remain unexecuted. Host owner
+helpers and compiled fixtures do not close those checklists. Xiaomi remains locked/off; iPhone is
+paired over local network with passcode/developer-image readiness pending. Production data untouched.
 
 Accepted only with current checks/review and explicit physical product approval. Android/iPhone statuses
 are separate; missing target or stalled execution remains precisely unconfirmed. If the user accepts
