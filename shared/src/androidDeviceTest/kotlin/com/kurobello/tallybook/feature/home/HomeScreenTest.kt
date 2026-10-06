@@ -1,5 +1,6 @@
 package com.kurobello.tallybook.feature.home
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,7 +63,7 @@ class HomeScreenTest {
   fun outerShellKeepsBrandAndSearchVisibleWhileLoading() {
     val appName = localizedString(Res.string.app_name)
     val searchPlaceholder = localizedString(Res.string.home_search_placeholder)
-    composeRule.setContent { TallybookTheme { HomeScreen(HomeUiState.loading(), {}, {}) } }
+    composeRule.setContent { TallybookTheme { HostedHomeScreen(HomeUiState.loading(), {}, {}) } }
 
     composeRule
         .onNodeWithText(appName)
@@ -82,7 +83,7 @@ class HomeScreenTest {
       CompositionLocalProvider(
           LocalDensity provides Density(currentDensity.density, fontScale = 3f)
       ) {
-        TallybookTheme { HomeScreen(HomeUiState.loading(), {}, {}) }
+        TallybookTheme { HostedHomeScreen(HomeUiState.loading(), {}, {}) }
       }
     }
 
@@ -104,7 +105,7 @@ class HomeScreenTest {
   fun loadingExposesLocalizedProgressAndAddAction() {
     val loadingDescription = localizedString(Res.string.loading)
     val addMovementLabel = localizedString(Res.string.navigation_add_movement)
-    composeRule.setContent { TallybookTheme { HomeScreen(HomeUiState.loading(), {}, {}) } }
+    composeRule.setContent { TallybookTheme { HostedHomeScreen(HomeUiState.loading(), {}, {}) } }
 
     composeRule.onNodeWithContentDescription(loadingDescription).assertIsDisplayed()
     composeRule.onNodeWithContentDescription(addMovementLabel).assertIsDisplayed()
@@ -121,7 +122,7 @@ class HomeScreenTest {
             localizedString(Res.string.navigation_search),
             localizedString(Res.string.navigation_profile),
         )
-    composeRule.setContent { TallybookTheme { HomeScreen(HomeUiState.loading(), {}, {}) } }
+    composeRule.setContent { TallybookTheme { HostedHomeScreen(HomeUiState.loading(), {}, {}) } }
 
     navigationLabels.forEach { label ->
       composeRule.onNodeWithContentDescription(label).assertIsDisplayed()
@@ -130,18 +131,17 @@ class HomeScreenTest {
   }
 
   @Test
-  fun unfinishedNavigationDestinationsHaveNoClickAction() {
+  fun reservedNavigationDestinationsHaveNoClickAction() {
     val unavailableLabels =
         listOf(
-            Res.string.navigation_history,
             Res.string.navigation_search,
             Res.string.navigation_profile,
         )
-    composeRule.setContent { TallybookTheme { HomeScreen(HomeUiState.loading(), {}, {}) } }
+    composeRule.setContent { TallybookTheme { HostedHomeScreen(HomeUiState.loading(), {}, {}) } }
 
     composeRule
         .onNodeWithContentDescription(localizedString(Res.string.navigation_home))
-        .assertHasNoClickAction()
+        .assertHasClickAction()
     unavailableLabels.forEach { label ->
       composeRule
           .onNodeWithContentDescription(localizedString(label))
@@ -156,7 +156,7 @@ class HomeScreenTest {
   @Test
   fun emptyStateTitleIsAHeading() {
     val emptyTitle = localizedString(Res.string.home_empty_title)
-    composeRule.setContent { TallybookTheme { HomeScreen(emptyState, {}, {}) } }
+    composeRule.setContent { TallybookTheme { HostedHomeScreen(emptyState, {}, {}) } }
 
     composeRule
         .onNodeWithText(emptyTitle)
@@ -169,7 +169,9 @@ class HomeScreenTest {
     var additions = 0
     val emptyCtaLabel = localizedString(Res.string.home_add_first)
     val navigationAddLabel = localizedString(Res.string.navigation_add_movement)
-    composeRule.setContent { TallybookTheme { HomeScreen(emptyState, { additions += 1 }, {}) } }
+    composeRule.setContent {
+      TallybookTheme { HostedHomeScreen(emptyState, { additions += 1 }, {}) }
+    }
 
     composeRule.onNodeWithText(emptyCtaLabel).performClick()
     composeRule.onNodeWithContentDescription(navigationAddLabel).performClick()
@@ -183,7 +185,7 @@ class HomeScreenTest {
     val retryLabel = localizedString(Res.string.retry)
     composeRule.setContent {
       TallybookTheme {
-        HomeScreen(
+        HostedHomeScreen(
             HomeUiState.error(DataError.Local(IllegalStateException())),
             {},
             { retries += 1 },
@@ -202,7 +204,7 @@ class HomeScreenTest {
     val catalogLabel = localizedString(Res.string.ui_catalog_title)
     composeRule.setContent {
       TallybookTheme {
-        HomeScreen(
+        HostedHomeScreen(
             uiState = HomeUiState.loading(),
             onAddMovimiento = {},
             onRetry = {},
@@ -220,7 +222,7 @@ class HomeScreenTest {
   fun errorStateBecomesAPoliteLiveRegion() {
     val errorTitle = localizedString(Res.string.home_load_error_title)
     var uiState by mutableStateOf(HomeUiState.loading())
-    composeRule.setContent { TallybookTheme { HomeScreen(uiState, {}, {}) } }
+    composeRule.setContent { TallybookTheme { HostedHomeScreen(uiState, {}, {}) } }
 
     composeRule.runOnIdle { uiState = HomeUiState.error(DataError.Local(IllegalStateException())) }
 
@@ -237,7 +239,7 @@ class HomeScreenTest {
   @Test
   fun populatedStateShowsRecentMovimientoAndItsCategory() {
     val recentMovementsLabel = localizedString(Res.string.home_recent)
-    composeRule.setContent { TallybookTheme { HomeScreen(populatedState, {}, {}) } }
+    composeRule.setContent { TallybookTheme { HostedHomeScreen(populatedState, {}, {}) } }
 
     composeRule.onNodeWithText("Comida").assertIsDisplayed()
     composeRule.onNodeWithText(recentMovementsLabel).assertIsDisplayed()
@@ -283,5 +285,26 @@ class HomeScreenTest {
             categoriasById = mapOf(categoria.id to categoria),
             error = null,
         )
+  }
+}
+
+@androidx.compose.runtime.Composable
+private fun HostedHomeScreen(
+    uiState: HomeUiState,
+    onAddMovimiento: () -> Unit,
+    onRetry: () -> Unit,
+    onOpenCatalog: (() -> Unit)? = null,
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
+) {
+  com.kurobello.tallybook.core.ui.layout.TallybookAppShell(
+      modifier = modifier.fillMaxSize(),
+      bottomBar = {
+        com.kurobello.tallybook.core.ui.navigation.TallybookBottomNavigation(
+            onAddMovement = onAddMovimiento,
+            onSelectDestination = {},
+        )
+      },
+  ) { clearance ->
+    HomeScreen(uiState, onAddMovimiento, onRetry, onOpenCatalog, bottomBarClearance = clearance)
   }
 }

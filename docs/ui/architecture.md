@@ -364,20 +364,40 @@ The approved order and ownership are:
 
 | Position | Role | Expected frequency | Current behavior |
 |---|---|---:|---|
-| Home | Primary destination | Daily | Selected and visible |
-| History | Primary destination | Frequent | Reserved icon; inert until the destination exists |
+| Home | Primary destination | Daily | Enabled; fresh launch starts here |
+| History | Primary destination | Frequent | Enabled; retained period and scroll |
 | Add movement | Contextual action | Frequent | Opens the existing movement sheet |
 | Search | Primary destination | Frequent | Reserved icon; inert until the destination exists |
 | Profile | Secondary surface | Occasional | Reserved icon; inert until the surface exists |
 
 The bar uses icons without visible labels. Every icon still has a localized accessibility description.
 Unavailable positions expose neither click nor selection semantics. The centered Add movement action
-is the only interactive item and replaces the former Home floating action button.
+opens the shared creation session; Home and History expose selected tab semantics.
 
-While Home is the only implemented destination, it supplies the bar through `TallybookScreenFrame`'s
-bottom-bar slot. The bar owns the bottom safe area and publishes a tokenized content clearance. Once a
-second destination exists, `TallybookAppShell` becomes the persistent owner without changing the bar
-component or Home's content components.
+`TallybookAppShell` measures the persistent bar before composing primary content and publishes its
+actual occupied clearance, including its sole bottom safe inset. Home and History use the screen
+frame's top/horizontal window insets and zero bottom floor; their lists add that clearance once.
+Standalone/catalog frame defaults preserve `max(bottom safe inset, bottom floor)`. The creation sheet
+retains its own safe/IME policy.
+
+`TallybookNavHost` owns a small typed visited/selected navigation snapshot. Home always has an entry;
+History is visited lazily and retained when hidden. Official saveable and ViewModel decorators are
+hoisted above the active display, in that order, with stable content keys and parent creation extras.
+Snapshotting extras for each parent lifetime prevents Activity Intent Bundles from resetting stores.
+Tabs select existing entries; History root Back selects Home, Home root delegates platform exit, and
+catalog Back returns to the previous primary. Search/Profile and the Home search surface remain inert.
+
+Home/History repository observations use five-second subscription sharing. Feature routes revalidate
+before lifecycle collection and present honest loading state from their first activation frame.
+Temporary loading/error lists use unsaved scroll state so they cannot clamp the retained content
+position before fresh rows arrive. Typed History input is checkpointed lazily from its sole ViewModel
+owner; rows, jobs and changed creation drafts are never saved.
+
+One shell-owned creation session/store survives its hide transition and clears after its originating
+hidden callback. Keyed callbacks carry that origin token; a delayed old completion cannot clear a new
+session. Navigation stays fixed while the modal is open or closing. Session UI uses an ephemeral
+saveable boundary, so a recreated shell starts a fresh draft. Android saved-owner recreation differs
+from iOS retained-controller/saveable scope; a fresh iOS process starts with normal cold-launch defaults.
 
 ## Incremental migration
 
@@ -493,5 +513,5 @@ toggle or fourth annual scope. Search remains a separate future destination.
 ## Remaining product decisions
 
 The bottom navigation pattern, ordered positions, and centered placement of `Create movimiento` are
-decided. History, Search, and Profile remain visual reservations without actions until their features
-are implemented.
+decided. Home and History are enabled. Search and Profile remain visual reservations without actions
+until their separate features are implemented.

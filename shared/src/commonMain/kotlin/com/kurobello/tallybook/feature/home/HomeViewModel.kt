@@ -12,16 +12,21 @@ import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingCommand
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class HomeViewModel(
@@ -31,16 +36,43 @@ internal class HomeViewModel(
     scope: CoroutineScope? = null,
 ) : ViewModel() {
 
-  private val coroutineScope = scope ?: viewModelScope
-  private val retryRequests = MutableStateFlow(0)
+  private val retryRequests = MutableStateFlow(0L)
+  private var observationEpoch = 0L
+  val uiState: StateFlow<HomeUiState>
+    field = MutableStateFlow(HomeUiState.loading())
 
-  val uiState =
-      retryRequests
-          .flatMapLatest { observeHomeState() }
-          .stateIn(coroutineScope, SharingStarted.Eagerly, HomeUiState.loading())
+  private val producer =
+      (scope ?: viewModelScope).launch(start = CoroutineStart.UNDISPATCHED) {
+        SharingStarted.WhileSubscribed(HOME_STOP_TIMEOUT_MILLIS)
+            .command(uiState.subscriptionCount)
+            .onEach {
+              observationEpoch += 1
+              uiState.update { it.revalidating() }
+            }
+            .collectLatest { command ->
+              if (command == SharingCommand.START) {
+                val epoch = observationEpoch
+                retryRequests
+                    .flatMapLatest { revision -> observeHomeState().map { revision to it } }
+                    .collect { (revision, state) ->
+                      uiState.update { current ->
+                        if (epoch == observationEpoch && revision == retryRequests.value) state
+                        else current
+                      }
+                    }
+              }
+            }
+      }
 
   fun retry() {
     retryRequests.update { it + 1 }
+    uiState.update { it.revalidating() }
+  }
+
+  fun onResume() = retry()
+
+  override fun onCleared() {
+    producer.cancel()
   }
 
   private fun observeHomeState(): Flow<HomeUiState> =
@@ -149,3 +181,7 @@ private fun <T> LoadState<T>.errorOrNull(): DataError? =
     (this as? LoadState.Value)?.outcome.let { it as? DataOutcome.Failure }?.error
 
 private const val HOME_RECENT_LIMIT = 6
+
+private const val HOME_STOP_TIMEOUT_MILLIS = 5_000L
+
+internal fun HomeUiState.revalidating(): HomeUiState = copy(isLoading = true, error = null)

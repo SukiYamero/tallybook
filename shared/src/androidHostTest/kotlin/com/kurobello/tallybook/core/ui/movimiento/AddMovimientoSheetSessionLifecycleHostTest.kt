@@ -1,4 +1,4 @@
-package com.kurobello.tallybook.feature.home
+package com.kurobello.tallybook.core.ui.movimiento
 
 import androidx.compose.runtime.AbstractApplier
 import androidx.compose.runtime.Composition
@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
-class HomeSheetSessionLifecycleHostTest {
+class AddMovimientoSheetSessionLifecycleHostTest {
 
   @OptIn(ExperimentalCoroutinesApi::class)
   @Test
@@ -44,7 +44,7 @@ class HomeSheetSessionLifecycleHostTest {
 
     try {
       composition.setContent {
-        activeSession.value?.let { session -> HomeSheetSessionLifecycle(session) }
+        activeSession.value?.let { session -> AddMovimientoSheetSessionLifecycle(session) }
       }
       runCurrent()
 

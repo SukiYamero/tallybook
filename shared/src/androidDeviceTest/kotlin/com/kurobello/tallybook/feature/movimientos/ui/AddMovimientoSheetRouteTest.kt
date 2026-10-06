@@ -3,6 +3,7 @@ package com.kurobello.tallybook.feature.movimientos.ui
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
@@ -75,6 +76,33 @@ class AddMovimientoSheetRouteTest {
 
       assertEquals(1, movementRepository.inserted.size)
       assertEquals(1, dismissCount)
+    } finally {
+      scope.cancel()
+    }
+  }
+
+  @Test
+  fun hiddenCompletionIsDeliveredOnceAfterClosingTheActualRoute() {
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    val viewModel = createViewModel(FakeMovimientoRepository(), scope)
+    var visible by mutableStateOf(true)
+    var hidden by mutableIntStateOf(0)
+    try {
+      composeRule.setContent {
+        TallybookTheme {
+          AddMovimientoSheetRoute(
+              visible = visible,
+              onDismiss = { visible = false },
+              onHidden = { hidden += 1 },
+              viewModel = viewModel,
+          )
+        }
+      }
+      composeRule.waitForIdle()
+      composeRule.runOnIdle { visible = false }
+      composeRule.waitUntil(5_000) { hidden == 1 }
+      composeRule.waitForIdle()
+      composeRule.runOnIdle { assertEquals(1, hidden) }
     } finally {
       scope.cancel()
     }

@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -50,7 +52,12 @@ internal fun HistoryScreen(
     modifier: Modifier = Modifier,
 ) {
   require(bottomBarClearance >= TallybookTheme.spacing.space0)
-  val listState = rememberLazyListState()
+  val contentListState = rememberLazyListState()
+  // A short loading list must not clamp restored row position before fresh rows arrive.
+  val pendingListState = remember { LazyListState() }
+  val listState =
+      if (uiState.period.cachedValue == null && !uiState.isEmpty) pendingListState
+      else contentListState
   val listDescription = stringResource(Res.string.navigation_history)
   TallybookScreenFrame(
       modifier = modifier,

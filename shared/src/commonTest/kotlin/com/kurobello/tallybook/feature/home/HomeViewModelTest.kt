@@ -1,5 +1,6 @@
 package com.kurobello.tallybook.feature.home
 
+import androidx.lifecycle.ViewModelStore
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
@@ -24,11 +25,15 @@ import kotlin.test.assertTrue
 import kotlin.time.Instant
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
@@ -177,18 +182,86 @@ class HomeViewModelTest {
     assertEquals(0, movimientos.insertCalls)
   }
 
+  @Test
+  fun readsOnlyWithConsumersAndMarksFirstReentryStaleAfterHiddenWrite() = runTest {
+    val preferences = FakePreferencesRepository(readyPreferences(Moneda.USD))
+    val movimientos =
+        FakeMovimientoRepository(
+            recent = DataOutcome.Success(emptyList()),
+            summary = DataOutcome.Success(summary(Moneda.USD)),
+        )
+    val categorias = FakeCategoriaRepository(DataOutcome.Success(emptyList()))
+    val vm = HomeViewModel(preferences, movimientos, categorias, backgroundScope)
+    runCurrent()
+    assertEquals(0, preferences.subscriptionCount)
+    val collector = backgroundScope.launch { vm.uiState.collect {} }
+    val second = backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+    assertEquals(1, preferences.subscriptionCount)
+    assertFalse(vm.uiState.value.isLoading)
+    collector.cancel()
+    second.cancel()
+    runCurrent()
+    advanceTimeBy(4_999)
+    runCurrent()
+    assertEquals(1, movimientos.activeRecent)
+    advanceTimeBy(1)
+    runCurrent()
+    assertEquals(0, movimientos.activeRecent)
+    assertTrue(vm.uiState.value.isLoading)
+    val hidden = movimiento("hidden", Moneda.USD, "food")
+    movimientos.invalidateAfterInsert(hidden)
+    var first: HomeUiState? = null
+    backgroundScope.launch { vm.uiState.take(1).collect { first = it } }
+    runCurrent()
+    assertTrue(requireNotNull(first).isLoading)
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+    assertEquals(listOf(hidden), vm.uiState.value.recent)
+  }
+
+  @Test
+  fun clearingHomeStopsOwnedReadsWithoutCancelingInjectedScope() = runTest {
+    val movimientos =
+        FakeMovimientoRepository(
+            recent = DataOutcome.Success(emptyList()),
+            summary = DataOutcome.Success(summary(Moneda.USD)),
+        )
+    val viewModel =
+        createViewModel(
+            FakePreferencesRepository(readyPreferences(Moneda.USD)),
+            movimientos,
+            FakeCategoriaRepository(DataOutcome.Success(emptyList())),
+            backgroundScope,
+        )
+    val sibling = backgroundScope.launch { awaitCancellation() }
+    runCurrent()
+    assertEquals(1, movimientos.activeRecent)
+    ViewModelStore().apply {
+      put("home", viewModel)
+      clear()
+    }
+    runCurrent()
+    assertEquals(0, movimientos.activeRecent)
+    assertTrue(sibling.isActive)
+  }
+
   private fun createViewModel(
       preferences: AppPreferencesRepository,
       movimientos: MovimientoRepository = FakeMovimientoRepository(),
       categorias: CategoriaRepository = FakeCategoriaRepository(),
       scope: CoroutineScope,
-  ) =
-      HomeViewModel(
-          preferencesRepository = preferences,
-          movimientoRepository = movimientos,
-          categoriaRepository = categorias,
-          scope = scope,
-      )
+  ): HomeViewModel {
+    val viewModel =
+        HomeViewModel(
+            preferencesRepository = preferences,
+            movimientoRepository = movimientos,
+            categoriaRepository = categorias,
+            scope = scope,
+        )
+    scope.launch { viewModel.uiState.collect {} }
+    return viewModel
+  }
 
   private class FakePreferencesRepository(
       initial: DataOutcome<AppPreferencesState>? = null,
@@ -222,6 +295,9 @@ class HomeViewModelTest {
     var insertCalls = 0
       private set
 
+    var activeRecent = 0
+      private set
+
     var recentSubscriptions = 0
       private set
 
@@ -230,7 +306,12 @@ class HomeViewModelTest {
 
     override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = flow {
       recentSubscriptions += 1
-      emitAll(recentValues.filterNotNull())
+      activeRecent += 1
+      try {
+        emitAll(recentValues.filterNotNull())
+      } finally {
+        activeRecent -= 1
+      }
     }
 
     override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> = flow {

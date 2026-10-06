@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -56,6 +57,7 @@ internal fun TallybookBottomNavigation(
     onAddMovement: () -> Unit,
     modifier: Modifier = Modifier,
     selectedDestination: Destination? = Home,
+    onSelectDestination: ((Destination) -> Unit)? = null,
 ) {
   Column(
       modifier = modifier.fillMaxWidth().background(TallybookTheme.colors.navigation.surface),
@@ -79,11 +81,14 @@ internal fun TallybookBottomNavigation(
           icon = Lucide.House,
           label = stringResource(Res.string.navigation_home),
           selected = selectedDestination == Home,
+          onClick = onSelectDestination?.let { { it(Home) } },
           modifier = Modifier.weight(1f),
       )
       BottomNavigationIcon(
           icon = Lucide.History,
           label = stringResource(Res.string.navigation_history),
+          selected = selectedDestination == History,
+          onClick = onSelectDestination?.let { { it(History) } },
           modifier = Modifier.weight(1f),
       )
       BottomNavigationAdd(
@@ -116,9 +121,24 @@ private fun BottomNavigationIcon(
     label: String,
     modifier: Modifier = Modifier,
     selected: Boolean = false,
+    onClick: (() -> Unit)? = null,
 ) {
   Box(
-      modifier = modifier.fillMaxHeight(),
+      modifier =
+          modifier
+              .fillMaxHeight()
+              .then(
+                  if (onClick != null)
+                      Modifier.selectable(
+                          selected = selected,
+                          role = Role.Tab,
+                          interactionSource = remember { MutableInteractionSource() },
+                          indication = null,
+                          onClick = onClick,
+                      )
+                  else Modifier
+              )
+              .semantics { contentDescription = label },
       contentAlignment = Alignment.Center,
   ) {
     Box(
@@ -134,10 +154,7 @@ private fun BottomNavigationIcon(
                       Modifier
                     }
                 )
-                .semantics {
-                  contentDescription = label
-                  if (selected) this.selected = true
-                },
+                .semantics { if (onClick != null) this.selected = selected },
         contentAlignment = Alignment.Center,
     ) {
       Image(
