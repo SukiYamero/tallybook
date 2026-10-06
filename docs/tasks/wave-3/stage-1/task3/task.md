@@ -5,13 +5,13 @@
 > unresolved Search decisions are inactive. Rebase them against delivered History/canonical rules
 > in a separately authorized Search plan before execution. It neither blocks nor enables History;
 > no Search UI, filter/criteria, structural SQL, projection, DI or navigation work is authorized now.
-> Use the [active History contract](../../README.md) and stage overview for current dependencies.
+> Use the [deferred Search index](../../README.md); re-plan dependencies before execution.
 
 
 ## Objective and context
 
 Define Search's typed non-text filters and transactional edit rules from the
-[wave contract](../../README.md), the supplied visual guide and Moneta's actual reference. The user
+[deferred Search proposals](../../README.md), the supplied visual guide and Moneta's actual reference. The user
 confirmed Apply commits and dismissal discards; Moneta's live-filter implementation is not this contract.
 Follows task1 for shared date-range and canonical-document ownership.
 

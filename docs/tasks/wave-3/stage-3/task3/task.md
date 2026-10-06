@@ -5,12 +5,12 @@
 > unresolved Search decisions are inactive. Rebase them against delivered History/canonical rules
 > in a separately authorized Search plan before execution. It neither blocks nor enables History;
 > no Search UI, filter/criteria, structural SQL, projection, DI or navigation work is authorized now.
-> Use the [active History contract](../../README.md) and stage overview for current dependencies.
+> Use the [deferred Search index](../../README.md); re-plan dependencies before execution.
 
 
 ## Objective and context
 
-Implement independent Search state for the [wave contract](../../README.md), especially confirmed
+Implement independent Search state for the [deferred Search proposals](../../README.md), especially confirmed
 draft/apply/dismiss behavior. Requires reviewed Stage 2 and shared text/projection conventions.
 May run beside History task2; serialize the shared Koin edit through the orchestrator.
 

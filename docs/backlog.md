@@ -4,11 +4,11 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 
 ## Alta
 
-- **iOS end-to-end** — `commonMain` y los tests compilan para `iosSimulatorArm64`, pero este host no
-  tiene runtimes ni simuladores instalados en Xcode, por lo que `iosSimulatorArm64Test` todavía no se
-  puede ejecutar. Falta: instalar un runtime iOS y correr ese test; luego, para el dispositivo físico,
-  iniciar sesión con Apple ID en Xcode, habilitar Developer Mode en el iPhone, completar `TEAM_ID` en
-  `iosApp/Configuration/Config.xcconfig` y ejecutar con Cmd+R.
+- **iOS physical end-to-end** — Shared production/test sources compile for Native, but physical
+  iPhone runtime validation remains pending and was explicitly deferred for History. Confirm the
+  authorized connected iPhone and developer services, then run the app from Xcode using the existing
+  shared `TEAM_ID`. Validate Home/History, creation, lifecycle and safe areas. Compilation does not
+  establish runtime behavior; follow the physical-device policy in `AGENTS.md`.
 
 ## Media
 

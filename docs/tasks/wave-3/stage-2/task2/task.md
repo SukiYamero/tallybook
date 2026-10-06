@@ -5,12 +5,12 @@
 > unresolved Search decisions are inactive. Rebase them against delivered History/canonical rules
 > in a separately authorized Search plan before execution. It neither blocks nor enables History;
 > no Search UI, filter/criteria, structural SQL, projection, DI or navigation work is authorized now.
-> Use the [active History contract](../../README.md) and stage overview for current dependencies.
+> Use the [deferred Search index](../../README.md); re-plan dependencies before execution.
 
 
 ## Objective and context
 
-Expose reactive Search reads for the confirmed [wave contract](../../README.md), including All history
+Expose reactive Search reads for the confirmed [deferred Search proposals](../../README.md), including All history
 without fake bounds or silent result caps. Requires reviewed Stage 1 and task1 repository work.
 
 Skills: `android-dev`, `android-data-layer`, `kotlin-flows`, `kotlin-coroutines`, `android-testing`,
