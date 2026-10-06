@@ -52,6 +52,7 @@ import com.composables.icons.lucide.ChevronDown
 import com.composables.icons.lucide.ChevronLeft
 import com.composables.icons.lucide.ChevronRight
 import com.composables.icons.lucide.Lucide
+import com.kurobello.tallybook.core.model.FIRST_SELECTABLE_YEAR
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.DayOfWeek
@@ -239,6 +240,8 @@ private fun TallybookDateCalendar(
     onYearSelected: (Int) -> Unit,
     onDateSelected: (LocalDate) -> Unit,
 ) {
+  val years = selectableYears(selectedDate, maxDate)
+  val canNavigateBackward = visibleMonth > YearMonth(years.first, Month.JANUARY)
   val canNavigateForward = maxDate == null || visibleMonth < YearMonth(maxDate.year, maxDate.month)
   TallybookSurface(
       modifier = Modifier.widthIn(max = TallybookTheme.dimensions.datePickerMaximumWidth),
@@ -264,6 +267,7 @@ private fun TallybookDateCalendar(
             onClick = onPreviousMonth,
             icon = Lucide.ChevronLeft,
             contentDescription = stringResource(Res.string.calendar_previous_month),
+            enabled = canNavigateBackward,
         )
         Row(
             modifier =
@@ -299,7 +303,7 @@ private fun TallybookDateCalendar(
       if (isYearSelectorOpen) {
         TallybookYearSelector(
             selectedYear = visibleMonth.year,
-            years = selectableYears(selectedDate, maxDate),
+            years = years,
             onYearSelected = onYearSelected,
         )
       } else {
@@ -317,7 +321,7 @@ private fun TallybookDateCalendar(
         monthGridDates(visibleMonth, firstDayOfWeek).chunked(DAYS_IN_WEEK).forEach { week ->
           Row(modifier = Modifier.fillMaxWidth()) {
             week.forEach { date ->
-              val isEnabled = maxDate == null || date <= maxDate
+              val isEnabled = date.year >= years.first && (maxDate == null || date <= maxDate)
               Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 TallybookCalendarDay(
                     date = date,
@@ -463,7 +467,7 @@ internal fun monthGridDates(month: YearMonth, firstDayOfWeek: DayOfWeek): List<L
 
 internal fun selectableYears(selectedDate: LocalDate, maxDate: LocalDate?): IntRange {
   val maximum = maxDate?.year ?: selectedDate.year + YEARS_AHEAD_WITHOUT_LIMIT
-  return FIRST_SELECTABLE_YEAR..maximum
+  return minOf(FIRST_SELECTABLE_YEAR, selectedDate.year)..maximum
 }
 
 internal class TallybookAnchoredPopupPositionProvider(
@@ -509,6 +513,5 @@ private fun List<String>.rotated(firstDayOfWeek: DayOfWeek): List<String> =
     drop(firstDayOfWeek.ordinal) + take(firstDayOfWeek.ordinal)
 
 private const val DAYS_IN_WEEK = 7
-private const val FIRST_SELECTABLE_YEAR = 2011
 private const val YEARS_AHEAD_WITHOUT_LIMIT = 1
 private const val YEARS_PER_ROW = 4

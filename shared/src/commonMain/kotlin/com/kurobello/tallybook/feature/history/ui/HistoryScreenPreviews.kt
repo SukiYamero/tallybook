@@ -13,10 +13,10 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryActions
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryFailure
-import com.kurobello.tallybook.feature.history.viewmodel.HistoryLoadState
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryProjection
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryScope
 import com.kurobello.tallybook.feature.history.viewmodel.HistorySelection
@@ -40,14 +40,17 @@ internal fun HistoryEmptyPreview() {
           MovimientoSummary(Money(0, Moneda.COP), Money(0, Moneda.COP)),
           emptyList(),
       )
-  HistoryPreview(historyPreviewState().copy(period = HistoryLoadState.Ready(content)), dark = false)
+  HistoryPreview(
+      historyPreviewState().copy(period = RetainedLoadState.Ready(content)),
+      dark = false,
+  )
 }
 
 @Preview
 @Composable
 internal fun HistoryLoadingPreview() =
     HistoryPreview(
-        historyPreviewState().copy(period = HistoryLoadState.Loading()),
+        historyPreviewState().copy(period = RetainedLoadState.Loading()),
         dark = false,
     )
 
@@ -55,7 +58,7 @@ internal fun HistoryLoadingPreview() =
 @Composable
 internal fun HistoryReadFailurePreview() =
     HistoryPreview(
-        historyPreviewState().copy(period = HistoryLoadState.Failed(historyPreviewFailure)),
+        historyPreviewState().copy(period = RetainedLoadState.Failed(historyPreviewFailure)),
         dark = false,
     )
 
@@ -64,7 +67,7 @@ internal fun HistoryReadFailurePreview() =
 internal fun HistoryCalculationFailurePreview() =
     HistoryPreview(
         historyPreviewState()
-            .copy(period = HistoryLoadState.Failed(HistoryFailure.CalculationOverflow)),
+            .copy(period = RetainedLoadState.Failed(HistoryFailure.CalculationOverflow)),
         dark = true,
     )
 
@@ -120,7 +123,7 @@ private fun historyPreviewState(): HistoryUiState {
       HistorySelection(HistoryScope.Day, date),
       date,
       Moneda.COP,
-      HistoryLoadState.Ready(content),
+      RetainedLoadState.Ready(content),
   )
 }
 

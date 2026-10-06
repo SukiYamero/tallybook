@@ -22,13 +22,12 @@ import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.calendar_date_content_description
 import tallybook.shared.generated.resources.date_chip_value
 import tallybook.shared.generated.resources.date_picker_months
+import tallybook.shared.generated.resources.date_picker_months_short
 import tallybook.shared.generated.resources.date_picker_weekday_names
 import tallybook.shared.generated.resources.date_picker_weekdays
 import tallybook.shared.generated.resources.history_day_title
-import tallybook.shared.generated.resources.history_month_year
 import tallybook.shared.generated.resources.history_period_description
 import tallybook.shared.generated.resources.history_range_description
-import tallybook.shared.generated.resources.history_scope_context
 import tallybook.shared.generated.resources.history_scope_day
 import tallybook.shared.generated.resources.history_scope_month
 import tallybook.shared.generated.resources.history_scope_week
@@ -40,38 +39,29 @@ import tallybook.shared.generated.resources.history_year_description
 internal fun HistoryPeriodHeader(state: HistoryUiState, actions: HistoryActions) {
   val selected = state.selectedPeriod
   val monthNames = stringArrayResource(Res.array.date_picker_months)
-  val monthYear =
-      stringResource(
-          Res.string.history_month_year,
-          monthNames[selected.start.month.ordinal],
-          selected.start.year,
-      )
-  val title =
+  val detail =
       when (state.selection.scope) {
         HistoryScope.Day ->
             stringResource(
-                Res.string.history_day_title,
-                stringArrayResource(Res.array.date_picker_weekday_names)[
-                    selected.start.dayOfWeek.ordinal],
-                selected.start.day,
-            )
+                    Res.string.history_day_title,
+                    stringArrayResource(Res.array.date_picker_weekday_names)[
+                        selected.start.dayOfWeek.ordinal],
+                    selected.start.day,
+                )
+                .replaceFirstChar(Char::titlecase)
         HistoryScope.Week ->
-            stringResource(
-                Res.string.history_week_title,
-                selected.start.day,
-                selected.end.day,
-                monthNames[selected.start.month.ordinal],
-            )
-        HistoryScope.Month -> monthYear
+            if (selected.start == selected.end) selected.start.day.toString()
+            else
+                stringResource(
+                    Res.string.history_week_title,
+                    selected.start.day,
+                    selected.end.day,
+                )
+        HistoryScope.Month -> null
       }
   TallybookPeriodPickerHeader(
-      title = title,
-      supportingText =
-          stringResource(
-              Res.string.history_scope_context,
-              historyScopeLabel(state.selection.scope),
-              monthYear,
-          ),
+      title = monthNames[selected.start.month.ordinal].replaceFirstChar(Char::titlecase),
+      supportingText = detail,
       titleStyle = TallybookTheme.typography.headline,
       yearControl = {
         TallybookYearMenu(
@@ -98,14 +88,16 @@ internal fun HistoryScopeControl(state: HistoryUiState, actions: HistoryActions)
 @Composable
 internal fun HistoryPeriodRow(state: HistoryUiState, actions: HistoryActions) {
   val weekdays = stringArrayResource(Res.array.date_picker_weekdays)
-  val months = stringArrayResource(Res.array.date_picker_months)
+  val months = stringArrayResource(Res.array.date_picker_months_short)
   val options =
       state.periods.map { period ->
         val label =
             when (state.selection.scope) {
               HistoryScope.Day -> period.start.day.toString()
               HistoryScope.Week ->
-                  stringResource(Res.string.history_week_chip, period.start.day, period.end.day)
+                  if (period.start == period.end) period.start.day.toString()
+                  else
+                      stringResource(Res.string.history_week_chip, period.start.day, period.end.day)
               HistoryScope.Month -> months[period.start.month.ordinal]
             }
         TallybookPeriodOption(

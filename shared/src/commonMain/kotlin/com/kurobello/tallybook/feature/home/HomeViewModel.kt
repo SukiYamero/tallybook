@@ -11,6 +11,7 @@ import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoSummary
+import com.kurobello.tallybook.core.ui.state.failed
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -58,8 +59,13 @@ internal class HomeViewModel(
                       uiState.update { current ->
                         when {
                           epoch != observationEpoch || revision != retryRequests.value -> current
-                          state.isLoading &&
-                              state.summary.balance.moneda == current.summary.balance.moneda ->
+                          state.error != null &&
+                              current.hasSnapshot &&
+                              state.moneda == current.moneda ->
+                              current.copy(
+                                  content = current.content.failed(requireNotNull(state.error))
+                              )
+                          state.isLoading && state.moneda == current.moneda ->
                               current.revalidating()
                           else -> state
                         }
@@ -85,12 +91,13 @@ internal class HomeViewModel(
 
   private fun DataOutcome<AppPreferencesState>.toHomeStateFlow(): Flow<HomeUiState> =
       when (this) {
-        is DataOutcome.Failure -> HomeUiState.error(error).asFlow()
+        is DataOutcome.Failure -> HomeUiState.error(error, uiState.value.moneda).asFlow()
         is DataOutcome.Success ->
             when (data) {
               AppPreferencesState.Uninitialized ->
                   HomeUiState.error(
-                          DataError.InvalidInput("Preferences are uninitialized after app startup")
+                          DataError.InvalidInput("Preferences are uninitialized after app startup"),
+                          uiState.value.moneda,
                       )
                       .asFlow()
               is AppPreferencesState.Ready -> observePersistedHome(data.value.monedaPrincipal)
@@ -127,15 +134,15 @@ private data class HomeSnapshot(
 ) {
   fun toUiState(moneda: Moneda): HomeUiState =
       when {
-        error != null -> HomeUiState.error(error)
+        error != null -> HomeUiState.error(error, moneda)
         isLoading -> HomeUiState.loading(moneda)
         else ->
-            HomeUiState(
-                isLoading = false,
-                summary = requireNotNull(summary),
-                recent = requireNotNull(recent),
-                categoriasById = requireNotNull(categoriasById),
-                error = null,
+            HomeUiState.ready(
+                HomeContent(
+                    summary = requireNotNull(summary),
+                    recent = requireNotNull(recent),
+                    categoriasById = requireNotNull(categoriasById),
+                )
             )
       }
 
@@ -168,4 +175,4 @@ private const val HOME_RECENT_LIMIT = 6
 
 private const val HOME_STOP_TIMEOUT_MILLIS = 5_000L
 
-internal fun HomeUiState.revalidating(): HomeUiState = copy(isLoading = true, error = null)
+internal fun HomeUiState.revalidating(): HomeUiState = copy(content = content.refreshing())

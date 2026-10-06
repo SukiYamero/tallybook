@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
@@ -20,7 +21,6 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -40,10 +40,10 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryActions
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryFailure
-import com.kurobello.tallybook.feature.history.viewmodel.HistoryLoadState
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryProjection
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryScope
 import com.kurobello.tallybook.feature.history.viewmodel.HistorySelection
@@ -65,7 +65,9 @@ import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.calendar_date_content_description
 import tallybook.shared.generated.resources.date_chip_value
 import tallybook.shared.generated.resources.date_picker_months
+import tallybook.shared.generated.resources.date_picker_weekday_names
 import tallybook.shared.generated.resources.expense
+import tallybook.shared.generated.resources.history_day_title
 import tallybook.shared.generated.resources.history_empty_title
 import tallybook.shared.generated.resources.history_movement_count
 import tallybook.shared.generated.resources.history_overflow_error
@@ -100,12 +102,106 @@ class HistoryScreenTest {
 
   @Test
   fun loadingKeepsPeriodControlsWithoutInventingZero() {
-    val state = contentState.copy(period = HistoryLoadState.Loading())
+    val state = contentState.copy(period = RetainedLoadState.Loading())
     composeRule.setContent { TallybookTheme { HistoryScreen(state, NoActions, {}, 0.dp) } }
-    composeRule.onAllNodesWithText(localized(Res.string.loading))[0].assertIsDisplayed()
+    composeRule.mainClock.autoAdvance = false
+    composeRule.onNodeWithContentDescription(localized(Res.string.loading)).assertDoesNotExist()
+    composeRule.mainClock.advanceTimeBy(240)
+    composeRule.onNodeWithContentDescription(localized(Res.string.loading)).assertIsDisplayed()
     composeRule.onNodeWithText(localized(Res.string.history_scope_month)).assertExists()
     composeRule.onNodeWithText("Lunch with Ana").assertDoesNotExist()
     composeRule.onNodeWithText(summary.balance.format()).assertDoesNotExist()
+  }
+
+  @Test
+  fun quickPeriodReadKeepsItsOriginalDateAndContentUntilNewResultArrives() {
+    val state = mutableStateOf(contentState)
+    composeRule.setContent { TallybookTheme { HistoryScreen(state.value, NoActions, {}, 0.dp) } }
+    composeRule.mainClock.autoAdvance = false
+    val nextSelection = HistorySelection(HistoryScope.Day, LocalDate(2026, 9, 14))
+    composeRule.runOnIdle {
+      state.value =
+          contentState.copy(selection = nextSelection, period = RetainedLoadState.Loading())
+    }
+    composeRule.mainClock.advanceTimeBy(96)
+    val weekdays = runBlocking { getStringArray(Res.array.date_picker_weekday_names) }
+    val originalTitle = runBlocking {
+      getString(Res.string.history_day_title, weekdays[today.dayOfWeek.ordinal], today.day)
+          .replaceFirstChar(Char::titlecase)
+    }
+    val pendingTitle = runBlocking {
+      getString(
+              Res.string.history_day_title,
+              weekdays[nextSelection.anchor.dayOfWeek.ordinal],
+              nextSelection.anchor.day,
+          )
+          .replaceFirstChar(Char::titlecase)
+    }
+    composeRule.onNodeWithText(originalTitle).assertExists()
+    composeRule.onNodeWithText(pendingTitle).assertDoesNotExist()
+    composeRule.onNodeWithText(summary.balance.format()).assertExists()
+    composeRule.onNodeWithText("Lunch with Ana").assertExists()
+    composeRule.onNodeWithContentDescription(localized(Res.string.loading)).assertDoesNotExist()
+    val empty =
+        HistoryProjection.Content(
+            MovimientoSummary(Money(0, Moneda.COP), Money(0, Moneda.COP)),
+            emptyList(),
+        )
+    composeRule.runOnIdle {
+      state.value = state.value.copy(period = RetainedLoadState.Ready(empty))
+    }
+    composeRule.mainClock.advanceTimeBy(32)
+    composeRule.onNodeWithText("Lunch with Ana").assertDoesNotExist()
+    composeRule.onNodeWithText(localized(Res.string.history_empty_title)).assertExists()
+    composeRule.mainClock.advanceTimeBy(240)
+    composeRule.onNodeWithContentDescription(localized(Res.string.loading)).assertDoesNotExist()
+  }
+
+  @Test
+  fun slowPeriodReadShowsSkeletonAndErrorsInterruptTheWait() {
+    val state = mutableStateOf(contentState)
+    composeRule.setContent { TallybookTheme { HistoryScreen(state.value, NoActions, {}, 0.dp) } }
+    composeRule.mainClock.autoAdvance = false
+    composeRule.runOnIdle {
+      state.value =
+          contentState.copy(
+              selection = HistorySelection(HistoryScope.Week, today),
+              period = RetainedLoadState.Loading(),
+          )
+    }
+    composeRule.mainClock.advanceTimeBy(240)
+    composeRule.onNodeWithContentDescription(localized(Res.string.loading)).assertIsDisplayed()
+    composeRule.onNodeWithText(summary.balance.format()).assertDoesNotExist()
+    composeRule.onNodeWithText("Lunch with Ana").assertDoesNotExist()
+    composeRule.onNodeWithText("$ 000.000").assertDoesNotExist()
+    val screenshot =
+        File(
+            InstrumentationRegistry.getInstrumentation().targetContext.cacheDir,
+            "history-skeleton.png",
+        )
+    screenshot.outputStream().use {
+      composeRule
+          .onNodeWithContentDescription(localized(Res.string.navigation_history))
+          .captureToImage()
+          .asAndroidBitmap()
+          .compress(Bitmap.CompressFormat.PNG, 100, it)
+    }
+    composeRule.runOnIdle {
+      state.value =
+          state.value.copy(period = RetainedLoadState.Failed(HistoryFailure.CalculationOverflow))
+    }
+    composeRule.mainClock.advanceTimeBy(32)
+    composeRule.onNodeWithText(localized(Res.string.history_overflow_error)).assertExists()
+    composeRule.onNodeWithContentDescription(localized(Res.string.loading)).assertDoesNotExist()
+    composeRule.runOnIdle { state.value = state.value.copy(period = RetainedLoadState.Loading()) }
+    composeRule.mainClock.advanceTimeBy(32)
+    composeRule.runOnIdle {
+      state.value =
+          state.value.copy(period = RetainedLoadState.Failed(HistoryFailure.CalculationOverflow))
+    }
+    composeRule.mainClock.advanceTimeBy(240)
+    composeRule.onNodeWithText(localized(Res.string.history_overflow_error)).assertExists()
+    composeRule.onNodeWithContentDescription(localized(Res.string.loading)).assertDoesNotExist()
   }
 
   @Test
@@ -119,7 +215,7 @@ class HistoryScreenTest {
     composeRule.setContent {
       TallybookTheme {
         HistoryScreen(
-            contentState.copy(period = HistoryLoadState.Ready(empty)),
+            contentState.copy(period = RetainedLoadState.Ready(empty)),
             NoActions,
             { additions++ },
             0.dp,
@@ -150,7 +246,7 @@ class HistoryScreenTest {
     composeRule.setContent {
       TallybookTheme {
         HistoryScreen(
-            contentState.copy(period = HistoryLoadState.Failed(failure)),
+            contentState.copy(period = RetainedLoadState.Failed(failure)),
             actions,
             {},
             0.dp,
@@ -171,7 +267,9 @@ class HistoryScreenTest {
     composeRule.setContent {
       TallybookTheme {
         HistoryScreen(
-            contentState.copy(period = HistoryLoadState.Failed(HistoryFailure.CalculationOverflow)),
+            contentState.copy(
+                period = RetainedLoadState.Failed(HistoryFailure.CalculationOverflow)
+            ),
             NoActions,
             {},
             0.dp,
@@ -227,7 +325,7 @@ class HistoryScreenTest {
       density = LocalDensity.current.density
       TallybookTheme {
         HistoryScreen(
-            contentState.copy(period = HistoryLoadState.Ready(content)),
+            contentState.copy(period = RetainedLoadState.Ready(content)),
             NoActions,
             {},
             96.dp,
@@ -275,7 +373,7 @@ class HistoryScreenTest {
     val failure = HistoryFailure.Repository(DataError.Local(IllegalStateException()))
     val state =
         contentState.copy(
-            period = HistoryLoadState.Failed(failure),
+            period = RetainedLoadState.Failed(failure),
         )
     var selectedScope: HistoryScope? = null
     val actions =
@@ -404,20 +502,21 @@ class HistoryScreenTest {
   }
 
   @Test
-  fun retainedPeriodRowsRemainVisibleAndExplicitlyStaleDuringReload() {
+  fun retainedPeriodRowsRemainVisibleWithoutInitialFeedbackDuringReload() {
     composeRule.setContent {
       TallybookTheme {
         HistoryScreen(
-            contentState.copy(period = HistoryLoadState.Loading(projection)),
+            contentState.copy(period = RetainedLoadState.Loading(projection)),
             NoActions,
             {},
             0.dp,
         )
       }
     }
+    composeRule.mainClock.advanceTimeBy(240)
     val list = composeRule.onNodeWithContentDescription(localized(Res.string.navigation_history))
-    list.performScrollToNode(hasText(localized(Res.string.history_stale)))
-    composeRule.onNodeWithText(localized(Res.string.history_stale)).assertIsDisplayed()
+    composeRule.onNodeWithText(localized(Res.string.history_stale)).assertDoesNotExist()
+    composeRule.onNodeWithContentDescription(localized(Res.string.loading)).assertDoesNotExist()
     list.performScrollToNode(hasText("Lunch with Ana"))
     composeRule.onNodeWithText("Lunch with Ana").assertIsDisplayed()
   }
@@ -482,7 +581,7 @@ class HistoryScreenTest {
             HistorySelection(HistoryScope.Day, today),
             today,
             Moneda.COP,
-            HistoryLoadState.Ready(projection),
+            RetainedLoadState.Ready(projection),
         )
   }
 }

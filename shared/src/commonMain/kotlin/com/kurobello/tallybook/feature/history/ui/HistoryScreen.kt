@@ -15,21 +15,25 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import com.kurobello.tallybook.core.ui.component.TallybookButton
+import com.kurobello.tallybook.core.ui.component.TallybookSkeletonLine
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.layout.TallybookScreenFrame
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoRowContent
+import com.kurobello.tallybook.core.ui.movimiento.MovimientoRowSkeleton
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoRowText
+import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryActions
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryUiState
-import com.kurobello.tallybook.feature.history.viewmodel.cachedValue
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
@@ -43,6 +47,8 @@ import tallybook.shared.generated.resources.navigation_add_movement
 import tallybook.shared.generated.resources.navigation_history
 import tallybook.shared.generated.resources.retry
 
+private const val MOVEMENT_SKELETON_COUNT = 3
+
 @Composable
 internal fun HistoryScreen(
     uiState: HistoryUiState,
@@ -52,11 +58,13 @@ internal fun HistoryScreen(
     modifier: Modifier = Modifier,
 ) {
   require(bottomBarClearance >= TallybookTheme.spacing.space0)
+  val presentation by rememberHistoryPresentation(uiState)
+  val renderedState = presentation.state
   val contentListState = rememberLazyListState()
   // A short loading list must not clamp restored row position before fresh rows arrive.
   val pendingListState = remember { LazyListState() }
   val listState =
-      if (uiState.period.cachedValue == null && !uiState.isEmpty) pendingListState
+      if (renderedState.period.cachedValue == null && !renderedState.isEmpty) pendingListState
       else contentListState
   val listDescription = stringResource(Res.string.navigation_history)
   TallybookScreenFrame(
@@ -75,7 +83,7 @@ internal fun HistoryScreen(
             ),
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
     ) {
-      historyContent(uiState, actions, onAdd)
+      historyContent(renderedState, actions, onAdd, presentation.showLoading)
     }
   }
 }
@@ -94,20 +102,32 @@ private fun LazyListScope.historyContent(
     uiState: HistoryUiState,
     actions: HistoryActions,
     onAdd: () -> Unit,
+    showLoading: Boolean,
 ) {
   val content = uiState.period.cachedValue
   item(key = "history-context") { HistoryPeriodHeader(uiState, actions) }
   item(key = "history-count") {
-    TallybookText(
-        content?.let {
+    if (content != null) {
+      TallybookText(
           pluralStringResource(
               Res.plurals.history_movement_count,
-              it.movementCount,
-              it.movementCount,
-          )
-        } ?: stringResource(Res.string.history_unavailable),
-        style = TallybookTheme.typography.bodySmall,
-    )
+              content.movementCount,
+              content.movementCount,
+          ),
+          style = TallybookTheme.typography.bodySmall,
+      )
+    } else if (uiState.period is RetainedLoadState.Loading) {
+      TallybookSkeletonLine(
+          sampleText = pluralStringResource(Res.plurals.history_movement_count, 1, 1),
+          style = TallybookTheme.typography.bodySmall,
+          modifier = Modifier.alpha(if (showLoading) 1f else 0f),
+      )
+    } else {
+      TallybookText(
+          stringResource(Res.string.history_unavailable),
+          style = TallybookTheme.typography.bodySmall,
+      )
+    }
   }
   item(key = "history-scope") { HistoryScopeControl(uiState, actions) }
   item(key = "history-periods") { HistoryPeriodRow(uiState, actions) }
@@ -119,7 +139,14 @@ private fun LazyListScope.historyContent(
       item(key = "history-preferences-error") {
         HistoryReadNotice(stringResource(Res.string.movimiento_preferences_error), actions::onRetry)
       }
-  item(key = "history-period-summary") { HistoryPeriodSummary(uiState.period, actions::onRetry) }
+  item(key = "history-period-summary") {
+    HistoryPeriodSummary(uiState.period, actions::onRetry, showLoading)
+  }
+  if (showLoading && uiState.period is RetainedLoadState.Loading && content == null) {
+    items(MOVEMENT_SKELETON_COUNT, key = { "history-skeleton-$it" }, contentType = { "skeleton" }) {
+      MovimientoRowSkeleton(Modifier.fillMaxWidth())
+    }
+  }
   if (uiState.isEmpty) item(key = "history-empty") { HistoryEmptyPeriod(onAdd) }
   content?.groups?.forEach { group ->
     item(key = group.key, contentType = "date") {

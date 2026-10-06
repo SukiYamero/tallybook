@@ -82,6 +82,11 @@
         <item>maio</item><item>junho</item><item>julho</item><item>agosto</item>
         <item>setembro</item><item>outubro</item><item>novembro</item><item>dezembro</item>
     </string-array>
+    <string-array name="date_picker_months_short">
+        <item>Jan</item><item>Fev</item><item>Mar</item><item>Abr</item>
+        <item>Mai</item><item>Jun</item><item>Jul</item><item>Ago</item>
+        <item>Set</item><item>Out</item><item>Nov</item><item>Dez</item>
+    </string-array>
     <string-array name="date_picker_weekdays">
         <item>S</item><item>T</item><item>Q</item><item>Q</item><item>S</item><item>S</item><item>D</item>
     </string-array>
@@ -190,10 +195,8 @@
     <string name="history_year_description">Selecionar ano: %1$d</string>
     <string name="history_period_description">Selecionar período</string>
     <string name="history_day_title">%1$s %2$d</string>
-    <string name="history_month_year">%1$s %2$d</string>
-    <string name="history_week_title">%1$d–%2$d %3$s</string>
-    <string name="history_scope_context">%1$s · %2$s</string>
-    <string name="history_week_chip">Sem %1$d–%2$d</string>
+    <string name="history_week_title">De %1$d a %2$d</string>
+    <string name="history_week_chip">%1$d–%2$d</string>
     <string name="history_range_description">De %1$s a %2$s</string>
     <string name="history_empty_title">Nenhuma movimentação neste período</string>
     <string name="history_empty_body">Escolha outro período ou adicione uma movimentação.</string>

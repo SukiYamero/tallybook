@@ -9,10 +9,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import com.kurobello.tallybook.feature.history.viewmodel.HistoryLoadState
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryUiState
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryViewModel
-import com.kurobello.tallybook.feature.history.viewmodel.cachedValue
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -38,7 +36,7 @@ internal fun rememberHistoryRouteState(
 ): State<HistoryUiState> {
   val owner = LocalLifecycleOwner.current
   return key(viewModel, owner, label) {
-    produceState(initialValue = viewModel.uiState.value.routeRevalidating(clearRows = true)) {
+    produceState(initialValue = viewModel.uiState.value.routeRevalidating()) {
       owner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
         try {
           viewModel.onPresentationChanged(label)
@@ -52,8 +50,8 @@ internal fun rememberHistoryRouteState(
   }
 }
 
-private fun HistoryUiState.routeRevalidating(clearRows: Boolean = false): HistoryUiState =
+private fun HistoryUiState.routeRevalidating(): HistoryUiState =
     copy(
-        period = HistoryLoadState.Loading(if (clearRows) null else period.cachedValue),
+        period = period.refreshing(),
         years = years.copy(isLoading = true),
     )

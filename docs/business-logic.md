@@ -63,10 +63,12 @@ non-date filters and charts are later capabilities and do not belong to History 
   choosing the selected chip preserves its interior anchor. A Day chip selects its exact date.
   Year/month changes and Month-chip selection preserve day-of-month where valid, clamp month-end
   and leap dates, and clamp future dates. A future month in the current year uses the current month.
-- Allowed years come from persisted movimientos in the primary currency plus the current year,
-  descending. Selected/restored past years remain available for the retained entry even after their
-  last row disappears and another year is selected. Future years are excluded after backward date
-  refresh. Fresh entries derive years again; metadata changes never reset selection.
+- Allowed years include every year from the shared `FIRST_SELECTABLE_YEAR` (2019) through the current
+  year, descending. Earlier years with persisted movimientos in the primary currency or a
+  selected/restored anchor remain available, so the selection floor never hides existing records.
+  Selected/restored past years remain available for the retained entry even after their last row
+  disappears and another year is selected. Future years are excluded after backward date refresh.
+  Fresh entries derive years again; metadata changes never reset selection.
 - Each date refresh captures the clock and timezone once. An anchor equal to the previous today
   follows the new today; historical anchors stay fixed unless they become future, then clamp to
   today. Resume refresh makes newly available years visible without a background midnight timer.

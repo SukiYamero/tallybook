@@ -9,5 +9,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name="com.kurobello.tallybook.feature.history.ui.HistoryLoadingPreviewActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <activity
+            android:name="com.kurobello.tallybook.feature.home.HomeLoadingPreviewActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
     </application>
 </manifest>

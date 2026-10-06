@@ -41,6 +41,83 @@ import kotlinx.datetime.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
+  @Test
+  fun immediateFailureOnCurrencyChangeDoesNotRetainTheOtherCurrencySnapshot() = runTest {
+    val preferences = FakePreferencesRepository(readyPreferences(Moneda.USD))
+    val movimientos =
+        FakeMovimientoRepository(
+            recent = DataOutcome.Success(emptyList()),
+            summary = DataOutcome.Success(HomeUiState.emptySummary(Moneda.USD)),
+        )
+    val vm =
+        createViewModel(
+            preferences,
+            movimientos,
+            FakeCategoriaRepository(DataOutcome.Success(emptyList())),
+            backgroundScope,
+        )
+    runCurrent()
+    assertTrue(vm.uiState.value.hasSnapshot)
+    val failure = DataError.Local(IllegalStateException())
+    preferences.emit(readyPreferences(Moneda.COP))
+    movimientos.emitRecent(DataOutcome.Failure(failure))
+    runCurrent()
+    assertEquals(Moneda.COP, vm.uiState.value.moneda)
+    assertEquals(failure, vm.uiState.value.error)
+    assertFalse(vm.uiState.value.hasSnapshot)
+    movimientos.emitRecent(DataOutcome.Success(emptyList()))
+    movimientos.awaitNextSummary()
+    vm.retry()
+    runCurrent()
+    assertEquals(Moneda.COP, vm.uiState.value.moneda)
+    assertTrue(vm.uiState.value.content.isInitialLoading)
+  }
+
+  @Test
+  fun firstReadFailureKeepsItsKnownRequestCurrency() = runTest {
+    val failure = DataError.Local(IllegalStateException())
+    val vm =
+        createViewModel(
+            FakePreferencesRepository(readyPreferences(Moneda.USD)),
+            FakeMovimientoRepository(recent = DataOutcome.Failure(failure)),
+            FakeCategoriaRepository(),
+            backgroundScope,
+        )
+    runCurrent()
+    assertEquals(Moneda.USD, vm.uiState.value.moneda)
+    assertEquals(failure, vm.uiState.value.error)
+  }
+
+  @Test
+  fun completedEmptySnapshotSurvivesReadFailureAndPendingRetry() = runTest {
+    val cachedSummary = HomeUiState.emptySummary(Moneda.USD)
+    val movimientos =
+        FakeMovimientoRepository(
+            recent = DataOutcome.Success(emptyList()),
+            summary = DataOutcome.Success(cachedSummary),
+        )
+    val vm =
+        createViewModel(
+            FakePreferencesRepository(readyPreferences(Moneda.USD)),
+            movimientos,
+            FakeCategoriaRepository(DataOutcome.Success(emptyList())),
+            backgroundScope,
+        )
+    runCurrent()
+    assertTrue(vm.uiState.value.isEmpty)
+    val failure = DataError.Local(IllegalStateException())
+    movimientos.emitRecent(DataOutcome.Failure(failure))
+    runCurrent()
+    assertEquals(failure, vm.uiState.value.error)
+    assertEquals(cachedSummary, vm.uiState.value.summary)
+    movimientos.emitRecent(DataOutcome.Success(emptyList()))
+    movimientos.awaitNextSummary()
+    vm.retry()
+    runCurrent()
+    assertTrue(vm.uiState.value.isLoading)
+    assertTrue(vm.uiState.value.isEmpty)
+    assertNull(vm.uiState.value.error)
+  }
 
   @Test
   fun startsLoadingBeforeEverySourceEmits() = runTest {

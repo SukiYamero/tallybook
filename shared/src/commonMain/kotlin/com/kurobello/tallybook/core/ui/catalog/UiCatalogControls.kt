@@ -25,6 +25,7 @@ import com.composables.icons.lucide.ArrowUpRight
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.UtensilsCrossed
 import com.composables.icons.lucide.X
+import com.kurobello.tallybook.core.model.FIRST_SELECTABLE_YEAR
 import com.kurobello.tallybook.core.ui.component.TallybookAmountInput
 import com.kurobello.tallybook.core.ui.component.TallybookDateChipPicker
 import com.kurobello.tallybook.core.ui.component.TallybookDateChipSize
@@ -275,7 +276,7 @@ private fun CatalogPeriodPickerSample(
     weekdayFullNames: List<String>,
     monthNames: List<String>,
 ) {
-  val years = remember(today) { (today.year downTo CATALOG_PERIOD_FIRST_YEAR).toList() }
+  val years = remember(today) { (today.year downTo FIRST_SELECTABLE_YEAR).toList() }
   var scope by remember { mutableStateOf(TallybookPeriodScope.Day) }
   var focusedMonth by remember(today) { mutableStateOf(YearMonth(today.year, today.month)) }
   var selectedPeriod by
@@ -714,4 +715,3 @@ private enum class CatalogMovementType {
 }
 
 private const val MONTH_LABEL_LENGTH = 3
-private const val CATALOG_PERIOD_FIRST_YEAR = 2017

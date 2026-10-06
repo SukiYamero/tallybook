@@ -43,11 +43,30 @@ class TallybookAnchoredPopupPositionProviderTest {
   @Test
   fun yearSelectorKeepsTheHistoricalBoundaryAndGrowsWithTheMaximumDate() {
     assertEquals(
-        2011..2027,
+        2019..2027,
         selectableYears(
             selectedDate = LocalDate(2027, 1, 1),
             maxDate = LocalDate(2027, 1, 1),
         ),
+    )
+  }
+
+  @Test
+  fun yearSelectorKeepsAnExistingLegacySelectedDateReachable() {
+    assertEquals(
+        2016..2027,
+        selectableYears(
+            selectedDate = LocalDate(2016, 8, 15),
+            maxDate = LocalDate(2027, 1, 1),
+        ),
+    )
+  }
+
+  @Test
+  fun unlimitedYearSelectorPreservesItsOneYearForwardWindow() {
+    assertEquals(
+        2019..2027,
+        selectableYears(selectedDate = LocalDate(2026, 10, 6), maxDate = null),
     )
   }
 }
