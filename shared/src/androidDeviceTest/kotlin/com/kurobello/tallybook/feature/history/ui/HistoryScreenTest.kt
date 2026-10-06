@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -26,6 +27,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.Density
@@ -301,6 +303,13 @@ class HistoryScreenTest {
             period = HistoryLoadState.Failed(failure),
             overall = HistoryLoadState.Failed(failure),
         )
+    var selectedScope: HistoryScope? = null
+    val actions =
+        object : HistoryActions by NoActions {
+          override fun onScopeChanged(scope: HistoryScope) {
+            selectedScope = scope
+          }
+        }
     var pixelsPerDp = 1f
     composeRule.setContent {
       val density = LocalDensity.current
@@ -308,7 +317,7 @@ class HistoryScreenTest {
       CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
         TallybookTheme {
           Box(Modifier.height(320.dp).testTag("history-compact-viewport")) {
-            HistoryScreen(state, NoActions, {}, 96.dp, Modifier.fillMaxSize())
+            HistoryScreen(state, actions, {}, 96.dp, Modifier.fillMaxSize())
           }
         }
       }
@@ -317,7 +326,6 @@ class HistoryScreenTest {
         .onNodeWithContentDescription(localized(Res.string.navigation_history))
         .performScrollToNode(hasText(localized(Res.string.history_scope_month)))
     val scope = composeRule.onNodeWithText(localized(Res.string.history_scope_month))
-    scope.assertIsDisplayed().performClick()
     val list = composeRule.onNodeWithContentDescription(localized(Res.string.navigation_history))
     val targetBounds = scope.getUnclippedBoundsInRoot()
     val listBounds = list.getUnclippedBoundsInRoot()
@@ -339,6 +347,7 @@ class HistoryScreenTest {
     }
     val diagnostic =
         JSONObject()
+            .put("phase", "before")
             .put("targetTop", targetBounds.top.value * pixelsPerDp)
             .put("targetBottom", targetBounds.bottom.value * pixelsPerDp)
             .put("targetHeight", (targetBounds.bottom.value - targetBounds.top.value) * pixelsPerDp)
@@ -365,11 +374,68 @@ class HistoryScreenTest {
             .put("screenshot", screenshot.absolutePath)
     InstrumentationRegistry.getInstrumentation()
         .sendStatus(2, Bundle().apply { putString("history_diagnostic", diagnostic.toString()) })
+    val usableHeight = listBounds.bottom.value - listBounds.top.value - 96f
     assertTrue(
-        targetBounds.top >= listBounds.top &&
-            targetBounds.bottom.value <= listBounds.bottom.value - 96f,
+        targetBounds.bottom.value - targetBounds.top.value <= usableHeight,
         diagnostic.toString(),
     )
+    val occludedPixels =
+        (targetBounds.bottom.value - listBounds.bottom.value + 96f).coerceAtLeast(0f) * pixelsPerDp
+    assertTrue(occludedPixels <= (listBounds.bottom.value - listBounds.top.value) * pixelsPerDp)
+    list.performSemanticsAction(SemanticsActions.ScrollBy) { scroll ->
+      assertTrue(scroll(0f, occludedPixels))
+    }
+    composeRule.waitForIdle()
+    val revealedTarget = scope.getUnclippedBoundsInRoot()
+    val revealedList = list.getUnclippedBoundsInRoot()
+    val afterScreenshot = File(screenshot.parentFile, "history-compact-after.png")
+    afterScreenshot.outputStream().use {
+      composeRule
+          .onNodeWithTag("history-compact-viewport")
+          .captureToImage()
+          .asAndroidBitmap()
+          .compress(Bitmap.CompressFormat.PNG, 100, it)
+    }
+    val afterDiagnostic =
+        JSONObject(diagnostic.toString())
+            .put("phase", "after")
+            .put("requestedScrollPixels", occludedPixels)
+            .put("targetTop", revealedTarget.top.value * pixelsPerDp)
+            .put("targetBottom", revealedTarget.bottom.value * pixelsPerDp)
+            .put(
+                "targetHeight",
+                (revealedTarget.bottom.value - revealedTarget.top.value) * pixelsPerDp,
+            )
+            .put("listTop", revealedList.top.value * pixelsPerDp)
+            .put("listBottom", revealedList.bottom.value * pixelsPerDp)
+            .put(
+                "scroll",
+                list
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.VerticalScrollAxisRange]
+                    .value(),
+            )
+            .put(
+                "scrollMax",
+                list
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.VerticalScrollAxisRange]
+                    .maxValue()
+                    .toString(),
+            )
+            .put("screenshot", afterScreenshot.absolutePath)
+    InstrumentationRegistry.getInstrumentation()
+        .sendStatus(
+            2,
+            Bundle().apply { putString("history_diagnostic", afterDiagnostic.toString()) },
+        )
+    assertTrue(
+        revealedTarget.top >= revealedList.top &&
+            revealedTarget.bottom.value <= revealedList.bottom.value - 96f,
+        afterDiagnostic.toString(),
+    )
+    scope.assertIsDisplayed().performClick()
+    composeRule.runOnIdle { assertEquals(HistoryScope.Month, selectedScope) }
   }
 
   @Test
