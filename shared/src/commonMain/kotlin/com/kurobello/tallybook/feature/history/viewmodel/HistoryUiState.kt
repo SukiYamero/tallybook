@@ -3,7 +3,6 @@ package com.kurobello.tallybook.feature.history.viewmodel
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.MovimientoDateRange
-import com.kurobello.tallybook.core.model.MovimientoSummary
 import kotlinx.datetime.LocalDate
 
 internal data class HistoryUiState(
@@ -11,7 +10,6 @@ internal data class HistoryUiState(
     val today: LocalDate,
     val moneda: Moneda? = null,
     val period: HistoryLoadState<HistoryProjection.Content> = HistoryLoadState.Loading(),
-    val overall: HistoryLoadState<MovimientoSummary> = HistoryLoadState.Loading(),
     val years: HistoryYearState = HistoryYearState(),
     val preferenceFailure: DataError? = null,
 ) {

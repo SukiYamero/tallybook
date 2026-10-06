@@ -55,6 +55,5 @@ internal fun rememberHistoryRouteState(
 private fun HistoryUiState.routeRevalidating(clearRows: Boolean = false): HistoryUiState =
     copy(
         period = HistoryLoadState.Loading(if (clearRows) null else period.cachedValue),
-        overall = HistoryLoadState.Loading(overall.cachedValue),
         years = years.copy(isLoading = true),
     )

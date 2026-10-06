@@ -47,8 +47,7 @@ internal fun HistoryEmptyPreview() {
 @Composable
 internal fun HistoryLoadingPreview() =
     HistoryPreview(
-        historyPreviewState()
-            .copy(period = HistoryLoadState.Loading(), overall = HistoryLoadState.Loading()),
+        historyPreviewState().copy(period = HistoryLoadState.Loading()),
         dark = false,
     )
 
@@ -66,14 +65,6 @@ internal fun HistoryCalculationFailurePreview() =
     HistoryPreview(
         historyPreviewState()
             .copy(period = HistoryLoadState.Failed(HistoryFailure.CalculationOverflow)),
-        dark = true,
-    )
-
-@Preview
-@Composable
-internal fun HistoryGlobalFailurePreview() =
-    HistoryPreview(
-        historyPreviewState().copy(overall = HistoryLoadState.Failed(historyPreviewFailure)),
         dark = true,
     )
 
@@ -130,7 +121,6 @@ private fun historyPreviewState(): HistoryUiState {
       date,
       Moneda.COP,
       HistoryLoadState.Ready(content),
-      HistoryLoadState.Ready(summary),
   )
 }
 

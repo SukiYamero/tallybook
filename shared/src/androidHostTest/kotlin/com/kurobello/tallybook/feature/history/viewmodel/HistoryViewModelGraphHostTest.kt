@@ -43,6 +43,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -188,8 +189,10 @@ internal class HistoryViewModelGraphHostTest {
           )
           assertEquals(
               Money(-250, Moneda.USD),
-              assertIs<HistoryLoadState.Ready<MovimientoSummary>>(first.uiState.value.overall)
-                  .value
+              assertIs<DataOutcome.Success<MovimientoSummary>>(
+                      movimientos.observeSummary(Moneda.USD).first()
+                  )
+                  .data
                   .balance,
           )
           first.onScopeChanged(HistoryScope.Week)

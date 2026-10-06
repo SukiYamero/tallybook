@@ -84,6 +84,7 @@ class HistoryViewModelTest {
     assertEquals(1, content.value.movementCount)
     assertEquals(Money(-100, Moneda.USD), content.value.summary.balance)
     assertEquals(1, fixture.preferences.source.starts)
+    assertEquals(0, fixture.movimientos.summary(Moneda.USD).starts)
     assertEquals(1, fixture.movimientos.activeRanges)
     first.cancel()
     runCurrent()
@@ -134,7 +135,7 @@ class HistoryViewModelTest {
   }
 
   @Test
-  fun reportsEarlyReadFailuresAndKeepsGlobalFailureIndependent() = runTest {
+  fun reportsEarlyReadFailuresAndRecoversPeriodContent() = runTest {
     val failure = DataError.Local(IllegalStateException())
     val fixture = HistoryFixture(this, listOf(movimiento("today", TODAY)))
     fixture.categorias.source.emit(null)
@@ -148,7 +149,6 @@ class HistoryViewModelTest {
         HistoryFailure.Repository(failure),
         assertIs<HistoryLoadState.Failed<*>>(vm.uiState.value.period).failure,
     )
-    assertIs<HistoryLoadState.Ready<MovimientoSummary>>(vm.uiState.value.overall)
     fixture.categorias.source.emit(DataOutcome.Success(emptyList()))
     fixture.movimientos
         .range(Moneda.USD, MovimientoDateRange(TODAY, TODAY))
@@ -156,10 +156,7 @@ class HistoryViewModelTest {
     fixture.movimientos.summary(Moneda.USD).emit(DataOutcome.Failure(failure))
     runCurrent()
     assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
-    assertEquals(
-        HistoryFailure.Repository(failure),
-        assertIs<HistoryLoadState.Failed<*>>(vm.uiState.value.overall).failure,
-    )
+    assertEquals(0, fixture.movimientos.summary(Moneda.USD).starts)
   }
 
   @Test
@@ -212,7 +209,7 @@ class HistoryViewModelTest {
             .value
             .movementCount,
     )
-    assertEquals(1, fixture.movimientos.summary(Moneda.USD).starts)
+    assertEquals(0, fixture.movimientos.summary(Moneda.USD).starts)
     assertEquals(1, fixture.movimientos.years(Moneda.USD).starts)
     assertEquals(1, fixture.categorias.source.starts)
     val afterSelection = states.size

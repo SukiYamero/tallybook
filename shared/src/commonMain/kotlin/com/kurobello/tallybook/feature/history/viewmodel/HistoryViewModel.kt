@@ -14,7 +14,6 @@ import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoDateRange
-import com.kurobello.tallybook.core.model.MovimientoSummary
 import kotlin.time.Clock
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -180,9 +179,6 @@ internal class HistoryViewModel(
                 reloadChanged -> HistoryLoadState.Loading(state.period.cachedValue)
                 else -> state.period
               },
-          overall =
-              if (reloadChanged) HistoryLoadState.Loading(state.overall.cachedValue)
-              else state.overall,
           preferenceFailure = if (reloadChanged) null else state.preferenceFailure,
       )
     }
@@ -202,18 +198,12 @@ internal class HistoryViewModel(
                         HistoryFailure.Repository(failure),
                         state.period.cachedValue,
                     ),
-                overall =
-                    HistoryLoadState.Failed(
-                        HistoryFailure.Repository(failure),
-                        state.overall.cachedValue,
-                    ),
             )
         moneda != null && moneda != state.moneda ->
             state.copy(
                 moneda = moneda,
                 preferenceFailure = null,
                 period = HistoryLoadState.Loading(),
-                overall = HistoryLoadState.Loading(),
                 years = HistoryYearState(retained = inputs.value.retainedYears),
             )
         else -> state.copy(preferenceFailure = null)
@@ -237,7 +227,6 @@ internal class HistoryViewModel(
             period =
                 if (periodMatches) frame.period.retainPrevious(state.period.cachedValue)
                 else state.period,
-            overall = frame.summary.toPanel().retainPrevious(state.overall.cachedValue),
             years =
                 state.years.copy(
                     persisted = frame.years.data ?: state.years.persisted,
@@ -278,7 +267,6 @@ private data class HistorySources(
     val range: RangeLoad,
     val categories: SourceLoad<List<Categoria>>,
     val years: SourceLoad<List<Int>>,
-    val summary: SourceLoad<MovimientoSummary>,
     val label: String,
 )
 
@@ -286,7 +274,6 @@ private data class HistoryFrame(
     val request: RangeRequest,
     val period: HistoryLoadState<HistoryProjection.Content>,
     val years: SourceLoad<List<Int>>,
-    val summary: SourceLoad<MovimientoSummary>,
     val label: String,
 )
 
@@ -322,10 +309,9 @@ private fun observeHistory(
                                 },
                             repositories.categorias.observeAll().toSourceLoad(),
                             repositories.movimientos.observeYears(moneda).toSourceLoad(),
-                            repositories.movimientos.observeSummary(moneda).toSourceLoad(),
                             inputs.map { it.label }.distinctUntilChanged(),
-                        ) { range, categories, years, summary, label ->
-                          HistorySources(range, categories, years, summary, label)
+                        ) { range, categories, years, label ->
+                          HistorySources(range, categories, years, label)
                         }
                         .mapLatest { sources -> sources.toFrame(dispatcher) }
               }
@@ -377,17 +363,6 @@ private val SourceLoad<AppPreferencesState>.preferenceFailure: DataError?
             DataError.InvalidInput("Preferences are uninitialized after app startup")
           } else null
 
-private fun <T> SourceLoad<T>.toPanel(): HistoryLoadState<T> =
-    when (this) {
-      SourceLoad.Loading -> HistoryLoadState.Loading()
-      is SourceLoad.Value ->
-          when (val result = outcome) {
-            is DataOutcome.Success -> HistoryLoadState.Ready(result.data)
-            is DataOutcome.Failure ->
-                HistoryLoadState.Failed(HistoryFailure.Repository(result.error))
-          }
-    }
-
 private fun <T> HistoryLoadState<T>.retainPrevious(previous: T?): HistoryLoadState<T> =
     when (this) {
       is HistoryLoadState.Loading -> copy(previous = previous)
@@ -409,7 +384,6 @@ internal class HistoryDateProvider(
 private fun HistoryUiState.revalidating(): HistoryUiState =
     copy(
         period = HistoryLoadState.Loading(period.cachedValue),
-        overall = HistoryLoadState.Loading(overall.cachedValue),
         years = years.copy(isLoading = true),
     )
 
@@ -438,5 +412,5 @@ private suspend fun HistorySources.toFrame(dispatcher: CoroutineDispatcher): His
               is HistoryProjection.Failure -> HistoryLoadState.Failed(projection.failure)
             }
       }
-  return HistoryFrame(range.request, period, years, summary, label)
+  return HistoryFrame(range.request, period, years, label)
 }

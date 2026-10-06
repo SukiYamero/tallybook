@@ -39,6 +39,7 @@ import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.MovimientoDateRange
+import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.ui.layout.TallybookAppShell
 import com.kurobello.tallybook.core.ui.navigation.History
 import com.kurobello.tallybook.core.ui.navigation.TallybookBottomNavigation
@@ -79,7 +80,6 @@ import org.json.JSONObject
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.history_overall_balance
 import tallybook.shared.generated.resources.navigation_history
 import tallybook.shared.generated.resources.unknown_category
 
@@ -159,7 +159,6 @@ class HistoryVolumeDeviceTest {
             },
         )
     val historyLabel = runBlocking { getString(Res.string.navigation_history) }
-    val overallLabel = runBlocking { getString(Res.string.history_overall_balance) }
     var clearancePixels = 0f
     composeRule.setContent {
       if (visible.value) {
@@ -188,7 +187,6 @@ class HistoryVolumeDeviceTest {
     composeRule.waitForIdle()
     list.performTouchInput { swipeUp() }
     composeRule.onNodeWithText(measurement.last.title).assertIsDisplayed()
-    composeRule.onNodeWithText(overallLabel).assertIsDisplayed()
     assertTrue(clearancePixels > 0f)
     val rowBottom =
         composeRule.onNodeWithText(measurement.last.title).fetchSemanticsNode().boundsInRoot.bottom
@@ -291,9 +289,17 @@ class HistoryVolumeDeviceTest {
       }
       val state =
           requireNotNull(viewModel).uiState.first {
-            (it.period as? HistoryLoadState.Ready)?.value?.movementCount == 10000 &&
-                (it.overall as? HistoryLoadState.Ready)?.value?.gastos?.minorUnits == 1_400_000L
+            (it.period as? HistoryLoadState.Ready)?.value?.movementCount == 10000
           }
+      assertEquals(
+          1_400_000L,
+          assertIs<DataOutcome.Success<MovimientoSummary>>(
+                  movimientos.observeSummary(Moneda.COP).first()
+              )
+              .data
+              .gastos
+              .minorUnits,
+      )
       assertEquals(
           1_000_000L,
           assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(state.period)

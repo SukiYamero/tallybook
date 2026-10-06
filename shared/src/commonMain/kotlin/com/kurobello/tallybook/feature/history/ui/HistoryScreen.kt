@@ -65,21 +65,14 @@ internal fun HistoryScreen(
           WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
       bottomPaddingFloor = TallybookTheme.spacing.space0,
   ) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().semantics { contentDescription = listDescription },
+        state = listState,
+        contentPadding =
+            PaddingValues(bottom = bottomBarClearance + TallybookTheme.spacing.space16),
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
     ) {
-      HistoryOverallSummary(uiState.moneda, uiState.overall, actions::onRetry)
-      LazyColumn(
-          modifier =
-              Modifier.weight(1f).fillMaxWidth().semantics { contentDescription = listDescription },
-          state = listState,
-          contentPadding =
-              PaddingValues(bottom = bottomBarClearance + TallybookTheme.spacing.space16),
-          verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
-      ) {
-        historyContent(uiState, actions, onAdd)
-      }
+      historyContent(uiState, actions, onAdd)
     }
   }
 }

@@ -68,9 +68,8 @@ import tallybook.shared.generated.resources.date_picker_months
 import tallybook.shared.generated.resources.expense
 import tallybook.shared.generated.resources.history_empty_title
 import tallybook.shared.generated.resources.history_movement_count
-import tallybook.shared.generated.resources.history_overall_balance
-import tallybook.shared.generated.resources.history_overall_error
 import tallybook.shared.generated.resources.history_overflow_error
+import tallybook.shared.generated.resources.history_period_balance
 import tallybook.shared.generated.resources.history_period_error
 import tallybook.shared.generated.resources.history_scope_month
 import tallybook.shared.generated.resources.history_stale
@@ -84,11 +83,13 @@ class HistoryScreenTest {
   @get:Rule val composeRule = createComposeRule()
 
   @Test
-  fun contentShowsOverallBalanceAndReadOnlyDescriptionRows() {
-    val label = runBlocking { getString(Res.string.history_overall_balance) }
+  fun contentShowsPeriodSummaryAndReadOnlyDescriptionRowsWithoutOverallHeader() {
     composeRule.setContent { TallybookTheme { HistoryScreen(contentState, NoActions, {}, 0.dp) } }
 
-    composeRule.onNodeWithText(label).assertIsDisplayed()
+    composeRule.onNodeWithText("Overall balance").assertDoesNotExist()
+    composeRule.onNodeWithText("Balance general").assertDoesNotExist()
+    composeRule.onNodeWithText("Saldo geral").assertDoesNotExist()
+    composeRule.onNodeWithText(localized(Res.string.history_period_balance)).assertExists()
     composeRule
         .onNodeWithContentDescription(localized(Res.string.navigation_history))
         .performScrollToNode(hasText("Lunch with Ana"))
@@ -98,9 +99,8 @@ class HistoryScreenTest {
   }
 
   @Test
-  fun loadingKeepsGlobalStatusAndPeriodControlsWithoutInventingZero() {
-    val state =
-        contentState.copy(period = HistoryLoadState.Loading(), overall = HistoryLoadState.Loading())
+  fun loadingKeepsPeriodControlsWithoutInventingZero() {
+    val state = contentState.copy(period = HistoryLoadState.Loading())
     composeRule.setContent { TallybookTheme { HistoryScreen(state, NoActions, {}, 0.dp) } }
     composeRule.onAllNodesWithText(localized(Res.string.loading))[0].assertIsDisplayed()
     composeRule.onNodeWithText(localized(Res.string.history_scope_month)).assertExists()
@@ -109,7 +109,7 @@ class HistoryScreenTest {
   }
 
   @Test
-  fun emptyPeriodAddsUsingCallerCallbackAndKeepsOverallBalance() {
+  fun emptyPeriodAddsUsingCallerCallback() {
     var additions = 0
     val empty =
         HistoryProjection.Content(
@@ -134,7 +134,6 @@ class HistoryScreenTest {
         .onNodeWithText(localized(Res.string.navigation_add_movement))
         .performScrollTo()
         .performClick()
-    composeRule.onNodeWithText(localized(Res.string.history_overall_balance)).assertIsDisplayed()
     composeRule.runOnIdle { assertEquals(1, additions) }
   }
 
@@ -184,29 +183,6 @@ class HistoryScreenTest {
         .performScrollTo()
         .assertIsDisplayed()
     composeRule.onNodeWithText(localized(Res.string.history_empty_title)).assertDoesNotExist()
-  }
-
-  @Test
-  fun globalFailureRetainsSeparatePeriodContentAndMarksPreviousBalanceStale() {
-    val failure = HistoryFailure.Repository(DataError.Local(IllegalStateException()))
-    composeRule.setContent {
-      TallybookTheme {
-        HistoryScreen(
-            contentState.copy(overall = HistoryLoadState.Failed(failure, summary)),
-            NoActions,
-            {},
-            0.dp,
-        )
-      }
-    }
-    composeRule
-        .onNodeWithContentDescription(localized(Res.string.history_overall_error), substring = true)
-        .assertIsDisplayed()
-    composeRule.onNodeWithText(localized(Res.string.history_stale)).assertIsDisplayed()
-    composeRule
-        .onNodeWithContentDescription(localized(Res.string.navigation_history))
-        .performScrollToNode(hasText("Lunch with Ana"))
-    composeRule.onNodeWithText("Lunch with Ana").assertIsDisplayed()
   }
 
   @Test
@@ -260,7 +236,6 @@ class HistoryScreenTest {
     }
     val list = composeRule.onNodeWithContentDescription(localized(Res.string.navigation_history))
     list.performScrollToNode(hasText("Item 30")).performTouchInput { swipeUp() }
-    composeRule.onNodeWithText(localized(Res.string.history_overall_balance)).assertIsDisplayed()
     val rowBottom = composeRule.onNodeWithText("Item 30").fetchSemanticsNode().boundsInRoot.bottom
     val listBottom = list.fetchSemanticsNode().boundsInRoot.bottom
     assertTrue(listBottom - rowBottom >= 96f * density)
@@ -301,7 +276,6 @@ class HistoryScreenTest {
     val state =
         contentState.copy(
             period = HistoryLoadState.Failed(failure),
-            overall = HistoryLoadState.Failed(failure),
         )
     var selectedScope: HistoryScope? = null
     val actions =
@@ -355,15 +329,6 @@ class HistoryScreenTest {
             .put("listBottom", listBounds.bottom.value * pixelsPerDp)
             .put("listHeight", (listBounds.bottom.value - listBounds.top.value) * pixelsPerDp)
             .put("clearancePixels", 96f * pixelsPerDp)
-            .put(
-                "globalSummaryHeight",
-                composeRule
-                    .onNodeWithText(localized(Res.string.history_overall_balance))
-                    .fetchSemanticsNode()
-                    .layoutInfo
-                    .parentInfo
-                    ?.height,
-            )
             .put(
                 "scroll",
                 list
@@ -518,7 +483,6 @@ class HistoryScreenTest {
             today,
             Moneda.COP,
             HistoryLoadState.Ready(projection),
-            HistoryLoadState.Ready(summary),
         )
   }
 }

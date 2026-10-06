@@ -10,13 +10,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import com.composables.icons.lucide.Lucide
-import com.composables.icons.lucide.RefreshCw
-import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.component.TallybookButton
-import com.kurobello.tallybook.core.ui.component.TallybookIconButton
 import com.kurobello.tallybook.core.ui.component.TallybookSurface
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.movimiento.signedMovimientoAmountText
@@ -27,60 +23,15 @@ import com.kurobello.tallybook.feature.history.viewmodel.HistoryProjection
 import com.kurobello.tallybook.feature.history.viewmodel.cachedValue
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.history_currency_unavailable
-import tallybook.shared.generated.resources.history_overall_balance
-import tallybook.shared.generated.resources.history_overall_error
 import tallybook.shared.generated.resources.history_overflow_error
 import tallybook.shared.generated.resources.history_period_balance
 import tallybook.shared.generated.resources.history_period_error
 import tallybook.shared.generated.resources.history_stale
-import tallybook.shared.generated.resources.history_unavailable
 import tallybook.shared.generated.resources.home_expenses
 import tallybook.shared.generated.resources.home_income
 import tallybook.shared.generated.resources.home_load_error_body
 import tallybook.shared.generated.resources.loading
 import tallybook.shared.generated.resources.retry
-
-@Composable
-internal fun HistoryOverallSummary(
-    moneda: Moneda?,
-    overall: HistoryLoadState<MovimientoSummary>,
-    onRetry: () -> Unit,
-) {
-  val failureDescription = stringResource(Res.string.history_overall_error)
-  val retryLabel = stringResource(Res.string.retry)
-  FlowRow(
-      modifier = Modifier.fillMaxWidth(),
-      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
-      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4),
-  ) {
-    TallybookText(
-        stringResource(Res.string.history_overall_balance),
-        style = TallybookTheme.typography.label,
-    )
-    TallybookText(
-        moneda?.name ?: stringResource(Res.string.history_currency_unavailable),
-        style = TallybookTheme.typography.label,
-    )
-    TallybookText(
-        overall.cachedValue?.balance?.format()
-            ?: stringResource(
-                if (overall is HistoryLoadState.Loading) Res.string.loading
-                else Res.string.history_unavailable
-            ),
-        style = TallybookTheme.typography.bodyEmphasis,
-    )
-    if (overall !is HistoryLoadState.Ready && overall.cachedValue != null) HistoryStaleNotice()
-    if (overall is HistoryLoadState.Failed) {
-      TallybookIconButton(
-          onClick = onRetry,
-          icon = Lucide.RefreshCw,
-          contentDescription = failureDescription + ", " + retryLabel,
-          modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-      )
-    }
-  }
-}
 
 @Composable
 internal fun HistoryPeriodSummary(

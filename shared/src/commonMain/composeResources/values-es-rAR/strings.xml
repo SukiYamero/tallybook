@@ -183,7 +183,6 @@
     <string name="movimiento_amount_expense_prompt">¿Cuánto gastaste?</string>
     <string name="movimiento_amount_income_prompt">¿Cuánto recibiste?</string>
 
-    <string name="history_overall_balance">Balance general</string>
     <string name="history_period_balance">Balance del período</string>
     <string name="history_scope_day">Día</string>
     <string name="history_scope_week">Semana</string>
@@ -200,11 +199,9 @@
     <string name="history_empty_body">Podés elegir otro período o agregar un movimiento.</string>
     <string name="history_period_error">No pudimos cargar este período</string>
     <string name="history_overflow_error">El total de este período supera el monto que podemos mostrar. Elegí otro período.</string>
-    <string name="history_overall_error">El balance general no está disponible.</string>
     <string name="history_year_error">No pudimos actualizar los años disponibles.</string>
     <string name="history_stale">Datos anteriores</string>
     <string name="history_unavailable">No disponible</string>
-    <string name="history_currency_unavailable">Moneda no disponible</string>
     <plurals name="history_movement_count">
         <item quantity="one">%1$d movimiento</item>
         <item quantity="other">%1$d movimientos</item>

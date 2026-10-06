@@ -106,14 +106,12 @@ class HistoryIntegrationTest {
       first.submit("expense", "10,50", TipoMovimiento.GASTO, TODAY)
       first.submit("income", "20,00", TipoMovimiento.INGRESO, TODAY)
       assertEquals(summary(2000, 1050), first.home.uiState.value.summary)
-      assertEquals(summary(2000, 1050), first.overall)
       assertEquals(summary(2000, 1050), first.period.summary)
       assertEquals(listOf("income", "expense"), first.period.groups.single().rows.map { it.id })
       assertEquals(TODAY, first.period.groups.single().fecha)
       assertEquals(2, first.period.movementCount)
       first.submit("outside", "5,00", TipoMovimiento.GASTO, LocalDate(2026, 9, 14))
       assertEquals(summary(2000, 1550), first.home.uiState.value.summary)
-      assertEquals(summary(2000, 1550), first.overall)
       assertEquals(summary(2000, 1050), first.period.summary)
       assertEquals(2, first.period.movementCount)
       assertEquals(selection, first.history.uiState.value.selection)
@@ -132,12 +130,10 @@ class HistoryIntegrationTest {
           setOf("expense", "income", "outside"),
           assertSuccess(reopened.movimientos.getAll()).map { it.id }.toSet(),
       )
-      assertEquals(summary(2000, 1550), reopened.overall)
       assertEquals(summary(2000, 1550), reopened.home.uiState.value.summary)
       assertEquals(summary(2000, 1050), reopened.period.summary)
       assertEquals(2, reopened.period.movementCount)
       reopened.submit("after-reopen", "1,00", TipoMovimiento.INGRESO, TODAY)
-      assertEquals(summary(2100, 1550), reopened.overall)
       assertEquals(summary(2100, 1550), reopened.home.uiState.value.summary)
       assertEquals(3, reopened.period.movementCount)
       assertEquals(firstHome, first.home.uiState.value)
@@ -167,7 +163,6 @@ class HistoryIntegrationTest {
       assertEquals(listOf("income", "expense"), graph.home.uiState.value.recent.map { it.id })
       assertFalse(graph.home.uiState.value.isEmpty)
       assertEquals(summary(2000, 1050), graph.home.uiState.value.summary)
-      assertEquals(summary(2000, 1050), graph.overall)
       assertEquals(period, graph.period)
       assertEquals(selected, graph.history.uiState.value.selection)
       val sql = requireNotNull(graph.driver.scopedRecentSql)
@@ -304,7 +299,7 @@ class HistoryIntegrationTest {
           assertIs<DataError.Local>(assertIs<HistoryFailure.Repository>(failed.failure).error)
           assertEquals(previousPeriod, failed.previous)
           assertEquals(selected, graph.history.uiState.value.selection)
-          assertEquals(summary(0, 1050), graph.overall)
+          assertEquals(summary(0, 1050), graph.home.uiState.value.summary)
           graph.driver.failRangeReads = false
           graph.history.onRetry()
           runCurrent()
@@ -384,10 +379,6 @@ class HistoryIntegrationTest {
       get() =
           assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(history.uiState.value.period)
               .value
-
-    val overall
-      get() =
-          assertIs<HistoryLoadState.Ready<MovimientoSummary>>(history.uiState.value.overall).value
 
     init {
       if (createSchema) TallybookDatabase.Schema.create(driver)
