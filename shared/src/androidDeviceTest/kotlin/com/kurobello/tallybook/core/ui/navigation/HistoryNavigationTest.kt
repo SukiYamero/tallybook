@@ -1,10 +1,13 @@
 package com.kurobello.tallybook.core.ui.navigation
 
+import android.os.Bundle
 import android.os.Parcel
 import android.os.Parcelable
 import android.view.KeyEvent
+import android.view.WindowInsets
+import android.view.WindowManager
+import android.view.inspector.WindowInspector
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.runtime.saveable.SaveableStateRegistry
@@ -62,6 +65,7 @@ import com.kurobello.tallybook.di.viewModelModule
 import java.io.Serializable as JavaSerializable
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
+import kotlin.test.assertNotSame
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.coroutines.CoroutineDispatcher
@@ -76,6 +80,8 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
+import org.json.JSONArray
+import org.json.JSONObject
 import org.junit.Rule
 import org.junit.Test
 import org.koin.compose.KoinIsolatedContext
@@ -83,6 +89,7 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.add_movimiento_pane_title
 import tallybook.shared.generated.resources.history_scope_week
 import tallybook.shared.generated.resources.history_year_description
 import tallybook.shared.generated.resources.movimiento_amount_expense_prompt
@@ -108,10 +115,10 @@ internal class HistoryNavigationTest {
       historyTab().performClick()
       composeRule.onNodeWithText("Item 35").assertIsDisplayed()
       val starts = fixture.movimientos.starts.get()
-      composeRule.runOnIdle { fixture.restoreNewOwners() }
+      restoreShell(fixture)
+      historyTab().assertIsSelected()
       composeRule.waitUntil(5_000) { fixture.movimientos.starts.get() > starts }
       composeRule.onNodeWithText("Item 35").assertIsDisplayed()
-      historyTab().assertIsSelected()
       list.performScrollToNode(hasText(text(Res.string.history_scope_week)))
       composeRule.onNodeWithText(text(Res.string.history_scope_week)).assertIsSelected()
     }
@@ -135,8 +142,43 @@ internal class HistoryNavigationTest {
           .performClick()
       composeRule.onNodeWithContentDescription(text(Res.string.navigation_home)).performClick()
       historyTab().assertIsSelected()
+      composeRule.onNodeWithText("Food").assertIsDisplayed()
       systemBack()
-      composeRule.waitForIdle()
+      composeRule.onNodeWithText("Food").assertDoesNotExist()
+      composeRule
+          .onNodeWithContentDescription(text(Res.string.movimiento_amount_expense_prompt))
+          .assertIsDisplayed()
+      val pane =
+          SemanticsMatcher.expectValue(
+              SemanticsProperties.PaneTitle,
+              text(Res.string.add_movimiento_pane_title),
+          )
+      repeat(3) {
+        if (composeRule.onAllNodes(pane).fetchSemanticsNodes().isNotEmpty()) {
+          var imeVisible = false
+          InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            imeVisible =
+                WindowInspector.getGlobalWindowViews().any { view ->
+                  view.rootWindowInsets?.isVisible(WindowInsets.Type.ime()) == true
+                }
+          }
+          InstrumentationRegistry.getInstrumentation()
+              .sendStatus(
+                  2,
+                  Bundle().apply {
+                    putString(
+                        "history_diagnostic",
+                        JSONObject()
+                            .put("phase", "form-dismiss")
+                            .put("imeVisible", imeVisible)
+                            .toString(),
+                    )
+                  },
+              )
+          systemBack()
+        }
+      }
+      composeRule.onNode(pane).assertDoesNotExist()
       composeRule.onNodeWithContentDescription(text(Res.string.navigation_home)).performClick()
       composeRule.onNodeWithContentDescription(text(Res.string.navigation_home)).assertIsSelected()
       composeRule
@@ -156,7 +198,7 @@ internal class HistoryNavigationTest {
       composeRule.onNodeWithText("Food").performClick()
       val prompt = text(Res.string.movimiento_amount_expense_prompt)
       composeRule.onNodeWithContentDescription(prompt).performTextInput("1234")
-      composeRule.runOnIdle { fixture.restoreNewOwners() }
+      restoreShell(fixture)
       historyTab().assertIsSelected()
       composeRule.onNodeWithContentDescription(prompt).assertDoesNotExist()
       composeRule
@@ -192,6 +234,27 @@ internal class HistoryNavigationTest {
       historyTab().performClick()
       val year = runBlocking { getString(Res.string.history_year_description, 2026) }
       composeRule.onNodeWithContentDescription(year).performClick()
+      val diagnostic = JSONObject().put("phase", "before-popup-back")
+      val nativeWindows = JSONArray()
+      InstrumentationRegistry.getInstrumentation().runOnMainSync {
+        WindowInspector.getGlobalWindowViews().forEach { view ->
+          val params = view.layoutParams as? WindowManager.LayoutParams
+          nativeWindows.put(
+              JSONObject()
+                  .put("class", view.javaClass.name)
+                  .put("attached", view.isAttachedToWindow)
+                  .put("shown", view.isShown)
+                  .put("focused", view.hasWindowFocus())
+                  .put("width", view.width)
+                  .put("height", view.height)
+                  .put("flags", params?.flags)
+                  .put("type", params?.type)
+          )
+        }
+      }
+      diagnostic.put("windows", nativeWindows)
+      InstrumentationRegistry.getInstrumentation()
+          .sendStatus(2, Bundle().apply { putString("history_diagnostic", diagnostic.toString()) })
       systemBack()
       historyTab().assertIsSelected()
       systemBack()
@@ -226,12 +289,20 @@ internal class HistoryNavigationTest {
 
   private fun text(resource: StringResource): String = runBlocking { getString(resource) }
 
+  private fun restoreShell(fixture: DeviceShell) {
+    lateinit var snapshot: NavigationSnapshot
+    composeRule.runOnIdle { snapshot = fixture.saveAndUnmount() }
+    composeRule.waitForIdle()
+    composeRule.runOnIdle { fixture.restoreNewOwners(snapshot) }
+    composeRule.waitForIdle()
+  }
+
   private fun withShell(start: Destination = Home, block: (DeviceShell) -> Unit) {
     val fixture = DeviceShell()
     try {
       composeRule.setContent {
-        val owner = fixture.owner.value
-        key(owner) {
+        if (fixture.mounted.value) {
+          val owner = fixture.owner.value
           KoinIsolatedContext(fixture.context) {
             CompositionLocalProvider(
                 LocalLifecycleOwner provides owner,
@@ -256,6 +327,7 @@ internal class HistoryNavigationTest {
 
 private class DeviceShell {
   val movimientos = NavigationMovimientos()
+  val mounted = mutableStateOf(true)
   val owner = mutableStateOf(NavigationParent(null))
   val registry =
       mutableStateOf(SaveableStateRegistry(null) { it is Parcelable || it is JavaSerializable })
@@ -279,7 +351,7 @@ private class DeviceShell {
     )
   }
 
-  fun restoreNewOwners() {
+  fun saveAndUnmount(): NavigationSnapshot {
     val parcel = Parcel.obtain()
     try {
       parcel.writeBundle(owner.value.save())
@@ -293,12 +365,23 @@ private class DeviceShell {
             require(key is String && value is List<*>)
             key to value.toList()
           }
-      owner.value.close()
-      owner.value = NavigationParent(saved)
-      registry.value = SaveableStateRegistry(compose) { it is Parcelable || it is JavaSerializable }
+      mounted.value = false
+      return NavigationSnapshot(saved, compose)
     } finally {
       parcel.recycle()
     }
+  }
+
+  fun restoreNewOwners(snapshot: NavigationSnapshot) {
+    check(!mounted.value)
+    val original = owner.value
+    original.close()
+    val restored = NavigationParent(snapshot.owner)
+    assertNotSame(original.viewModelStore, restored.viewModelStore)
+    owner.value = restored
+    registry.value =
+        SaveableStateRegistry(snapshot.compose) { it is Parcelable || it is JavaSerializable }
+    mounted.value = true
   }
 
   fun close() {
@@ -306,6 +389,11 @@ private class DeviceShell {
     context.close()
   }
 }
+
+private data class NavigationSnapshot(
+    val owner: SavedState,
+    val compose: Map<String, List<Any?>>,
+)
 
 private class NavigationParent(restored: SavedState?) :
     SavedStateRegistryOwner, ViewModelStoreOwner {

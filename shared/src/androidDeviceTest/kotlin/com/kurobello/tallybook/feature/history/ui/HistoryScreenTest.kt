@@ -1,18 +1,27 @@
 package com.kurobello.tallybook.feature.history.ui
 
+import android.graphics.Bitmap
+import android.os.Bundle
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -21,6 +30,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.test.platform.app.InstrumentationRegistry
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
@@ -36,6 +46,7 @@ import com.kurobello.tallybook.feature.history.viewmodel.HistoryProjection
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryScope
 import com.kurobello.tallybook.feature.history.viewmodel.HistorySelection
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryUiState
+import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Instant
@@ -45,6 +56,7 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getPluralString
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.getStringArray
+import org.json.JSONObject
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
@@ -294,7 +306,11 @@ class HistoryScreenTest {
       val density = LocalDensity.current
       pixelsPerDp = density.density
       CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
-        TallybookTheme { HistoryScreen(state, NoActions, {}, 96.dp, Modifier.height(320.dp)) }
+        TallybookTheme {
+          Box(Modifier.height(320.dp).testTag("history-compact-viewport")) {
+            HistoryScreen(state, NoActions, {}, 96.dp, Modifier.fillMaxSize())
+          }
+        }
       }
     }
     composeRule
@@ -303,9 +319,56 @@ class HistoryScreenTest {
     val scope = composeRule.onNodeWithText(localized(Res.string.history_scope_month))
     scope.assertIsDisplayed().performClick()
     val list = composeRule.onNodeWithContentDescription(localized(Res.string.navigation_history))
+    val targetBounds = scope.getUnclippedBoundsInRoot()
+    val listBounds = list.getUnclippedBoundsInRoot()
+    val screenshot =
+        File(
+            requireNotNull(
+                InstrumentationRegistry.getInstrumentation()
+                    .targetContext
+                    .getExternalFilesDir("history-runtime")
+            ),
+            "history-compact-before.png",
+        )
+    screenshot.outputStream().use {
+      composeRule
+          .onNodeWithTag("history-compact-viewport")
+          .captureToImage()
+          .asAndroidBitmap()
+          .compress(Bitmap.CompressFormat.PNG, 100, it)
+    }
+    val diagnostic =
+        JSONObject()
+            .put("targetTop", targetBounds.top.value * pixelsPerDp)
+            .put("targetBottom", targetBounds.bottom.value * pixelsPerDp)
+            .put("targetHeight", (targetBounds.bottom.value - targetBounds.top.value) * pixelsPerDp)
+            .put("listTop", listBounds.top.value * pixelsPerDp)
+            .put("listBottom", listBounds.bottom.value * pixelsPerDp)
+            .put("listHeight", (listBounds.bottom.value - listBounds.top.value) * pixelsPerDp)
+            .put("clearancePixels", 96f * pixelsPerDp)
+            .put(
+                "globalSummaryHeight",
+                composeRule
+                    .onNodeWithText(localized(Res.string.history_overall_balance))
+                    .fetchSemanticsNode()
+                    .layoutInfo
+                    .parentInfo
+                    ?.height,
+            )
+            .put(
+                "scroll",
+                list
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.VerticalScrollAxisRange]
+                    .value(),
+            )
+            .put("screenshot", screenshot.absolutePath)
+    InstrumentationRegistry.getInstrumentation()
+        .sendStatus(2, Bundle().apply { putString("history_diagnostic", diagnostic.toString()) })
     assertTrue(
-        scope.fetchSemanticsNode().boundsInRoot.bottom <=
-            list.fetchSemanticsNode().boundsInRoot.bottom - 96f * pixelsPerDp
+        targetBounds.top >= listBounds.top &&
+            targetBounds.bottom.value <= listBounds.bottom.value - 96f,
+        diagnostic.toString(),
     )
   }
 

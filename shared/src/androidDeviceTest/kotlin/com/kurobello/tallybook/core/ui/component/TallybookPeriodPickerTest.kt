@@ -6,17 +6,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.unit.dp
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.test.assertEquals
@@ -120,7 +122,10 @@ class TallybookPeriodPickerTest {
     }
 
     composeRule.onNodeWithText("2026").performClick()
-    composeRule.onNodeWithText("2019").performScrollTo().performClick()
+    composeRule
+        .onNode(SemanticsMatcher.keyIsDefined(SemanticsActions.ScrollToIndex))
+        .performScrollToNode(hasText("2019"))
+    composeRule.onNodeWithText("2019").performClick()
 
     composeRule.runOnIdle { assertEquals(2019, selectedYear) }
   }
