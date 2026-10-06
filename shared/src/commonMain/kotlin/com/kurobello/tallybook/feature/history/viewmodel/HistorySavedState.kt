@@ -10,7 +10,7 @@ import kotlinx.serialization.SerializationException
 internal const val HISTORY_SAVED_INPUT_KEY = "history-input"
 
 internal fun restoreHistoryInput(handle: SavedStateHandle, today: LocalDate): HistorySelection {
-  val checkpoint = handle.get<SavedState>(HISTORY_SAVED_INPUT_KEY)
+  val checkpoint = handle.get<Any>(HISTORY_SAVED_INPUT_KEY) as? SavedState
   val input = checkpoint?.let {
     try {
       decodeFromSavedState(HistorySavedInput.serializer(), it)
