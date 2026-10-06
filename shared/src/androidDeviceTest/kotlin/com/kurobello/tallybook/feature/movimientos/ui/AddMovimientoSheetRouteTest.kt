@@ -150,6 +150,9 @@ class AddMovimientoSheetRouteTest {
   private class FakeMovimientoRepository : MovimientoRepository {
     val inserted = mutableStateListOf<Movimiento>()
 
+    override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
+        error("Scoped recent reads are not expected in this fixture")
+
     override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = emptyFlow()
 
     override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> = emptyFlow()

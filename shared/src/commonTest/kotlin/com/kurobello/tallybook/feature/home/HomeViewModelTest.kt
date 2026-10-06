@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
@@ -98,6 +99,7 @@ class HomeViewModelTest {
 
     runCurrent()
 
+    assertEquals(listOf(Moneda.USD to 6), movimientos.recentRequests)
     assertEquals(listOf(usdMovimiento), viewModel.uiState.value.recent)
     assertEquals(category, viewModel.uiState.value.categoriasById[category.id])
     assertEquals(Moneda.USD, viewModel.uiState.value.summary.balance.moneda)
@@ -345,6 +347,7 @@ class HomeViewModelTest {
   ) : MovimientoRepository {
     private val recentValues = MutableStateFlow(recent)
     private val summaryValues = MutableStateFlow(summary)
+    val recentRequests = mutableListOf<Pair<Moneda, Int>>()
     var insertCalls = 0
       private set
 
@@ -357,15 +360,30 @@ class HomeViewModelTest {
     var summarySubscriptions = 0
       private set
 
-    override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = flow {
-      recentSubscriptions += 1
-      activeRecent += 1
-      try {
-        emitAll(recentValues.filterNotNull())
-      } finally {
-        activeRecent -= 1
-      }
-    }
+    override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> =
+        error("Home recent reads must include principal currency")
+
+    override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
+        flow {
+          recentRequests += moneda to limit
+          recentSubscriptions += 1
+          activeRecent += 1
+          try {
+            emitAll(
+                recentValues.filterNotNull().map { outcome ->
+                  when (outcome) {
+                    is DataOutcome.Success ->
+                        DataOutcome.Success(
+                            outcome.data.filter { it.monto.moneda == moneda }.take(limit)
+                        )
+                    is DataOutcome.Failure -> outcome
+                  }
+                }
+            )
+          } finally {
+            activeRecent -= 1
+          }
+        }
 
     override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> = flow {
       summarySubscriptions += 1

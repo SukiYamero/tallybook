@@ -98,6 +98,25 @@ internal class MovimientoRepositoryImpl(
             .asLocalDataOutcome()
       }
 
+  override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
+      if (limit <= 0) {
+        flowOf(
+            DataOutcome.Failure(DataError.InvalidInput("Recent movimiento limit must be positive"))
+        )
+      } else {
+        flow {
+              emitAll(
+                  database.movimientoQueries
+                      .selectRecentMovimientosByMoneda(moneda.name, limit.toLong())
+                      .asFlow()
+                      .mapToList(dispatcher)
+                      .map { rows -> rows.map { it.toDomain() } }
+              )
+            }
+            .flowOn(dispatcher)
+            .asLocalDataOutcome()
+      }
+
   override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> =
       database.movimientoQueries
           .sumMovimientosByTipo(moneda.name)

@@ -495,6 +495,25 @@ private class ShellMovimientos : MovimientoRepository {
     }
   }
 
+  override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
+      flow {
+        activeRecent += 1
+        try {
+          emitAll(
+              rows.map { values ->
+                DataOutcome.Success(
+                    values
+                        .filter { it.monto.moneda == moneda }
+                        .sortedWith(shellStorageOrder)
+                        .take(limit)
+                )
+              }
+          )
+        } finally {
+          activeRecent -= 1
+        }
+      }
+
   override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = flow {
     activeRecent += 1
     try {

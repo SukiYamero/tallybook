@@ -371,6 +371,25 @@ private class NavigationMovimientos : MovimientoRepository {
     }
   }
 
+  override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
+      flow {
+        activeRecent.incrementAndGet()
+        try {
+          emitAll(
+              rows.map { values ->
+                DataOutcome.Success(
+                    values
+                        .filter { it.monto.moneda == moneda }
+                        .sortedWith(navigationStorageOrder)
+                        .take(limit)
+                )
+              }
+          )
+        } finally {
+          activeRecent.decrementAndGet()
+        }
+      }
+
   override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = flow {
     activeRecent.incrementAndGet()
     try {

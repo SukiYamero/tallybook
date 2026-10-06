@@ -540,6 +540,9 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) : Movimient
 
   override fun observeSummary(moneda: Moneda) = summary(moneda).observe()
 
+  override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
+      error("Scoped recent reads are not expected in this fixture")
+
   override fun observeRecent(limit: Int) = flow { emit(DataOutcome.Success(rows.take(limit))) }
 
   override suspend fun getAll() = DataOutcome.Success(rows)

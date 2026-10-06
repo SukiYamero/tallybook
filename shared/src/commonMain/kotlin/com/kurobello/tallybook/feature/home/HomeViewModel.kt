@@ -100,10 +100,10 @@ internal class HomeViewModel(
   private fun observePersistedHome(moneda: Moneda): Flow<HomeUiState> =
       combine(
           movimientoRepository.observeSummary(moneda).toLoadState(),
-          movimientoRepository.observeRecent(HOME_RECENT_LIMIT).toLoadState(),
+          movimientoRepository.observeRecent(moneda, HOME_RECENT_LIMIT).toLoadState(),
           categoriaRepository.observeAll().toLoadState(),
       ) { summary, recent, categorias ->
-        HomeSnapshot.from(moneda, summary, recent, categorias).toUiState(moneda)
+        HomeSnapshot.from(summary, recent, categorias).toUiState(moneda)
       }
 }
 
@@ -141,18 +141,13 @@ private data class HomeSnapshot(
 
   companion object {
     fun from(
-        moneda: Moneda,
         summary: LoadState<MovimientoSummary>,
         recent: LoadState<List<Movimiento>>,
         categorias: LoadState<List<com.kurobello.tallybook.core.model.Categoria>>,
     ): HomeSnapshot =
         HomeSnapshot(
             summary = summary.successOrNull(),
-            recent =
-                recent
-                    .successOrNull()
-                    ?.filter { it.monto.moneda == moneda }
-                    ?.take(HOME_RECENT_LIMIT),
+            recent = recent.successOrNull(),
             categoriasById = categorias.successOrNull()?.associateBy { it.id },
             error = summary.errorOrNull() ?: recent.errorOrNull() ?: categorias.errorOrNull(),
             isLoading =

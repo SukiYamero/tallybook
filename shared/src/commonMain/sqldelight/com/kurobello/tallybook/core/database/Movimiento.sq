@@ -38,6 +38,13 @@ FROM movimiento
 ORDER BY fecha DESC, created_at DESC, id DESC
 LIMIT ?;
 
+selectRecentMovimientosByMoneda:
+SELECT *
+FROM movimiento
+WHERE monto_moneda = ?
+ORDER BY fecha DESC, created_at DESC, id DESC
+LIMIT ?;
+
 selectMovimientoById:
 SELECT *
 FROM movimiento

@@ -52,6 +52,79 @@ class ReactiveRepositoryTest {
   }
 
   @Test
+  fun `scoped recent bounds currency before limit mapping and reacts to inserts and deletes`() =
+      runTest {
+        JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+          TallybookDatabase.Schema.create(driver)
+          val database = TallybookDatabase(driver)
+          val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+          val flow = repository.observeRecent(Moneda.COP, 2)
+          val emissions = mutableListOf<DataOutcome<List<Movimiento>>>()
+          val collector = backgroundScope.launch { flow.collect(emissions::add) }
+          testScheduler.runCurrent()
+          assertEquals(1, emissions.size)
+          assertEquals(DataOutcome.Success(emptyList<Movimiento>()), emissions.single())
+          val first = movimiento("a", monto = Money(100, Moneda.COP))
+          val second = movimiento("b", monto = Money(100, Moneda.COP))
+          val third =
+              movimiento("c", monto = Money(100, Moneda.COP))
+                  .copy(createdAt = first.createdAt + kotlin.time.Duration.parse("1s"))
+          for (row in listOf(first, second, third)) assertEquals(
+              DataOutcome.Success(Unit),
+              repository.insert(row),
+          )
+          database.movimientoQueries.insertMovimiento(
+              "foreign-corrupt",
+              "INVALID_TYPE",
+              100,
+              "USD",
+              "2026-09-16",
+              "cat_comida",
+              null,
+              "invalid-instant",
+          )
+          testScheduler.runCurrent()
+          assertEquals(DataOutcome.Success(listOf(third, second)), emissions.last())
+          assertIs<DataOutcome.Failure>(repository.observeRecent(10).first())
+          assertEquals(DataOutcome.Success(Unit), repository.delete(third.id))
+          testScheduler.runCurrent()
+          assertEquals(DataOutcome.Success(listOf(second, first)), emissions.last())
+          database.movimientoQueries.insertMovimiento(
+              "selected-corrupt",
+              "GASTO",
+              0,
+              "COP",
+              "2026-09-16",
+              "cat_comida",
+              null,
+              first.createdAt.toString(),
+          )
+          testScheduler.runCurrent()
+          assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(emissions.last()).error)
+          assertTrue(collector.isCompleted)
+          assertEquals(DataOutcome.Success(Unit), repository.delete("selected-corrupt"))
+          assertEquals(DataOutcome.Success(listOf(second, first)), flow.first())
+        }
+      }
+
+  @Test
+  fun `scoped recent rejects invalid limits before reading and wraps closed storage`() = runTest {
+    val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+    TallybookDatabase.Schema.create(driver)
+    val repository =
+        MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
+    driver.close()
+    for (limit in listOf(0, -1)) {
+      assertIs<DataError.InvalidInput>(
+          assertIs<DataOutcome.Failure>(repository.observeRecent(Moneda.COP, limit).first()).error
+      )
+    }
+    assertIs<DataError.Local>(
+        assertIs<DataOutcome.Failure>(repository.observeRecent(Moneda.COP, 2).first()).error
+    )
+  }
+
+  @Test
   fun `observe all categorias emits an initial list and another list after seeding`() = runTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     TallybookDatabase.Schema.create(driver)

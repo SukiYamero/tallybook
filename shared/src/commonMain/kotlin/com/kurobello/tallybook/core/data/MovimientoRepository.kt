@@ -11,6 +11,8 @@ interface MovimientoRepository {
 
   fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>>
 
+  fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>>
+
   fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>>
 
   /**

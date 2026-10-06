@@ -28,6 +28,9 @@ locale del sistema una sola vez; idioma y región salen del mismo tag (`es-CO` �
 `CO`); la región mapea a moneda por tabla fija (default `COP` si no matchea); el idioma determina los
 strings de la UI. No hay selector de moneda al inicio — es inferido, editable después a mano.
 
+Home recent movimientos use the primary currency before applying the six-row limit, ordered by
+`fecha DESC, created_at DESC, id DESC`. Newer foreign-currency rows cannot hide eligible movements.
+
 ## Categorías
 
 Lista predefinida (no las crea el usuario en el MVP), portada de moneta — no se retipea acá para no
