@@ -48,6 +48,8 @@ internal object TallybookDimensions {
   val datePickerMediumChipHeight = minimumTouchTarget
   val datePickerDaySize = TallybookSpacing.space40
   val datePickerMaximumWidth = 336.dp
+  val datePickerYearSelectorMaximumHeight = 240.dp
+  val searchPresetChipVisualHeight = 36.dp
   val categoryPickerResultsMaximumHeight = 420.dp
   val yearMenuMaximumWidth = 128.dp
   val segmentedControlMinimumHeight = minimumTouchTarget

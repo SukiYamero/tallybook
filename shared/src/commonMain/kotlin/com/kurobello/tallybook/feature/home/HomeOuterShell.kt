@@ -3,6 +3,7 @@ package com.kurobello.tallybook.feature.home
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -71,9 +73,16 @@ internal fun HomeHeader(modifier: Modifier = Modifier) {
 }
 
 @Composable
-internal fun HomeSearch(modifier: Modifier = Modifier) {
+internal fun HomeSearch(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
   TallybookSurface(
-      modifier = modifier.fillMaxWidth().heightIn(min = TallybookTheme.dimensions.homeSearchHeight),
+      modifier =
+          modifier
+              .fillMaxWidth()
+              .heightIn(min = TallybookTheme.dimensions.minimumTouchTarget)
+              .then(
+                  if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick)
+                  else Modifier
+              ),
       style =
           TallybookSurfaceDefaults.cardStyle()
               .copy(

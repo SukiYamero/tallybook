@@ -14,14 +14,14 @@ class DestinationSerializationTest {
   @Test
   fun everyDestinationExposesAGeneratedSerializer() {
     val serialNames =
-        listOf(Home.serializer(), History.serializer(), UiCatalog.serializer()).map {
-          it.descriptor.serialName
-        }
+        listOf(Home.serializer(), History.serializer(), Search.serializer(), UiCatalog.serializer())
+            .map { it.descriptor.serialName }
 
     assertEquals(
         listOf(
             "com.kurobello.tallybook.core.ui.navigation.Home",
             "com.kurobello.tallybook.core.ui.navigation.History",
+            "com.kurobello.tallybook.core.ui.navigation.Search",
             "com.kurobello.tallybook.core.ui.navigation.UiCatalog",
         ),
         serialNames,
@@ -38,11 +38,11 @@ class DestinationSerializationTest {
 
   @Test
   fun destinationBackStackSurvivesSerializationRoundTrip() {
-    val original = NavBackStack<Destination>(UiCatalog)
+    val original = NavBackStack<Destination>(Home, History, Search, UiCatalog)
 
     val encoded = Json.encodeToString(destinationBackStackSerializer(), original)
     val restored = Json.decodeFromString(destinationBackStackSerializer(), encoded)
 
-    assertEquals(listOf(UiCatalog), restored.toList())
+    assertEquals(listOf(Home, History, Search, UiCatalog), restored.toList())
   }
 }

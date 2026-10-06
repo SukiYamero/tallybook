@@ -1,0 +1,272 @@
+@file:Suppress("LongParameterList")
+
+package com.kurobello.tallybook.feature.search.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
+import androidx.compose.ui.Modifier
+import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
+import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
+import com.kurobello.tallybook.core.ui.component.TallybookButton
+import com.kurobello.tallybook.core.ui.component.TallybookDateChipPicker
+import com.kurobello.tallybook.core.ui.component.TallybookModalBottomSheet
+import com.kurobello.tallybook.core.ui.component.TallybookSegmentOption
+import com.kurobello.tallybook.core.ui.component.TallybookSegmentedControl
+import com.kurobello.tallybook.core.ui.component.TallybookSegmentedControlStyle
+import com.kurobello.tallybook.core.ui.component.TallybookText
+import com.kurobello.tallybook.core.ui.component.TallybookTextButton
+import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import com.kurobello.tallybook.feature.search.viewmodel.SearchActions
+import com.kurobello.tallybook.feature.search.viewmodel.SearchDatePreset
+import com.kurobello.tallybook.feature.search.viewmodel.SearchFilterResolution
+import com.kurobello.tallybook.feature.search.viewmodel.SearchFilterSession
+import com.kurobello.tallybook.feature.search.viewmodel.SearchFilterSessionId
+import com.kurobello.tallybook.feature.search.viewmodel.SearchFilters
+import com.kurobello.tallybook.feature.search.viewmodel.SearchUiState
+import com.kurobello.tallybook.feature.search.viewmodel.resolveSearchFilters
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
+import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.search_all_history
+import tallybook.shared.generated.resources.search_all_types
+import tallybook.shared.generated.resources.search_apply
+import tallybook.shared.generated.resources.search_clear_filters
+import tallybook.shared.generated.resources.search_custom
+import tallybook.shared.generated.resources.search_date_range
+import tallybook.shared.generated.resources.search_end_date
+import tallybook.shared.generated.resources.search_expenses
+import tallybook.shared.generated.resources.search_filters
+import tallybook.shared.generated.resources.search_income
+import tallybook.shared.generated.resources.search_invalid_dates
+import tallybook.shared.generated.resources.search_last_30_days
+import tallybook.shared.generated.resources.search_last_7_days
+import tallybook.shared.generated.resources.search_start_date
+import tallybook.shared.generated.resources.search_this_month
+import tallybook.shared.generated.resources.search_this_year
+import tallybook.shared.generated.resources.search_type
+
+@Composable
+internal fun SearchFilterSheet(
+    uiState: SearchUiState,
+    actions: SearchActions,
+    modifier: Modifier = Modifier,
+) {
+  val sessionId =
+      when (val session = uiState.filterSession) {
+        SearchFilterSession.Hidden -> return
+        is SearchFilterSession.Editing -> session.sessionId
+        is SearchFilterSession.Closing -> session.sessionId
+      }
+  key(sessionId) {
+    TallybookModalBottomSheet(
+        visible = uiState.filterSession is SearchFilterSession.Editing,
+        paneTitle = stringResource(Res.string.search_filters),
+        callbacks =
+            ModalBottomSheetCallbacks(
+                onDismiss = { actions.onCancelFilters(sessionId) },
+                onHidden = { actions.onFiltersHidden(sessionId) },
+            ),
+        layout =
+            ModalBottomSheetLayout(
+                modifier = modifier.fillMaxHeight(SEARCH_FILTER_SHEET_HEIGHT_FRACTION),
+                fillAvailableHeight = true,
+            ),
+    ) {
+      SearchFilterSheetContent(uiState, actions)
+    }
+  }
+}
+
+@Composable
+internal fun SearchFilterSheetContent(
+    uiState: SearchUiState,
+    actions: SearchActions,
+    modifier: Modifier = Modifier,
+) {
+  val session = uiState.filterSession
+  val id: SearchFilterSessionId
+  val filters: SearchFilters
+  when (session) {
+    SearchFilterSession.Hidden -> return
+    is SearchFilterSession.Editing -> {
+      id = session.sessionId
+      filters = session.draft
+    }
+    is SearchFilterSession.Closing -> {
+      id = session.sessionId
+      filters = session.renderSnapshot
+    }
+  }
+  val enabled = session is SearchFilterSession.Editing
+  val valid = resolveSearchFilters(filters, uiState.today) is SearchFilterResolution.Valid
+  Column(modifier.fillMaxSize().imePadding().padding(horizontal = TallybookTheme.spacing.space20)) {
+    Column(
+        modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space20),
+    ) {
+      SearchDateFilters(filters, uiState, enabled) { actions.onFilterDraftChanged(id, it) }
+      SearchTypeFilters(filters.tipo, enabled) {
+        actions.onFilterDraftChanged(id, filters.copy(tipo = it))
+      }
+      SearchCategoryFilters(
+          uiState.categories.values.orEmpty(),
+          filters.categoryIds,
+          enabled,
+          { actions.onFilterDraftChanged(id, filters.toggleCategory(it)) },
+          Modifier.fillMaxWidth().padding(bottom = TallybookTheme.spacing.space16),
+      )
+    }
+    SearchFilterFooter(
+        enabled,
+        valid,
+        { actions.onClearFilters(id) },
+        { actions.onApplyFilters(id) },
+    )
+  }
+}
+
+@Composable
+private fun SearchTypeFilters(
+    selectedType: TipoMovimiento?,
+    enabled: Boolean,
+    onSelect: (TipoMovimiento?) -> Unit,
+) {
+  Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8)) {
+    SearchFilterHeading(stringResource(Res.string.search_type))
+    TallybookSegmentedControl(
+        options =
+            listOf(
+                TallybookSegmentOption<TipoMovimiento?>(
+                    null,
+                    stringResource(Res.string.search_all_types),
+                ),
+                TallybookSegmentOption(
+                    TipoMovimiento.GASTO,
+                    stringResource(Res.string.search_expenses),
+                ),
+                TallybookSegmentOption(
+                    TipoMovimiento.INGRESO,
+                    stringResource(Res.string.search_income),
+                ),
+            ),
+        selected = selectedType,
+        onSelect = onSelect,
+        modifier = Modifier.fillMaxWidth(),
+        enabled = enabled,
+        style = TallybookSegmentedControlStyle.Neutral,
+    )
+  }
+}
+
+@Composable
+private fun SearchFilterFooter(
+    enabled: Boolean,
+    valid: Boolean,
+    onClear: () -> Unit,
+    onApply: () -> Unit,
+) {
+  Row(
+      modifier = Modifier.fillMaxWidth().padding(vertical = TallybookTheme.spacing.space12),
+      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
+  ) {
+    TallybookTextButton(onClear, enabled = enabled) {
+      TallybookText(stringResource(Res.string.search_clear_filters))
+    }
+    TallybookButton(
+        onApply,
+        Modifier.weight(1f),
+        enabled = enabled && valid,
+    ) {
+      TallybookText(stringResource(Res.string.search_apply))
+    }
+  }
+}
+
+@Composable
+private fun SearchDateFilters(
+    filters: SearchFilters,
+    state: SearchUiState,
+    enabled: Boolean,
+    onChange: (SearchFilters) -> Unit,
+) {
+  Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8)) {
+    SearchFilterHeading(stringResource(Res.string.search_date_range))
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+        verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+    ) {
+      SearchDatePreset.entries.forEach { preset ->
+        SearchChoiceChip(
+            searchPresetLabel(preset),
+            filters.preset == preset,
+            { onChange(filters.copy(preset = preset)) },
+            enabled = enabled,
+        )
+      }
+    }
+    if (filters.preset == SearchDatePreset.Custom) {
+      FlowRow(
+          horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+          verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+      ) {
+        val startDate = searchFullDate(filters.customStart)
+        val endDate = searchFullDate(filters.customEnd)
+        val minimumYear = state.availableYears.minOrNull() ?: state.today.year
+        TallybookDateChipPicker(
+            filters.customStart,
+            { onChange(filters.copy(customStart = it)) },
+            "${stringResource(Res.string.search_start_date)}: $startDate",
+            enabled = enabled,
+            maxDate = state.today,
+            minYear = minimumYear,
+            valueLabel = startDate,
+            calendarDaySize = TallybookTheme.dimensions.minimumTouchTarget,
+        )
+        TallybookDateChipPicker(
+            filters.customEnd,
+            { onChange(filters.copy(customEnd = it)) },
+            "${stringResource(Res.string.search_end_date)}: $endDate",
+            enabled = enabled,
+            maxDate = state.today,
+            minYear = minimumYear,
+            valueLabel = endDate,
+            calendarDaySize = TallybookTheme.dimensions.minimumTouchTarget,
+        )
+      }
+    }
+    if (resolveSearchFilters(filters, state.today) is SearchFilterResolution.Invalid) {
+      TallybookText(
+          stringResource(Res.string.search_invalid_dates),
+          color = TallybookTheme.colors.status.danger.base,
+      )
+    }
+  }
+}
+
+private val searchPresetResources: Map<SearchDatePreset, StringResource> =
+    mapOf(
+        SearchDatePreset.All to Res.string.search_all_history,
+        SearchDatePreset.Last7Days to Res.string.search_last_7_days,
+        SearchDatePreset.Last30Days to Res.string.search_last_30_days,
+        SearchDatePreset.ThisMonth to Res.string.search_this_month,
+        SearchDatePreset.ThisYear to Res.string.search_this_year,
+        SearchDatePreset.Custom to Res.string.search_custom,
+    )
+
+@Composable
+internal fun searchPresetLabel(preset: SearchDatePreset): String =
+    stringResource(searchPresetResources.getValue(preset))
+
+private const val SEARCH_FILTER_SHEET_HEIGHT_FRACTION = 0.72f

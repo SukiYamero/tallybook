@@ -15,6 +15,8 @@ import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoDateRange
+import com.kurobello.tallybook.core.model.MovimientoReadCriteria
+import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
@@ -466,6 +468,11 @@ class HomeViewModelTest {
       summarySubscriptions += 1
       emitAll(summaryValues.filterNotNull())
     }
+
+    override fun observeFiltered(
+        criteria: MovimientoReadCriteria
+    ): Flow<DataOutcome<MovimientoSearchSnapshot>> =
+        error("Search reads are not expected in this fixture")
 
     override fun observeRange(
         moneda: Moneda,

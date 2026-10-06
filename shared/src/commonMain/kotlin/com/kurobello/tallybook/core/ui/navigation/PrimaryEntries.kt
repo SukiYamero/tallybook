@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSerializable
 import androidx.lifecycle.defaultViewModelCreationExtras
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
@@ -30,9 +31,15 @@ internal fun rememberPrimaryEntries(
   val provider = rememberViewModelStoreProvider(parent = parent, defaultCreationExtras = extras)
   val viewModelDecorator =
       remember(provider) { ViewModelStoreNavEntryDecorator<Destination>(provider) }
+  val latestProvider = rememberUpdatedState(entryProvider)
   return rememberDecoratedNavEntries(
       backStack = navigation.retainedKeys,
       entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), viewModelDecorator),
-      entryProvider = entryProvider,
+      entryProvider = { destination ->
+        // Navigation3 caches entries by back stack, so retained content must read current inputs.
+        NavEntry(navEntry = latestProvider.value(destination)) { key ->
+          latestProvider.value(key).Content()
+        }
+      },
   )
 }

@@ -7,6 +7,9 @@ import com.kurobello.tallybook.feature.history.viewmodel.HistoryViewModel
 import com.kurobello.tallybook.feature.home.HomeViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoRepositories
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
+import com.kurobello.tallybook.feature.search.viewmodel.SearchDateProvider
+import com.kurobello.tallybook.feature.search.viewmodel.SearchRepositories
+import com.kurobello.tallybook.feature.search.viewmodel.SearchViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
@@ -37,6 +40,15 @@ internal val viewModelModule = module {
         idGenerator = get(),
         clock = get(),
         timeZoneProvider = get(),
+    )
+  }
+  viewModel { parameters ->
+    SearchViewModel(
+        repositories = SearchRepositories(get(), get(), get()),
+        savedStateHandle = get(),
+        unknownCategoryLabel = parameters.get(),
+        dateProvider = SearchDateProvider(get(), get()),
+        computationDispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.DEFAULT)),
     )
   }
 }

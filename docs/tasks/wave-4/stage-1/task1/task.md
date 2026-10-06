@@ -37,7 +37,7 @@ Consumes existing Moneda, TipoMovimiento, MovimientoDateRange, FIRST_SELECTABLE_
   fields, date sentinels or parallel isAll/isActive constructor flags.
 - `SearchFilterSession`: Hidden; Editing(sessionId,draft); Closing(sessionId,renderSnapshot).
   `SearchFilterSessionId` is a monotonic local identity; session actions carry it. Pure transitions
-  produce a commit only on Editing → Closing via valid Apply. The ViewModel owns ID allocation.
+  produce a commit only on Editing → Closing via valid Apply or Clear. The ViewModel owns ID allocation.
 - `SearchSavedInput`: schema version 1, raw query, preset, ISO custom endpoints, optional movement type,
   deterministic category-ID list. Serialize tokens explicitly; do not depend on enum ordinals.
 
@@ -54,8 +54,8 @@ the render snapshot and no commit. Closing is immutable/disabled; matching hidde
 Reopen during Closing and actions for older IDs are no-ops, including an old hidden callback when a
 newer session is also Closing. Opening after Hidden allocates a new ID.
 
-Clear replaces just the Editing draft with defaults at current today. Dismiss discards those defaults;
-Apply commits them. Preset changes preserve custom endpoints. Categories use immutable exact IDs, with
+Clear commits defaults at refreshed today and closes immediately, preserving raw text. Preset changes
+preserve custom endpoints. Categories use immutable exact IDs, with
 deterministic serialized/chip order; no parent expansion, catalog lookup or type pruning in the reducer.
 
 Absent/undecodable/unknown-version saved input recovers to fresh filters/raw empty query. With a valid
@@ -74,7 +74,8 @@ from a newly restored invalid Custom input that deterministically recovers.
       reversed, future and backward-clock invalid cases; switching presets retains custom endpoints.
 - [ ] Category toggling twice returns the original set; caller mutation cannot alter captured criteria;
       All/custom status derives correctly and type/category combinations remain available.
-- [ ] Open/edit/clear/cancel/reopen leaves applied values unchanged; valid Apply emits one commit even
+- [ ] Open/edit/cancel/reopen leaves applied values unchanged; Clear commits defaults and closes;
+      valid Apply emits one commit even
       with no changes or zero matches; no result count is required by this pure contract.
 - [ ] Duplicate Apply/cancel/hidden, rejected reopen, old actions during newer Editing/Closing; retained
       closing render data exists until exactly its matching hidden cleanup.

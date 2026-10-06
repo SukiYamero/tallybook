@@ -56,6 +56,25 @@ FROM movimiento
 WHERE monto_moneda = ? AND fecha >= ? AND fecha <= ?
 ORDER BY fecha DESC, created_at DESC, id DESC;
 
+selectFilteredMovimientos:
+SELECT *
+FROM movimiento
+WHERE monto_moneda = :moneda
+  AND (:start_date IS NULL OR fecha >= :start_date)
+  AND (:end_date IS NULL OR fecha <= :end_date)
+  AND (:movement_type IS NULL OR tipo = :movement_type)
+ORDER BY fecha DESC, created_at DESC, id DESC;
+
+selectFilteredMovimientosByCategory:
+SELECT *
+FROM movimiento
+WHERE monto_moneda = :moneda
+  AND (:start_date IS NULL OR fecha >= :start_date)
+  AND (:end_date IS NULL OR fecha <= :end_date)
+  AND (:movement_type IS NULL OR tipo = :movement_type)
+  AND categoria_id IN :category_ids
+ORDER BY fecha DESC, created_at DESC, id DESC;
+
 deleteMovimiento:
 DELETE FROM movimiento
 WHERE id = ?;

@@ -20,6 +20,7 @@ internal fun TallybookSearchField(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     onClear: () -> Unit,
+    inputModifier: Modifier = Modifier,
 ) {
   TallybookTextField(
       value = query,
@@ -27,6 +28,7 @@ internal fun TallybookSearchField(
       modifier = modifier,
       placeholder = placeholder,
       enabled = enabled,
+      inputModifier = inputModifier,
       leadingContent = {
         Image(
             imageVector = Lucide.Search,

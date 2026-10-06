@@ -549,7 +549,8 @@ safe area, `space20` above the header and shell-measured bottom clearance exactl
 scroll with content; no fixed global balance or chart. Rows reuse MovimientoRowContent with description
 first and full civil date/category subtitle; complete date/currency/type semantics remain accessible.
 
-The filter sheet uses wrapping date presets, two existing date chips for Custom, Todos/Gastos/Ingresos,
+The filter sheet occupies 72% of available height, revealing the underlying Search field in portrait.
+It uses compact, vertically centered wrapping date presets, two existing date chips for Custom, Todos/Gastos/Ingresos,
 then parent-grouped real category chips with children visible. Show all persisted categories, with
 their existing icons/tints, plus selected missing-ID fallback chips with remove semantics. The body
 scrolls while a separate Limpiar/Aplicar footer remains reachable above safe/IME insets. Preserve
@@ -572,12 +573,13 @@ retain that old text result as an error fallback.
 | Condition | Body / loading treatment | Header and controls |
 | --- | --- | --- |
 | Fresh/recreated entry, no valid snapshot, read under 200 ms | Reserve result space; no skeleton flash; ready/error bypass delay | Live title/input/chips; no invented count or empty message |
-| Same initial read still pending at 200 ms | Four static MovimientoRowSkeleton rows; one loading semantic group | Count line placeholder; real input stays usable; filters wait for real category/read metadata |
+| Same initial read still pending at 200 ms | Four static MovimientoRowSkeleton rows; one loading semantic group | Localized loading text replaces the count; real input stays usable; filters wait for real category/read metadata |
 | New structural criteria/currency without snapshot | Clear unrelated rows immediately; delayed skeleton if read exceeds 200 ms | Applied chips/input update immediately; pending count unavailable |
 | Return/resume/retry with same request snapshot, including empty | Render retained snapshot immediately; no skeleton | Pending count unavailable; discreet updating indicator only if actual revalidation exceeds 200 ms |
-| Text debounce for same structural criteria | Keep last-settled rows as an updating display; no skeleton or spinner for the timer alone | Immediate localized searching text in the reserved count line; no old count/no-results assertion; busy semantics |
-| Text computation still running 200 ms after it starts | Retain bounded settled rows; small shared progress indicator beside result status | Localized searching status; no numeric count until settled |
-| Draft edits, Clear draft, sheet opening/closing | No result query, loading or count preview | Underlying applied rows/count remain unchanged |
+| Text debounce for same structural criteria | Keep last-settled rows as an updating display; no skeleton or spinner for the timer alone | Immediate localized loading text in the reserved count line; no old count/no-results assertion; busy semantics |
+| Text computation still running 200 ms after it starts | Retain bounded settled rows; small shared progress indicator beside result status | Localized loading text; no numeric count until settled |
+| Draft edits, sheet opening/cancel closing | No result query, loading or count preview | Underlying applied rows/count remain unchanged |
+| Clear filters | Atomically commit defaults and close; results follow the new applied request | Raw text remains unchanged |
 | Matching insert/delete or category/locale change | Atomically replace when projection settles; retain same-request render during work | Suppress old count as current while known reprocessing is pending; no full-screen skeleton |
 | Same-request failure with valid snapshot | Retain readable content plus explicit error/retry; no skeleton | Count is stale/unavailable, inputs preserved |
 | Initial/different-request failure or invalid applied Custom dates | Explicit error/retry or date correction; never a perpetual skeleton/empty success | No count; fields/chip removal remain usable |
@@ -594,8 +596,9 @@ structural identity change so a previous query cannot remain visible during the 
 delay the entire SearchUiState or share a pending timer with session state. Results/failures cancel
 feedback promptly; no spinner remains after cancellation or disposal.
 
-Result count exists only for a settled current Ready snapshot and derives from its rows. Reserve its
-line height while pending; skeleton sample text has no accessibility. Announce settled result count
+Result count exists only for a settled current Ready snapshot and derives from its rows. Its line
+shows localized loading text while work is pending, including first-read and debounce; resources own
+the wording. Announce settled result count
 politely, not each keystroke or placeholder. Filter active/expanded state and chip removals must be
 meaningful without dots/color. Avoid repeating the same status through multiple live regions.
 

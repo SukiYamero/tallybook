@@ -38,6 +38,7 @@ fun CategoryChip(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
@@ -66,6 +67,7 @@ fun CategoryChip(
               )
               .selectable(
                   selected = selected,
+                  enabled = enabled,
                   interactionSource = interactionSource,
                   indication = null,
                   onClick = {

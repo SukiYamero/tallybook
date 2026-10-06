@@ -36,11 +36,14 @@ internal data class MovimientoRowText(
 )
 
 @Composable
+@Suppress("LongParameterList")
 internal fun MovimientoRowContent(
     movimiento: Movimiento,
     categoria: Categoria?,
     text: MovimientoRowText,
     modifier: Modifier = Modifier,
+    maxDescriptionLines: Int = 2,
+    maxSubtitleLines: Int = 1,
 ) {
   val amountText = signedMovimientoAmountText(movimiento.monto, movimiento.tipo)
   val typeLabel =
@@ -79,7 +82,13 @@ internal fun MovimientoRowContent(
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
-      MovimientoRowDescription(categoria, text, Modifier.weight(1f))
+      MovimientoRowDescription(
+          categoria,
+          text,
+          maxDescriptionLines,
+          maxSubtitleLines,
+          Modifier.weight(1f),
+      )
       TallybookText(
           amountText,
           color =
@@ -103,6 +112,8 @@ internal fun signedMovimientoAmountText(monto: Money, tipo: TipoMovimiento): Str
 private fun MovimientoRowDescription(
     categoria: Categoria?,
     text: MovimientoRowText,
+    maxDescriptionLines: Int,
+    maxSubtitleLines: Int,
     modifier: Modifier,
 ) {
   Row(
@@ -116,7 +127,7 @@ private fun MovimientoRowDescription(
       TallybookText(
           text.primary,
           style = TallybookTheme.typography.bodyEmphasis,
-          maxLines = 2,
+          maxLines = maxDescriptionLines,
           overflow = TextOverflow.Ellipsis,
       )
       text.secondary?.let {
@@ -124,7 +135,7 @@ private fun MovimientoRowDescription(
             it,
             color = TallybookTheme.colors.foreground.tertiary,
             style = TallybookTheme.typography.bodySmall,
-            maxLines = 1,
+            maxLines = maxSubtitleLines,
             overflow = TextOverflow.Ellipsis,
         )
       }

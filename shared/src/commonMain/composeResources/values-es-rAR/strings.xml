@@ -209,4 +209,46 @@
         <item quantity="one">%1$d movimiento</item>
         <item quantity="other">%1$d movimientos</item>
     </plurals>
+    <string name="search_title">Buscar movimientos</string>
+    <string name="search_placeholder">Descripción o categoría</string>
+    <string name="search_filters">Filtros</string>
+    <string name="search_filters_active">Filtros activos</string>
+    <string name="search_filters_inactive">Sin filtros</string>
+    <string name="search_filters_expanded">Abiertos</string>
+    <string name="search_filters_collapsed">Cerrados</string>
+    <string name="search_clear_query">Borrar búsqueda</string>
+    <string name="search_remove_filter">Quitar filtro: %1$s</string>
+    <string name="search_searching">Buscando…</string>
+    <string name="search_updating">Actualizando resultados…</string>
+    <string name="search_loading">Cargando…</string>
+    <string name="search_no_data_title">Aún no hay movimientos</string>
+    <string name="search_no_data_body">Registrá un movimiento para encontrarlo aquí.</string>
+    <string name="search_no_results_title">Sin resultados</string>
+    <string name="search_no_results_body">No hay movimientos con estos filtros.</string>
+    <string name="search_no_results_query_body">No hay movimientos que coincidan con “%1$s”.</string>
+    <string name="search_clear_text">Borrar texto</string>
+    <string name="search_adjust_filters">Ajustar filtros</string>
+    <string name="search_error">Tus movimientos siguen guardados. No pudimos consultar la búsqueda. Intentá de nuevo.</string>
+    <string name="search_invalid_dates">Elegí fechas hasta hoy para buscar.</string>
+    <string name="search_date_range">Rango de fechas</string>
+    <string name="search_type">Tipo</string>
+    <string name="search_category_label">Categorías</string>
+    <string name="search_all_history">Todo el historial</string>
+    <string name="search_last_7_days">Últimos 7 días</string>
+    <string name="search_last_30_days">Últimos 30 días</string>
+    <string name="search_this_month">Este mes</string>
+    <string name="search_this_year">Este año</string>
+    <string name="search_custom">Personalizado</string>
+    <string name="search_all_types">Todos</string>
+    <string name="search_expenses">Gastos</string>
+    <string name="search_income">Ingresos</string>
+    <string name="search_clear_filters">Limpiar</string>
+    <string name="search_apply">Aplicar</string>
+    <string name="search_start_date">Desde</string>
+    <string name="search_end_date">Hasta</string>
+    <string name="search_date_range_value">%1$s – %2$s</string>
+    <plurals name="search_count">
+        <item quantity="one">%1$d resultado</item>
+        <item quantity="other">%1$d resultados</item>
+    </plurals>
 </resources>

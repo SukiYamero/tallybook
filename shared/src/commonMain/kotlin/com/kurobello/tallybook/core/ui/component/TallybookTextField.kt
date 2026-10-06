@@ -49,6 +49,7 @@ internal fun TallybookTextField(
     textStyle: TextStyle = TallybookTheme.typography.body,
     leadingContent: (@Composable () -> Unit)? = null,
     trailingContent: (@Composable () -> Unit)? = null,
+    inputModifier: Modifier = Modifier,
 ) {
   val interactionSource = remember { MutableInteractionSource() }
   val isFocused by interactionSource.collectIsFocusedAsState()
@@ -76,7 +77,7 @@ internal fun TallybookTextField(
         value = value,
         onValueChange = onValueChange,
         modifier =
-            Modifier.semantics {
+            inputModifier.semantics {
               if (inputDescription != null) {
                 contentDescription = inputDescription
               }

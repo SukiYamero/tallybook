@@ -111,7 +111,8 @@ Search is a separate destination over the primary currency. Its implementation c
   selectable regardless of type. Missing selected IDs remain visible with a localized fallback and
   explicit remove action.
 - Filter edits form a draft. Apply atomically commits and closes; Back, scrim or drag discards and
-  closes. Clear edits only the draft, resetting Custom endpoints to today. Apply is available for
+  closes. Clear atomically commits default filters and closes, resetting Custom endpoints to current
+  today and preserving raw search text. Apply is available for
   valid unchanged filters and zero results; its label/accessibility name contains no quantity.
 - Removing an applied chip commits just that dimension. Draft edits never update results, applied
   chips or count. Closing sheets accept no edits or repeated commits.

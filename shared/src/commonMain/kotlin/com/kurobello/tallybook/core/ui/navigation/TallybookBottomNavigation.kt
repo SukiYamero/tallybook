@@ -99,6 +99,8 @@ internal fun TallybookBottomNavigation(
       BottomNavigationIcon(
           icon = Lucide.Search,
           label = stringResource(Res.string.navigation_search),
+          selected = selectedDestination == Search,
+          onClick = onSelectDestination?.let { { it(Search) } },
           modifier = Modifier.weight(1f),
       )
       BottomNavigationIcon(

@@ -10,6 +10,8 @@ import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoDateRange
+import com.kurobello.tallybook.core.model.MovimientoReadCriteria
+import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlinx.coroutines.CoroutineDispatcher
@@ -21,6 +23,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 
 internal class MovimientoRepositoryImpl(
@@ -28,21 +31,70 @@ internal class MovimientoRepositoryImpl(
     private val dispatcher: CoroutineDispatcher,
 ) : MovimientoRepository {
 
+  override fun observeFiltered(
+      criteria: MovimientoReadCriteria
+  ): Flow<DataOutcome<MovimientoSearchSnapshot>> {
+    val categoryIds = criteria.categoryIds.sorted()
+    val invalidInput =
+        when {
+          categoryIds.any { it.isBlank() } ->
+              DataError.InvalidInput("Categoria ids must not be blank")
+          else -> criteria.range?.let(::validateRange)
+        }
+    if (invalidInput != null) return flowOf(DataOutcome.Failure(invalidInput))
+    return flow {
+          val queries = database.movimientoQueries
+          val query =
+              if (categoryIds.isEmpty()) {
+                queries.selectFilteredMovimientos(
+                    criteria.moneda.name,
+                    criteria.range?.start?.toString(),
+                    criteria.range?.end?.toString(),
+                    criteria.tipo?.name,
+                )
+              } else {
+                queries.selectFilteredMovimientosByCategory(
+                    criteria.moneda.name,
+                    criteria.range?.start?.toString(),
+                    criteria.range?.end?.toString(),
+                    criteria.tipo?.name,
+                    categoryIds,
+                )
+              }
+          emitAll(
+              query.asFlow().map { invalidatedQuery ->
+                withContext(dispatcher) {
+                  val (rows, years) =
+                      database.transactionWithResult {
+                        invalidatedQuery.executeAsList() to
+                            queries.selectMovimientoYears(criteria.moneda.name).executeAsList()
+                      }
+                  val context = currentCoroutineContext()
+                  context.ensureActive()
+                  val movimientos = rows.map { row ->
+                    context.ensureActive()
+                    row.toDomain()
+                  }
+                  val persistedYears = years.map { year ->
+                    context.ensureActive()
+                    parseStoredYear(year)
+                  }
+                  context.ensureActive()
+                  MovimientoSearchSnapshot(movimientos, persistedYears)
+                }
+              }
+          )
+        }
+        .flowOn(dispatcher)
+        .asLocalDataOutcome()
+  }
+
   override fun observeRange(
       moneda: Moneda,
       range: MovimientoDateRange,
   ): Flow<DataOutcome<List<Movimiento>>> {
-    if (
-        range.start.year != range.end.year &&
-            (range.start.year < 0 || range.end.year > MAX_FOUR_DIGIT_YEAR)
-    ) {
-      return flowOf(
-          DataOutcome.Failure(
-              DataError.InvalidInput(
-                  "Cross-year movimiento ranges require years from 0000 through 9999"
-              )
-          )
-      )
+    validateRange(range)?.let {
+      return flowOf(DataOutcome.Failure(it))
     }
     return flow {
           emitAll(
@@ -181,15 +233,23 @@ internal class MovimientoRepositoryImpl(
             DataError.InvalidInput("Movimiento description is too long")
         else -> null
       }
-
-  private fun parseStoredYear(value: String): Int {
-    val canonicalDate = "$value-01-01"
-    val date = LocalDate.parse(canonicalDate)
-    require(date.toString() == canonicalDate) {
-      "Persisted movimiento year must use canonical ISO representation"
-    }
-    return date.year
-  }
 }
+
+private fun parseStoredYear(value: String): Int {
+  val canonicalDate = "$value-01-01"
+  val date = LocalDate.parse(canonicalDate)
+  require(date.toString() == canonicalDate) {
+    "Persisted movimiento year must use canonical ISO representation"
+  }
+  return date.year
+}
+
+private fun validateRange(range: MovimientoDateRange): DataError.InvalidInput? =
+    if (
+        range.start.year != range.end.year &&
+            (range.start.year < 0 || range.end.year > MAX_FOUR_DIGIT_YEAR)
+    ) {
+      DataError.InvalidInput("Cross-year movimiento ranges require years from 0000 through 9999")
+    } else null
 
 private const val MAX_FOUR_DIGIT_YEAR = 9999

@@ -27,11 +27,13 @@ import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_comida
 import tallybook.shared.generated.resources.ui_catalog_title
 
+@Suppress("LongParameterList")
 @Composable
 internal fun HomeRoute(
     onAddMovimiento: () -> Unit,
     bottomBarClearance: Dp,
     onOpenCatalog: (() -> Unit)? = null,
+    onSearch: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel(),
 ) {
@@ -41,6 +43,7 @@ internal fun HomeRoute(
       onAddMovimiento = onAddMovimiento,
       onRetry = viewModel::retry,
       onOpenCatalog = onOpenCatalog,
+      onSearch = onSearch,
       modifier = modifier,
       bottomBarClearance = bottomBarClearance,
   )
@@ -53,6 +56,7 @@ internal fun HomeScreen(
     onAddMovimiento: () -> Unit,
     onRetry: () -> Unit,
     onOpenCatalog: (() -> Unit)? = null,
+    onSearch: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     bottomBarClearance: Dp = TallybookTheme.spacing.space0,
 ) {
@@ -76,7 +80,12 @@ internal fun HomeScreen(
             PaddingValues(bottom = bottomBarClearance + TallybookTheme.spacing.space16),
     ) {
       item { HomeHeader(modifier = Modifier.padding(bottom = TallybookTheme.spacing.space20)) }
-      item { HomeSearch(modifier = Modifier.padding(bottom = TallybookTheme.spacing.space18)) }
+      item {
+        HomeSearch(
+            onClick = onSearch,
+            modifier = Modifier.padding(bottom = TallybookTheme.spacing.space18),
+        )
+      }
       when {
         renderedState.error != null -> item { HomeError(onRetry) }
         !renderedState.hasSnapshot -> homeLoading(presentation.showLoading)

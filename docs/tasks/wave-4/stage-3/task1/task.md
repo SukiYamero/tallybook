@@ -37,7 +37,7 @@ Task 2 owns route/navigation wiring; this task does not add a destination or ano
 SearchScreen receives SearchUiState, SearchActions, creation/filter requests, bottomBarClearance and
 root Modifier. It owns LazyListState in composition; preserve one saveable content scroll owner.
 Result-feedback adapter observes result status; it cannot delay live input/chips/actions. Static
-first-read skeleton uses four existing MovimientoRowSkeleton rows and a count-line placeholder;
+first-read skeleton uses four existing MovimientoRowSkeleton rows and localized count-line loading text;
 sample data/amounts have no semantics. Use shared progress indicator for sustained local work only.
 
 Header/input/chips and rows share the lazy screen composition. Pending/failed current count is absent
@@ -56,8 +56,9 @@ localized source generation. Unknown-category fallback does not show raw IDs.
 Editing sheet renders draft controls; Closing renders the captured read-only draft until onHidden.
 All category/preset/type/date/clear/apply controls disable during Closing, including open popups.
 Apply has exact localized count-free label, remains enabled for valid unchanged/zero-result drafts,
-and only validation prevents a commit. Limpiar edits only draft; no discard-confirmation dialog.
+and only validation prevents an Apply commit. Limpiar commits defaults and closes; no discard-confirmation dialog.
 
+Use 72% of available height and compact centered preset chips with minimum 48 dp touch targets.
 Keep Limpiar/Aplicar outside the scrolling body with the modal's existing safe/IME policy. Compose the
 fixed footer within the current modal content slot; extend the shared modal API only if a measured
 layout constraint requires it. Scroll/body weight and content-detent measurement must be tested with
@@ -93,7 +94,7 @@ through existing modal safe-area policy. Announce one settled count politely, av
 - [ ] Pure screen renders current count, pending no-count, header/input/chips, exact row labels and
       distinct no-data/no-results/error; clear/removal/retry/creation callbacks remain isolated.
 - [ ] Fresh slow-read skeleton semantics appear at 200 ms; fast read/error cancels them; first read
-      placeholder text is absent from accessibility; same-request cached empty return has no skeleton.
+      loading text replaces numeric count; same-request cached empty return has no skeleton.
 - [ ] Live query/chips update during delayed feedback; old result identity cannot leak after criteria
       change; text debounce has no spinner or old empty assertion; sustained match feedback settles.
 - [ ] Filter exact presets/type/multiple IDs, unchanged/zero-result Apply, Clear/cancel, quantity-free

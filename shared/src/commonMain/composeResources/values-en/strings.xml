@@ -209,4 +209,46 @@
         <item quantity="one">%1$d movement</item>
         <item quantity="other">%1$d movements</item>
     </plurals>
+    <string name="search_title">Search movements</string>
+    <string name="search_placeholder">Description or category</string>
+    <string name="search_filters">Filters</string>
+    <string name="search_filters_active">Active filters</string>
+    <string name="search_filters_inactive">No filters</string>
+    <string name="search_filters_expanded">Expanded</string>
+    <string name="search_filters_collapsed">Collapsed</string>
+    <string name="search_clear_query">Clear search</string>
+    <string name="search_remove_filter">Remove filter: %1$s</string>
+    <string name="search_searching">Searching…</string>
+    <string name="search_updating">Updating results…</string>
+    <string name="search_loading">Loading…</string>
+    <string name="search_no_data_title">No movements yet</string>
+    <string name="search_no_data_body">Add a movement to find it here.</string>
+    <string name="search_no_results_title">No results</string>
+    <string name="search_no_results_body">No movements match these filters.</string>
+    <string name="search_no_results_query_body">No movements match “%1$s”.</string>
+    <string name="search_clear_text">Clear text</string>
+    <string name="search_adjust_filters">Adjust filters</string>
+    <string name="search_error">Your movements are still saved. Search could not load. Try again.</string>
+    <string name="search_invalid_dates">Choose dates up to today to search.</string>
+    <string name="search_date_range">Date range</string>
+    <string name="search_type">Type</string>
+    <string name="search_category_label">Categories</string>
+    <string name="search_all_history">All history</string>
+    <string name="search_last_7_days">Last 7 days</string>
+    <string name="search_last_30_days">Last 30 days</string>
+    <string name="search_this_month">This month</string>
+    <string name="search_this_year">This year</string>
+    <string name="search_custom">Custom</string>
+    <string name="search_all_types">All</string>
+    <string name="search_expenses">Expenses</string>
+    <string name="search_income">Income</string>
+    <string name="search_clear_filters">Clear</string>
+    <string name="search_apply">Apply</string>
+    <string name="search_start_date">From</string>
+    <string name="search_end_date">To</string>
+    <string name="search_date_range_value">%1$s – %2$s</string>
+    <plurals name="search_count">
+        <item quantity="one">%1$d result</item>
+        <item quantity="other">%1$d results</item>
+    </plurals>
 </resources>

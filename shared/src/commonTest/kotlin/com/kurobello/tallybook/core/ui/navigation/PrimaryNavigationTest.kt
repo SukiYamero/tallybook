@@ -44,4 +44,32 @@ internal class PrimaryNavigationTest {
     assertEquals(listOf(Home, History, UiCatalog), restored.retainedKeys)
     assertEquals(History, restored.back().selected)
   }
+
+  @Test
+  fun searchRetainsItsOwnerAndBackReturnsHome() {
+    val search = PrimaryNavigationState().select(Search)
+    assertEquals(Search, search.selected)
+    assertEquals(listOf(Home, Search), search.retainedKeys)
+    assertEquals(listOf(Home, Search), search.displayedKeys)
+    assertSame(search, search.select(Search))
+    val history = search.select(History)
+    assertEquals(listOf(Home, History, Search), history.retainedKeys)
+    assertEquals(listOf(Home, History), history.displayedKeys)
+    assertEquals(listOf(Home, History, Search), history.select(Search).back().retainedKeys)
+    assertEquals(Home, history.select(Search).back().selected)
+    assertEquals(search, search.openCatalog().back())
+  }
+
+  @Test
+  fun restoredSearchPreservesVisitedEntriesAndStableContentKeys() {
+    val original = PrimaryNavigationState().select(History).select(Search).openCatalog()
+    val restored =
+        Json.decodeFromString<PrimaryNavigationState>(
+            Json.encodeToString(PrimaryNavigationState.serializer(), original)
+        )
+    assertEquals(original, restored)
+    assertEquals(listOf(Home, History, Search, UiCatalog), restored.retainedKeys)
+    assertEquals(Search, restored.back().selected)
+    assertEquals("primary-search", primaryContentKey(Search))
+  }
 }

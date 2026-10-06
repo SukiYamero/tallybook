@@ -75,10 +75,10 @@ read and cannot declare no-data from cached metadata. Known empty categories are
 5. Text identity is normalizeSearchText(raw). Nonblank changed identity settles 250 ms after the last
    edit; blank/clear settles immediately; identical normalized edits need no delay/new projection.
    Keep raw text and settled request text distinct by temporal role, not as independently editable
-   copies. Clear cancels the pending timer and preserves applied filters.
+   copies. Clear text cancels the pending timer and preserves applied filters.
 6. A raw edit immediately marks count/empty semantics unavailable if its identity is unsettled.
    During text-only pending work, one same-structural settled row snapshot may remain as a visibly
-   updating display, with immediate plain searching status in the count line. Its own text identity
+   updating display, with immediate localized loading text in the count line. Its own text identity
    stays attached. Never present its old count or empty-query
    message as the new query. New criteria cannot use that display exception. Once new text fails,
    discard a previous different-text snapshot rather than retain it as current error fallback.

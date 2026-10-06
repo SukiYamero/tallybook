@@ -43,6 +43,8 @@ import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoDateRange
+import com.kurobello.tallybook.core.model.MovimientoReadCriteria
+import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
@@ -354,6 +356,7 @@ private class ShellHarness(
   @Composable
   private fun Content() {
     val state = rememberPrimaryNavigation(Home)
+    val presentationLabel = label.value
     val entries =
         rememberPrimaryEntries(state.value) { destination ->
           NavEntry(destination, contentKey = primaryContentKey(destination)) {
@@ -376,10 +379,10 @@ private class ShellHarness(
                 }
               }
               History -> {
-                val vm: HistoryViewModel = koinViewModel { parametersOf(label.value) }
-                val output = rememberHistoryRouteState(vm, label.value)
+                val vm: HistoryViewModel = koinViewModel { parametersOf(presentationLabel) }
+                val output = rememberHistoryRouteState(vm, presentationLabel)
                 val rendered = output.value
-                val initial = androidx.compose.runtime.remember(vm, label.value) { rendered }
+                val initial = androidx.compose.runtime.remember(vm, presentationLabel) { rendered }
                 SideEffect {
                   history = vm
                   if (
@@ -392,6 +395,7 @@ private class ShellHarness(
                   renderedHistory += rendered
                 }
               }
+              Search -> Unit
               UiCatalog -> Unit
             }
             SideEffect {
@@ -473,6 +477,11 @@ private class ShellMovimientos : MovimientoRepository {
   var activeRanges = 0
   var activeRecent = 0
   var rangeStarts = 0
+
+  override fun observeFiltered(
+      criteria: MovimientoReadCriteria
+  ): Flow<DataOutcome<MovimientoSearchSnapshot>> =
+      error("Search reads are not expected in this fixture")
 
   override fun observeRange(
       moneda: Moneda,

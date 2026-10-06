@@ -1,7 +1,36 @@
 # Wave 4 — Search and filters implementation plan
 
-**Status:** Planning only. Product scope is agreed; implementation, runtime acceptance, commits and
-integration are not authorized by this document. The application currently has no Search destination.
+**Status:** IN_PROGRESS. The user authorized implementation and physical Xiaomi verification on
+2026-10-06. The user accepted the Android flow and requested a commit; integration into `main` remains pending.
+
+## Execution checkpoint
+
+- Baseline: `936d09f`; branch `feat/search-filters`, isolated worktree
+  `/Users/sukiyamero/.codex/worktrees/29e3/tallybook`.
+- Ownership: contract, repository, state and UI workers implemented their staged assignments;
+  orchestrator owns integration, documents, Gradle and device resources. Final review is independent.
+- Target: one authorized Xiaomi M2012K11AG, serial `aaa9cea2`, Android API 33.
+- Current verification: 71 Search-related host tests pass with zero failures/skips, including
+  clear-and-close/debounce and all-locale loading copy. `detekt ktfmtCheck`, Android production/test
+  APKs and Native production/common-test compilation pass.
+- Xiaomi acceptance iteration: loading replaces count while pending; centered presets and partial
+  sheet reveal the input. Applying date/type/category and pressing Clear removes all three filters,
+  closes the sheet and retains raw text. The user accepted the flow and authorized a commit.
+- Previous feature verification: `detekt ktfmtCheck` pass; 337 shared host tests pass with zero failures/skips;
+  Android production/test APKs and Native production/common-test compilation pass. Native simulator
+  test compilation is not a simulator run or iPhone evidence.
+- Final independent review: no mandatory findings; the reviewer reused its own read-only context.
+- Xiaomi production APK installed and launched successfully. Manual checks pass for unmatched text,
+  immediate clearing, draft discard, applying/removing type, Home-entry focus and ordinary tab return
+  without automatic focus. Landscape month scrolling exposes the final day with a full 48 dp target;
+  footer remains reachable and Back closes the calendar before the sheet. Rotation is restored to free.
+- Automated device runner: interrupted after one bounded diagnosis; 0/20 selected UI tests completed.
+  Test APK compilation does not establish UI test success. Manual production-app checks replace the
+  blocked smoke execution; benchmark execution remains unconfirmed.
+- Scale volume: proposed 2,000 isolated fixture rows, awaiting user confirmation before execution.
+- Remaining acceptance limits: the volume probe is prepared/compiled but unexecuted; the device runner
+  must become usable before its execution. No physical iPhone was available. Integration remains
+  pending; Android acceptance does not establish volume or iPhone evidence.
 
 **Goal:** Deliver shared text search and transactional filters with exact results/count, first-read
 skeletons, retained same-request revalidation and correct navigation/modal lifetime.
@@ -153,6 +182,26 @@ Primary contracts reviewed during planning:
   provides transactionWithResult. Prove combined reads/invalidation with real drivers.
 - [SQLDelight 2.3.2 observable queries](https://sqldelight.github.io/sqldelight/2.3.2/multiplatform_sqlite/coroutines/)
   provides query Flow updates. Verify generated listener dependencies and cancellation cleanup.
+- [Navigation3 decorated entries source](https://github.com/androidx/androidx/blob/androidx-main/navigation3/navigation3-runtime/src/commonMain/kotlin/androidx/navigation3/runtime/DecoratedNavEntries.kt)
+  caches provider entries by back-stack keys. Resolved runtime 1.1.1 bytecode confirms this behavior;
+  retained content reads the current provider through a copied entry, preserving decorated owners.
+  The host lifecycle integration fixture exercises changing scalar presentation inputs with retained
+  keys; Home-entry focus additionally requires the physical keyboard check.
+- [NavEntry copy constructor](https://github.com/androidx/androidx/blob/androidx-main/navigation3/navigation3-runtime/src/commonMain/kotlin/androidx/navigation3/runtime/NavEntry.kt)
+  preserves key, content key and metadata while supplying current content.
+- [Compose focus](https://developer.android.com/develop/ui/compose/touch-input/focus/change-focus-behavior)
+  requires the attached focus target before requesting focus. Home-entry intents wait for resumed
+  content and a frame; ordinary Search-tab selection has no focus intent.
+- [Compose window information source](https://github.com/JetBrains/compose-multiplatform-core/blob/jb-main/compose/ui/ui/src/commonMain/kotlin/androidx/compose/ui/platform/WindowInfo.kt)
+  provides container size for a safe-height, scrollable calendar without reducing day targets.
+- [Unstyled 2.9.0 BottomSheet source](https://github.com/composablehorizons/compose-unstyled/blob/2.9.0/composeunstyled-bottom-sheet/src/commonMain/kotlin/com/composeunstyled/BottomSheet.kt)
+  clamps measurement to caller constraints and anchors the measured sheet at the bottom. Search
+  supplies a 72% fill modifier through the existing modal layout, retaining its bounded body/footer.
+  Physical height and footer reachability remain the runtime check for this caller policy.
+
+Resolved execution versions include Kotlin 2.4.10, Compose Multiplatform 1.11.1, Android Compose
+foundation/UI 1.11.2, Android Material3 1.5.0-alpha17, Navigation3 1.1.1, lifecycle 2.11.0-beta01,
+Koin 4.2.2 and SQLDelight 2.3.2. No dependency upgrade is part of this change.
 
 Execution also verifies resolved Navigation3/lifecycle/Koin/Unstyled versions and official source for
 changed restoration/modal behavior. New Search restoration, coordinated pickers, minimum-year support
@@ -160,8 +209,7 @@ and footer placement need complete integration checks. Documentation/compilation
 
 ## Verification and readiness
 
-Planning evidence consists of source/test/reference inspection, primary contract review, document
-link/path/coherence checks and a final plan review. No new app build/test/device result is asserted.
+Current verification evidence and outstanding execution gates are recorded in the execution checkpoint.
 
 Authorized execution runs task-specific checks through gradle-run's wrapper. Kotlin always requires
 `./gradlew detekt ktfmtCheck`; broaden once for repository/navigation regressions, not every task.

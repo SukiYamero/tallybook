@@ -10,6 +10,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -18,14 +19,21 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,17 +43,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntRect
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import com.composables.icons.lucide.CalendarDays
 import com.composables.icons.lucide.ChevronDown
@@ -54,12 +59,10 @@ import com.composables.icons.lucide.ChevronRight
 import com.composables.icons.lucide.Lucide
 import com.kurobello.tallybook.core.model.FIRST_SELECTABLE_YEAR
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
-import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.Month
 import kotlinx.datetime.YearMonth
-import kotlinx.datetime.plus
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
@@ -85,6 +88,9 @@ internal fun TallybookDateChipPicker(
     maxDate: LocalDate? = null,
     firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
     size: TallybookDateChipSize = TallybookDateChipSize.S,
+    minYear: Int = FIRST_SELECTABLE_YEAR,
+    valueLabel: String? = null,
+    calendarDaySize: Dp = TallybookTheme.dimensions.datePickerDaySize,
 ) {
   var isOpen by remember { mutableStateOf(false) }
   val popupVisibility = remember { MutableTransitionState(false) }
@@ -94,16 +100,33 @@ internal fun TallybookDateChipPicker(
   val monthNames = stringArrayResource(Res.array.date_picker_months)
   val weekdayNames = stringArrayResource(Res.array.date_picker_weekdays)
   val selectedLabel =
-      stringResource(Res.string.date_chip_value, value.day, monthNames[value.month.ordinal])
+      valueLabel
+          ?: stringResource(Res.string.date_chip_value, value.day, monthNames[value.month.ordinal])
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
   val density = LocalDensity.current
+  val windowHeight = LocalWindowInfo.current.containerSize.height
+  val safeInsets = WindowInsets.safeDrawing
+  val maximumPopupHeight =
+      with(density) {
+        calendarPopupMaximumHeight(
+            windowHeight.toDp(),
+            (safeInsets.getTop(this) + safeInsets.getBottom(this)).toDp(),
+            TallybookTheme.spacing.space16,
+        )
+      }
   val isMedium = size == TallybookDateChipSize.M
   val iconSize =
       if (isMedium) TallybookTheme.dimensions.iconSmall
       else TallybookTheme.dimensions.datePickerChipIconSize
   val viewportOverlayState = LocalTallybookViewportOverlayState.current
   val viewportOverlayOwner = remember { Any() }
+  LaunchedEffect(enabled) {
+    if (!enabled) {
+      isOpen = false
+      viewportOverlayState?.hideScrim(viewportOverlayOwner)
+    }
+  }
   DisposableEffect(viewportOverlayState, viewportOverlayOwner) {
     onDispose { viewportOverlayState?.hideScrim(viewportOverlayOwner) }
   }
@@ -130,7 +153,7 @@ internal fun TallybookDateChipPicker(
                     onClick = {
                       viewportOverlayState?.showScrim(viewportOverlayOwner)
                       isOpen = true
-                      visibleMonth = YearMonth(value.year, value.month)
+                      visibleMonth = initialCalendarMonth(value, maxDate)
                       isYearSelectorOpen = false
                     },
                 )
@@ -200,6 +223,10 @@ internal fun TallybookDateChipPicker(
         ) {
           TallybookDateCalendar(
               visibleMonth = visibleMonth,
+              enabled = enabled,
+              minYear = minYear,
+              calendarDaySize = calendarDaySize,
+              maximumHeight = maximumPopupHeight,
               selectedDate = value,
               maxDate = maxDate,
               firstDayOfWeek = firstDayOfWeek,
@@ -210,7 +237,7 @@ internal fun TallybookDateChipPicker(
               onNextMonth = { visibleMonth = visibleMonth.next() },
               onYearSelectorClick = { isYearSelectorOpen = true },
               onYearSelected = { year ->
-                visibleMonth = YearMonth(year, visibleMonth.month)
+                visibleMonth = initialCalendarMonth(LocalDate(year, visibleMonth.month, 1), maxDate)
                 isYearSelectorOpen = false
               },
               onDateSelected = {
@@ -228,6 +255,10 @@ internal fun TallybookDateChipPicker(
 @Composable
 private fun TallybookDateCalendar(
     visibleMonth: YearMonth,
+    enabled: Boolean,
+    minYear: Int,
+    calendarDaySize: Dp,
+    maximumHeight: Dp,
     selectedDate: LocalDate,
     maxDate: LocalDate?,
     firstDayOfWeek: DayOfWeek,
@@ -240,11 +271,20 @@ private fun TallybookDateCalendar(
     onYearSelected: (Int) -> Unit,
     onDateSelected: (LocalDate) -> Unit,
 ) {
-  val years = selectableYears(selectedDate, maxDate)
+  val years = selectableYears(selectedDate, maxDate, minYear)
+  val calendarScrollState = remember(visibleMonth) { ScrollState(0) }
   val canNavigateBackward = visibleMonth > YearMonth(years.first, Month.JANUARY)
   val canNavigateForward = maxDate == null || visibleMonth < YearMonth(maxDate.year, maxDate.month)
   TallybookSurface(
-      modifier = Modifier.widthIn(max = TallybookTheme.dimensions.datePickerMaximumWidth),
+      modifier =
+          Modifier.widthIn(
+                  max =
+                      maxOf(
+                          TallybookTheme.dimensions.datePickerMaximumWidth,
+                          calendarDaySize * DAYS_IN_WEEK + TallybookTheme.spacing.space12 * 2,
+                      )
+              )
+              .heightIn(max = maximumHeight),
       style =
           TallybookSurfaceStyle(
               color = TallybookTheme.colors.surface.sunken,
@@ -267,7 +307,7 @@ private fun TallybookDateCalendar(
             onClick = onPreviousMonth,
             icon = Lucide.ChevronLeft,
             contentDescription = stringResource(Res.string.calendar_previous_month),
-            enabled = canNavigateBackward,
+            enabled = enabled && canNavigateBackward,
         )
         Row(
             modifier =
@@ -276,6 +316,7 @@ private fun TallybookDateCalendar(
                         indication = null,
                         role = Role.Button,
                         onClick = onYearSelectorClick,
+                        enabled = enabled,
                     )
                     .semantics { contentDescription = "${visibleMonth.year}" }
                     .padding(TallybookTheme.spacing.space8),
@@ -297,40 +338,50 @@ private fun TallybookDateCalendar(
             onClick = onNextMonth,
             icon = Lucide.ChevronRight,
             contentDescription = stringResource(Res.string.calendar_next_month),
-            enabled = canNavigateForward,
+            enabled = enabled && canNavigateForward,
         )
       }
-      if (isYearSelectorOpen) {
-        TallybookYearSelector(
-            selectedYear = visibleMonth.year,
-            years = years,
-            onYearSelected = onYearSelected,
-        )
-      } else {
-        Row(modifier = Modifier.fillMaxWidth()) {
-          weekdayNames.rotated(firstDayOfWeek).forEach { weekday ->
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-              TallybookText(
-                  text = weekday,
-                  color = TallybookTheme.colors.foreground.faint,
-                  style = TallybookTheme.typography.caption,
-              )
+      Box(Modifier.weight(1f, fill = false)) {
+        if (isYearSelectorOpen) {
+          TallybookYearSelector(
+              selectedYear = visibleMonth.year,
+              years = years,
+              enabled = enabled,
+              onYearSelected = onYearSelected,
+          )
+        } else {
+          Column(
+              Modifier.verticalScroll(calendarScrollState),
+              verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+          ) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+              weekdayNames.rotated(firstDayOfWeek).forEach { weekday ->
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                  TallybookText(
+                      text = weekday,
+                      color = TallybookTheme.colors.foreground.faint,
+                      style = TallybookTheme.typography.caption,
+                  )
+                }
+              }
             }
-          }
-        }
-        monthGridDates(visibleMonth, firstDayOfWeek).chunked(DAYS_IN_WEEK).forEach { week ->
-          Row(modifier = Modifier.fillMaxWidth()) {
-            week.forEach { date ->
-              val isEnabled = date.year >= years.first && (maxDate == null || date <= maxDate)
-              Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                TallybookCalendarDay(
-                    date = date,
-                    isCurrentMonth = date.month == visibleMonth.month,
-                    isSelected = date == selectedDate,
-                    enabled = isEnabled,
-                    monthName = monthNames[date.month.ordinal],
-                    onClick = { onDateSelected(date) },
-                )
+            monthGridDates(visibleMonth, firstDayOfWeek).chunked(DAYS_IN_WEEK).forEach { week ->
+              Row(modifier = Modifier.fillMaxWidth()) {
+                week.forEach { date ->
+                  val isEnabled =
+                      enabled && date.year >= years.first && (maxDate == null || date <= maxDate)
+                  Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    TallybookCalendarDay(
+                        date = date,
+                        daySize = calendarDaySize,
+                        isCurrentMonth = date.month == visibleMonth.month,
+                        isSelected = date == selectedDate,
+                        enabled = isEnabled,
+                        monthName = monthNames[date.month.ordinal],
+                        onClick = { onDateSelected(date) },
+                    )
+                  }
+                }
               }
             }
           }
@@ -344,45 +395,61 @@ private fun TallybookDateCalendar(
 private fun TallybookYearSelector(
     selectedYear: Int,
     years: IntRange,
+    enabled: Boolean,
     onYearSelected: (Int) -> Unit,
 ) {
-  years.toList().reversed().chunked(YEARS_PER_ROW).forEach { row ->
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4),
-    ) {
-      row.forEach { year ->
-        val isSelected = year == selectedYear
-        TallybookSurface(
-            modifier =
-                Modifier.weight(1f)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        role = Role.Button,
-                        onClick = { onYearSelected(year) },
-                    ),
-            style =
-                TallybookSurfaceStyle(
-                    color =
-                        if (isSelected) TallybookTheme.colors.brand.primary
-                        else TallybookTheme.colors.surface.sunken,
-                    contentColor =
-                        if (isSelected) TallybookTheme.colors.brand.onPrimary
-                        else TallybookTheme.colors.foreground.primary,
-                    shape = RoundedCornerShape(TallybookTheme.radii.radius10),
-                    border = null,
-                    contentAlignment = Alignment.Center,
-                ),
-        ) {
-          TallybookText(
-              text = year.toString(),
-              modifier = Modifier.padding(TallybookTheme.spacing.space12),
-              color =
-                  if (isSelected) TallybookTheme.colors.brand.onPrimary
-                  else TallybookTheme.colors.foreground.primary,
-              style = TallybookTheme.typography.bodyEmphasis,
-          )
+  val rowCount = yearSelectorRowCount(years)
+  val initialRow = yearSelectorRowIndex(years, selectedYear)
+  val scrollState = rememberLazyListState(initialFirstVisibleItemIndex = initialRow)
+  LazyColumn(
+      modifier =
+          Modifier.fillMaxWidth()
+              .heightIn(max = TallybookTheme.dimensions.datePickerYearSelectorMaximumHeight),
+      state = scrollState,
+      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4),
+  ) {
+    items(count = rowCount, key = { yearSelectorRowFirst(years, it) }) { rowIndex ->
+      val row = yearSelectorRow(years, rowIndex)
+      Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4),
+      ) {
+        row.forEach { year ->
+          val isSelected = year == selectedYear
+          TallybookSurface(
+              modifier =
+                  Modifier.weight(1f)
+                      .defaultMinSize(minHeight = TallybookTheme.dimensions.minimumTouchTarget)
+                      .clickable(
+                          interactionSource = remember { MutableInteractionSource() },
+                          indication = null,
+                          role = Role.Button,
+                          onClick = { onYearSelected(year) },
+                          enabled = enabled,
+                      )
+                      .semantics { selected = isSelected },
+              style =
+                  TallybookSurfaceStyle(
+                      color =
+                          if (isSelected) TallybookTheme.colors.brand.primary
+                          else TallybookTheme.colors.surface.sunken,
+                      contentColor =
+                          if (isSelected) TallybookTheme.colors.brand.onPrimary
+                          else TallybookTheme.colors.foreground.primary,
+                      shape = RoundedCornerShape(TallybookTheme.radii.radius10),
+                      border = null,
+                      contentAlignment = Alignment.Center,
+                  ),
+          ) {
+            TallybookText(
+                text = year.toString(),
+                modifier = Modifier.padding(TallybookTheme.spacing.space12),
+                color =
+                    if (isSelected) TallybookTheme.colors.brand.onPrimary
+                    else TallybookTheme.colors.foreground.primary,
+                style = TallybookTheme.typography.bodyEmphasis,
+            )
+          }
         }
       }
     }
@@ -392,6 +459,7 @@ private fun TallybookYearSelector(
 @Composable
 private fun TallybookCalendarDay(
     date: LocalDate,
+    daySize: Dp,
     isCurrentMonth: Boolean,
     isSelected: Boolean,
     enabled: Boolean,
@@ -415,7 +483,7 @@ private fun TallybookCalendarDay(
       )
   Box(
       modifier =
-          Modifier.size(TallybookTheme.dimensions.datePickerDaySize)
+          Modifier.size(daySize)
               .then(
                   if (isSelected) {
                     Modifier.clip(RoundedCornerShape(TallybookTheme.radii.radius10))
@@ -456,51 +524,6 @@ private fun DatePickerIcon(
   )
 }
 
-internal fun monthGridDates(month: YearMonth, firstDayOfWeek: DayOfWeek): List<LocalDate> {
-  val firstDate = month.firstDay
-  val leadingDays =
-      (firstDate.dayOfWeek.ordinal - firstDayOfWeek.ordinal + DAYS_IN_WEEK) % DAYS_IN_WEEK
-  val gridDays = leadingDays + month.numberOfDays
-  val completeWeeks = (gridDays + DAYS_IN_WEEK - 1) / DAYS_IN_WEEK
-  return List(completeWeeks * DAYS_IN_WEEK) { firstDate.plus(DatePeriod(days = it - leadingDays)) }
-}
-
-internal fun selectableYears(selectedDate: LocalDate, maxDate: LocalDate?): IntRange {
-  val maximum = maxDate?.year ?: selectedDate.year + YEARS_AHEAD_WITHOUT_LIMIT
-  return minOf(FIRST_SELECTABLE_YEAR, selectedDate.year)..maximum
-}
-
-internal class TallybookAnchoredPopupPositionProvider(
-    private val verticalOffset: Int,
-    private val edgeMargin: Int,
-) : PopupPositionProvider {
-  override fun calculatePosition(
-      anchorBounds: IntRect,
-      windowSize: IntSize,
-      layoutDirection: LayoutDirection,
-      popupContentSize: IntSize,
-  ): IntOffset {
-    val centeredX = anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2
-    val maxX = maxOf(edgeMargin, windowSize.width - popupContentSize.width - edgeMargin)
-    val availableBelow = windowSize.height - anchorBounds.bottom - verticalOffset
-    val availableAbove = anchorBounds.top - verticalOffset
-    val maxY = maxOf(edgeMargin, windowSize.height - popupContentSize.height - edgeMargin)
-    val y =
-        when {
-          availableBelow >= popupContentSize.height -> anchorBounds.bottom + verticalOffset
-          availableAbove >= popupContentSize.height ->
-              anchorBounds.top - verticalOffset - popupContentSize.height
-          availableAbove > availableBelow ->
-              (anchorBounds.top - verticalOffset - popupContentSize.height).coerceIn(
-                  edgeMargin,
-                  maxY,
-              )
-          else -> (anchorBounds.bottom + verticalOffset).coerceIn(edgeMargin, maxY)
-        }
-    return IntOffset(centeredX.coerceIn(edgeMargin, maxX), y)
-  }
-}
-
 private fun YearMonth.previous(): YearMonth =
     if (month == Month.JANUARY) YearMonth(year - 1, Month.DECEMBER)
     else YearMonth(year, month.ordinal)
@@ -513,5 +536,3 @@ private fun List<String>.rotated(firstDayOfWeek: DayOfWeek): List<String> =
     drop(firstDayOfWeek.ordinal) + take(firstDayOfWeek.ordinal)
 
 private const val DAYS_IN_WEEK = 7
-private const val YEARS_AHEAD_WITHOUT_LIMIT = 1
-private const val YEARS_PER_ROW = 4
