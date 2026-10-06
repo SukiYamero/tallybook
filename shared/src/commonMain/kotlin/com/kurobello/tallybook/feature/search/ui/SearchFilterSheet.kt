@@ -11,15 +11,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
 import com.kurobello.tallybook.core.ui.component.TallybookButton
+import com.kurobello.tallybook.core.ui.component.TallybookChoicePill
 import com.kurobello.tallybook.core.ui.component.TallybookDateChipPicker
 import com.kurobello.tallybook.core.ui.component.TallybookModalBottomSheet
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentOption
@@ -204,11 +208,12 @@ private fun SearchDateFilters(
   Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8)) {
     SearchFilterHeading(stringResource(Res.string.search_date_range))
     FlowRow(
+        modifier = Modifier.selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
     ) {
       SearchDatePreset.entries.forEach { preset ->
-        SearchChoiceChip(
+        TallybookChoicePill(
             searchPresetLabel(preset),
             filters.preset == preset,
             { onChange(filters.copy(preset = preset)) },
@@ -217,33 +222,37 @@ private fun SearchDateFilters(
       }
     }
     if (filters.preset == SearchDatePreset.Custom) {
-      FlowRow(
-          horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+      Column(
           verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
       ) {
         val startDate = searchFullDate(filters.customStart)
         val endDate = searchFullDate(filters.customEnd)
         val minimumYear = state.availableYears.minOrNull() ?: state.today.year
-        TallybookDateChipPicker(
-            filters.customStart,
-            { onChange(filters.copy(customStart = it)) },
-            "${stringResource(Res.string.search_start_date)}: $startDate",
-            enabled = enabled,
-            maxDate = state.today,
-            minYear = minimumYear,
-            valueLabel = startDate,
-            calendarDaySize = TallybookTheme.dimensions.minimumTouchTarget,
-        )
-        TallybookDateChipPicker(
-            filters.customEnd,
-            { onChange(filters.copy(customEnd = it)) },
-            "${stringResource(Res.string.search_end_date)}: $endDate",
-            enabled = enabled,
-            maxDate = state.today,
-            minYear = minimumYear,
-            valueLabel = endDate,
-            calendarDaySize = TallybookTheme.dimensions.minimumTouchTarget,
-        )
+        SearchCustomDateRow(stringResource(Res.string.search_start_date)) {
+          TallybookDateChipPicker(
+              filters.customStart,
+              { onChange(filters.copy(customStart = it)) },
+              "${stringResource(Res.string.search_start_date)}: $startDate",
+              enabled = enabled,
+              maxDate = minOf(filters.customEnd, state.today),
+              minYear = minimumYear,
+              valueLabel = startDate,
+              calendarDaySize = TallybookTheme.dimensions.minimumTouchTarget,
+          )
+        }
+        SearchCustomDateRow(stringResource(Res.string.search_end_date)) {
+          TallybookDateChipPicker(
+              filters.customEnd,
+              { onChange(filters.copy(customEnd = it)) },
+              "${stringResource(Res.string.search_end_date)}: $endDate",
+              enabled = enabled,
+              maxDate = state.today,
+              minYear = minimumYear,
+              valueLabel = endDate,
+              calendarDaySize = TallybookTheme.dimensions.minimumTouchTarget,
+              minDate = filters.customStart,
+          )
+        }
       }
     }
     if (resolveSearchFilters(filters, state.today) is SearchFilterResolution.Invalid) {
@@ -252,6 +261,26 @@ private fun SearchDateFilters(
           color = TallybookTheme.colors.status.danger.base,
       )
     }
+  }
+}
+
+@Composable
+private fun SearchCustomDateRow(
+    label: String,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+  Row(
+      modifier = modifier,
+      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+      verticalAlignment = Alignment.CenterVertically,
+  ) {
+    TallybookText(
+        label,
+        modifier = Modifier.widthIn(min = TallybookTheme.spacing.space48),
+        style = TallybookTheme.typography.bodySmall,
+    )
+    content()
   }
 }
 

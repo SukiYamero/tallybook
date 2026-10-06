@@ -1,0 +1,101 @@
+# Search and filters
+
+Search is a shared Android/iOS primary destination over persisted movimientos in the primary currency.
+The user accepted the Android flow and follow-ups; integration into `main` remains pending.
+[Business logic](../business-logic.md#search-and-filters) owns matching, date and filter rules;
+[UI architecture](../ui/architecture.md#search-presentation) owns presentation and lifecycle contracts.
+The [screen](references/search-screen.png) and [filters](references/search-filters.png) are composition
+references; their sample data and quantity-bearing Apply button are not requirements.
+
+## Integration
+
+- SQLDelight structural predicates produce rows and currency years in one transaction-backed
+  `MovimientoSearchSnapshot`. Categories come from their existing repository. Text matching uses
+  the shared normalization utility and injected computation dispatcher, without resubscribing for
+  each character. Cancellation and generation/revision guards prevent stale publication.
+- SearchViewModel owns raw input, applied criteria, transactional editing/closing sessions and
+  `RetainedLoadState<SearchResultsUi, SearchFailure>`. Results own the exact visible count; controls
+  stay live while delayed feedback applies only to the result region. Pending status shows Loading.
+- Decorated Navigation 3 entries retain the actual SavedStateHandle and ViewModel owner. Retained
+  entry content reads the current provider to keep presentation/focus inputs fresh. Home entry
+  reveals/focuses the field once; tab return retains position. Creation remains shell-owned, with
+  modal exclusion and origin-checked callbacks.
+- The filter sheet uses 72% of available height, a scrolling body and fixed footer. Clear commits
+  default filters, closes and preserves raw text. Custom shows labeled From/To controls with inclusive
+  opposite-endpoint bounds and today's cap; legacy reversed saved input keeps normalization.
+- Shared `TallybookChoicePill` and `TallybookFilterTag` preserve 48dp interaction targets with smaller
+  visuals and no press shading. Shared movement-row amounts and skeletons use the next size token,
+  17sp; monetary formatting is unchanged. Reusable APIs live in the [catalog](../ui/components.md).
+- No editing, chart, currency selector, category authoring, sync, FTS, pager or dependency upgrade is
+  included. The unified Custom range selector is deferred to [the backlog](../backlog.md).
+
+## Verification boundaries
+
+The feature passed 337 shared host tests. Current follow-ups passed 80 focused date-bound/Search host
+tests with zero failures/skips, plus Detekt, ktfmtCheck, Android production/test APK builds and Native
+production/common-test compilation. Earlier amount changes passed 19 focused money/row host tests.
+Independent final review found no mandatory issues; its read-only reviewer context was reused.
+
+The current production APK was installed and launched on one authorized Xiaomi M2012K11AG, API 33.
+Physical checks cover search/clear/debounce feedback, independent filter application/removal, draft
+cancellation, Clear-and-close, Home-entry focus/tab retention, partial sheet/footer reachability,
+landscape calendar scrolling, compact tags, choice-pill press shading and smaller movement amounts.
+Custom checks cover visible endpoint labels, rejected inverted/future selections, same-day apply and
+reopening unchanged. Device rotation and keep-awake settings were restored.
+
+The instrumented UI runner stalled before assertions and was interrupted after bounded diagnosis:
+0/20 selected tests completed. APK compilation is not a UI-test pass; production-app manual smoke
+provides the Android runtime evidence. The isolated 2,000-row scale fixture is compiled but unexecuted,
+so no Search capacity/performance claim is made. These remaining checks are tracked in the backlog.
+Native compilation does not establish physical iPhone runtime behavior; no authorized iPhone was
+available. No production data was seeded. Future checks follow
+[proportional verification](../README.md#proportional-verification).
+
+## API evidence
+
+- [SQLDelight 2.3.2 arguments](https://sqldelight.github.io/sqldelight/2.3.2/multiplatform_sqlite/query_arguments/)
+  supports bound scalars and collection IN; repository fixtures cover empty/many-ID predicates.
+- [SQLDelight 2.3.2 transactions](https://sqldelight.github.io/sqldelight/2.3.2/multiplatform_sqlite/transactions/)
+  provides transactionWithResult for coherent row/metadata reads, covered with real-driver fixtures.
+- [SQLDelight 2.3.2 observable queries](https://sqldelight.github.io/sqldelight/2.3.2/multiplatform_sqlite/coroutines/)
+  provides query Flow updates; repository fixtures cover invalidation and cancellation cleanup.
+- [Navigation3 decorated entries source](https://github.com/androidx/androidx/blob/androidx-main/navigation3/navigation3-runtime/src/commonMain/kotlin/androidx/navigation3/runtime/DecoratedNavEntries.kt)
+  caches provider entries by back-stack keys. Resolved runtime 1.1.1 bytecode confirms this behavior;
+  retained content reads the current provider through a copied entry, preserving decorated owners.
+  The host lifecycle integration fixture exercises changing scalar presentation inputs with retained
+  keys; Home-entry focus has additional physical keyboard evidence.
+- [NavEntry copy constructor](https://github.com/androidx/androidx/blob/androidx-main/navigation3/navigation3-runtime/src/commonMain/kotlin/androidx/navigation3/runtime/NavEntry.kt)
+  preserves key, content key and metadata while supplying current content.
+- [Compose focus](https://developer.android.com/develop/ui/compose/touch-input/focus/change-focus-behavior)
+  requires the attached focus target before requesting focus. Home-entry intents wait for resumed
+  content and a frame; ordinary Search-tab selection has no focus intent.
+- [Compose window information source](https://github.com/JetBrains/compose-multiplatform-core/blob/jb-main/compose/ui/ui/src/commonMain/kotlin/androidx/compose/ui/platform/WindowInfo.kt)
+  provides container size for a safe-height, scrollable calendar without reducing day targets.
+- [Unstyled 2.9.0 BottomSheet source](https://github.com/composablehorizons/compose-unstyled/blob/2.9.0/composeunstyled-bottom-sheet/src/commonMain/kotlin/com/composeunstyled/BottomSheet.kt)
+  clamps measurement to caller constraints and anchors the measured sheet at the bottom. Search
+  supplies a 72% fill modifier through the existing modal layout, retaining its bounded body/footer.
+  Physical checks cover height and footer reachability for this caller policy.
+- [Compose selectable source](https://github.com/androidx/androidx/blob/androidx-main/compose/foundation/foundation/src/commonMain/kotlin/androidx/compose/foundation/selection/Selectable.kt)
+  supports an explicit null indication. Resolved foundation 1.11.2 exposes the source/indication
+  overload; the shared choice pill disables inherited press shading without changing selection.
+
+Resolved execution versions include Kotlin 2.4.10, Compose Multiplatform 1.11.1, Android Compose
+foundation/UI 1.11.2, Android Material3 1.5.0-alpha17, Navigation3 1.1.1, lifecycle 2.11.0-beta01,
+Koin 4.2.2 and SQLDelight 2.3.2. No dependency upgrade is part of this change.
+
+## Custom range-picker feasibility
+
+The existing `TallybookDateChipPicker` selects one day; its calendar/year helpers do not implement a
+range transaction. The installed Material3 offers
+[DateRangePicker](https://kotlinlang.org/api/compose-multiplatform/material3/androidx.compose.material3/-date-range-picker.html)
+and [rememberDateRangePickerState](https://kotlinlang.org/api/compose-multiplatform/material3/androidx.compose.material3/remember-date-range-picker-state.html)
+with both UTC-midnight endpoints, initial displayed month, configurable years and `SelectableDates`.
+An isolated commonMain compile probe with both endpoints, year range and future-date restriction
+passed Android and Native compilation against the resolved versions, without dependency changes.
+
+A reusable range field could wrap this existing calendar in one popup/dialog. Keep the existing
+domain validation and editing session; translate civil dates through UTC midnight, extend the years
+to persisted/restored dates, disable future days, and update both draft endpoints only after a complete
+selection. Popup cancellation must discard the provisional range. Styles, compact-screen Back/focus
+and physical iPhone behavior still need integration evidence before replacing Custom. No calendar
+engine or new dependency is needed; this analysis does not assert that replacement has shipped.

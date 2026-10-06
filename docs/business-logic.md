@@ -51,8 +51,8 @@ tener una segunda copia que se desincronice; fuente real: `web/moneta/src/lib/sc
 ## Tracking and History
 
 History browses movimientos with three scopes: Day, Week and Month. A year selector supplies
-calendar context; Year is not a fourth scope. Search is a separate future destination. Text search,
-non-date filters and charts are later capabilities and do not belong to History selection.
+calendar context; Year is not a fourth scope. Search is a separate destination. Text search and
+non-date filters belong to Search; charts do not belong to History selection.
 
 - Fresh History entry selects Day at today. Scope and one civil-date anchor own selection; context,
   selected chips, options and read range are derived.
@@ -84,10 +84,10 @@ non-date filters and charts are later capabilities and do not belong to History 
   recreation and iOS retained-controller/saveable recreation define restoration; fresh cold launches
   use normal defaults, with no iOS cross-process persistence bridge.
 
-## Search and filters (planned Wave 4)
+## Search and filters
 
 Search is a separate destination over the primary currency. Its implementation contract lives in
-[Wave 4](tasks/wave-4/README.md); this section owns agreed product rules, not delivery status.
+[Search](features/search.md); this section owns agreed product rules, not delivery status.
 
 - A fresh entry has an empty query, All history, all types and no selected categories. All history
   removes the date predicate; it never imposes a year floor or result limit.
@@ -102,7 +102,9 @@ Search is a separate destination over the primary currency. Its implementation c
   first of this month through today; January 1 through today; Custom. Relative presets resolve from
   one captured civil today/timezone on resume and Apply. Custom remains absolute.
 - Custom starts with today/today. Preserve its last valid endpoints when choosing another preset.
-  Normalize reversed endpoints on Apply and display the normalized range. Future input cannot apply.
+  Interactive selection keeps From on or before To: From is capped at To/today, and To starts at
+  From and is capped at today. Same-day ranges are valid. Reversed legacy inputs still normalize
+  on Apply/restoration as a compatibility safeguard. Future input cannot apply.
   Restored malformed/future Custom input recovers to default filters. If the clock moves backward,
   keep an existing now-future Custom selection visible with an invalid-range error until corrected;
   never silently clamp it or run its invalid query.

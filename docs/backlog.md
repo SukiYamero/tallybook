@@ -7,10 +7,17 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 - **iOS physical end-to-end** — Shared production/test sources compile for Native, but physical
   iPhone runtime validation remains pending and was explicitly deferred for History. Confirm the
   authorized connected iPhone and developer services, then run the app from Xcode using the existing
-  shared `TEAM_ID`. Validate Home/History, creation, lifecycle and safe areas. Compilation does not
-  establish runtime behavior; follow the physical-device policy in `AGENTS.md`.
+  shared `TEAM_ID`. Validate Home/History/Search, filters, creation, lifecycle and safe areas.
+  Compilation does not establish runtime behavior; follow the physical-device policy in `AGENTS.md`.
 
 ## Media
+
+- **Search scale and automated device checks** — The 2,000-row isolated scale fixture is prepared
+  and compiled but unexecuted; dataset authorization and a usable runner remain prerequisites.
+  The Xiaomi UI runner stalled before assertions (0/20 completed) and was stopped after bounded
+  diagnosis. Prioritize runner repair before retrying, then execute the agreed bounded scale check
+  with correctness, latency, responsiveness and subscription/allocation evidence. Existing manual
+  Android evidence and precise limits live in [Search](features/search.md#verification-boundaries).
 
 - **Taxonomía detallada de errores** — `DataError` arranca con `Local`/`Unknown` en
   `docs/tasks/fundacion/wave-1/task1/task.md`; falta expandirlo (causas de red granulares, mapeo a
@@ -22,6 +29,11 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
   `Dispatchers.Default`). Mover el test a `commonTest` requiere reescribir esa aserción.
 
 ## Baja
+
+- **Unified Custom date-range picker** — Deferred by the user. Replace Search's two labeled date
+  controls with a reusable range selector when prioritized. Existing API and compilation evidence,
+  adaptation requirements and runtime limits live in the
+  [range-picker analysis](features/search.md#custom-range-picker-feasibility).
 
 - **Compatibilidad de Detekt con Gradle 10** — Detekt 1.23.8 no produce hallazgos, pero su plugin
   invoca `ReportingExtension.file(String)`, API deprecada por Gradle 9 y eliminada en Gradle 10. La

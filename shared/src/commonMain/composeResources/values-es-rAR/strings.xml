@@ -16,6 +16,8 @@
     <string name="ui_catalog_icon_buttons">Botones con ícono</string>
     <string name="ui_catalog_text_fields">Campos de texto</string>
     <string name="ui_catalog_search_fields">Campos de búsqueda</string>
+    <string name="ui_catalog_filter_tags">Filtros aplicados</string>
+    <string name="ui_catalog_choice_pills">Opciones de selección</string>
     <string name="ui_catalog_segmented_controls">Controles segmentados</string>
     <string name="ui_catalog_selection_fields">Campos de selección</string>
     <string name="ui_catalog_loading_states">Estados de carga</string>

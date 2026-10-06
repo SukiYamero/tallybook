@@ -42,7 +42,7 @@ internal fun MovimientoRowSkeleton(modifier: Modifier = Modifier) {
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
       MovimientoRowDescriptionSkeleton(modifier = Modifier.weight(1f))
-      TallybookSkeletonLine(sampleText = "$ 000.000", style = TallybookTheme.typography.title)
+      TallybookSkeletonLine(sampleText = "$ 000.000", style = movementRowAmountStyle())
     }
   }
 }

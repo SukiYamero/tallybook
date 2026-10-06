@@ -91,12 +91,15 @@ internal fun TallybookDateChipPicker(
     minYear: Int = FIRST_SELECTABLE_YEAR,
     valueLabel: String? = null,
     calendarDaySize: Dp = TallybookTheme.dimensions.datePickerDaySize,
+    minDate: LocalDate? = null,
 ) {
   var isOpen by remember { mutableStateOf(false) }
   val popupVisibility = remember { MutableTransitionState(false) }
   popupVisibility.targetState = isOpen
   var visibleMonth by remember(value) { mutableStateOf(YearMonth(value.year, value.month)) }
   var isYearSelectorOpen by remember { mutableStateOf(false) }
+  val displayMonth = initialCalendarMonth(visibleMonth.firstDay, maxDate, minDate)
+  val years = selectableYears(value, maxDate, minYear, minDate)
   val monthNames = stringArrayResource(Res.array.date_picker_months)
   val weekdayNames = stringArrayResource(Res.array.date_picker_weekdays)
   val selectedLabel =
@@ -153,7 +156,7 @@ internal fun TallybookDateChipPicker(
                     onClick = {
                       viewportOverlayState?.showScrim(viewportOverlayOwner)
                       isOpen = true
-                      visibleMonth = initialCalendarMonth(value, maxDate)
+                      visibleMonth = initialCalendarMonth(value, maxDate, minDate)
                       isYearSelectorOpen = false
                     },
                 )
@@ -222,28 +225,32 @@ internal fun TallybookDateChipPicker(
                     ),
         ) {
           TallybookDateCalendar(
-              visibleMonth = visibleMonth,
+              visibleMonth = displayMonth,
               enabled = enabled,
               minYear = minYear,
               calendarDaySize = calendarDaySize,
               maximumHeight = maximumPopupHeight,
               selectedDate = value,
               maxDate = maxDate,
+              minDate = minDate,
               firstDayOfWeek = firstDayOfWeek,
               monthNames = monthNames,
               weekdayNames = weekdayNames,
               isYearSelectorOpen = isYearSelectorOpen,
-              onPreviousMonth = { visibleMonth = visibleMonth.previous() },
-              onNextMonth = { visibleMonth = visibleMonth.next() },
+              onPreviousMonth = { visibleMonth = displayMonth.previous() },
+              onNextMonth = { visibleMonth = displayMonth.next() },
               onYearSelectorClick = { isYearSelectorOpen = true },
               onYearSelected = { year ->
-                visibleMonth = initialCalendarMonth(LocalDate(year, visibleMonth.month, 1), maxDate)
+                visibleMonth =
+                    initialCalendarMonth(LocalDate(year, displayMonth.month, 1), maxDate, minDate)
                 isYearSelectorOpen = false
               },
-              onDateSelected = {
-                onValueChange(it)
-                viewportOverlayState?.hideScrim(viewportOverlayOwner)
-                isOpen = false
+              onDateSelected = { date ->
+                if (enabled && isCalendarDateSelectable(date, years.first, maxDate, minDate)) {
+                  onValueChange(date)
+                  viewportOverlayState?.hideScrim(viewportOverlayOwner)
+                  isOpen = false
+                }
               },
           )
         }
@@ -261,6 +268,7 @@ private fun TallybookDateCalendar(
     maximumHeight: Dp,
     selectedDate: LocalDate,
     maxDate: LocalDate?,
+    minDate: LocalDate?,
     firstDayOfWeek: DayOfWeek,
     monthNames: List<String>,
     weekdayNames: List<String>,
@@ -271,10 +279,12 @@ private fun TallybookDateCalendar(
     onYearSelected: (Int) -> Unit,
     onDateSelected: (LocalDate) -> Unit,
 ) {
-  val years = selectableYears(selectedDate, maxDate, minYear)
+  val years = selectableYears(selectedDate, maxDate, minYear, minDate)
   val calendarScrollState = remember(visibleMonth) { ScrollState(0) }
-  val canNavigateBackward = visibleMonth > YearMonth(years.first, Month.JANUARY)
-  val canNavigateForward = maxDate == null || visibleMonth < YearMonth(maxDate.year, maxDate.month)
+  val minimumMonth = minimumCalendarMonth(years, minDate)
+  val canNavigateBackward = !years.isEmpty() && visibleMonth > minimumMonth
+  val canNavigateForward =
+      !years.isEmpty() && (maxDate == null || visibleMonth < YearMonth(maxDate.year, maxDate.month))
   TallybookSurface(
       modifier =
           Modifier.widthIn(
@@ -316,7 +326,7 @@ private fun TallybookDateCalendar(
                         indication = null,
                         role = Role.Button,
                         onClick = onYearSelectorClick,
-                        enabled = enabled,
+                        enabled = enabled && !years.isEmpty(),
                     )
                     .semantics { contentDescription = "${visibleMonth.year}" }
                     .padding(TallybookTheme.spacing.space8),
@@ -342,7 +352,7 @@ private fun TallybookDateCalendar(
         )
       }
       Box(Modifier.weight(1f, fill = false)) {
-        if (isYearSelectorOpen) {
+        if (isYearSelectorOpen && !years.isEmpty()) {
           TallybookYearSelector(
               selectedYear = visibleMonth.year,
               years = years,
@@ -369,7 +379,7 @@ private fun TallybookDateCalendar(
               Row(modifier = Modifier.fillMaxWidth()) {
                 week.forEach { date ->
                   val isEnabled =
-                      enabled && date.year >= years.first && (maxDate == null || date <= maxDate)
+                      enabled && isCalendarDateSelectable(date, years.first, maxDate, minDate)
                   Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     TallybookCalendarDay(
                         date = date,

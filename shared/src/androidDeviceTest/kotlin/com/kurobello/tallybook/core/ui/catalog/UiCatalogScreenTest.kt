@@ -1,5 +1,6 @@
 package com.kurobello.tallybook.core.ui.catalog
 
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -9,8 +10,11 @@ import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.filter
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -29,6 +33,7 @@ import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category
+import tallybook.shared.generated.resources.category_comida
 import tallybook.shared.generated.resources.category_required
 import tallybook.shared.generated.resources.expense
 import tallybook.shared.generated.resources.home_search_placeholder
@@ -41,14 +46,17 @@ import tallybook.shared.generated.resources.navigation_profile
 import tallybook.shared.generated.resources.navigation_search
 import tallybook.shared.generated.resources.ui_catalog_actions
 import tallybook.shared.generated.resources.ui_catalog_amount_inputs
+import tallybook.shared.generated.resources.ui_catalog_choice_pills
 import tallybook.shared.generated.resources.ui_catalog_clear_search
 import tallybook.shared.generated.resources.ui_catalog_dark
 import tallybook.shared.generated.resources.ui_catalog_data_display
 import tallybook.shared.generated.resources.ui_catalog_date_pickers
 import tallybook.shared.generated.resources.ui_catalog_disabled_icon_button
+import tallybook.shared.generated.resources.ui_catalog_filter_tags
 import tallybook.shared.generated.resources.ui_catalog_foundations
 import tallybook.shared.generated.resources.ui_catalog_icon_buttons
 import tallybook.shared.generated.resources.ui_catalog_loading_states
+import tallybook.shared.generated.resources.ui_catalog_period_day
 import tallybook.shared.generated.resources.ui_catalog_period_pickers
 import tallybook.shared.generated.resources.ui_catalog_sample_body_emphasis
 import tallybook.shared.generated.resources.ui_catalog_sample_body_small
@@ -82,6 +90,45 @@ class UiCatalogScreenTest {
     composeRule
         .onNodeWithContentDescription(localizedString(Res.string.loading))
         .assertIsDisplayed()
+  }
+
+  @Test
+  fun catalogChoicePillsShowSelectedUnselectedAndDisabledStates() {
+    composeRule.setContent { UiCatalogRoute() }
+    scrollTo("choice-pills")
+    composeRule
+        .onNodeWithText(localizedString(Res.string.ui_catalog_choice_pills))
+        .assertIsDisplayed()
+    val pills =
+        composeRule.onAllNodes(
+            hasText(localizedString(Res.string.ui_catalog_period_day)) and
+                hasAnyAncestor(hasTestTag(catalogSectionAutomationTag("choice-pills")))
+        )
+    val selected = SemanticsMatcher.expectValue(SemanticsProperties.Selected, true)
+    val unselected = SemanticsMatcher.expectValue(SemanticsProperties.Selected, false)
+    pills.filter(selected and isEnabled()).assertCountEquals(1)
+    pills.filter(unselected and isEnabled()).assertCountEquals(1)
+    pills.filter(!isEnabled()).assertCountEquals(1)
+  }
+
+  @Test
+  fun catalogFilterTagsShowNormalTintedAndDisabledButtonsWithoutSelectedState() {
+    composeRule.setContent { UiCatalogRoute() }
+    scrollTo("filter-tags")
+    composeRule
+        .onNodeWithText(localizedString(Res.string.ui_catalog_filter_tags))
+        .assertIsDisplayed()
+    val tags =
+        composeRule.onAllNodes(
+            hasText(localizedString(Res.string.category_comida)) and
+                hasAnyAncestor(hasTestTag(catalogSectionAutomationTag("filter-tags")))
+        )
+    tags
+        .filter(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+        .assertCountEquals(3)
+    tags.filter(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected)).assertCountEquals(3)
+    tags.filter(isEnabled()).assertCountEquals(2)
+    tags.filter(!isEnabled()).assertCountEquals(1)
   }
 
   @Test
@@ -257,6 +304,8 @@ class UiCatalogScreenTest {
             CatalogSection("search-fields", Res.string.ui_catalog_search_fields),
             CatalogSection("amount-inputs", Res.string.ui_catalog_amount_inputs),
             CatalogSection("date-pickers", Res.string.ui_catalog_date_pickers),
+            CatalogSection("choice-pills", Res.string.ui_catalog_choice_pills),
+            CatalogSection("filter-tags", Res.string.ui_catalog_filter_tags),
             CatalogSection("period-pickers", Res.string.ui_catalog_period_pickers),
             CatalogSection("segmented-controls", Res.string.ui_catalog_segmented_controls),
             CatalogSection("selection-fields", Res.string.ui_catalog_selection_fields),

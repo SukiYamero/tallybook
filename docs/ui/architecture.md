@@ -367,12 +367,12 @@ The approved order and ownership are:
 | Home | Primary destination | Daily | Enabled; fresh launch starts here |
 | History | Primary destination | Frequent | Enabled; retained period and scroll |
 | Add movement | Contextual action | Frequent | Opens the existing movement sheet |
-| Search | Primary destination | Frequent | Reserved icon; inert until the destination exists |
+| Search | Primary destination | Frequent | Enabled; retained query, filters and scroll |
 | Profile | Secondary surface | Occasional | Reserved icon; inert until the surface exists |
 
 The bar uses icons without visible labels. Every icon still has a localized accessibility description.
 Unavailable positions expose neither click nor selection semantics. The centered Add movement action
-opens the shared creation session; Home and History expose selected tab semantics.
+opens the shared creation session; Home, History and Search expose selected tab semantics.
 
 `TallybookAppShell` measures the persistent bar before composing primary content and publishes its
 actual occupied clearance, including its sole bottom safe inset. Home and History use the screen
@@ -385,7 +385,8 @@ History is visited lazily and retained when hidden. Official saveable and ViewMo
 hoisted above the active display, in that order, with stable content keys and parent creation extras.
 Snapshotting extras for each parent lifetime prevents Activity Intent Bundles from resetting stores.
 Tabs select existing entries; History root Back selects Home, Home root delegates platform exit, and
-catalog Back returns to the previous primary. Search/Profile and the Home search surface remain inert.
+Search root Back selects Home; catalog Back returns to the previous primary. Home search opens Search
+with a one-time focus intent. Profile remains inert.
 
 Home/History repository observations use five-second subscription sharing. Feature routes revalidate
 before lifecycle collection. `RetainedLoadState<Content, Failure>` is the shared snapshot contract:
@@ -529,23 +530,22 @@ History starts directly with its contextual header and period controls. Scrollab
 an explicit label and scroll with the content. No fixed global balance, currency banner or independent
 global-summary status appears in History; the global balance remains on Home.
 History has no text-search field, non-date filters, balance-visibility
-toggle or fourth annual scope. Search remains a separate future destination.
+toggle or fourth annual scope. Search is a separate destination.
 
 ## Remaining product decisions
 
 The bottom navigation pattern, ordered positions, and centered placement of `Create movimiento` are
-decided. Home and History are enabled. Search and Profile remain visual reservations without actions
-until their separate features are implemented.
+decided. Home, History and Search are enabled. Profile remains a visual reservation without actions
+until its separate feature is implemented.
 
-## Planned Search presentation (Wave 4)
+## Search presentation
 
-This is the presentation contract for [Wave 4](../tasks/wave-4/README.md), not a claim that Search is
-implemented. [Business logic](../business-logic.md#search-and-filters-planned-wave-4) owns matching,
-filter/date/count semantics. Existing Home/History behavior above remains the current baseline.
+This is the presentation contract for [Search](../features/search.md).
+[Business logic](../business-logic.md#search-and-filters) owns matching and filter/date/count semantics.
 
 Search follows the supplied composition: header/title and result status, filter icon, text input,
-horizontal removable applied chips, then a flat lazy movement list. Use the frame's top/horizontal
-safe area, `space20` above the header and shell-measured bottom clearance exactly once. Header/field
+horizontal removable applied tags using the shared `TallybookFilterTag`, then a flat lazy movement
+list. Use the frame's top/horizontal safe area, `space20` above the header and shell-measured bottom clearance exactly once. Header/field
 scroll with content; no fixed global balance or chart. Rows reuse MovimientoRowContent with description
 first and full civil date/category subtitle; complete date/currency/type semantics remain accessible.
 
@@ -555,7 +555,10 @@ then parent-grouped real category chips with children visible. Show all persiste
 their existing icons/tints, plus selected missing-ID fallback chips with remove semantics. The body
 scrolls while a separate Limpiar/Aplicar footer remains reachable above safe/IME insets. Preserve
 minimum 48 dp targets and font scaling. Closing renders the captured draft as disabled until hidden.
-Only one calendar popup is active; Back closes it before cancelling filters. Custom chips/rows include
+Only one calendar popup is active; Back closes it before cancelling filters. Custom date rows show
+localized From/To labels to the left of their controls. They use inclusive opposite-endpoint bounds:
+To disables days before From, and From disables days after To;
+both preserve today's maximum and allow a same-day range. Custom chips/rows include
 year in display and full date semantics. Earlier persisted/restored years extend the shared date
 picker's 2019 floor without changing its default behavior for existing callers. The expanded year
 selector uses bounded lazy/scrollable rows, with selected-year reveal once on opening; older history

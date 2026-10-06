@@ -6,7 +6,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
@@ -16,17 +18,136 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.test.assertEquals
+import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
+import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.getStringArray
 import org.junit.Rule
 import org.junit.Test
+import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.calendar_next_month
+import tallybook.shared.generated.resources.calendar_previous_month
+import tallybook.shared.generated.resources.date_picker_months
 
 class TallybookDateChipPickerTest {
 
   @get:Rule val composeRule = createComposeRule()
+
+  @Test
+  fun raisingTheYearFloorWhileBrowsingKeepsNextMonthAvailableForRecovery() {
+    val minimumYear = mutableStateOf(1900)
+    composeRule.setContent {
+      TallybookTheme {
+        TallybookDateChipPicker(
+            value = LocalDate(2026, 10, 6),
+            onValueChange = {},
+            label = "Date",
+            maxDate = LocalDate(2026, 10, 6),
+            minYear = minimumYear.value,
+        )
+      }
+    }
+    composeRule.onNodeWithContentDescription("Date").performClick()
+    composeRule.onNodeWithContentDescription("2026").performClick()
+    composeRule.onNodeWithText("2019").performClick()
+    composeRule.runOnIdle { minimumYear.value = 2026 }
+    composeRule
+        .onNodeWithContentDescription(runBlocking { getString(Res.string.calendar_next_month) })
+        .assertIsEnabled()
+        .performClick()
+    val month = runBlocking { getStringArray(Res.array.date_picker_months)[10] }
+    composeRule.onNodeWithText("$month 2019").assertIsDisplayed()
+  }
+
+  @Test
+  fun minimumDateRejectsEarlierDaysAndAllowsTheInclusiveEndpoint() {
+    val selections = mutableListOf<LocalDate>()
+    composeRule.setContent {
+      TallybookTheme {
+        TallybookDateChipPicker(
+            value = LocalDate(2026, 9, 15),
+            onValueChange = { selections += it },
+            label = "Date",
+            maxDate = LocalDate(2026, 10, 6),
+            minDate = LocalDate(2026, 9, 20),
+        )
+      }
+    }
+    composeRule.onNodeWithContentDescription("Date").performClick()
+    composeRule
+        .onNodeWithContentDescription(runBlocking { getString(Res.string.calendar_previous_month) })
+        .assertIsNotEnabled()
+    composeRule.onNodeWithText("19").assertIsNotEnabled().performTouchInput { click() }
+    composeRule.runOnIdle { assertEquals(emptyList(), selections) }
+    composeRule.onNodeWithText("20").assertIsEnabled().performClick()
+    composeRule.runOnIdle { assertEquals(listOf(LocalDate(2026, 9, 20)), selections) }
+  }
+
+  @Test
+  fun lowerBoundRevealsItsMonthAndExcludesEarlierYears() {
+    val month = runBlocking { getStringArray(Res.array.date_picker_months)[8] }
+    composeRule.setContent {
+      TallybookTheme {
+        TallybookDateChipPicker(
+            value = LocalDate(1900, 1, 1),
+            onValueChange = {},
+            label = "Date",
+            maxDate = LocalDate(2026, 10, 6),
+            minYear = 1900,
+            valueLabel = "1 January 1900",
+            minDate = LocalDate(2025, 9, 20),
+        )
+      }
+    }
+    composeRule.onNodeWithContentDescription("Date").performClick()
+    composeRule.onNodeWithText("$month 2025").assertIsDisplayed()
+    composeRule.onNodeWithContentDescription("2025").performClick()
+    composeRule.onNodeWithText("2024").assertDoesNotExist()
+    composeRule.onNodeWithText("1900").assertDoesNotExist()
+    composeRule.onNodeWithText("2026").performClick()
+    composeRule.onNodeWithText("$month 2026").assertIsDisplayed()
+  }
+
+  @Test
+  fun boundsChangingDuringPressRejectSelectionUntilTheMinimumIsCorrected() {
+    val minimum = mutableStateOf(LocalDate(2026, 10, 1))
+    val selections = mutableListOf<LocalDate>()
+    composeRule.setContent {
+      TallybookTheme {
+        TallybookDateChipPicker(
+            value = LocalDate(2026, 10, 6),
+            onValueChange = { selections += it },
+            label = "Date",
+            maxDate = LocalDate(2026, 10, 6),
+            valueLabel = "6 October 2026",
+            minDate = minimum.value,
+        )
+      }
+    }
+    composeRule.onNodeWithContentDescription("Date").performClick()
+    composeRule.onNodeWithText("5").performTouchInput { down(center) }
+    composeRule.runOnIdle { minimum.value = LocalDate(2026, 10, 7) }
+    composeRule.onNodeWithText("5").assertIsNotEnabled().performTouchInput { up() }
+    composeRule.onNodeWithContentDescription("2026").assertIsNotEnabled()
+    composeRule
+        .onNodeWithContentDescription(runBlocking { getString(Res.string.calendar_previous_month) })
+        .assertIsNotEnabled()
+    composeRule
+        .onNodeWithContentDescription(runBlocking { getString(Res.string.calendar_next_month) })
+        .assertIsNotEnabled()
+    composeRule.onNodeWithText("6 October 2026").assertIsDisplayed()
+    composeRule.runOnIdle {
+      assertEquals(emptyList(), selections)
+      minimum.value = LocalDate(2026, 10, 1)
+    }
+    composeRule.onNodeWithText("5").assertIsEnabled().performClick()
+    composeRule.runOnIdle { assertEquals(listOf(LocalDate(2026, 10, 5)), selections) }
+  }
 
   @Test
   fun compactWindowAllowsScrollingToACompleteFortyEightDpFinalCalendarRow() {

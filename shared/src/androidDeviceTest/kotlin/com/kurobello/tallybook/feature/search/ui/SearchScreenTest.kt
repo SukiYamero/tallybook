@@ -9,9 +9,11 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.dp
 import com.kurobello.tallybook.core.model.DataError
+import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.search.viewmodel.SearchDateFailure
@@ -30,17 +32,53 @@ import tallybook.shared.generated.resources.retry
 import tallybook.shared.generated.resources.search_adjust_filters
 import tallybook.shared.generated.resources.search_clear_query
 import tallybook.shared.generated.resources.search_count
+import tallybook.shared.generated.resources.search_expenses
 import tallybook.shared.generated.resources.search_filters
 import tallybook.shared.generated.resources.search_invalid_dates
+import tallybook.shared.generated.resources.search_last_7_days
 import tallybook.shared.generated.resources.search_loading
 import tallybook.shared.generated.resources.search_no_data_title
 import tallybook.shared.generated.resources.search_no_results_title
 import tallybook.shared.generated.resources.search_placeholder
+import tallybook.shared.generated.resources.search_remove_filter
 import tallybook.shared.generated.resources.search_searching
 import tallybook.shared.generated.resources.search_updating
+import tallybook.shared.generated.resources.unknown_category
 
 class SearchScreenTest {
   @get:Rule val composeRule = createComposeRule()
+
+  @Test
+  fun appliedFilterTagsRemoveOnlyTheirOwnDateTypeOrCategoryDimension() {
+    val actions = SearchTestActions()
+    val state =
+        searchTestState.copy(
+            filters =
+                searchTestState.filters.copy(
+                    preset = SearchDatePreset.Last7Days,
+                    tipo = TipoMovimiento.GASTO,
+                    categoryIds = setOf("food", "missing"),
+                )
+        )
+    composeRule.setContent { TallybookTheme { SearchScreen(state, actions, {}, {}, 0.dp) } }
+    val labels =
+        listOf(
+            runBlocking { getString(Res.string.search_last_7_days) },
+            runBlocking { getString(Res.string.search_expenses) },
+            "Food",
+            runBlocking { getString(Res.string.unknown_category) },
+        )
+    labels.forEach { label ->
+      val remove = runBlocking { getString(Res.string.search_remove_filter, label) }
+      composeRule.onNodeWithContentDescription(remove).performScrollTo().performClick()
+    }
+    composeRule.runOnIdle {
+      assertEquals(
+          listOf("remove-date", "remove-type", "remove-category:food", "remove-category:missing"),
+          actions.events,
+      )
+    }
+  }
 
   @Test
   fun pendingResultsShowLoadingWithoutCountOrSearchUpdateWording() {

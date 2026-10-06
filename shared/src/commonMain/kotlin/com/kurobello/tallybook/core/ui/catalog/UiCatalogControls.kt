@@ -25,12 +25,17 @@ import com.composables.icons.lucide.ArrowUpRight
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.UtensilsCrossed
 import com.composables.icons.lucide.X
+import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.FIRST_SELECTABLE_YEAR
+import com.kurobello.tallybook.core.ui.category.tintColors
 import com.kurobello.tallybook.core.ui.component.TallybookAmountInput
+import com.kurobello.tallybook.core.ui.component.TallybookButtonColors
+import com.kurobello.tallybook.core.ui.component.TallybookChoicePill
 import com.kurobello.tallybook.core.ui.component.TallybookDateChipPicker
 import com.kurobello.tallybook.core.ui.component.TallybookDateChipSize
 import com.kurobello.tallybook.core.ui.component.TallybookDayPeriod
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
+import com.kurobello.tallybook.core.ui.component.TallybookFilterTag
 import com.kurobello.tallybook.core.ui.component.TallybookIconButton
 import com.kurobello.tallybook.core.ui.component.TallybookIconButtonStyle
 import com.kurobello.tallybook.core.ui.component.TallybookLoadingState
@@ -77,10 +82,13 @@ import tallybook.shared.generated.resources.expense
 import tallybook.shared.generated.resources.home_search_placeholder
 import tallybook.shared.generated.resources.income
 import tallybook.shared.generated.resources.loading
+import tallybook.shared.generated.resources.search_remove_filter
 import tallybook.shared.generated.resources.ui_catalog_amount_inputs
+import tallybook.shared.generated.resources.ui_catalog_choice_pills
 import tallybook.shared.generated.resources.ui_catalog_clear_search
 import tallybook.shared.generated.resources.ui_catalog_date_pickers
 import tallybook.shared.generated.resources.ui_catalog_disabled_icon_button
+import tallybook.shared.generated.resources.ui_catalog_filter_tags
 import tallybook.shared.generated.resources.ui_catalog_icon_button
 import tallybook.shared.generated.resources.ui_catalog_icon_buttons
 import tallybook.shared.generated.resources.ui_catalog_loading_states
@@ -130,6 +138,12 @@ internal fun LazyListScope.catalogControlMatrices() {
   catalogControlSection("date-pickers", { stringResource(Res.string.ui_catalog_date_pickers) }) {
     CatalogDatePickerMatrix()
   }
+  catalogControlSection("choice-pills", { stringResource(Res.string.ui_catalog_choice_pills) }) {
+    CatalogChoicePillMatrix()
+  }
+  catalogControlSection("filter-tags", { stringResource(Res.string.ui_catalog_filter_tags) }) {
+    CatalogFilterTagMatrix()
+  }
   catalogControlSection(
       "period-pickers",
       { stringResource(Res.string.ui_catalog_period_pickers) },
@@ -176,6 +190,46 @@ private fun LazyListScope.catalogControlSection(
         automationTag = catalogSectionAutomationTag(key),
     ) {
       content()
+    }
+  }
+}
+
+@Composable
+private fun CatalogChoicePillMatrix() {
+  val label = stringResource(Res.string.ui_catalog_period_day)
+  CatalogSurface {
+    CatalogSample(label = stringResource(Res.string.ui_catalog_state_default)) {
+      TallybookChoicePill(label, selected = false, onClick = {})
+    }
+    CatalogSample(label = stringResource(Res.string.ui_catalog_state_selected)) {
+      TallybookChoicePill(label, selected = true, onClick = {})
+    }
+    CatalogSample(label = stringResource(Res.string.ui_catalog_state_disabled)) {
+      TallybookChoicePill(label, selected = false, onClick = {}, enabled = false)
+    }
+  }
+}
+
+@Composable
+private fun CatalogFilterTagMatrix() {
+  val label = stringResource(Res.string.category_comida)
+  val removal = stringResource(Res.string.search_remove_filter, label)
+  val tint = CategoryTint.AMBER.tintColors()
+  CatalogSurface {
+    CatalogSample(label = stringResource(Res.string.ui_catalog_state_default)) {
+      TallybookFilterTag(label, removal, {})
+    }
+    CatalogSample(label = stringResource(Res.string.ui_catalog_state_emphasis)) {
+      TallybookFilterTag(
+          label,
+          removal,
+          {},
+          colors =
+              TallybookButtonColors(tint.container, tint.content, tint.container, tint.content),
+      )
+    }
+    CatalogSample(label = stringResource(Res.string.ui_catalog_state_disabled)) {
+      TallybookFilterTag(label, removal, {}, enabled = false)
     }
   }
 }

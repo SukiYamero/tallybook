@@ -2,7 +2,6 @@
 
 package com.kurobello.tallybook.feature.search.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,7 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
@@ -38,11 +36,11 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.Dp
 import com.composables.icons.lucide.ListFilter
 import com.composables.icons.lucide.Lucide
-import com.composables.icons.lucide.X
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.category.tintColors
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookButtonColors
+import com.kurobello.tallybook.core.ui.component.TallybookFilterTag
 import com.kurobello.tallybook.core.ui.component.TallybookIconButton
 import com.kurobello.tallybook.core.ui.component.TallybookIconButtonStyle
 import com.kurobello.tallybook.core.ui.component.TallybookProgressIndicator
@@ -295,63 +293,44 @@ private fun SearchAppliedChips(state: SearchUiState, actions: SearchActions) {
                       searchFullDate(state.filters.customEnd),
                   )
               else searchPresetLabel(state.filters.preset)
-          SearchAppliedChip(label, actions::onRemoveDateFilter)
+          TallybookFilterTag(
+              label,
+              stringResource(Res.string.search_remove_filter, label),
+              actions::onRemoveDateFilter,
+          )
         }
     state.filters.tipo?.let { type ->
       item(key = "type") {
-        SearchAppliedChip(
+        val label =
             stringResource(
                 if (type == TipoMovimiento.GASTO) Res.string.search_expenses
                 else Res.string.search_income
-            ),
+            )
+        TallybookFilterTag(
+            label,
+            stringResource(Res.string.search_remove_filter, label),
             actions::onRemoveTypeFilter,
         )
       }
     }
     items(selectedCategories, key = { "category:${it.id}" }) { category ->
       val tint = category.color.tintColors()
-      SearchAppliedChip(
+      TallybookFilterTag(
           category.nombre,
+          stringResource(Res.string.search_remove_filter, category.nombre),
           { actions.onRemoveCategoryFilter(category.id) },
-          TallybookButtonColors(tint.container, tint.content, tint.container, tint.content),
+          colors =
+              TallybookButtonColors(tint.container, tint.content, tint.container, tint.content),
       )
     }
     items(missing.sorted(), key = { "category:$it" }) { id ->
-      SearchAppliedChip(
-          stringResource(Res.string.unknown_category),
+      val label = stringResource(Res.string.unknown_category)
+      TallybookFilterTag(
+          label,
+          stringResource(Res.string.search_remove_filter, label),
           { actions.onRemoveCategoryFilter(id) },
       )
     }
-  }
-}
-
-@Composable
-private fun SearchAppliedChip(
-    label: String,
-    onRemove: () -> Unit,
-    colors: TallybookButtonColors? = null,
-) {
-  val remove = stringResource(Res.string.search_remove_filter, label)
-  val chipColors =
-      colors
-          ?: TallybookButtonColors(
-              TallybookTheme.colors.surface.deep,
-              TallybookTheme.colors.foreground.secondary,
-              TallybookTheme.colors.surface.deep,
-              TallybookTheme.colors.foreground.disabled,
-          )
-  TallybookButton(
-      onRemove,
-      modifier = Modifier.semantics { contentDescription = remove },
-      colors = chipColors,
-  ) {
-    TallybookText(label, style = TallybookTheme.typography.label)
-    Image(
-        Lucide.X,
-        null,
-        Modifier.size(TallybookTheme.dimensions.iconSmall),
-        colorFilter = ColorFilter.tint(chipColors.content),
-    )
   }
 }
 

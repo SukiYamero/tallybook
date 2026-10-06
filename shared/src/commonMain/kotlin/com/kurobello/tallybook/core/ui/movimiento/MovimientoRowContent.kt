@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import com.composables.icons.lucide.CircleQuestionMark
 import com.composables.icons.lucide.Lucide
@@ -24,6 +26,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookSurface
 import com.kurobello.tallybook.core.ui.component.TallybookSurfaceDefaults
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import com.kurobello.tallybook.core.ui.theme.TallybookTypeScale
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.expense
@@ -95,11 +98,16 @@ internal fun MovimientoRowContent(
               if (movimiento.tipo == TipoMovimiento.INGRESO)
                   TallybookTheme.colors.status.success.base
               else TallybookTheme.colors.foreground.primary,
-          style = TallybookTheme.typography.title,
+          style = movementRowAmountStyle(),
       )
     }
   }
 }
+
+@Composable
+@ReadOnlyComposable
+internal fun movementRowAmountStyle(): TextStyle =
+    TallybookTheme.typography.title.copy(fontSize = TallybookTypeScale.size17)
 
 internal fun signedMovimientoAmountText(monto: Money, tipo: TipoMovimiento): String {
   val formatted = (if (tipo == TipoMovimiento.GASTO) -monto else monto).format()

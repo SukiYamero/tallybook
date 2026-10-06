@@ -1,22 +1,21 @@
-package com.kurobello.tallybook.feature.search.ui
+package com.kurobello.tallybook.core.ui.component
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
-import com.kurobello.tallybook.core.ui.component.TallybookSurface
-import com.kurobello.tallybook.core.ui.component.TallybookSurfaceStyle
-import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 
 @Composable
-internal fun SearchChoiceChip(
+internal fun TallybookChoicePill(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
@@ -24,6 +23,7 @@ internal fun SearchChoiceChip(
     enabled: Boolean = true,
 ) {
   val colors = TallybookTheme.colors
+  val interactionSource = remember { MutableInteractionSource() }
   Box(
       modifier =
           modifier
@@ -31,14 +31,19 @@ internal fun SearchChoiceChip(
                   minWidth = TallybookTheme.dimensions.minimumTouchTarget,
                   minHeight = TallybookTheme.dimensions.minimumTouchTarget,
               )
-              .selectable(selected, enabled = enabled, role = Role.RadioButton, onClick = onClick),
+              .selectable(
+                  selected = selected,
+                  interactionSource = interactionSource,
+                  indication = null,
+                  enabled = enabled,
+                  role = Role.RadioButton,
+                  onClick = onClick,
+              ),
       contentAlignment = Alignment.Center,
   ) {
     TallybookSurface(
         modifier =
-            Modifier.defaultMinSize(
-                minHeight = TallybookTheme.dimensions.searchPresetChipVisualHeight
-            ),
+            Modifier.defaultMinSize(minHeight = TallybookTheme.dimensions.choicePillVisualHeight),
         style =
             TallybookSurfaceStyle(
                 color = if (selected) colors.surface.deep else colors.surface.card,

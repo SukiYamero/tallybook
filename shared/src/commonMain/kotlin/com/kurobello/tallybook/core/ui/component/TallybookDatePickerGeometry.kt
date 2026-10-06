@@ -1,16 +1,12 @@
 package com.kurobello.tallybook.core.ui.component
 
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntRect
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.PopupPositionProvider
 import com.kurobello.tallybook.core.model.FIRST_SELECTABLE_YEAR
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.Month
 import kotlinx.datetime.YearMonth
 import kotlinx.datetime.plus
 
@@ -27,15 +23,47 @@ internal fun selectableYears(
     selectedDate: LocalDate,
     maxDate: LocalDate?,
     minYear: Int = FIRST_SELECTABLE_YEAR,
+    minDate: LocalDate? = null,
 ): IntRange {
-  val maximum = maxDate?.year ?: selectedDate.year + YEARS_AHEAD_WITHOUT_LIMIT
-  return minOf(minYear, selectedDate.year, maximum)..maximum
+  if (minDate != null && maxDate != null && minDate > maxDate) return IntRange.EMPTY
+  val maximum =
+      maxDate?.year
+          ?: maxOf(
+              selectedDate.year + YEARS_AHEAD_WITHOUT_LIMIT,
+              minDate?.year ?: selectedDate.year,
+          )
+  val floor = minOf(minYear, selectedDate.year, maximum)
+  val minimum = if (minDate != null) maxOf(floor, minDate.year) else floor
+  return minimum..maximum
 }
 
-internal fun initialCalendarMonth(value: LocalDate, maxDate: LocalDate?): YearMonth {
-  val visible = if (maxDate != null && value > maxDate) maxDate else value
+internal fun initialCalendarMonth(
+    value: LocalDate,
+    maxDate: LocalDate?,
+    minDate: LocalDate? = null,
+): YearMonth {
+  val visible =
+      when {
+        maxDate != null && (value > maxDate || (minDate != null && minDate > maxDate)) -> maxDate
+        minDate != null && value < minDate -> minDate
+        else -> value
+      }
   return YearMonth(visible.year, visible.month)
 }
+
+internal fun isCalendarDateSelectable(
+    date: LocalDate,
+    minimumYear: Int,
+    maxDate: LocalDate? = null,
+    minDate: LocalDate? = null,
+): Boolean =
+    date.year >= minimumYear &&
+        (maxDate == null || date <= maxDate) &&
+        (minDate == null || date >= minDate)
+
+internal fun minimumCalendarMonth(years: IntRange, minDate: LocalDate?): YearMonth =
+    if (minDate != null && minDate.year == years.first) YearMonth(minDate.year, minDate.month)
+    else YearMonth(years.first, Month.JANUARY)
 
 internal fun calendarPopupMaximumHeight(
     windowHeight: Dp,
@@ -65,37 +93,6 @@ internal fun yearSelectorRowIndex(years: IntRange, selectedYear: Int): Int =
     ((years.last.toLong() - selectedYear).coerceAtLeast(0) / YEARS_PER_ROW)
         .toInt()
         .coerceAtMost((yearSelectorRowCount(years) - 1).coerceAtLeast(0))
-
-internal class TallybookAnchoredPopupPositionProvider(
-    private val verticalOffset: Int,
-    private val edgeMargin: Int,
-) : PopupPositionProvider {
-  override fun calculatePosition(
-      anchorBounds: IntRect,
-      windowSize: IntSize,
-      layoutDirection: LayoutDirection,
-      popupContentSize: IntSize,
-  ): IntOffset {
-    val centeredX = anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2
-    val maxX = maxOf(edgeMargin, windowSize.width - popupContentSize.width - edgeMargin)
-    val availableBelow = windowSize.height - anchorBounds.bottom - verticalOffset
-    val availableAbove = anchorBounds.top - verticalOffset
-    val maxY = maxOf(edgeMargin, windowSize.height - popupContentSize.height - edgeMargin)
-    val y =
-        when {
-          availableBelow >= popupContentSize.height -> anchorBounds.bottom + verticalOffset
-          availableAbove >= popupContentSize.height ->
-              anchorBounds.top - verticalOffset - popupContentSize.height
-          availableAbove > availableBelow ->
-              (anchorBounds.top - verticalOffset - popupContentSize.height).coerceIn(
-                  edgeMargin,
-                  maxY,
-              )
-          else -> (anchorBounds.bottom + verticalOffset).coerceIn(edgeMargin, maxY)
-        }
-    return IntOffset(centeredX.coerceIn(edgeMargin, maxX), y)
-  }
-}
 
 private const val DAYS_IN_WEEK = 7
 private const val YEARS_AHEAD_WITHOUT_LIMIT = 1
