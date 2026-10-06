@@ -18,10 +18,10 @@ internal data class HomeUiState(
     get() = !isLoading && error == null && recent.isEmpty()
 
   companion object {
-    fun loading() =
+    fun loading(moneda: Moneda = Moneda.COP) =
         HomeUiState(
             isLoading = true,
-            summary = emptySummary(Moneda.COP),
+            summary = emptySummary(moneda),
             recent = emptyList(),
             categoriasById = emptyMap(),
             error = null,

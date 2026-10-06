@@ -484,7 +484,9 @@ private class ShellMovimientos : MovimientoRepository {
       emitAll(
           rows.map { values ->
             DataOutcome.Success(
-                values.filter { it.fecha in range.start..range.end && it.monto.moneda == moneda }
+                values
+                    .filter { it.fecha in range.start..range.end && it.monto.moneda == moneda }
+                    .sortedWith(shellStorageOrder)
             )
           }
       )
@@ -496,7 +498,7 @@ private class ShellMovimientos : MovimientoRepository {
   override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = flow {
     activeRecent += 1
     try {
-      emitAll(rows.map { DataOutcome.Success(it.take(limit)) })
+      emitAll(rows.map { DataOutcome.Success(it.sortedWith(shellStorageOrder).take(limit)) })
     } finally {
       activeRecent -= 1
     }
@@ -524,6 +526,11 @@ private class ShellMovimientos : MovimientoRepository {
 
   override suspend fun getAll(): DataOutcome<List<Movimiento>> = DataOutcome.Success(rows.value)
 }
+
+private val shellStorageOrder =
+    compareByDescending<Movimiento> { it.fecha }
+        .thenByDescending { it.createdAt }
+        .thenByDescending { it.id }
 
 private class ShellPreferences : AppPreferencesRepository {
   override val preferences: Flow<DataOutcome<AppPreferencesState>> =

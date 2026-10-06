@@ -221,6 +221,59 @@ class HomeViewModelTest {
   }
 
   @Test
+  fun pendingReentryReadsPreserveCachedDataWithoutClaimingSuccess() = runTest {
+    val category = categoria("food")
+    val movement = movimiento("cached", Moneda.USD, category.id)
+    val cachedSummary = summary(Moneda.USD)
+    val movimientos =
+        FakeMovimientoRepository(
+            recent = DataOutcome.Success(listOf(movement)),
+            summary = DataOutcome.Success(cachedSummary),
+        )
+    val preferences = FakePreferencesRepository(readyPreferences(Moneda.USD))
+    val vm =
+        HomeViewModel(
+            preferences,
+            movimientos,
+            FakeCategoriaRepository(DataOutcome.Success(listOf(category))),
+            backgroundScope,
+        )
+    val collector = backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+    collector.cancel()
+    runCurrent()
+    advanceTimeBy(5_000)
+    runCurrent()
+    movimientos.awaitNextSummary()
+    vm.onResume()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+
+    assertTrue(vm.uiState.value.isLoading)
+    assertEquals(cachedSummary, vm.uiState.value.summary)
+    assertEquals(listOf(movement), vm.uiState.value.recent)
+    assertEquals(mapOf(category.id to category), vm.uiState.value.categoriasById)
+
+    val refreshed = MovimientoSummary(Money(2_000, Moneda.USD), Money(250, Moneda.USD))
+    movimientos.emitSummary(DataOutcome.Success(refreshed))
+    runCurrent()
+    assertFalse(vm.uiState.value.isLoading)
+    assertEquals(refreshed, vm.uiState.value.summary)
+
+    movimientos.awaitNextSummary()
+    preferences.emit(readyPreferences(Moneda.COP))
+    runCurrent()
+    assertTrue(vm.uiState.value.isLoading)
+    assertEquals(HomeUiState.emptySummary(Moneda.COP), vm.uiState.value.summary)
+    assertTrue(vm.uiState.value.recent.isEmpty())
+    assertTrue(vm.uiState.value.categoriasById.isEmpty())
+    movimientos.emitSummary(DataOutcome.Success(summary(Moneda.COP)))
+    runCurrent()
+    assertFalse(vm.uiState.value.isLoading)
+    assertEquals(Moneda.COP, vm.uiState.value.summary.balance.moneda)
+  }
+
+  @Test
   fun clearingHomeStopsOwnedReadsWithoutCancelingInjectedScope() = runTest {
     val movimientos =
         FakeMovimientoRepository(
@@ -343,6 +396,10 @@ class HomeViewModelTest {
 
     fun emitSummary(value: DataOutcome<MovimientoSummary>) {
       summaryValues.value = value
+    }
+
+    fun awaitNextSummary() {
+      summaryValues.value = null
     }
 
     fun invalidateAfterInsert(movimiento: Movimiento) {

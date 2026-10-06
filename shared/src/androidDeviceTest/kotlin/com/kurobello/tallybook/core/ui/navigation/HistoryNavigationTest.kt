@@ -359,7 +359,11 @@ private class NavigationMovimientos : MovimientoRepository {
     try {
       emitAll(
           rows.map { values ->
-            DataOutcome.Success(values.filter { it.fecha in range.start..range.end })
+            DataOutcome.Success(
+                values
+                    .filter { it.fecha in range.start..range.end && it.monto.moneda == moneda }
+                    .sortedWith(navigationStorageOrder)
+            )
           }
       )
     } finally {
@@ -370,7 +374,7 @@ private class NavigationMovimientos : MovimientoRepository {
   override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = flow {
     activeRecent.incrementAndGet()
     try {
-      emitAll(rows.map { DataOutcome.Success(it.take(limit)) })
+      emitAll(rows.map { DataOutcome.Success(it.sortedWith(navigationStorageOrder).take(limit)) })
     } finally {
       activeRecent.decrementAndGet()
     }
@@ -398,6 +402,11 @@ private class NavigationMovimientos : MovimientoRepository {
 
   override suspend fun getAll(): DataOutcome<List<Movimiento>> = DataOutcome.Success(rows.value)
 }
+
+private val navigationStorageOrder =
+    compareByDescending<Movimiento> { it.fecha }
+        .thenByDescending { it.createdAt }
+        .thenByDescending { it.id }
 
 private class NavigationPreferences : AppPreferencesRepository {
   override val preferences: Flow<DataOutcome<AppPreferencesState>> =

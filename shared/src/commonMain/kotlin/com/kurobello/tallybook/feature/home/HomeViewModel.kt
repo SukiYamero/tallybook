@@ -56,8 +56,13 @@ internal class HomeViewModel(
                     .flatMapLatest { revision -> observeHomeState().map { revision to it } }
                     .collect { (revision, state) ->
                       uiState.update { current ->
-                        if (epoch == observationEpoch && revision == retryRequests.value) state
-                        else current
+                        when {
+                          epoch != observationEpoch || revision != retryRequests.value -> current
+                          state.isLoading &&
+                              state.summary.balance.moneda == current.summary.balance.moneda ->
+                              current.revalidating()
+                          else -> state
+                        }
                       }
                     }
               }
@@ -76,17 +81,7 @@ internal class HomeViewModel(
   }
 
   private fun observeHomeState(): Flow<HomeUiState> =
-      preferencesRepository.preferences
-          .map<DataOutcome<AppPreferencesState>, PreferenceLoadState> {
-            PreferenceLoadState.Value(it)
-          }
-          .onStart { emit(PreferenceLoadState.Loading) }
-          .flatMapLatest { preferenceState ->
-            when (preferenceState) {
-              PreferenceLoadState.Loading -> HomeUiState.loading().asFlow()
-              is PreferenceLoadState.Value -> preferenceState.outcome.toHomeStateFlow()
-            }
-          }
+      preferencesRepository.preferences.flatMapLatest { it.toHomeStateFlow() }
 
   private fun DataOutcome<AppPreferencesState>.toHomeStateFlow(): Flow<HomeUiState> =
       when (this) {
@@ -108,14 +103,8 @@ internal class HomeViewModel(
           movimientoRepository.observeRecent(HOME_RECENT_LIMIT).toLoadState(),
           categoriaRepository.observeAll().toLoadState(),
       ) { summary, recent, categorias ->
-        HomeSnapshot.from(moneda, summary, recent, categorias).toUiState()
+        HomeSnapshot.from(moneda, summary, recent, categorias).toUiState(moneda)
       }
-}
-
-private sealed interface PreferenceLoadState {
-  data object Loading : PreferenceLoadState
-
-  data class Value(val outcome: DataOutcome<AppPreferencesState>) : PreferenceLoadState
 }
 
 private sealed interface LoadState<out T> {
@@ -136,10 +125,10 @@ private data class HomeSnapshot(
     val error: DataError?,
     val isLoading: Boolean,
 ) {
-  fun toUiState(): HomeUiState =
+  fun toUiState(moneda: Moneda): HomeUiState =
       when {
         error != null -> HomeUiState.error(error)
-        isLoading -> HomeUiState.loading()
+        isLoading -> HomeUiState.loading(moneda)
         else ->
             HomeUiState(
                 isLoading = false,
