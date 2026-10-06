@@ -3,6 +3,7 @@ package com.kurobello.tallybook.feature.history.ui
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.Build
+import android.os.Bundle
 import android.os.Debug
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.collectAsState
@@ -13,10 +14,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performScrollToKey
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.lifecycle.SavedStateHandle
@@ -74,6 +74,8 @@ import kotlinx.datetime.TimeZone
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.setResourceReaderAndroidContext
+import org.json.JSONArray
+import org.json.JSONObject
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
@@ -96,29 +98,66 @@ class HistoryVolumeDeviceTest {
     val fixture = VolumeFixture(context)
     val visible = mutableStateOf(true)
     var composed = false
-    var metrics: String? = null
     try {
-      metrics = exercise(fixture, visible) { composed = true }
+      exercise(fixture, visible, before) { composed = true }
     } finally {
       if (composed) {
         composeRule.runOnIdle { visible.value = false }
         composeRule.waitForIdle()
       }
       fixture.close()
-      println(
-          "History volume target=${Build.MODEL} sdk=${Build.VERSION.SDK_INT} testDebug=${context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0} selected=10000 excludedCurrency=4000 excludedDates=4000 beforePssKb=$before afterClosePssKb=${memoryPssKb()} $metrics"
-      )
+      InstrumentationRegistry.getInstrumentation()
+          .sendStatus(
+              2,
+              Bundle().apply {
+                putString(
+                    "history_diagnostic",
+                    JSONObject()
+                        .put("phase", "volume-after-close")
+                        .put("afterClosePssKb", memoryPssKb())
+                        .toString(),
+                )
+              },
+          )
     }
   }
 
   private fun exercise(
       fixture: VolumeFixture,
       visible: androidx.compose.runtime.MutableState<Boolean>,
+      beforePssKb: Int,
       onComposed: () -> Unit,
-  ): String {
+  ) {
     runBlocking { withTimeout(30_000) { fixture.startAndSeed() } }
     val afterReady = memoryPssKb()
     val measurement = runBlocking { withTimeout(30_000) { fixture.measureSnapshot() } }
+    val context = InstrumentationRegistry.getInstrumentation().targetContext
+    InstrumentationRegistry.getInstrumentation()
+        .sendStatus(
+            2,
+            Bundle().apply {
+              putString(
+                  "history_diagnostic",
+                  JSONObject()
+                      .put("phase", "volume-before-ui")
+                      .put("target", Build.MODEL)
+                      .put("sdk", Build.VERSION.SDK_INT)
+                      .put(
+                          "testDebug",
+                          context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0,
+                      )
+                      .put("selected", 10000)
+                      .put("excludedCurrency", 4000)
+                      .put("excludedDates", 4000)
+                      .put("beforePssKb", beforePssKb)
+                      .put("afterReadyPssKb", afterReady)
+                      .put("read", measurement.read)
+                      .put("projection", measurement.projection)
+                      .put("plan", JSONArray(measurement.plan))
+                      .toString(),
+              )
+            },
+        )
     val historyLabel = runBlocking { getString(Res.string.navigation_history) }
     val overallLabel = runBlocking { getString(Res.string.history_overall_balance) }
     var clearancePixels = 0f
@@ -139,18 +178,37 @@ class HistoryVolumeDeviceTest {
     }
     onComposed()
     val list = composeRule.onNode(hasContentDescription(historyLabel) and hasScrollAction())
-    list.performScrollToNode(hasText(measurement.first))
-    composeRule.onNodeWithText(measurement.first).assertIsDisplayed()
-    list.performScrollToNode(hasText(measurement.middle))
-    composeRule.onNodeWithText(measurement.middle).assertIsDisplayed()
-    list.performScrollToNode(hasText(measurement.last)).performTouchInput { swipeUp() }
-    composeRule.onNodeWithText(measurement.last).assertIsDisplayed()
+    list.performScrollToKey(measurement.first.key)
+    composeRule.waitForIdle()
+    composeRule.onNodeWithText(measurement.first.title).assertIsDisplayed()
+    list.performScrollToKey(measurement.middle.key)
+    composeRule.waitForIdle()
+    composeRule.onNodeWithText(measurement.middle.title).assertIsDisplayed()
+    list.performScrollToKey(measurement.last.key)
+    composeRule.waitForIdle()
+    list.performTouchInput { swipeUp() }
+    composeRule.onNodeWithText(measurement.last.title).assertIsDisplayed()
     composeRule.onNodeWithText(overallLabel).assertIsDisplayed()
     assertTrue(clearancePixels > 0f)
     val rowBottom =
-        composeRule.onNodeWithText(measurement.last).fetchSemanticsNode().boundsInRoot.bottom
+        composeRule.onNodeWithText(measurement.last.title).fetchSemanticsNode().boundsInRoot.bottom
     assertTrue(list.fetchSemanticsNode().boundsInRoot.bottom - rowBottom >= clearancePixels)
-    return "read=${measurement.read} projection=${measurement.projection} plan=${measurement.plan} afterReadyPssKb=$afterReady afterScrollPssKb=${memoryPssKb()}"
+    InstrumentationRegistry.getInstrumentation()
+        .sendStatus(
+            2,
+            Bundle().apply {
+              putString(
+                  "history_diagnostic",
+                  JSONObject()
+                      .put("phase", "volume-after-scroll")
+                      .put("afterScrollPssKb", memoryPssKb())
+                      .put("rowBottom", rowBottom)
+                      .put("listBottom", list.fetchSemanticsNode().boundsInRoot.bottom)
+                      .put("clearancePixels", clearancePixels)
+                      .toString(),
+              )
+            },
+        )
   }
 
   private class VolumeFixture(private val context: Context) {
@@ -308,10 +366,11 @@ class HistoryVolumeDeviceTest {
                 }
                 .value
           }
+      val projectedRows = projection.groups.flatMap { it.rows }
       return Measurement(
-          requireNotNull(rows.first().descripcion),
-          requireNotNull(rows[5000].descripcion),
-          requireNotNull(rows.last().descripcion),
+          projectedRows.first(),
+          projectedRows[5000],
+          projectedRows.last(),
           readTime,
           projectionTime,
           plan,
@@ -338,9 +397,9 @@ class HistoryVolumeDeviceTest {
   }
 
   private data class Measurement(
-      val first: String,
-      val middle: String,
-      val last: String,
+      val first: HistoryMovimientoRowUi,
+      val middle: HistoryMovimientoRowUi,
+      val last: HistoryMovimientoRowUi,
       val read: String,
       val projection: String,
       val plan: List<String>,
