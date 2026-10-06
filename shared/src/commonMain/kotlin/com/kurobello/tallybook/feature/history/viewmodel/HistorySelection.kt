@@ -1,5 +1,6 @@
 package com.kurobello.tallybook.feature.history.viewmodel
 
+import com.kurobello.tallybook.core.model.FIRST_SELECTABLE_YEAR
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoPeriodRanges
 import kotlinx.datetime.LocalDate
@@ -69,7 +70,11 @@ internal data class HistorySelection(val scope: HistoryScope, val anchor: LocalD
       today: LocalDate,
       retainedYears: Set<Int> = emptySet(),
   ): List<Int> =
-      (persistedYears + retainedYears + today.year + anchor.year)
+      ((FIRST_SELECTABLE_YEAR..today.year) +
+              persistedYears +
+              retainedYears +
+              today.year +
+              anchor.year)
           .filter { it <= today.year }
           .distinct()
           .sortedDescending()

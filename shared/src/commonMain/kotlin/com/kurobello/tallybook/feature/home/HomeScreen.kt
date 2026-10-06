@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -55,6 +56,8 @@ internal fun HomeScreen(
     modifier: Modifier = Modifier,
     bottomBarClearance: Dp = TallybookTheme.spacing.space0,
 ) {
+  val presentation by rememberHomePresentation(uiState)
+  val renderedState = presentation.state
   val contentListState = rememberLazyListState()
   // Loading/error placeholders must not consume the retained content scroll position.
   val pendingListState = remember { LazyListState() }
@@ -67,17 +70,18 @@ internal fun HomeScreen(
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         state =
-            if (uiState.isLoading || uiState.error != null) pendingListState else contentListState,
+            if (!renderedState.hasSnapshot || renderedState.error != null) pendingListState
+            else contentListState,
         contentPadding =
             PaddingValues(bottom = bottomBarClearance + TallybookTheme.spacing.space16),
     ) {
       item { HomeHeader(modifier = Modifier.padding(bottom = TallybookTheme.spacing.space20)) }
       item { HomeSearch(modifier = Modifier.padding(bottom = TallybookTheme.spacing.space18)) }
       when {
-        uiState.isLoading -> item { HomeLoading() }
-        uiState.error != null -> item { HomeError(onRetry) }
-        uiState.isEmpty -> item { HomeEmpty(onAddMovimiento) }
-        else -> homePopulated(uiState)
+        renderedState.error != null -> item { HomeError(onRetry) }
+        !renderedState.hasSnapshot -> homeLoading(presentation.showLoading)
+        renderedState.isEmpty -> item { HomeEmpty(onAddMovimiento) }
+        else -> homePopulated(renderedState)
       }
       if (onOpenCatalog != null) {
         item {
@@ -104,12 +108,12 @@ internal fun HomeLoadingPreview() {
 internal fun HomeEmptyPreview() {
   TallybookTheme {
     HomeScreen(
-        HomeUiState(
-            isLoading = false,
-            summary = HomeUiState.emptySummary(com.kurobello.tallybook.core.model.Moneda.COP),
-            recent = emptyList(),
-            categoriasById = emptyMap(),
-            error = null,
+        HomeUiState.ready(
+            HomeContent(
+                summary = HomeUiState.emptySummary(com.kurobello.tallybook.core.model.Moneda.COP),
+                recent = emptyList(),
+                categoriasById = emptyMap(),
+            )
         ),
         {},
         {},
@@ -161,16 +165,16 @@ internal fun HomePopulatedPreview() {
       )
   TallybookTheme {
     HomeScreen(
-        HomeUiState(
-            isLoading = false,
-            summary =
-                com.kurobello.tallybook.core.model.MovimientoSummary(
-                    movimiento.monto,
-                    movimiento.monto,
-                ),
-            recent = listOf(movimiento),
-            categoriasById = mapOf(categoria.id to categoria),
-            error = null,
+        HomeUiState.ready(
+            HomeContent(
+                summary =
+                    com.kurobello.tallybook.core.model.MovimientoSummary(
+                        movimiento.monto,
+                        movimiento.monto,
+                    ),
+                recent = listOf(movimiento),
+                categoriasById = mapOf(categoria.id to categoria),
+            )
         ),
         {},
         {},

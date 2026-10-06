@@ -388,7 +388,22 @@ Tabs select existing entries; History root Back selects Home, Home root delegate
 catalog Back returns to the previous primary. Search/Profile and the Home search surface remain inert.
 
 Home/History repository observations use five-second subscription sharing. Feature routes revalidate
-before lifecycle collection and present honest loading state from their first activation frame.
+before lifecycle collection. `RetainedLoadState<Content, Failure>` is the shared snapshot contract:
+`Ready` owns one complete value, `refreshing()` retains it in `Loading(previous)`, and `failed(error)`
+retains it with a typed failure. Empty collections are valid completed snapshots; snapshot/error types
+are non-null. ViewModels own this state and clear the snapshot when query identity changes. Snapshot
+retention is process-local presentation state, not a second database or a cache of every query.
+
+Home and History render valid retained content immediately when returning to a section, including
+completed empty results, while their repositories revalidate in the background. The shared
+`LoadingPresentation` mechanism delays initial feedback by 200 ms only when no valid snapshot exists;
+results and failures bypass that delay. Callers select `isInitialLoading` and a typed request identity
+derived only from screen state, including currency/period and excluding presentation metadata. Updates
+within the same pending request preserve the original deadline. Initial content reserves summary space
+without inventing totals; perceptible first reads show static skeletons. Read failures remain visible
+and retry preserves the last valid snapshot only for the same request identity.
+The period summary places balance above income/expenses in both content and skeleton states, avoiding
+amount-dependent horizontal wrapping at ordinary text sizes.
 Temporary loading/error lists use unsaved scroll state so they cannot clamp the retained content
 position before fresh rows arrive. Typed History input is checkpointed lazily from its sole ViewModel
 owner; rows, jobs and changed creation drafts are never saved.
@@ -504,6 +519,10 @@ Use this checklist in every UI pull request:
 ## History presentation
 
 History presentation uses the existing period picker with three scopes and a year context.
+The header shows the full month name and the year menu once. Day adds the weekday and day number;
+Week adds its day range, or one day for a single-day block; Month needs no supporting date line.
+Month chips use localized abbreviations and week chips use compact day ranges. Accessibility labels
+keep full dates, including the year.
 The temporal and selection rules live in [business logic](../business-logic.md#tracking-and-history).
 History starts directly with its contextual header and period controls. Scrollable content adds
 `space20` above the header after the frame safe inset. Selected-period totals have

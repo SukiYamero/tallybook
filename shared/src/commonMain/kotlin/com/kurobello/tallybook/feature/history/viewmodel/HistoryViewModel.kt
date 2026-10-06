@@ -14,6 +14,8 @@ import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoDateRange
+import com.kurobello.tallybook.core.ui.state.RetainedLoadState
+import com.kurobello.tallybook.core.ui.state.failed
 import kotlin.time.Clock
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -175,8 +177,8 @@ internal class HistoryViewModel(
           years = state.years.copy(retained = current.retainedYears),
           period =
               when {
-                rangeChanged || presentationChanged -> HistoryLoadState.Loading()
-                reloadChanged -> HistoryLoadState.Loading(state.period.cachedValue)
+                rangeChanged -> RetainedLoadState.Loading()
+                presentationChanged || reloadChanged -> state.period.refreshing()
                 else -> state.period
               },
           preferenceFailure = if (reloadChanged) null else state.preferenceFailure,
@@ -193,17 +195,13 @@ internal class HistoryViewModel(
         failure != null ->
             state.copy(
                 preferenceFailure = failure,
-                period =
-                    HistoryLoadState.Failed(
-                        HistoryFailure.Repository(failure),
-                        state.period.cachedValue,
-                    ),
+                period = state.period.failed(HistoryFailure.Repository(failure)),
             )
         moneda != null && moneda != state.moneda ->
             state.copy(
                 moneda = moneda,
                 preferenceFailure = null,
-                period = HistoryLoadState.Loading(),
+                period = RetainedLoadState.Loading(),
                 years = HistoryYearState(retained = inputs.value.retainedYears),
             )
         else -> state.copy(preferenceFailure = null)
@@ -272,7 +270,7 @@ private data class HistorySources(
 
 private data class HistoryFrame(
     val request: RangeRequest,
-    val period: HistoryLoadState<HistoryProjection.Content>,
+    val period: RetainedLoadState<HistoryProjection.Content, HistoryFailure>,
     val years: SourceLoad<List<Int>>,
     val label: String,
 )
@@ -363,11 +361,13 @@ private val SourceLoad<AppPreferencesState>.preferenceFailure: DataError?
             DataError.InvalidInput("Preferences are uninitialized after app startup")
           } else null
 
-private fun <T> HistoryLoadState<T>.retainPrevious(previous: T?): HistoryLoadState<T> =
+private fun <T : Any, E : Any> RetainedLoadState<T, E>.retainPrevious(
+    previous: T?
+): RetainedLoadState<T, E> =
     when (this) {
-      is HistoryLoadState.Loading -> copy(previous = previous)
-      is HistoryLoadState.Failed -> copy(previous = previous)
-      is HistoryLoadState.Ready -> this
+      is RetainedLoadState.Loading -> copy(previous = previous)
+      is RetainedLoadState.Failed -> copy(previous = previous)
+      is RetainedLoadState.Ready -> this
     }
 
 internal class HistoryDateProvider(
@@ -383,7 +383,7 @@ internal class HistoryDateProvider(
 
 private fun HistoryUiState.revalidating(): HistoryUiState =
     copy(
-        period = HistoryLoadState.Loading(period.cachedValue),
+        period = period.refreshing(),
         years = years.copy(isLoading = true),
     )
 
@@ -391,10 +391,10 @@ private suspend fun HistorySources.toFrame(dispatcher: CoroutineDispatcher): His
   val failure = range.load.failure ?: categories.failure
   val rows = range.load.data
   val categoryValues = categories.data
-  val period: HistoryLoadState<HistoryProjection.Content> =
+  val period: RetainedLoadState<HistoryProjection.Content, HistoryFailure> =
       when {
-        failure != null -> HistoryLoadState.Failed(HistoryFailure.Repository(failure))
-        rows == null || categoryValues == null -> HistoryLoadState.Loading()
+        failure != null -> RetainedLoadState.Failed(HistoryFailure.Repository(failure))
+        rows == null || categoryValues == null -> RetainedLoadState.Loading()
         else ->
             when (
                 val projection =
@@ -408,8 +408,8 @@ private suspend fun HistorySources.toFrame(dispatcher: CoroutineDispatcher): His
                       )
                     }
             ) {
-              is HistoryProjection.Content -> HistoryLoadState.Ready(projection)
-              is HistoryProjection.Failure -> HistoryLoadState.Failed(projection.failure)
+              is HistoryProjection.Content -> RetainedLoadState.Ready(projection)
+              is HistoryProjection.Failure -> RetainedLoadState.Failed(projection.failure)
             }
       }
   return HistoryFrame(range.request, period, years, label)

@@ -13,6 +13,7 @@ import org.robolectric.annotation.Config
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.calendar_date_content_description
 import tallybook.shared.generated.resources.date_picker_months
+import tallybook.shared.generated.resources.date_picker_months_short
 import tallybook.shared.generated.resources.history_movement_count
 import tallybook.shared.generated.resources.history_week_title
 import tallybook.shared.generated.resources.history_year_description
@@ -55,10 +56,10 @@ class HistoryResourcesHostTest {
     try {
       val cases =
           listOf(
-              Triple("es-CO", "15 de septiembre de 2026", "8–14 septiembre"),
-              Triple("es-AR", "15 de septiembre de 2026", "8–14 septiembre"),
-              Triple("en-US", "September 15, 2026", "September 8–14"),
-              Triple("pt-BR", "15 de setembro de 2026", "8–14 setembro"),
+              Triple("es-CO", "15 de septiembre de 2026", "Del 8 al 14"),
+              Triple("es-AR", "15 de septiembre de 2026", "Del 8 al 14"),
+              Triple("en-US", "September 15, 2026", "Days 8–14"),
+              Triple("pt-BR", "15 de setembro de 2026", "De 8 a 14"),
           )
       cases.forEach { (locale, date, week) ->
         Locale.setDefault(Locale.forLanguageTag(locale))
@@ -68,7 +69,11 @@ class HistoryResourcesHostTest {
             getString(Res.string.calendar_date_content_description, 15, month, 2026),
             locale,
         )
-        assertEquals(week, getString(Res.string.history_week_title, 8, 14, month), locale)
+        assertEquals(week, getString(Res.string.history_week_title, 8, 14), locale)
+        val shortMonth = if (locale == "pt-BR") "Set" else "Sep"
+        val shortMonths = getStringArray(Res.array.date_picker_months_short)
+        assertEquals(12, shortMonths.size, locale)
+        assertEquals(shortMonth, shortMonths[8], locale)
       }
     } finally {
       Locale.setDefault(original)

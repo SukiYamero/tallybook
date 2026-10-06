@@ -40,10 +40,10 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.di.DispatcherQualifier
 import com.kurobello.tallybook.di.viewModelModule
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryFailure
-import com.kurobello.tallybook.feature.history.viewmodel.HistoryLoadState
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryProjection
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryScope
 import com.kurobello.tallybook.feature.history.viewmodel.HistorySelection
@@ -227,7 +227,10 @@ class HistoryIntegrationTest {
           graph.movimientos.insert(row("prior-year", LocalDate(2024, 9, 15))),
       )
       runCurrent()
-      assertEquals(listOf(2026, 2024), graph.history.uiState.value.availableYears)
+      assertEquals(
+          listOf(2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019),
+          graph.history.uiState.value.availableYears,
+      )
       graph.history.onYearSelected(2024)
       runCurrent()
       val historical = graph.history.uiState.value.selection
@@ -243,7 +246,10 @@ class HistoryIntegrationTest {
       assertEquals(DataOutcome.Success(Unit), graph.movimientos.delete("missing"))
       runCurrent()
       assertEquals(emptyList(), graph.history.uiState.value.years.persisted)
-      assertEquals(listOf(2026, 2024), graph.history.uiState.value.availableYears)
+      assertEquals(
+          listOf(2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019),
+          graph.history.uiState.value.availableYears,
+      )
       graph.history.onYearSelected(2024)
       runCurrent()
       clock.instant = Instant.parse("2027-01-01T00:30:00Z")
@@ -257,7 +263,10 @@ class HistoryIntegrationTest {
       runCurrent()
       assertEquals(LocalDate(2027, 1, 1), graph.history.uiState.value.today)
       assertEquals(historical, graph.history.uiState.value.selection)
-      assertEquals(listOf(2027, 2026, 2024), graph.history.uiState.value.availableYears)
+      assertEquals(
+          listOf(2027, 2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019),
+          graph.history.uiState.value.availableYears,
+      )
     }
   }
 
@@ -293,7 +302,7 @@ class HistoryIntegrationTest {
           graph.history.onRetry()
           runCurrent()
           val failed =
-              assertIs<HistoryLoadState.Failed<HistoryProjection.Content>>(
+              assertIs<RetainedLoadState.Failed<HistoryProjection.Content, HistoryFailure>>(
                   graph.history.uiState.value.period
               )
           assertIs<DataError.Local>(assertIs<HistoryFailure.Repository>(failed.failure).error)
@@ -377,7 +386,7 @@ class HistoryIntegrationTest {
     val history: HistoryViewModel
     val period
       get() =
-          assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(history.uiState.value.period)
+          assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(history.uiState.value.period)
               .value
 
     init {
@@ -422,7 +431,7 @@ class HistoryIntegrationTest {
       collectors += fixture.test.backgroundScope.launch { history.uiState.collect {} }
       fixture.test.runCurrent()
       assertFalse(home.uiState.value.isLoading)
-      assertIs<HistoryLoadState.Ready<*>>(history.uiState.value.period)
+      assertIs<RetainedLoadState.Ready<*>>(history.uiState.value.period)
     }
 
     private inline fun <reified T : ViewModel> model(): T {

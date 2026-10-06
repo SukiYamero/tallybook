@@ -28,6 +28,7 @@ import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.di.DispatcherQualifier
 import com.kurobello.tallybook.di.viewModelModule
 import java.sql.Driver
@@ -123,7 +124,10 @@ internal class HistoryViewModelGraphHostTest {
               HistorySelection(HistoryScope.Week, LocalDate(2024, 2, 22)),
               seeded.uiState.value.selection,
           )
-          assertEquals(listOf(2026, 2024), seeded.uiState.value.availableYears)
+          assertEquals(
+              listOf(2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019),
+              seeded.uiState.value.availableYears,
+          )
           val malformedOwner = HistoryRegistryOwner(null, savedState()).also(owners::add)
           assertEquals(
               HistorySelection(HistoryScope.Day, LocalDate(2026, 10, 5)),
@@ -145,7 +149,7 @@ internal class HistoryViewModelGraphHostTest {
           runCurrent()
           assertEquals(
               0,
-              assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(
+              assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(
                       first.uiState.value.period
                   )
                   .value
@@ -158,7 +162,7 @@ internal class HistoryViewModelGraphHostTest {
           runCurrent()
           assertEquals(
               1,
-              assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(
+              assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(
                       first.uiState.value.period
                   )
                   .value
@@ -166,7 +170,7 @@ internal class HistoryViewModelGraphHostTest {
           )
           assertEquals(
               "Sin categoría",
-              assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(
+              assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(
                       first.uiState.value.period
                   )
                   .value
@@ -181,7 +185,7 @@ internal class HistoryViewModelGraphHostTest {
           runCurrent()
           assertEquals(
               1,
-              assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(
+              assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(
                       first.uiState.value.period
                   )
                   .value
@@ -199,7 +203,7 @@ internal class HistoryViewModelGraphHostTest {
           runCurrent()
           assertEquals(
               2,
-              assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(
+              assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(
                       first.uiState.value.period
                   )
                   .value
@@ -220,7 +224,7 @@ internal class HistoryViewModelGraphHostTest {
           runCurrent()
           assertEquals(
               2,
-              assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(
+              assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(
                       second.uiState.value.period
                   )
                   .value

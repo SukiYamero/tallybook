@@ -107,7 +107,9 @@ class HomeScreenTest {
     val addMovementLabel = localizedString(Res.string.navigation_add_movement)
     composeRule.setContent { TallybookTheme { HostedHomeScreen(HomeUiState.loading(), {}, {}) } }
 
+    composeRule.mainClock.advanceTimeBy(240)
     composeRule.onNodeWithContentDescription(loadingDescription).assertIsDisplayed()
+    composeRule.onNodeWithText("$ 000.000").assertDoesNotExist()
     composeRule.onNodeWithContentDescription(addMovementLabel).assertIsDisplayed()
   }
 
@@ -270,20 +272,20 @@ class HomeScreenTest {
             createdAt = Instant.parse("2026-09-15T00:00:00Z"),
         )
     val emptyState =
-        HomeUiState(
-            isLoading = false,
-            summary = HomeUiState.emptySummary(Moneda.COP),
-            recent = emptyList(),
-            categoriasById = emptyMap(),
-            error = null,
+        HomeUiState.ready(
+            HomeContent(
+                summary = HomeUiState.emptySummary(Moneda.COP),
+                recent = emptyList(),
+                categoriasById = emptyMap(),
+            )
         )
     val populatedState =
-        HomeUiState(
-            isLoading = false,
-            summary = MovimientoSummary(Money(100, Moneda.COP), Money(100, Moneda.COP)),
-            recent = listOf(movimiento),
-            categoriasById = mapOf(categoria.id to categoria),
-            error = null,
+        HomeUiState.ready(
+            HomeContent(
+                summary = MovimientoSummary(Money(100, Moneda.COP), Money(100, Moneda.COP)),
+                recent = listOf(movimiento),
+                categoriasById = mapOf(categoria.id to categoria),
+            )
         )
   }
 }

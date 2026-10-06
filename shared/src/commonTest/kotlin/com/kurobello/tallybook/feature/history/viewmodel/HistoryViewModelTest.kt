@@ -17,6 +17,7 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -80,7 +81,7 @@ class HistoryViewModelTest {
     val second = backgroundScope.launch { vm.uiState.collect {} }
     runCurrent()
     val content =
-        assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
+        assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
     assertEquals(1, content.value.movementCount)
     assertEquals(Money(-100, Moneda.USD), content.value.summary.balance)
     assertEquals(1, fixture.preferences.source.starts)
@@ -126,11 +127,11 @@ class HistoryViewModelTest {
     runCurrent()
     val first = requireNotNull(firstState)
     assertEquals(HistorySelection(HistoryScope.Week, LocalDate(2024, 2, 22)), first.selection)
-    assertIs<HistoryLoadState.Loading<HistoryProjection.Content>>(first.period)
+    assertIs<RetainedLoadState.Loading<HistoryProjection.Content>>(first.period)
     backgroundScope.launch { vm.uiState.collect {} }
     runCurrent()
     val content =
-        assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
+        assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
     assertEquals(2, content.value.movementCount)
   }
 
@@ -147,7 +148,7 @@ class HistoryViewModelTest {
     runCurrent()
     assertEquals(
         HistoryFailure.Repository(failure),
-        assertIs<HistoryLoadState.Failed<*>>(vm.uiState.value.period).failure,
+        assertIs<RetainedLoadState.Failed<*, *>>(vm.uiState.value.period).failure,
     )
     fixture.categorias.source.emit(DataOutcome.Success(emptyList()))
     fixture.movimientos
@@ -155,7 +156,7 @@ class HistoryViewModelTest {
         .emit(DataOutcome.Success(listOf(movimiento("today", TODAY))))
     fixture.movimientos.summary(Moneda.USD).emit(DataOutcome.Failure(failure))
     runCurrent()
-    assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
+    assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
     assertEquals(0, fixture.movimientos.summary(Moneda.USD).starts)
   }
 
@@ -169,9 +170,10 @@ class HistoryViewModelTest {
     runCurrent()
     val starts = fixture.movimientos.totalRangeStarts
     vm.onPresentationChanged("Sin categoría")
+    assertTrue(vm.uiState.value.period.hasSnapshot)
     runCurrent()
     val content =
-        assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
+        assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
     assertEquals("Sin categoría", content.value.groups.single().rows.single().title)
     assertEquals(starts, fixture.movimientos.totalRangeStarts)
     fixture.movimientos.years(Moneda.USD).emit(DataOutcome.Success(emptyList()))
@@ -205,7 +207,7 @@ class HistoryViewModelTest {
     val week = MovimientoDateRange(LocalDate(2026, 10, 1), TODAY)
     assertEquals(
         2,
-        assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
+        assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
             .value
             .movementCount,
     )
@@ -222,7 +224,7 @@ class HistoryViewModelTest {
     assertTrue(
         states.drop(afterSelection).all { state ->
           val period = state.period
-          period !is HistoryLoadState.Ready || period.value.groups.all { it.fecha == TODAY }
+          period !is RetainedLoadState.Ready || period.value.groups.all { it.fecha == TODAY }
         }
     )
     fixture.preferences.setMonedaPrincipal(Moneda.COP)
@@ -232,13 +234,13 @@ class HistoryViewModelTest {
     runCurrent()
     assertEquals(Moneda.COP, vm.uiState.value.moneda)
     val content =
-        assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
+        assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
     assertEquals("cop-today", content.value.groups.single().rows.single().id)
     assertTrue(
         states
             .filter { it.moneda == Moneda.COP }
             .all { state ->
-              state.period !is HistoryLoadState.Ready ||
+              state.period !is RetainedLoadState.Ready ||
                   state.period.value.summary.balance.moneda == Moneda.COP
             }
     )
@@ -256,12 +258,14 @@ class HistoryViewModelTest {
     val source = fixture.movimientos.range(Moneda.USD, MovimientoDateRange(date, date))
     source.emit(DataOutcome.Failure(DataError.Local(IllegalStateException())))
     runCurrent()
-    assertIs<HistoryLoadState.Failed<HistoryProjection.Content>>(vm.uiState.value.period)
+    assertIs<RetainedLoadState.Failed<HistoryProjection.Content, HistoryFailure>>(
+        vm.uiState.value.period
+    )
     source.emit(DataOutcome.Success(listOf(movimiento("past", date))))
     vm.onRetry()
     assertEquals(HistorySelection(HistoryScope.Day, date), vm.uiState.value.selection)
     runCurrent()
-    assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
+    assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
     source.emit(
         DataOutcome.Success(
             listOf(
@@ -276,7 +280,7 @@ class HistoryViewModelTest {
     runCurrent()
     assertEquals(
         HistoryFailure.CalculationOverflow,
-        assertIs<HistoryLoadState.Failed<*>>(vm.uiState.value.period).failure,
+        assertIs<RetainedLoadState.Failed<*, *>>(vm.uiState.value.period).failure,
     )
     assertFalse(vm.uiState.value.isEmpty)
     assertEquals(HistorySelection(HistoryScope.Day, date), vm.uiState.value.selection)
@@ -294,7 +298,7 @@ class HistoryViewModelTest {
     runCurrent()
     assertEquals(
         HistoryFailure.Repository(failure),
-        assertIs<HistoryLoadState.Failed<*>>(categoryVm.uiState.value.period).failure,
+        assertIs<RetainedLoadState.Failed<*, *>>(categoryVm.uiState.value.period).failure,
     )
 
     val yearsFixture = HistoryFixture(this)
@@ -305,7 +309,10 @@ class HistoryViewModelTest {
     backgroundScope.launch { yearsVm.uiState.collect {} }
     runCurrent()
     assertEquals(failure, yearsVm.uiState.value.years.failure)
-    assertEquals(listOf(2026), yearsVm.uiState.value.availableYears)
+    assertEquals(
+        listOf(2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019),
+        yearsVm.uiState.value.availableYears,
+    )
 
     val startupFixture = HistoryFixture(this)
     startupFixture.preferences.source.emit(DataOutcome.Success(AppPreferencesState.Uninitialized))
@@ -325,17 +332,17 @@ class HistoryViewModelTest {
     val vm = fixture.create()
     val collector = backgroundScope.launch { vm.uiState.collect {} }
     runCurrent()
-    assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
+    assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
     collector.cancel()
     runCurrent()
     advanceTimeBy(5_000)
     runCurrent()
     assertEquals(1, source.active)
-    assertIs<HistoryLoadState.Loading<HistoryProjection.Content>>(vm.uiState.value.period)
+    assertIs<RetainedLoadState.Loading<HistoryProjection.Content>>(vm.uiState.value.period)
     advanceTimeBy(1_000)
     runCurrent()
     assertEquals(0, source.active)
-    assertIs<HistoryLoadState.Loading<HistoryProjection.Content>>(vm.uiState.value.period)
+    assertIs<RetainedLoadState.Loading<HistoryProjection.Content>>(vm.uiState.value.period)
   }
 
   @Test

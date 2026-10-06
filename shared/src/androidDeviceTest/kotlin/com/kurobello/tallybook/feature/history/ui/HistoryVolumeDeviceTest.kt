@@ -43,10 +43,10 @@ import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.ui.layout.TallybookAppShell
 import com.kurobello.tallybook.core.ui.navigation.History
 import com.kurobello.tallybook.core.ui.navigation.TallybookBottomNavigation
+import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.history.viewmodel.HISTORY_SAVED_INPUT_KEY
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryDateProvider
-import com.kurobello.tallybook.feature.history.viewmodel.HistoryLoadState
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryProjection
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryRepositories
 import com.kurobello.tallybook.feature.history.viewmodel.HistorySavedInput
@@ -264,7 +264,7 @@ class HistoryVolumeDeviceTest {
         store.put("volume", requireNotNull(viewModel))
         collector = scope.launch { requireNotNull(viewModel).uiState.collect {} }
       }
-      requireNotNull(viewModel).uiState.first { it.period is HistoryLoadState.Ready }
+      requireNotNull(viewModel).uiState.first { it.period is RetainedLoadState.Ready }
       withContext(Dispatchers.IO) {
         database.transaction {
           repeat(10000) { index ->
@@ -289,7 +289,7 @@ class HistoryVolumeDeviceTest {
       }
       val state =
           requireNotNull(viewModel).uiState.first {
-            (it.period as? HistoryLoadState.Ready)?.value?.movementCount == 10000
+            (it.period as? RetainedLoadState.Ready)?.value?.movementCount == 10000
           }
       assertEquals(
           1_400_000L,
@@ -302,7 +302,7 @@ class HistoryVolumeDeviceTest {
       )
       assertEquals(
           1_000_000L,
-          assertIs<HistoryLoadState.Ready<HistoryProjection.Content>>(state.period)
+          assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(state.period)
               .value
               .summary
               .gastos

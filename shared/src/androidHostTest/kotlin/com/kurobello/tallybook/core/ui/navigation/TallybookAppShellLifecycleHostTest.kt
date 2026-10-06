@@ -45,10 +45,10 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.di.DispatcherQualifier
 import com.kurobello.tallybook.di.viewModelModule
 import com.kurobello.tallybook.feature.history.ui.rememberHistoryRouteState
-import com.kurobello.tallybook.feature.history.viewmodel.HistoryLoadState
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryScope
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryUiState
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryViewModel
@@ -141,7 +141,7 @@ internal class TallybookAppShellLifecycleHostTest {
           }
           assertEquals(2, restored.owners.size)
           assertSame(restored.history, restored.historyInstances.last())
-          assertIs<HistoryLoadState.Loading<*>>(restored.firstHistoryStates.last().period)
+          assertIs<RetainedLoadState.Loading<*>>(restored.firstHistoryStates.last().period)
           assertTrue(repository.rangeStarts > 1)
         }
       }
@@ -208,16 +208,16 @@ internal class TallybookAppShellLifecycleHostTest {
       repository.rows.value = repository.rows.value + shellRow("hidden", LocalDate(2026, 10, 5))
       fixture.select(History)
       assertEquals(selected, fixture.firstHistoryStates.last().selection)
-      assertIs<HistoryLoadState.Loading<*>>(fixture.firstHistoryStates.last().period)
+      assertIs<RetainedLoadState.Loading<*>>(fixture.firstHistoryStates.last().period)
       fixture.pause()
-      assertIs<HistoryLoadState.Loading<*>>(fixture.renderedHistory.last().period)
+      assertIs<RetainedLoadState.Loading<*>>(fixture.renderedHistory.last().period)
       fixture.resume()
       fixture.label.value = "Sin categoría"
       fixture.settle()
-      assertIs<HistoryLoadState.Loading<*>>(fixture.firstHistoryStates.last().period)
+      assertIs<RetainedLoadState.Loading<*>>(fixture.firstHistoryStates.last().period)
       assertEquals(
           "Sin categoría",
-          (fixture.history.uiState.value.period as HistoryLoadState.Ready)
+          (fixture.history.uiState.value.period as RetainedLoadState.Ready)
               .value
               .groups
               .first()

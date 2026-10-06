@@ -19,23 +19,29 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Search
 import com.composables.icons.lucide.Wallet
 import com.kurobello.tallybook.core.ui.component.TallybookButton
-import com.kurobello.tallybook.core.ui.component.TallybookLoadingState
+import com.kurobello.tallybook.core.ui.component.TallybookSkeletonLine
 import com.kurobello.tallybook.core.ui.component.TallybookSurface
 import com.kurobello.tallybook.core.ui.component.TallybookSurfaceDefaults
 import com.kurobello.tallybook.core.ui.component.TallybookSurfaceStyle
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.movimiento.BalanceCard
+import com.kurobello.tallybook.core.ui.movimiento.BalanceCardSkeleton
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoRow
+import com.kurobello.tallybook.core.ui.movimiento.MovimientoRowSkeleton
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
@@ -102,19 +108,39 @@ internal fun HomeSearch(modifier: Modifier = Modifier) {
   }
 }
 
-@Composable
-internal fun HomeLoading() {
-  val loadingDescription = stringResource(Res.string.loading)
-  TallybookSurface(
-      modifier = Modifier.fillMaxWidth(),
-      style = homeStateSurfaceStyle(),
-  ) {
-    TallybookLoadingState(
-        contentDescription = loadingDescription,
+private const val HOME_SKELETON_ROW_COUNT = 3
+
+internal fun LazyListScope.homeLoading(showLoading: Boolean) {
+  item {
+    val description = stringResource(Res.string.loading)
+    val feedback =
+        if (showLoading)
+            Modifier.semantics {
+              contentDescription = description
+              progressBarRangeInfo = ProgressBarRangeInfo.Indeterminate
+              liveRegion = LiveRegionMode.Polite
+            }
+        else Modifier
+    Box(
         modifier =
-            Modifier.fillMaxWidth()
-                .heightIn(min = TallybookTheme.dimensions.containedLoadingMinHeight),
-    )
+            Modifier.fillMaxWidth().padding(bottom = TallybookTheme.spacing.space18).then(feedback)
+    ) {
+      BalanceCardSkeleton(Modifier.fillMaxWidth().alpha(if (showLoading) 1f else 0f))
+    }
+  }
+  if (showLoading) {
+    item {
+      TallybookSkeletonLine(
+          stringResource(Res.string.home_recent),
+          TallybookTheme.typography.title,
+          Modifier.padding(bottom = TallybookTheme.spacing.space10),
+      )
+    }
+    items(HOME_SKELETON_ROW_COUNT) {
+      MovimientoRowSkeleton(
+          Modifier.fillMaxWidth().padding(bottom = TallybookTheme.spacing.space10)
+      )
+    }
   }
 }
 

@@ -155,7 +155,7 @@ class HistorySelectionTest {
 
     assertEquals(HistorySelection(HistoryScope.Week, next), live.refresh(previous, next))
     assertEquals(
-        listOf(2026, 2025),
+        listOf(2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019),
         live.refresh(previous, next).availableYears(listOf(2025), next),
     )
   }
@@ -186,25 +186,61 @@ class HistorySelectionTest {
   fun yearOptionsRetainSelectedPastYearWhenItsMetadataDisappears() {
     val selection = HistorySelection(HistoryScope.Day, LocalDate(2024, 2, 29))
     assertEquals(
-        listOf(2026, 2025, 2024, 2022),
+        listOf(2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019),
         selection.availableYears(listOf(2022, 2025, 2025), today),
     )
-    assertEquals(listOf(2026, 2024), selection.availableYears(emptyList(), today))
+    assertEquals(
+        listOf(2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019),
+        selection.availableYears(emptyList(), today),
+    )
   }
 
   @Test
   fun retainedEntryYearsRemainAvailableAfterSelectingAnotherYear() {
     val changed = HistorySelection(HistoryScope.Day, LocalDate(2024, 2, 29)).selectYear(2025, today)
     assertEquals(
-        listOf(2026, 2025, 2024),
+        listOf(2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019),
         changed.availableYears(emptyList(), today, retainedYears = setOf(2024)),
     )
     val earlier = LocalDate(2023, 12, 31)
     assertEquals(
-        listOf(2023, 2022),
+        listOf(2023, 2022, 2021, 2020, 2019),
         changed
             .refresh(today, earlier)
             .availableYears(emptyList(), earlier, retainedYears = setOf(2022, 2024, 2025, 2026)),
+    )
+  }
+
+  @Test
+  fun emptyHistoryOffersEveryYearFrom2019ThroughToday() {
+    assertEquals(
+        listOf(2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019),
+        HistorySelection.initial(today).availableYears(emptyList(), today),
+    )
+  }
+
+  @Test
+  fun legacyYearExceptionsDoNotInventIntermediateOlderYears() {
+    val selection = HistorySelection(HistoryScope.Day, LocalDate(2016, 2, 19))
+
+    assertEquals(
+        listOf(2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2016, 2014, 2012),
+        selection.availableYears(
+            persistedYears = listOf(2014, 2014, 2027),
+            today = today,
+            retainedYears = setOf(2012, 2027),
+        ),
+    )
+  }
+
+  @Test
+  fun restoredLegacyYearStaysReachableWithoutPersistedMetadata() {
+    val restored = HistorySelection.restore(HistorySavedInput(1, "Month", "2010-03-10"), today)
+
+    assertEquals(LocalDate(2010, 3, 10), restored.anchor)
+    assertEquals(
+        listOf(2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2010),
+        restored.availableYears(emptyList(), today),
     )
   }
 
@@ -217,7 +253,10 @@ class HistorySelectionTest {
       val decoded = Json.decodeFromString<HistorySavedInput>(Json.encodeToString(input))
       val restored = HistorySelection.restore(decoded, today)
       assertEquals(selection, restored)
-      assertEquals(listOf(2026, 2024), restored.availableYears(emptyList(), today))
+      assertEquals(
+          listOf(2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019),
+          restored.availableYears(emptyList(), today),
+      )
     }
   }
 

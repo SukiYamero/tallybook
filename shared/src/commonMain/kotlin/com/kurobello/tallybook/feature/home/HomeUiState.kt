@@ -1,42 +1,45 @@
 package com.kurobello.tallybook.feature.home
 
-import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
-import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoSummary
+import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 
 internal data class HomeUiState(
-    val isLoading: Boolean,
-    val summary: MovimientoSummary,
-    val recent: List<Movimiento>,
-    val categoriasById: Map<String, Categoria>,
-    val error: DataError?,
+    val moneda: Moneda,
+    val content: RetainedLoadState<HomeContent, DataError> = RetainedLoadState.Loading(),
 ) {
+  val isLoading: Boolean
+    get() = content.isLoading
+
+  val hasSnapshot: Boolean
+    get() = content.hasSnapshot
+
+  val summary: MovimientoSummary
+    get() = content.cachedValue?.summary ?: emptySummary(moneda)
+
+  val recent
+    get() = content.cachedValue?.recent.orEmpty()
+
+  val categoriasById
+    get() = content.cachedValue?.categoriasById.orEmpty()
+
+  val error: DataError?
+    get() = content.failure
+
   val isEmpty: Boolean
-    get() = !isLoading && error == null && recent.isEmpty()
+    get() = error == null && content.cachedValue?.recent?.isEmpty() == true
 
   companion object {
-    fun loading(moneda: Moneda = Moneda.COP) =
-        HomeUiState(
-            isLoading = true,
-            summary = emptySummary(moneda),
-            recent = emptyList(),
-            categoriasById = emptyMap(),
-            error = null,
-        )
+    fun loading(moneda: Moneda = Moneda.COP) = HomeUiState(moneda)
 
-    fun error(error: DataError) =
-        HomeUiState(
-            isLoading = false,
-            summary = emptySummary(Moneda.COP),
-            recent = emptyList(),
-            categoriasById = emptyMap(),
-            error = error,
-        )
+    fun ready(snapshot: HomeContent) =
+        HomeUiState(snapshot.summary.balance.moneda, RetainedLoadState.Ready(snapshot))
 
-    fun emptySummary(moneda: Moneda) =
-        MovimientoSummary(ingresos = Money(0, moneda), gastos = Money(0, moneda))
+    fun error(error: DataError, moneda: Moneda = Moneda.COP) =
+        HomeUiState(moneda, RetainedLoadState.Failed(error))
+
+    fun emptySummary(moneda: Moneda) = MovimientoSummary(Money(0, moneda), Money(0, moneda))
   }
 }
