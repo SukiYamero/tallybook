@@ -32,9 +32,32 @@ class CategorySearchTest {
   }
 
   @Test
+  fun matchesComposedAndDecomposedAccentsInEitherDirection() {
+    val categories =
+        listOf(
+            categoria(id = "cafe", nombre = "Cafe\u0301"),
+            categoria(id = "acao", nombre = "Ac\u0327a\u0303o"),
+        )
+
+    assertEquals(listOf(categories[0]), searchCategorias(categories, "  CAFÉ  "))
+    assertEquals(listOf(categories[1]), searchCategorias(categories, "AÇÃO"))
+    assertEquals(listOf(cafe), searchCategorias(listOf(cafe), "cafe\u0301"))
+  }
+
+  @Test
+  fun preservesEnyeAndDoesNotSearchCategoryIds() {
+    val category = categoria(id = "hidden-id", nombre = "An\u0303o")
+
+    assertEquals(listOf(category), searchCategorias(listOf(category), "AÑO"))
+    assertEquals(emptyList(), searchCategorias(listOf(category), "ano"))
+    assertEquals(emptyList(), searchCategorias(listOf(category), "hidden-id"))
+  }
+
+  @Test
   fun returnsNoResultsForBlankOrUnknownQuery() {
     val categories = listOf(comida, cafe)
 
+    assertEquals(emptyList(), searchCategorias(categories, ""))
     assertEquals(emptyList(), searchCategorias(categories, " "))
     assertEquals(emptyList(), searchCategorias(categories, "viaje"))
   }

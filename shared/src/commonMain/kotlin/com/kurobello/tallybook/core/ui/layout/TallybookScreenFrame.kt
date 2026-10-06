@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import com.kurobello.tallybook.core.ui.component.clearFocusOnUnconsumedTap
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -24,12 +25,15 @@ import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 internal fun TallybookScreenFrame(
     modifier: Modifier = Modifier,
     bottomBar: (@Composable () -> Unit)? = null,
+    windowInsets: WindowInsets = WindowInsets.safeDrawing,
+    bottomPaddingFloor: Dp = TallybookTheme.dimensions.screenBottomFloor,
     content: @Composable BoxScope.() -> Unit,
 ) {
   val contentPadding =
       screenContentPadding(
-          safeInsets = WindowInsets.safeDrawing.asPaddingValues(),
+          safeInsets = windowInsets.asPaddingValues(),
           layoutDirection = LocalLayoutDirection.current,
+          bottomPaddingFloor = bottomPaddingFloor,
       )
   Box(
       modifier =
@@ -60,6 +64,7 @@ internal fun TallybookScreenFrame(
 internal fun screenContentPadding(
     safeInsets: PaddingValues,
     layoutDirection: LayoutDirection,
+    bottomPaddingFloor: Dp = TallybookTheme.dimensions.screenBottomFloor,
 ): PaddingValues {
   val safeStart =
       if (layoutDirection == LayoutDirection.Ltr) {
@@ -77,7 +82,6 @@ internal fun screenContentPadding(
       start = safeStart + TallybookTheme.dimensions.screenHorizontal,
       top = maxOf(safeInsets.calculateTopPadding(), TallybookTheme.dimensions.screenTopFloor),
       end = safeEnd + TallybookTheme.dimensions.screenHorizontal,
-      bottom =
-          maxOf(safeInsets.calculateBottomPadding(), TallybookTheme.dimensions.screenBottomFloor),
+      bottom = maxOf(safeInsets.calculateBottomPadding(), bottomPaddingFloor),
   )
 }

@@ -35,6 +35,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -88,6 +89,7 @@ class FirstMovimientoIntegrationTest {
                   categoriaRepository = categorias,
                   scope = scopes.newScope(dispatcher),
               )
+          backgroundScope.launch { home.uiState.collect {} }
           testScheduler.advanceUntilIdle()
 
           assertFalse(home.uiState.value.isLoading)

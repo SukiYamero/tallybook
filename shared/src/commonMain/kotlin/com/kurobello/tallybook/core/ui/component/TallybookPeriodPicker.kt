@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,13 +47,16 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.composables.icons.lucide.Check
 import com.composables.icons.lucide.ChevronDown
 import com.composables.icons.lucide.Lucide
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import kotlinx.coroutines.flow.first
 
 @Immutable
 internal data class TallybookPeriodOption<T : Any>(
@@ -61,6 +65,7 @@ internal data class TallybookPeriodOption<T : Any>(
     val caption: String? = null,
     val hasData: Boolean = false,
     val key: String = value.toString(),
+    val contentDescription: String? = null,
 )
 
 @Composable
@@ -69,6 +74,7 @@ internal fun TallybookPeriodPickerHeader(
     yearControl: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     supportingText: String? = null,
+    titleStyle: TextStyle = TallybookTheme.typography.title,
 ) {
   Row(
       modifier = modifier.fillMaxWidth(),
@@ -79,7 +85,7 @@ internal fun TallybookPeriodPickerHeader(
         modifier = Modifier.weight(1f),
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space2),
     ) {
-      TallybookText(text = title, style = TallybookTheme.typography.title)
+      TallybookText(text = title, style = titleStyle, modifier = Modifier.semantics { heading() })
       if (supportingText != null) {
         TallybookText(
             text = supportingText,
@@ -105,8 +111,24 @@ internal fun <T : Any> TallybookPeriodPickerRow(
 
   val listState = rememberLazyListState()
   val selectedIndex = remember(options, selected) { options.indexOfFirst { it.value == selected } }
-  LaunchedEffect(selectedIndex) {
-    if (selectedIndex >= 0) listState.animateScrollToItem(selectedIndex)
+  LaunchedEffect(selectedIndex, options.getOrNull(selectedIndex)?.key) {
+    if (selectedIndex >= 0) {
+      // Replacement options can arrive before the previous keys have been remeasured.
+      val layout =
+          snapshotFlow { listState.layoutInfo }
+              .first { info ->
+                info.visibleItemsInfo.isNotEmpty() &&
+                    info.visibleItemsInfo.all { options.getOrNull(it.index)?.key == it.key }
+              }
+      val item = layout.visibleItemsInfo.firstOrNull { it.index == selectedIndex }
+      if (
+          item == null ||
+              item.offset < layout.viewportStartOffset ||
+              item.offset + item.size > layout.viewportEndOffset
+      ) {
+        listState.animateScrollToItem(selectedIndex)
+      }
+    }
   }
 
   LazyRow(
@@ -150,6 +172,7 @@ private fun <T : Any> TallybookPeriodPickerChip(
       modifier =
           Modifier.widthIn(min = TallybookTheme.dimensions.minimumTouchTarget)
               .defaultMinSize(minHeight = TallybookTheme.dimensions.minimumTouchTarget)
+              .semantics { option.contentDescription?.let { contentDescription = it } }
               .selectable(
                   selected = selected,
                   interactionSource = interactionSource,

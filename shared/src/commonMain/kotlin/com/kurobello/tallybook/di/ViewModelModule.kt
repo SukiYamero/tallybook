@@ -1,10 +1,15 @@
 package com.kurobello.tallybook.di
 
 import com.kurobello.tallybook.AppStartupViewModel
+import com.kurobello.tallybook.feature.history.viewmodel.HistoryDateProvider
+import com.kurobello.tallybook.feature.history.viewmodel.HistoryRepositories
+import com.kurobello.tallybook.feature.history.viewmodel.HistoryViewModel
 import com.kurobello.tallybook.feature.home.HomeViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoRepositories
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
+import kotlinx.coroutines.CoroutineDispatcher
 import org.koin.core.module.dsl.viewModel
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 internal val viewModelModule = module {
@@ -14,6 +19,15 @@ internal val viewModelModule = module {
         preferencesRepository = get(),
         movimientoRepository = get(),
         categoriaRepository = get(),
+    )
+  }
+  viewModel { parameters ->
+    HistoryViewModel(
+        repositories = HistoryRepositories(get(), get(), get()),
+        savedStateHandle = get(),
+        unknownCategoryLabel = parameters.get(),
+        dateProvider = HistoryDateProvider(get(), get()),
+        computationDispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.DEFAULT)),
     )
   }
   viewModel {

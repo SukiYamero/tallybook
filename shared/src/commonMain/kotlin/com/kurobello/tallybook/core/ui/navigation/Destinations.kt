@@ -7,4 +7,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object Home : Destination
 
+@Serializable data object History : Destination
+
 @Serializable data object UiCatalog : Destination

@@ -1,9 +1,17 @@
 # Wave 3 / Stage 1 / Task 3 — Search filter contracts
 
+> **DEFERRED — separate later Search destination.** This file preserves useful future proposals,
+> not an active Wave 3 task. Its original checklist, dependencies, shared-file permissions and
+> unresolved Search decisions are inactive. Rebase them against delivered History/canonical rules
+> in a separately authorized Search plan before execution. It neither blocks nor enables History;
+> no Search UI, filter/criteria, structural SQL, projection, DI or navigation work is authorized now.
+> Use the [deferred Search index](../../README.md); re-plan dependencies before execution.
+
+
 ## Objective and context
 
 Define Search's typed non-text filters and transactional edit rules from the
-[wave contract](../../README.md), the supplied visual guide and Moneta's actual reference. The user
+[deferred Search proposals](../../README.md), the supplied visual guide and Moneta's actual reference. The user
 confirmed Apply commits and dismissal discards; Moneta's live-filter implementation is not this contract.
 Follows task1 for shared date-range and canonical-document ownership.
 
@@ -42,6 +50,8 @@ The raw text query is separate and is not changed by clearing filter dimensions.
    once, disables controls and retains read-only render data until `onHidden` releases it. Reject
    reopen while Closing. Clear edits only an Editing draft; Apply is atomic/idempotent at zero results.
    Late hidden callbacks cannot close a newer session. No phase is saved as persistent input.
+   Editing/Closing carry a session identity; edit/apply/cancel/hidden actions carry that identity and
+   ignore an old session even when the newer session is also Closing. Test that exact ordering.
 6. Saved Search input restores only applied filters and raw query. Unknown version/preset/type or
    invalid custom dates recover deterministically to default applied filters; never restore an open
    draft, predicted count or live result list. Retain valid stable IDs even if their labels are missing.

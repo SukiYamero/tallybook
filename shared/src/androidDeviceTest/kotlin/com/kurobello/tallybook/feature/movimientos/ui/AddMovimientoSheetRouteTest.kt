@@ -3,6 +3,7 @@ package com.kurobello.tallybook.feature.movimientos.ui
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
@@ -18,6 +19,7 @@ import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoRepositories
@@ -79,6 +81,33 @@ class AddMovimientoSheetRouteTest {
     }
   }
 
+  @Test
+  fun hiddenCompletionIsDeliveredOnceAfterClosingTheActualRoute() {
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    val viewModel = createViewModel(FakeMovimientoRepository(), scope)
+    var visible by mutableStateOf(true)
+    var hidden by mutableIntStateOf(0)
+    try {
+      composeRule.setContent {
+        TallybookTheme {
+          AddMovimientoSheetRoute(
+              visible = visible,
+              onDismiss = { visible = false },
+              onHidden = { hidden += 1 },
+              viewModel = viewModel,
+          )
+        }
+      }
+      composeRule.waitForIdle()
+      composeRule.runOnIdle { visible = false }
+      composeRule.waitUntil(5_000) { hidden == 1 }
+      composeRule.waitForIdle()
+      composeRule.runOnIdle { assertEquals(1, hidden) }
+    } finally {
+      scope.cancel()
+    }
+  }
+
   private fun createViewModel(
       movementRepository: MovimientoRepository,
       scope: CoroutineScope,
@@ -121,9 +150,21 @@ class AddMovimientoSheetRouteTest {
   private class FakeMovimientoRepository : MovimientoRepository {
     val inserted = mutableStateListOf<Movimiento>()
 
+    override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
+        error("Scoped recent reads are not expected in this fixture")
+
     override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = emptyFlow()
 
     override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> = emptyFlow()
+
+    override fun observeRange(
+        moneda: Moneda,
+        range: MovimientoDateRange,
+    ): Flow<DataOutcome<List<Movimiento>>> =
+        error("History range reads are not expected in this fixture")
+
+    override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> =
+        error("History year reads are not expected in this fixture")
 
     override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> {
       inserted += movimiento

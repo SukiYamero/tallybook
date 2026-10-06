@@ -12,16 +12,21 @@ import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingCommand
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class HomeViewModel(
@@ -31,30 +36,52 @@ internal class HomeViewModel(
     scope: CoroutineScope? = null,
 ) : ViewModel() {
 
-  private val coroutineScope = scope ?: viewModelScope
-  private val retryRequests = MutableStateFlow(0)
+  private val retryRequests = MutableStateFlow(0L)
+  private var observationEpoch = 0L
+  val uiState: StateFlow<HomeUiState>
+    field = MutableStateFlow(HomeUiState.loading())
 
-  val uiState =
-      retryRequests
-          .flatMapLatest { observeHomeState() }
-          .stateIn(coroutineScope, SharingStarted.Eagerly, HomeUiState.loading())
+  private val producer =
+      (scope ?: viewModelScope).launch(start = CoroutineStart.UNDISPATCHED) {
+        SharingStarted.WhileSubscribed(HOME_STOP_TIMEOUT_MILLIS)
+            .command(uiState.subscriptionCount)
+            .onEach {
+              observationEpoch += 1
+              uiState.update { it.revalidating() }
+            }
+            .collectLatest { command ->
+              if (command == SharingCommand.START) {
+                val epoch = observationEpoch
+                retryRequests
+                    .flatMapLatest { revision -> observeHomeState().map { revision to it } }
+                    .collect { (revision, state) ->
+                      uiState.update { current ->
+                        when {
+                          epoch != observationEpoch || revision != retryRequests.value -> current
+                          state.isLoading &&
+                              state.summary.balance.moneda == current.summary.balance.moneda ->
+                              current.revalidating()
+                          else -> state
+                        }
+                      }
+                    }
+              }
+            }
+      }
 
   fun retry() {
     retryRequests.update { it + 1 }
+    uiState.update { it.revalidating() }
+  }
+
+  fun onResume() = retry()
+
+  override fun onCleared() {
+    producer.cancel()
   }
 
   private fun observeHomeState(): Flow<HomeUiState> =
-      preferencesRepository.preferences
-          .map<DataOutcome<AppPreferencesState>, PreferenceLoadState> {
-            PreferenceLoadState.Value(it)
-          }
-          .onStart { emit(PreferenceLoadState.Loading) }
-          .flatMapLatest { preferenceState ->
-            when (preferenceState) {
-              PreferenceLoadState.Loading -> HomeUiState.loading().asFlow()
-              is PreferenceLoadState.Value -> preferenceState.outcome.toHomeStateFlow()
-            }
-          }
+      preferencesRepository.preferences.flatMapLatest { it.toHomeStateFlow() }
 
   private fun DataOutcome<AppPreferencesState>.toHomeStateFlow(): Flow<HomeUiState> =
       when (this) {
@@ -73,17 +100,11 @@ internal class HomeViewModel(
   private fun observePersistedHome(moneda: Moneda): Flow<HomeUiState> =
       combine(
           movimientoRepository.observeSummary(moneda).toLoadState(),
-          movimientoRepository.observeRecent(HOME_RECENT_LIMIT).toLoadState(),
+          movimientoRepository.observeRecent(moneda, HOME_RECENT_LIMIT).toLoadState(),
           categoriaRepository.observeAll().toLoadState(),
       ) { summary, recent, categorias ->
-        HomeSnapshot.from(moneda, summary, recent, categorias).toUiState()
+        HomeSnapshot.from(summary, recent, categorias).toUiState(moneda)
       }
-}
-
-private sealed interface PreferenceLoadState {
-  data object Loading : PreferenceLoadState
-
-  data class Value(val outcome: DataOutcome<AppPreferencesState>) : PreferenceLoadState
 }
 
 private sealed interface LoadState<out T> {
@@ -104,10 +125,10 @@ private data class HomeSnapshot(
     val error: DataError?,
     val isLoading: Boolean,
 ) {
-  fun toUiState(): HomeUiState =
+  fun toUiState(moneda: Moneda): HomeUiState =
       when {
         error != null -> HomeUiState.error(error)
-        isLoading -> HomeUiState.loading()
+        isLoading -> HomeUiState.loading(moneda)
         else ->
             HomeUiState(
                 isLoading = false,
@@ -120,18 +141,13 @@ private data class HomeSnapshot(
 
   companion object {
     fun from(
-        moneda: Moneda,
         summary: LoadState<MovimientoSummary>,
         recent: LoadState<List<Movimiento>>,
         categorias: LoadState<List<com.kurobello.tallybook.core.model.Categoria>>,
     ): HomeSnapshot =
         HomeSnapshot(
             summary = summary.successOrNull(),
-            recent =
-                recent
-                    .successOrNull()
-                    ?.filter { it.monto.moneda == moneda }
-                    ?.take(HOME_RECENT_LIMIT),
+            recent = recent.successOrNull(),
             categoriasById = categorias.successOrNull()?.associateBy { it.id },
             error = summary.errorOrNull() ?: recent.errorOrNull() ?: categorias.errorOrNull(),
             isLoading =
@@ -149,3 +165,7 @@ private fun <T> LoadState<T>.errorOrNull(): DataError? =
     (this as? LoadState.Value)?.outcome.let { it as? DataOutcome.Failure }?.error
 
 private const val HOME_RECENT_LIMIT = 6
+
+private const val HOME_STOP_TIMEOUT_MILLIS = 5_000L
+
+internal fun HomeUiState.revalidating(): HomeUiState = copy(isLoading = true, error = null)

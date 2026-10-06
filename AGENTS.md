@@ -138,6 +138,9 @@ Android, Cmd+R en Xcode sobre el iPhone en iOS — o vía MCP `mobile-mcp`
 sesión. Si no hay Xiaomi, tablet Android o iPhone conectado, detener la instalación, test instrumentado
 o revisión visual y avisar al usuario antes de continuar.
 
+Choose validation scope and review checkpoints using the proportional verification policy in
+`docs/README.md`; this does not waive mandatory Kotlin style checks or truthful target evidence.
+
 Para APIs recientes, experimentales, sensibles a versión o con diferencias por plataforma, aplicar antes
 de implementar el gate de evidencia definido en `docs/README.md` — versión resuelta, fuente primaria,
 prueba del punto de integración y ejecución en el target que corresponda.
@@ -154,6 +157,7 @@ prueba del punto de integración y ejecución en el target que corresponda.
 
 Ciclo completo (worktrees, roles, code review dedicado, compactación) en `docs/README.md` — no
 duplicado acá. Resumen: una feature por worktree (máximo 4 a la vez), subagentes ejecutan por waves y
-un code-reviewer dedicado corrige antes de pedir tu ok en dispositivo real; `docs/business-logic.md` es
+un code-reviewer dedicado corrige el diff final; los reviews intermedios se reservan para límites
+materiales que bloquean trabajo dependiente, según `docs/README.md`; `docs/business-logic.md` es
 la única referencia de reglas de negocio, `docs/tasks/<slug>.md` el spec activo (efímero, se compacta al
 cerrar la feature).
