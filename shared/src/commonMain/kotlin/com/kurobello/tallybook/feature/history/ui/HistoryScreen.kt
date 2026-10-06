@@ -69,7 +69,10 @@ internal fun HistoryScreen(
         modifier = Modifier.fillMaxSize().semantics { contentDescription = listDescription },
         state = listState,
         contentPadding =
-            PaddingValues(bottom = bottomBarClearance + TallybookTheme.spacing.space16),
+            PaddingValues(
+                top = TallybookTheme.spacing.space20,
+                bottom = bottomBarClearance + TallybookTheme.spacing.space16,
+            ),
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
     ) {
       historyContent(uiState, actions, onAdd)

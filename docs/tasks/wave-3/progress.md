@@ -101,3 +101,8 @@ remain. Ninety-three focused host tests, app/test APK builds, Detekt and ktfmt p
 approved the change and renamed an obsolete test in `67faafd`. The installed app smoke check confirmed
 header absence, period-summary presence and a working Month callback; the temporary wake setting
 was restored to0. No volume or full-platform matrix was rerun. Verification scope follows `docs/README.md`.
+
+The History list adds the existing `space20` token above its header after the safe inset. The narrow
+app build, Detekt and ktfmt check passed; the phone smoke observed exactly55px additional top space
+at2.75density, with the fixed banner absent and period summary retained. No extra logic/stress tests
+were added for this reversible layout adjustment.
