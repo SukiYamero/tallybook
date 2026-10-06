@@ -126,5 +126,7 @@ than inventing a tool parameter or claiming native activation.
   a blocking architecture, contract, migration or platform-integration boundary under the proportional
   verification policy. The execution unit remains `taskN/task.md`; stages do not justify repeated
   checks, reviews or reports for each small change.
+- [`features/README.md`](features/README.md) — registro único del estado de entrega de las features.
+  Actualizar la fila al cambiar de estado; `DONE` requiere aceptación del usuario e integración en `main`.
 - `features/<nombre>.md` — doc chico post-confirmación, solo para features realmente importantes.
 - `backlog.md` — pendientes por criticidad, sin historial. Se borra el ítem apenas se resuelve.
