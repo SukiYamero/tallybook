@@ -80,6 +80,11 @@ separate destination is implemented; do not redirect it to History.
 3. Switching tabs selects existing entries rather than popping them. VMs/scroll are scoped to actual
    entries, not ambient Activity/app root. Keep Home plus the active primary in displayed navigation
    where needed by resolved NavDisplay Back handling. Returning Home does not remove retained History.
+   Keep the saved content LazyListState unmeasured while a fresh read has no rendered rows/cache;
+   a short loading/error dataset can otherwise clamp its restored row index. Home/History may use
+   one unsaved temporary list state for that distinct transient presentation, retaining one LazyColumn
+   and no saved rows, count placeholders or second ViewModel scroll authority. Settled empty content
+   measures normally. This requires a narrow HistoryScreen adaptation within full shell integration.
 4. Selected tab tap is no-op; repeated cycles do not duplicate routes/reset selection/scroll or grow
    entry/store counts. Outgoing animation can retain lifecycle briefly; assert upstream shutdown after
    settling plus the agreed five-second timeout. Home's current Eagerly upstream must be addressed
@@ -114,7 +119,7 @@ separate destination is implemented; do not redirect it to History.
 
 ## Test-first slices and checks
 
-- [ ] Early actual adapter/decorator/Koin/saved-owner probe + fresh review before S3 transport.
+- [x] Early actual adapter/decorator/Koin/saved-owner probe + independent review before S3 transport.
 - [ ] RED/GREEN bounded Home/History selection, selected-tab no-op, actual entry/VM/scroll retention,
       inert Search/Profile, History→Home→root Back and catalog return.
 - [ ] RED/GREEN serialized complete primary state restores active route; actual recreated shell restores
@@ -125,7 +130,7 @@ separate destination is implemented; do not redirect it to History.
       guards, save failure/retry/close/reopen and delayed A hidden callback during Closing B.
 - [ ] One bar, correct occupied clearance, inert reservations, selected semantics, physical popup/IME
       in creation sheet, supported Android/iPhone lifecycle evidence recorded separately.
-- [ ] Full host regression, Native test compilation, Android build, device-test compilation, Detekt/ktfmt.
+- [x] Full host regression, Native test compilation, Android build, device-test compilation, Detekt/ktfmt.
 
 Early validate: `./gradlew :shared:testAndroidHostTest --tests '*HistorySavedOwnerHostTest'`.
 Full focused: `./gradlew :shared:testAndroidHostTest --tests '*PrimaryNavigationTest' --tests '*DestinationSerializationTest' --tests '*TallybookAppShellLifecycleHostTest' --tests '*SheetSession*'`.
@@ -136,6 +141,12 @@ and `./gradlew :androidApp:assembleDebug :shared:compileAndroidDeviceTest`.
 
 ## Completion and dependencies
 
-Early slice/probe reviewed → S3 may choose transport. Full shell reviewed → Stage 6. Report missing
+Source-stage gate approved at `5126f53`: 251 host tests, Android app/test APK builds, Native
+production/test compilation and style checks pass. Production-helper/Koin/registry/Parcel/lifecycle
+host assertions passed; actual NavDisplay, physical first draw, list geometry/restore, Back/IME and
+MainActivity/iPhone assertions remain unexecuted. The compound runtime checklists above remain
+unchecked and continue into Stage 6; source review does not establish physical acceptance.
+
+Early slice/probe reviewed → S3 may choose transport. Full shell source reviewed → Stage 6. Report missing
 physical iPhone/unavailable runner precisely; compilation/host harness does not imply iPhone runtime.
 No Search work is required to close this task.
