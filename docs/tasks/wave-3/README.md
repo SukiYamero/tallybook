@@ -5,7 +5,7 @@
 > stage before its successor starts. Unchecked items are planned work, not implementation evidence.
 
 **Goal:** browse persisted movimientos by Day/Week/Month and year context in History, with exact
-period totals, compact global balance, retained selection/scroll and the accepted creation flow.
+period totals, retained selection/scroll and the accepted creation flow.
 Search is a separate later destination; History has no text search or non-date filters.
 
 **Architecture:** SQLDelight owns persisted data; the History ViewModel owns scope/anchor selection;
@@ -39,7 +39,8 @@ Included:
 
 - Home and History as real retained primary destinations; Search/Profile stay inert reservations.
 - Day/Week/Month, year context, exact date-grouped rows and exact selected-period totals.
-- Compact separately labelled global balance/currency, visible independently of list scrolling.
+- Selected-period balance/income/expense/count in the scrollable content; no fixed global balance
+  or History-wide global-summary subscription. Home retains the global balance.
 - Description-first History rows with date subtitle, category fallback/avatar and shared signed Money
   layout. Preserve Home's category-first public row API and visual behavior.
 - Reactive SQL invalidation, explicit loading/empty/error/retry, retained selection/scroll and supported

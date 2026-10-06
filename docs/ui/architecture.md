@@ -505,9 +505,10 @@ Use this checklist in every UI pull request:
 
 History presentation uses the existing period picker with three scopes and a year context.
 The temporal and selection rules live in [business logic](../business-logic.md#tracking-and-history).
-Its compact, separately labelled global balance and currency remain visible independently of list
-scrolling. Selected-period totals belong to the period content and retain their own state; they never
-replace the global balance. History has no text-search field, non-date filters, balance-visibility
+History starts directly with its contextual header and period controls. Selected-period totals have
+an explicit label and scroll with the content. No fixed global balance, currency banner or independent
+global-summary status appears in History; the global balance remains on Home.
+History has no text-search field, non-date filters, balance-visibility
 toggle or fourth annual scope. Search remains a separate future destination.
 
 ## Remaining product decisions

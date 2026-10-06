@@ -32,7 +32,7 @@ UiState derives full picker options and selected-period identity separately from
 read range. Selection remains their sole authority; Compose does not calculate ranges.
 
 UiState owns selection/today/known years, current range request, content/empty/loading/read/calculation
-failure, projected groups/period count/totals and independent global-summary status. Derived values
+failure and projected groups/period count/totals. History has no global-summary read or state. Derived values
 cannot be independently copied into disagreement. No query, filter, debounce, matching status/count,
 normalized candidates, predicted count or effect stream is created.
 
@@ -46,8 +46,8 @@ normalized candidates, predicted count or effect stream is created.
 3. Category/year metadata cannot reset scope/anchor. Each initial upstream failure is visible even
    when another source has not emitted. Retain known options/current year on metadata error and
    provide retry; never claim a false empty menu or empty currency from failed metadata.
-4. Period totals/count/groups use one range snapshot. Independently labelled global summary has
-   its own loading/error/retry; never replace unavailable global balance with period balance.
+4. Period totals/count/groups use one range snapshot. Home owns the global summary independently;
+   History never reads it or substitutes it for unavailable period data.
 5. Durable failures preserve selection. Retain stale content only for the same request with explicit
    status; new request labels never show old-date rows as current. Retry resubscribes affected reads,
    without reset/infinite retries/snackbar-only error.
@@ -67,7 +67,7 @@ normalized candidates, predicted count or effect stream is created.
 
 ## Test-first slices
 
-- [x] RED/GREEN loading/content/empty, upstream failure before peers, startup error and partial/global
+- [x] RED/GREEN loading/content/empty, upstream failure before peers, startup error and partial
       summary failure; explicit fallback change updates row text without SQL emission.
 - [x] RED/GREEN rapid A→B period/currency changes, late A emissions rejected and old collectors canceled.
 - [x] RED/GREEN retry preserves selection, overflow/recovery, years invalidation and selected-year
@@ -75,7 +75,7 @@ normalized candidates, predicted count or effect stream is created.
 - [x] RED/GREEN first re-entry state after timeout/hidden write, shutdown counts and reactivation reads;
       use explicit active collectors rather than weakening fresh `.value` assertions.
 - [x] RED/GREEN date/timezone/year rollover and validated restored input reload repository data.
-- [x] Inside/outside range inserts update period/global summaries appropriately without manual refresh;
+- [x] Inside/outside range inserts update History period and Home global summaries appropriately without manual refresh;
       controls/selection remain unchanged. No matching/nonmatching distinction exists in History.
 - [x] One TestCoroutineScheduler for scope/dispatchers/runTest; no wall-clock sleeps.
 - [x] Focused/full host regression, Native test compilation, Detekt/ktfmt and real Koin wiring evidence.

@@ -113,7 +113,7 @@ separate destination is implemented; do not redirect it to History.
   session token; an old A callback cannot clear a newer Closing B. Do not read the latest token to
   relabel an old completion. Existing cleanup tests remain meaningful when ownership moves.
 - Navigation taps cannot change underlying destination while modal is open. Saving returns to the same
-  selection; outside-range creation changes global summary only. SQL invalidation owns refresh.
+  selection; outside-range creation changes Home global summary only. SQL invalidation owns refresh.
 - One shell bar owns bottom safe inset and publishes occupied clearance; screens consume it without
   adding the same inset again. Creation sheet retains its own safe/IME policy. No filter modal exists.
 

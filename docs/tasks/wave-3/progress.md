@@ -7,7 +7,8 @@ Scope-revision baseline: `cfae0954d5749b00138c27999d92ceb1cae3d761`
 ## Current gate
 
 History is implemented and independently source-reviewed: Day/Week/Month, year context, month-bound
-week blocks and a separately labelled compact global balance. Search remains deferred. Whole-wave
+week blocks and selected-period totals in scrollable content. The fixed global header and its
+unused History subscription are removed; Home retains global balance. Search remains deferred. Whole-wave
 production source is approved at `e093eb4`; reviewed Android fixture corrections finish at `12c5541`.
 
 The Android/Xiaomi round is verified; the user explicitly ended further testing after the important
@@ -91,3 +92,12 @@ Native compilation is not iPhone runtime evidence. No emulator/simulator was run
 The testing round is closed at the user's request. Keep the implementation and evidence committed;
 handle integration approval separately under `docs/README.md`, retaining deferred Search/iOS work.
 No additional testing, merge or worktree cleanup is implied by ending this round.
+
+## Fixed-header removal
+
+The user requested removing the fixed overall-balance banner. Source commit `cee313e` removes the
+History-only component, read/state and obsolete resources; period totals and Home global behavior
+remain. Ninety-three focused host tests, app/test APK builds, Detekt and ktfmt pass. One final review
+approved the change and renamed an obsolete test in `67faafd`. The installed app smoke check confirmed
+header absence, period-summary presence and a working Month callback; the temporary wake setting
+was restored to0. No volume or full-platform matrix was rerun. Verification scope follows `docs/README.md`.

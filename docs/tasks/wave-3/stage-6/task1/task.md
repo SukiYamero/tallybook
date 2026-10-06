@@ -59,7 +59,7 @@ Resolve the placeholder from actual inventory, never run it literally.
 | Existing data/fresh entry | Existing rows survive; fresh History Day/today/current year and honest empty selected period |
 | Period/year | Exact blocks, historical month, truncated current block, leap February, clamp/no-op chip rules and accepted year context |
 | Reference | Context/header/count, three scopes/year, compact totals and description/date read-only rows; no search/filter/chart/breakdown/eye action |
-| Global/period money | Separately labelled currency/totals; global stays visible while rows scroll; unavailable status is not false zero |
+| Period money | Selected-period totals scroll with content; no fixed global header; Home retains global totals and unavailable status is not false zero |
 | Tab/Back | Repeated Home/History preserves selection/scroll; year popup/sheet first, History→Home, normal root exit; inert Search/Profile |
 | Creation from History | One accepted sheet/validation/guard, successful write, correct period membership without reset |
 | Android restore/cold launch | Actual Activity/saved-owner recreation restores small input/scroll; cold launch uses defaults and persisted rows |

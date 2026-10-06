@@ -74,8 +74,8 @@ non-date filters and charts are later capabilities and do not belong to History 
   `fecha`, preserving `fecha DESC, created_at DESC, id DESC`; `createdAt` is only the secondary order.
 - Period count, income, expense and balance describe every movimiento in the selected
   date/currency range, derived from the same bounded snapshot. Period balance is income minus
-  expense. The separately labelled global balance describes all dates in the primary currency,
-  remains visible independently of scrolling and has its own loading/error/retry state.
+  expense. History presents only the selected period; it does not display or subscribe to a global
+  balance. Home owns the global summary over all dates in the primary currency.
 - Saved selection contains only schema version, scope and ISO anchor. Unknown versions/scopes or
   malformed/future anchors recover to Day/today; valid inputs recompute derived state against current
   today/currency. Repository rows and query state are never saved. Android supported saved-owner

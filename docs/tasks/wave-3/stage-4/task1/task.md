@@ -31,8 +31,8 @@ Skills: `android-dev`, `compose`, `compose-state-and-effects`, `compose-componen
 
 ## Composition, state and callbacks
 
-- Keep compact explicitly labelled overall balance/currency outside list scrolling, with honest
-  loading/unavailable/retry. Selected-period totals have a separate label and status.
+- Start with contextual period controls; selected-period totals retain their label and honest
+  loading/unavailable/retry status. No fixed global balance/currency banner is rendered.
 - Use one vertical LazyColumn for contextual header/year menu, scope/month supporting text, period
   count, neutral three-scope control, horizontal chip strip, compact period summary, date headings
   and keyed read-only rows. Controls remain reachable in compact height, large text and errors.
@@ -55,7 +55,7 @@ Skills: `android-dev`, `compose`, `compose-state-and-effects`, `compose-componen
 
 1. Follow canonical architecture/tokens/safe areas. Reference saturated colors/blue outline/rounded
    avatar do not justify palette or shape changes. No chart/category breakdown/analysis tabs/eye action.
-2. Fixed-date/amount light/dark previews cover content/empty/loading/read/calculation/global-summary
+2. Fixed-date/amount light/dark previews cover content/empty/loading/read/calculation
    error and large text. Preview compilation is not physical acceptance.
 3. Shared row migration uses Tallybook components/tokens; preserve Home copy/signed currency and
    accessible type meaning. Long title/large amount must not overlap; allow growth/wrap/stack with
@@ -77,7 +77,7 @@ Skills: `android-dev`, `compose`, `compose-state-and-effects`, `compose-componen
 
 ## Test-first slices and checks
 
-- [ ] RED/GREEN exact loading/content/empty/error/global-error states, retained controls, callback
+- [ ] RED/GREEN exact loading/content/empty/error states, retained controls, callback
       arguments/year/scope selection, period count, stable date/row keys and read-only semantics.
 - [x] Add pure content, deterministic previews and all supported localized resources.
 - [ ] Home row API/copy regression plus History description/date/fallback/sign/currency/long-text
