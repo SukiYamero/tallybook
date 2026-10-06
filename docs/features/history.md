@@ -23,8 +23,8 @@ guides composition; its sample data, chart and eye control do not enable additio
 - The shell owns one creation session. Its store lives until the sheet finishes hiding; originating
   session identity guards delayed callbacks. The existing creation flow is shared by Home/History.
 - Search and Profile remain reserved destinations. Text search, non-date filters, charts and
-  transaction editing are outside this delivery. [Search proposals](../tasks/wave-3/README.md) remain
-  available for a separate plan.
+  transaction editing are outside this delivery. Search and filters have their separate
+  [Wave 4 plan](../tasks/wave-4/README.md).
 
 ## Verification boundaries
 

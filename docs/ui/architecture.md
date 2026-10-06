@@ -536,3 +536,89 @@ toggle or fourth annual scope. Search remains a separate future destination.
 The bottom navigation pattern, ordered positions, and centered placement of `Create movimiento` are
 decided. Home and History are enabled. Search and Profile remain visual reservations without actions
 until their separate features are implemented.
+
+## Planned Search presentation (Wave 4)
+
+This is the presentation contract for [Wave 4](../tasks/wave-4/README.md), not a claim that Search is
+implemented. [Business logic](../business-logic.md#search-and-filters-planned-wave-4) owns matching,
+filter/date/count semantics. Existing Home/History behavior above remains the current baseline.
+
+Search follows the supplied composition: header/title and result status, filter icon, text input,
+horizontal removable applied chips, then a flat lazy movement list. Use the frame's top/horizontal
+safe area, `space20` above the header and shell-measured bottom clearance exactly once. Header/field
+scroll with content; no fixed global balance or chart. Rows reuse MovimientoRowContent with description
+first and full civil date/category subtitle; complete date/currency/type semantics remain accessible.
+
+The filter sheet uses wrapping date presets, two existing date chips for Custom, Todos/Gastos/Ingresos,
+then parent-grouped real category chips with children visible. Show all persisted categories, with
+their existing icons/tints, plus selected missing-ID fallback chips with remove semantics. The body
+scrolls while a separate Limpiar/Aplicar footer remains reachable above safe/IME insets. Preserve
+minimum 48 dp targets and font scaling. Closing renders the captured draft as disabled until hidden.
+Only one calendar popup is active; Back closes it before cancelling filters. Custom chips/rows include
+year in display and full date semantics. Earlier persisted/restored years extend the shared date
+picker's 2019 floor without changing its default behavior for existing callers. The expanded year
+selector uses bounded lazy/scrollable rows, with selected-year reveal once on opening; older history
+such as 1900 must remain selectable on compact screens without constructing an unbounded popup.
+
+### Loading and result currency
+
+The shared `RetainedLoadState` contract remains the snapshot owner. A Search snapshot carries its
+structural and normalized-text identity; derived `isCurrent` controls count/empty semantics. A single
+last-settled snapshot may be rendered during text debounce/matching for the same structural criteria,
+explicitly as updating, never as current. Different currency/date/type/category criteria discard it.
+This bounded display is not a cache of prior queries. Failure of a different text request does not
+retain that old text result as an error fallback.
+
+| Condition | Body / loading treatment | Header and controls |
+| --- | --- | --- |
+| Fresh/recreated entry, no valid snapshot, read under 200 ms | Reserve result space; no skeleton flash; ready/error bypass delay | Live title/input/chips; no invented count or empty message |
+| Same initial read still pending at 200 ms | Four static MovimientoRowSkeleton rows; one loading semantic group | Count line placeholder; real input stays usable; filters wait for real category/read metadata |
+| New structural criteria/currency without snapshot | Clear unrelated rows immediately; delayed skeleton if read exceeds 200 ms | Applied chips/input update immediately; pending count unavailable |
+| Return/resume/retry with same request snapshot, including empty | Render retained snapshot immediately; no skeleton | Pending count unavailable; discreet updating indicator only if actual revalidation exceeds 200 ms |
+| Text debounce for same structural criteria | Keep last-settled rows as an updating display; no skeleton or spinner for the timer alone | Immediate localized searching text in the reserved count line; no old count/no-results assertion; busy semantics |
+| Text computation still running 200 ms after it starts | Retain bounded settled rows; small shared progress indicator beside result status | Localized searching status; no numeric count until settled |
+| Draft edits, Clear draft, sheet opening/closing | No result query, loading or count preview | Underlying applied rows/count remain unchanged |
+| Matching insert/delete or category/locale change | Atomically replace when projection settles; retain same-request render during work | Suppress old count as current while known reprocessing is pending; no full-screen skeleton |
+| Same-request failure with valid snapshot | Retain readable content plus explicit error/retry; no skeleton | Count is stale/unavailable, inputs preserved |
+| Initial/different-request failure or invalid applied Custom dates | Explicit error/retry or date correction; never a perpetual skeleton/empty success | No count; fields/chip removal remain usable |
+| Settled no-data or no-results | Distinct localized state; zero count from settled result | No spinner; no-data offers existing creation; no-results offers clear text/open filters |
+
+Feedback uses `TallybookMotion.loadingFeedbackDelayMillis` (200 ms), TallybookProgressIndicator and
+existing loading semantics. Do not add minimum loading duration or artificial request delay. During
+debounce, hide prior empty-state assertions rather than stating that the newly typed query matches
+nothing. Metadata/session changes cannot restart a pending structural-read deadline.
+
+Apply `LoadingPresentation` to the result presentation only. Field text, applied chips and filter
+actions must read live state while feedback is deferred. Reset the result presentation boundary on
+structural identity change so a previous query cannot remain visible during the grace period. Do not
+delay the entire SearchUiState or share a pending timer with session state. Results/failures cancel
+feedback promptly; no spinner remains after cancellation or disposal.
+
+Result count exists only for a settled current Ready snapshot and derives from its rows. Reserve its
+line height while pending; skeleton sample text has no accessibility. Announce settled result count
+politely, not each keystroke or placeholder. Filter active/expanded state and chip removals must be
+meaningful without dots/color. Avoid repeating the same status through multiple live regions.
+
+The content list has one saveable scroll owner. Temporary skeleton/error lists use unsaved state so
+they do not clamp its retained position. Tab return and same-request updates preserve scroll; a newly
+settled text/structural query resets results to the top once. Restoration preserves the saved content
+position until rebuilt results can render; it must not trigger the new-query reset accidentally.
+
+Home-to-Search focus is a one-time navigation intent: reveal the lazy header/field, wait for its
+composition and successful focus, then acknowledge the token. This explicit entry may reset retained
+scroll to reveal the field; ordinary tab return retains position. Cancel the intent if Search becomes
+inactive before completion. Tab selection/recomposition/restore never repeatedly refocuses or reopens
+the keyboard. Opening filters
+hides IME; dismissal returns accessibility focus to the filter button without forcing text keyboard.
+The shell blocks navigation/creation while filters are Editing or Closing; actions carry session
+identity and cannot reopen until the originating hidden cleanup. Applied input checkpoints contain no
+draft, rows, focus or keyboard state. Existing-ViewModel Activity recreation retains its draft; a new
+saved owner restores applied input with a Hidden session.
+
+When an applied Custom becomes invalid after a clock change, retain its visible chip/error and the
+last coherent same-currency years/category inputs for correction, while clearing invalid result rows
+and starting no invalid read. Filter opening remains available with initialized currency and ready
+categories in this correction state. If currency-year metadata is unavailable, the correction picker
+uses the shared floor plus applied/draft endpoint years; cached metadata never establishes current
+no-data. Currency change clears currency-specific metadata. A future selected date remains visible
+as invalid, but its correction popup opens at a valid month capped by current today.

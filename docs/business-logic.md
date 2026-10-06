@@ -84,6 +84,48 @@ non-date filters and charts are later capabilities and do not belong to History 
   recreation and iOS retained-controller/saveable recreation define restoration; fresh cold launches
   use normal defaults, with no iOS cross-process persistence bridge.
 
+## Search and filters (planned Wave 4)
+
+Search is a separate destination over the primary currency. Its implementation contract lives in
+[Wave 4](tasks/wave-4/README.md); this section owns agreed product rules, not delivery status.
+
+- A fresh entry has an empty query, All history, all types and no selected categories. All history
+  removes the date predicate; it never imposes a year floor or result limit.
+- Text matches one contiguous substring in description or the displayed category name. Trim and
+  lowercase with the existing supported-locale accent folding; preserve `ñ` versus `n`. Blank text
+  matches everything. Internal spaces are literal; no token/fuzzy/amount/date/category-ID search.
+  Unknown-category display labels are searchable.
+- Nonblank text settles after 250 ms without another edit; clearing or whitespace-only text settles
+  immediately. Text edits do not resubscribe to the database. Clear text keeps filters; Clear filters
+  keeps raw text.
+- Inclusive date presets: All; today minus six days through today; today minus 29 days through today;
+  first of this month through today; January 1 through today; Custom. Relative presets resolve from
+  one captured civil today/timezone on resume and Apply. Custom remains absolute.
+- Custom starts with today/today. Preserve its last valid endpoints when choosing another preset.
+  Normalize reversed endpoints on Apply and display the normalized range. Future input cannot apply.
+  Restored malformed/future Custom input recovers to default filters. If the clock moves backward,
+  keep an existing now-future Custom selection visible with an invalid-range error until corrected;
+  never silently clamp it or run its invalid query.
+- Date/type/category dimensions compose AND; selected IDs compose OR. No IDs means all categories;
+  selecting a parent matches its own ID only. All real categories, including children, remain
+  selectable regardless of type. Missing selected IDs remain visible with a localized fallback and
+  explicit remove action.
+- Filter edits form a draft. Apply atomically commits and closes; Back, scrim or drag discards and
+  closes. Clear edits only the draft, resetting Custom endpoints to today. Apply is available for
+  valid unchanged filters and zero results; its label/accessibility name contains no quantity.
+- Removing an applied chip commits just that dimension. Draft edits never update results, applied
+  chips or count. Closing sheets accept no edits or repeated commits.
+- Rows use `fecha DESC, created_at DESC, id DESC`, description-first titles with category fallback,
+  date/category subtitles and signed exact amounts. Search has no global balance or detail/edit action.
+- Count derives from the exact settled result list. Pending/stale/failed work never reports an old
+  count as current. No-data means no stored movements in this currency; no-results means currency
+  data exists but criteria/text match none. Currency presence metadata and structural rows come from
+  the same database read snapshot.
+- Applied filters/raw text survive supported saved-owner recreation. Results, categories, loading,
+  jobs, focus, keyboard and open/closing drafts are not saved. Tab changes retain the entry and scroll.
+  Raw text never enters preferences, analytics or logs. Restoration follows the existing platform
+  scope; no iOS cross-process persistence bridge is added.
+
 ## Tema
 
 Tema claro y oscuro — de dónde salen los colores/tokens concretos, ver `docs/stack.md`.
