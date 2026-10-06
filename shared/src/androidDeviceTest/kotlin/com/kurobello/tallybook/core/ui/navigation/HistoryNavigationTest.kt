@@ -22,6 +22,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isPopup
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -144,6 +145,7 @@ internal class HistoryNavigationTest {
       historyTab().assertIsSelected()
       composeRule.onNodeWithText("Food").assertIsDisplayed()
       systemBack()
+      historyTab().assertIsSelected()
       composeRule.onNodeWithText("Food").assertDoesNotExist()
       composeRule
           .onNodeWithContentDescription(text(Res.string.movimiento_amount_expense_prompt))
@@ -176,9 +178,11 @@ internal class HistoryNavigationTest {
                   },
               )
           systemBack()
+          historyTab().assertIsSelected()
         }
       }
       composeRule.onNode(pane).assertDoesNotExist()
+      historyTab().assertIsSelected()
       composeRule.onNodeWithContentDescription(text(Res.string.navigation_home)).performClick()
       composeRule.onNodeWithContentDescription(text(Res.string.navigation_home)).assertIsSelected()
       composeRule
@@ -230,32 +234,23 @@ internal class HistoryNavigationTest {
 
   @Test
   fun focusedYearPopupConsumesBackBeforeHistoryRootAndCatalogReturnsHome() {
-    withShell {
+    withShell { fixture ->
+      composeRule.runOnIdle { fixture.movimientos.addPriorYear() }
       historyTab().performClick()
       val year = runBlocking { getString(Res.string.history_year_description, 2026) }
       composeRule.onNodeWithContentDescription(year).performClick()
-      val diagnostic = JSONObject().put("phase", "before-popup-back")
-      val nativeWindows = JSONArray()
-      InstrumentationRegistry.getInstrumentation().runOnMainSync {
-        WindowInspector.getGlobalWindowViews().forEach { view ->
-          val params = view.layoutParams as? WindowManager.LayoutParams
-          nativeWindows.put(
-              JSONObject()
-                  .put("class", view.javaClass.name)
-                  .put("attached", view.isAttachedToWindow)
-                  .put("shown", view.isShown)
-                  .put("focused", view.hasWindowFocus())
-                  .put("width", view.width)
-                  .put("height", view.height)
-                  .put("flags", params?.flags)
-                  .put("type", params?.type)
-          )
-        }
+      recordPopupWindows("before-popup-focus")
+      composeRule.onNode(isPopup()).assertExists()
+      composeRule.onNodeWithText("2025").assertIsDisplayed()
+      try {
+        composeRule.waitUntil(5_000) { popupWindowState().isReady }
+      } finally {
+        recordPopupWindows("after-popup-focus-wait")
       }
-      diagnostic.put("windows", nativeWindows)
-      InstrumentationRegistry.getInstrumentation()
-          .sendStatus(2, Bundle().apply { putString("history_diagnostic", diagnostic.toString()) })
       systemBack()
+      composeRule.onNodeWithText("2025").assertDoesNotExist()
+      composeRule.onNode(isPopup()).assertDoesNotExist()
+      composeRule.waitUntil(5_000) { popupWindowState().count == 0 }
       historyTab().assertIsSelected()
       systemBack()
       composeRule.onNodeWithContentDescription(text(Res.string.navigation_home)).assertIsSelected()
@@ -285,6 +280,46 @@ internal class HistoryNavigationTest {
   private fun systemBack() {
     InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
     composeRule.waitForIdle()
+  }
+
+  private fun popupWindowState(): PopupWindowState {
+    var state = PopupWindowState(0, false)
+    InstrumentationRegistry.getInstrumentation().runOnMainSync {
+      val popups =
+          WindowInspector.getGlobalWindowViews().filter {
+            it.javaClass.name == "androidx.compose.ui.window.PopupLayout"
+          }
+      val popup = popups.singleOrNull()
+      state =
+          PopupWindowState(
+              popups.size,
+              popup != null && popup.isAttachedToWindow && popup.isShown && popup.hasWindowFocus(),
+          )
+    }
+    return state
+  }
+
+  private fun recordPopupWindows(phase: String) {
+    val nativeWindows = JSONArray()
+    InstrumentationRegistry.getInstrumentation().runOnMainSync {
+      WindowInspector.getGlobalWindowViews().forEach { view ->
+        val params = view.layoutParams as? WindowManager.LayoutParams
+        nativeWindows.put(
+            JSONObject()
+                .put("class", view.javaClass.name)
+                .put("attached", view.isAttachedToWindow)
+                .put("shown", view.isShown)
+                .put("focused", view.hasWindowFocus())
+                .put("width", view.width)
+                .put("height", view.height)
+                .put("flags", params?.flags)
+                .put("type", params?.type)
+        )
+      }
+    }
+    val diagnostic = JSONObject().put("phase", phase).put("windows", nativeWindows)
+    InstrumentationRegistry.getInstrumentation()
+        .sendStatus(2, Bundle().apply { putString("history_diagnostic", diagnostic.toString()) })
   }
 
   private fun text(resource: StringResource): String = runBlocking { getString(resource) }
@@ -324,6 +359,8 @@ internal class HistoryNavigationTest {
     }
   }
 }
+
+private data class PopupWindowState(val count: Int, val isReady: Boolean)
 
 private class DeviceShell {
   val movimientos = NavigationMovimientos()
@@ -437,6 +474,17 @@ private class NavigationMovimientos : MovimientoRepository {
   val starts = AtomicInteger()
   val activeRanges = AtomicInteger()
   val activeRecent = AtomicInteger()
+
+  fun addPriorYear() {
+    rows.value +=
+        rows.value
+            .first()
+            .copy(
+                id = "prior-year",
+                fecha = LocalDate(2025, 10, 5),
+                createdAt = Instant.parse("2025-10-05T12:00:00Z"),
+            )
+  }
 
   override fun observeRange(
       moneda: Moneda,
