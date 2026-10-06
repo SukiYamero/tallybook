@@ -211,7 +211,7 @@ class HistoryScreenTest {
   }
 
   @Test
-  fun longListKeepsGlobalSummaryVisibleAndLastRowAbovePublishedClearance() {
+  fun longListKeepsLastRowAbovePublishedClearance() {
     val rows =
         (1..30).map { index ->
           HistoryMovimientoRowUi(
