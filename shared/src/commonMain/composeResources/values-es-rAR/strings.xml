@@ -263,4 +263,28 @@
         <item quantity="one">%1$d resultado</item>
         <item quantity="other">%1$d resultados</item>
     </plurals>
+
+    <string name="movimiento_detail_title">Detalle del movimiento</string>
+    <string name="movimiento_edit_title">Editar movimiento</string>
+    <string name="movimiento_edit">Editar</string>
+    <string name="movimiento_delete">Eliminar</string>
+    <string name="movimiento_close">Cerrar</string>
+    <string name="movimiento_save_changes">Guardar cambios</string>
+    <string name="movimiento_read_error">No pudimos cargar el movimiento. Intentá de nuevo.</string>
+    <string name="movimiento_missing">Este movimiento ya no está disponible.</string>
+    <string name="movimiento_missing_edit">Este movimiento ya no está disponible. Tu borrador sigue abierto; podés revisarlo antes de cerrar.</string>
+    <string name="movimiento_delete_title">¿Eliminar este movimiento?</string>
+    <string name="movimiento_delete_message">%1$s. Podés deshacer la eliminación durante unos segundos.</string>
+    <string name="movimiento_delete_error">No pudimos eliminar el movimiento. Intentá de nuevo.</string>
+    <string name="movimiento_future_date">La fecha no puede ser posterior a hoy.</string>
+    <string name="movimiento_updated">Movimiento actualizado</string>
+    <string name="movimiento_deleted">Movimiento eliminado</string>
+    <string name="movimiento_restored">Movimiento restaurado</string>
+    <string name="movimiento_undo">Deshacer</string>
+    <string name="movimiento_restore_error">No pudimos restaurar el movimiento. Intentá de nuevo.</string>
+    <string name="movimiento_restore_conflict">No pudimos restaurar esta versión. El movimiento actual se conservó.</string>
+    <string name="movimiento_notification_close">Cerrar notificación</string>
+    <string name="movimiento_open_detail">Abrir detalle del movimiento</string>
+    <string name="movimiento_cancel">Cancelar</string>
+    <string name="movimiento_restoring">Restaurando movimiento</string>
 </resources>

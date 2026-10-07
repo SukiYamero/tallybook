@@ -311,5 +311,5 @@ private data class LoadSnapshot(
   }
 }
 
-private fun String.normalizeDescription(): String? =
+internal fun String.normalizeDescription(): String? =
     trim().replace(Regex("\\s+"), " ").ifEmpty { null }

@@ -13,7 +13,11 @@ import tallybook.shared.generated.resources.calendar_date_content_description
 import tallybook.shared.generated.resources.date_picker_months
 
 @Composable
-internal fun SearchResultRow(row: SearchResultRowUi, modifier: Modifier = Modifier) {
+internal fun SearchResultRow(
+    row: SearchResultRowUi,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+) {
   MovimientoRowContent(
       row.movimiento,
       row.categoria,
@@ -25,6 +29,7 @@ internal fun SearchResultRow(row: SearchResultRowUi, modifier: Modifier = Modifi
       modifier = modifier.fillMaxWidth(),
       maxDescriptionLines = Int.MAX_VALUE,
       maxSubtitleLines = Int.MAX_VALUE,
+      onClick = onClick,
   )
 }
 

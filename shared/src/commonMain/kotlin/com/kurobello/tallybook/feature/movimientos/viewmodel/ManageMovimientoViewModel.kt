@@ -1,0 +1,460 @@
+package com.kurobello.tallybook.feature.movimientos.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
+import com.kurobello.tallybook.core.model.Money
+import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoChanges
+import com.kurobello.tallybook.core.model.MovimientoRestoreResult
+import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.component.DismissalDecision
+import com.kurobello.tallybook.core.ui.component.dismissalDecision
+import kotlin.time.Clock
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.todayIn
+
+// One owner serializes the sheet lifecycle and the Undo mutation that outlives that sheet.
+@Suppress("TooManyFunctions")
+internal class ManageMovimientoViewModel(
+    private val movimientoRepository: MovimientoRepository,
+    private val categoriaRepository: CategoriaRepository,
+    private val clock: Clock,
+    private val timeZoneProvider: TimeZoneProvider,
+    scope: CoroutineScope? = null,
+) : ViewModel(), ManageMovimientoActions {
+  private val coroutineScope = scope ?: viewModelScope
+  private var nextToken = 0L
+  private var readGeneration = 0L
+  private var readJob: Job? = null
+  private var categoryJob: Job? = null
+  private var pendingFeedback: PendingMovimientoFeedback? = null
+  private var deletedMovimiento: Movimiento? = null
+
+  val uiState: StateFlow<ManageMovimientoUiState>
+    field = MutableStateFlow(ManageMovimientoUiState())
+
+  override fun open(id: String): Boolean {
+    if (id.isBlank() || uiState.value.session != null || uiState.value.isRestoring) return false
+    val session = MovimientoManagementSession(token = ++nextToken, movimientoId = id)
+    uiState.update { it.copy(session = session) }
+    loadCategories(session.token)
+    loadDetail(session.token)
+    return true
+  }
+
+  override fun onRetryLoad() {
+    val session = uiState.value.session ?: return
+    if (!session.canInteract) return
+    if (session.phase == MovimientoManagementPhase.Edit) loadCategories(session.token)
+    else {
+      if (session.isCategoriesFailed) loadCategories(session.token)
+      loadDetail(session.token)
+    }
+  }
+
+  override fun onEdit() {
+    val session =
+        uiState.value.session?.takeIf {
+          it.phase == MovimientoManagementPhase.Detail && it.canInteract
+        } ?: return
+    val movimiento = session.movimiento ?: return
+    val draft = movimiento.toDraft()
+    updateSession(session.token) {
+      copy(
+          phase = MovimientoManagementPhase.Edit,
+          edit =
+              EditMovimientoDraftState(
+                  original = movimiento,
+                  draft = draft,
+                  maxSelectableDate = today(),
+              ),
+          error = null,
+      )
+    }
+  }
+
+  override fun onTipoChanged(tipo: TipoMovimiento) = updateDraft { copy(tipo = tipo) }
+
+  override fun onAmountChanged(value: String) = updateDraft { copy(amountInput = value) }
+
+  override fun onFechaChanged(value: LocalDate) = updateDraft { copy(fecha = value) }
+
+  override fun onDescripcionChanged(value: String) = updateDraft {
+    copy(descripcion = value.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH))
+  }
+
+  override fun onCategoriaSelected(id: String) {
+    val session = uiState.value.session ?: return
+    if (session.categorias.none { it.id == id && it.padreId == null }) return
+    updateDraft { copy(selectedCategoriaId = id) }
+  }
+
+  override fun onCancelEdit() {
+    val session = uiState.value.session ?: return
+    if (session.phase != MovimientoManagementPhase.Edit || !session.canInteract) return
+    requestLeaveEdit(session, MovimientoDiscardTarget.Detail)
+  }
+
+  override fun onRequestDismiss(): Boolean {
+    val session =
+        uiState.value.session?.takeIf { it.canInteract && it.discardTarget == null } ?: return false
+    return when {
+      session.isDeleteConfirmationVisible -> {
+        onCancelDelete()
+        false
+      }
+      session.phase == MovimientoManagementPhase.Edit ->
+          requestLeaveEdit(session, MovimientoDiscardTarget.Close)
+      else -> {
+        close(session.token)
+        true
+      }
+    }
+  }
+
+  override fun onBack() {
+    val session = uiState.value.session ?: return
+    when {
+      session.isSubmitting -> Unit
+      session.discardTarget != null -> onContinueEditing()
+      session.isDeleteConfirmationVisible -> onCancelDelete()
+      session.phase == MovimientoManagementPhase.Edit -> onCancelEdit()
+      else -> onRequestDismiss()
+    }
+  }
+
+  override fun onContinueEditing() {
+    val session = uiState.value.session ?: return
+    if (session.canInteract) updateSession(session.token) { copy(discardTarget = null) }
+  }
+
+  override fun onDiscardChanges() {
+    val session =
+        uiState.value.session?.takeIf { it.canInteract && it.discardTarget != null } ?: return
+    val target = requireNotNull(session.discardTarget)
+    updateSession(session.token) {
+      copy(edit = edit?.copy(draft = requireNotNull(edit).original.toDraft()), discardTarget = null)
+    }
+    leaveEdit(session.token, target)
+  }
+
+  override fun onSubmit() {
+    val session =
+        uiState.value.session?.takeIf {
+          it.canModifyDraft && it.error != MovimientoManagementError.MissingOnSave
+        } ?: return
+    val draft = session.edit ?: return
+    val validated = draft.copy(submitAttempted = true, validationDate = today(), error = null)
+    val ready = session.copy(edit = validated, error = null)
+    updateSession(session.token) { ready }
+    val changes = ready.form?.toChangesOrNull()
+    when {
+      changes == null -> Unit
+      changes == validated.original.toChanges() -> loadDetail(session.token)
+      else -> {
+        updateSession(session.token) { copy(isSubmitting = true) }
+        submitUpdate(session, changes)
+      }
+    }
+  }
+
+  private fun submitUpdate(session: MovimientoManagementSession, changes: MovimientoChanges) {
+    coroutineScope.launch {
+      when (val outcome = movimientoRepository.update(session.movimientoId, changes)) {
+        is DataOutcome.Failure ->
+            updateSession(session.token) {
+              copy(isSubmitting = false, edit = edit?.copy(error = MovimientoFormError.SAVE_FAILED))
+            }
+        is DataOutcome.Success ->
+            when (outcome.data) {
+              MovimientoUpdateResult.Updated ->
+                  close(session.token, PendingMovimientoFeedback(MovimientoFeedbackKind.Saved))
+              MovimientoUpdateResult.NotFound ->
+                  updateSession(session.token) {
+                    copy(isSubmitting = false, error = MovimientoManagementError.MissingOnSave)
+                  }
+            }
+      }
+    }
+  }
+
+  override fun onRequestDelete() {
+    val session = uiState.value.session ?: return
+    if (
+        session.phase != MovimientoManagementPhase.Detail ||
+            session.movimiento == null ||
+            !session.canInteract
+    )
+        return
+    updateSession(session.token) { copy(isDeleteConfirmationVisible = true, error = null) }
+  }
+
+  override fun onCancelDelete() {
+    val session = uiState.value.session ?: return
+    if (session.canInteract)
+        updateSession(session.token) { copy(isDeleteConfirmationVisible = false) }
+  }
+
+  override fun onConfirmDelete() {
+    val session = uiState.value.session ?: return
+    if (!session.isDeleteConfirmationVisible || !session.canInteract) return
+    updateSession(session.token) { copy(isSubmitting = true, isDeleteConfirmationVisible = false) }
+    coroutineScope.launch {
+      when (val outcome = movimientoRepository.deleteAndCapture(session.movimientoId)) {
+        is DataOutcome.Failure ->
+            updateSession(session.token) {
+              copy(isSubmitting = false, error = MovimientoManagementError.DeleteFailed)
+            }
+        is DataOutcome.Success ->
+            close(
+                session.token,
+                PendingMovimientoFeedback(
+                    kind =
+                        if (outcome.data == null) MovimientoFeedbackKind.Missing
+                        else MovimientoFeedbackKind.Deleted,
+                    deleted = outcome.data,
+                ),
+            )
+      }
+    }
+  }
+
+  override fun onSheetHidden(origin: Long) {
+    val session = uiState.value.session ?: return
+    if (session.token != origin || session.phase != MovimientoManagementPhase.Closing) return
+    stopReads()
+    val pending = pendingFeedback
+    pendingFeedback = null
+    if (pending != null) {
+      deletedMovimiento = pending.deleted
+      uiState.update {
+        it.copy(session = null, feedback = MovimientoFeedback(++nextToken, kind = pending.kind))
+      }
+    } else uiState.update { it.copy(session = null) }
+  }
+
+  override fun onFeedbackAction(token: Long, revision: Int) {
+    val feedback =
+        feedbackFor(token, revision)?.takeIf { it.hasAction && uiState.value.session == null }
+            ?: return
+    val deleted = deletedMovimiento ?: return
+    val claimed = feedback.copy(revision = revision + 1, isRestoring = true)
+    uiState.update { it.copy(feedback = claimed) }
+    coroutineScope.launch {
+      val outcome = movimientoRepository.restoreDeleted(deleted)
+      val kind =
+          when (outcome) {
+            is DataOutcome.Failure -> MovimientoFeedbackKind.RestoreFailed
+            is DataOutcome.Success ->
+                when (outcome.data) {
+                  MovimientoRestoreResult.Restored,
+                  MovimientoRestoreResult.AlreadyPresent -> MovimientoFeedbackKind.Restored
+                  MovimientoRestoreResult.Conflict -> MovimientoFeedbackKind.RestoreConflict
+                }
+          }
+      if (kind != MovimientoFeedbackKind.RestoreFailed) deletedMovimiento = null
+      uiState.update { current ->
+        if (current.feedback == claimed)
+            current.copy(
+                feedback =
+                    claimed.copy(revision = claimed.revision + 1, kind = kind, isRestoring = false)
+            )
+        else current
+      }
+    }
+  }
+
+  override fun onFeedbackDismiss(token: Long, revision: Int) {
+    if (feedbackFor(token, revision) == null) return
+    deletedMovimiento = null
+    uiState.update { it.copy(feedback = null) }
+  }
+
+  private fun feedbackFor(token: Long, revision: Int): MovimientoFeedback? =
+      uiState.value.feedback?.takeIf {
+        it.token == token && it.revision == revision && !it.isRestoring
+      }
+
+  private fun requestLeaveEdit(
+      session: MovimientoManagementSession,
+      target: MovimientoDiscardTarget,
+  ): Boolean =
+      when (dismissalDecision(session.hasUnsavedChanges)) {
+        DismissalDecision.RequestConfirmation -> {
+          updateSession(session.token) { copy(discardTarget = target) }
+          false
+        }
+        DismissalDecision.Dismiss -> {
+          leaveEdit(session.token, target)
+          target == MovimientoDiscardTarget.Close
+        }
+      }
+
+  private fun leaveEdit(token: Long, target: MovimientoDiscardTarget) {
+    when (target) {
+      MovimientoDiscardTarget.Detail -> loadDetail(token)
+      MovimientoDiscardTarget.Close -> close(token)
+    }
+  }
+
+  private fun updateDraft(transform: MovimientoDraft.() -> MovimientoDraft) {
+    val session = uiState.value.session ?: return
+    if (!session.canModifyDraft) return
+    updateSession(session.token) {
+      copy(
+          edit = edit?.let { it.copy(draft = transform(it.draft), error = null) },
+          error = error?.takeIf { it == MovimientoManagementError.MissingOnSave },
+      )
+    }
+  }
+
+  private fun loadDetail(token: Long) {
+    val session = uiState.value.session ?: return
+    if (session.token != token) return
+    readJob?.cancel()
+    val generation = ++readGeneration
+    updateSession(token) {
+      copy(
+          phase = MovimientoManagementPhase.Loading,
+          movimiento = null,
+          edit = null,
+          error = null,
+          discardTarget = null,
+      )
+    }
+    readJob = coroutineScope.launch {
+      val result = movimientoRepository.getById(session.movimientoId)
+      if (generation != readGeneration) return@launch
+      updateSession(token) {
+        if (phase == MovimientoManagementPhase.Closing) this
+        else
+            when (result) {
+              is DataOutcome.Failure -> copy(phase = MovimientoManagementPhase.LoadFailed)
+              is DataOutcome.Success ->
+                  copy(
+                      phase =
+                          if (result.data == null) MovimientoManagementPhase.Missing
+                          else MovimientoManagementPhase.Detail,
+                      movimiento = result.data,
+                  )
+            }
+      }
+    }
+  }
+
+  private fun loadCategories(token: Long) {
+    categoryJob?.cancel()
+    updateSession(token) { copy(isCategoriesLoading = true, isCategoriesFailed = false) }
+    categoryJob = coroutineScope.launch {
+      categoriaRepository.observeAll().collect { result ->
+        updateSession(token) {
+          if (phase == MovimientoManagementPhase.Closing) this
+          else
+              when (result) {
+                is DataOutcome.Success ->
+                    copy(
+                        categorias = result.data,
+                        isCategoriesLoading = false,
+                        isCategoriesFailed = false,
+                    )
+                is DataOutcome.Failure ->
+                    copy(isCategoriesLoading = false, isCategoriesFailed = true)
+              }
+        }
+      }
+    }
+  }
+
+  private fun close(token: Long, feedback: PendingMovimientoFeedback? = null) {
+    pendingFeedback = feedback
+    readJob?.cancel()
+    ++readGeneration
+    updateSession(token) {
+      copy(
+          phase = MovimientoManagementPhase.Closing,
+          isSubmitting = false,
+          isDeleteConfirmationVisible = false,
+          discardTarget = null,
+      )
+    }
+  }
+
+  private fun updateSession(
+      token: Long,
+      transform: MovimientoManagementSession.() -> MovimientoManagementSession,
+  ) {
+    uiState.update { current ->
+      current.session?.takeIf { it.token == token }?.let { current.copy(session = transform(it)) }
+          ?: current
+    }
+  }
+
+  override fun onCleared() {
+    stopReads()
+    deletedMovimiento = null
+    pendingFeedback = null
+    uiState.value = ManageMovimientoUiState()
+  }
+
+  private fun today(): LocalDate = clock.todayIn(timeZoneProvider.current())
+
+  private fun stopReads() {
+    readJob?.cancel()
+    categoryJob?.cancel()
+    ++readGeneration
+  }
+}
+
+private data class PendingMovimientoFeedback(
+    val kind: MovimientoFeedbackKind,
+    val deleted: Movimiento? = null,
+)
+
+private val MovimientoManagementSession.canInteract: Boolean
+  get() = !isSubmitting && phase != MovimientoManagementPhase.Closing
+
+private val MovimientoManagementSession.canModifyDraft: Boolean
+  get() = phase == MovimientoManagementPhase.Edit && canInteract && discardTarget == null
+
+internal fun Money.toAmountInput(): String {
+  val digits = minorUnits.toString().padStart(moneda.scale + 1, '0')
+  return if (moneda.scale == 0) digits
+  else digits.dropLast(moneda.scale) + moneda.decimalSeparator + digits.takeLast(moneda.scale)
+}
+
+internal fun Movimiento.toDraft() =
+    MovimientoDraft(tipo, monto.toAmountInput(), fecha, categoriaId, descripcion.orEmpty())
+
+private fun Movimiento.toChanges() =
+    MovimientoChanges(tipo, monto, fecha, categoriaId, descripcion.normalizeDescriptionOrNull())
+
+private fun String?.normalizeDescriptionOrNull(): String? = this?.normalizeDescription()
+
+private fun EditMovimientoUiState.toChangesOrNull(): MovimientoChanges? {
+  val amount = (parseAmountInput(amountInput, moneda) as? AmountInputResult.Valid)?.money
+  val isReady = !isLoading && error == null
+  val fieldsValid = hasValidCategoria && !isFechaInvalid
+  return amount
+      ?.takeIf { isReady && fieldsValid }
+      ?.let {
+        MovimientoChanges(
+            tipo,
+            it,
+            fecha,
+            requireNotNull(selectedCategoriaId),
+            descripcion.normalizeDescription(),
+        )
+      }
+}

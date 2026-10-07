@@ -22,11 +22,18 @@ internal fun HistoryRoute(
     onAdd: () -> Unit,
     bottomBarClearance: Dp,
     modifier: Modifier = Modifier,
+    onOpenMovimiento: ((String) -> Unit)? = null,
 ) {
   val label = stringResource(Res.string.unknown_category)
   val viewModel: HistoryViewModel = koinViewModel { parametersOf(label) }
   val state = rememberHistoryRouteState(viewModel, label)
-  HistoryScreen(state.value, viewModel, onAdd, bottomBarClearance, modifier)
+  HistoryScreen(
+      state.value,
+      viewModel,
+      HistoryNavigationCallbacks(onAdd, onOpenMovimiento),
+      bottomBarClearance,
+      modifier,
+  )
 }
 
 @Composable

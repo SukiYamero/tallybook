@@ -101,6 +101,7 @@ internal fun SearchScreen(
     contentListState: LazyListState = rememberLazyListState(),
     fieldModifier: Modifier = Modifier,
     filterButtonModifier: Modifier = Modifier,
+    onOpenMovimiento: ((String) -> Unit)? = null,
 ) {
   require(bottomBarClearance >= TallybookTheme.spacing.space0)
   val presentation by rememberSearchPresentation(uiState)
@@ -187,7 +188,7 @@ internal fun SearchScreen(
           key = { "search-row:${it.id}" },
           contentType = { "movement" },
       ) {
-        SearchResultRow(it)
+        SearchResultRow(it, onClick = onOpenMovimiento?.let { open -> { open(it.movimiento.id) } })
       }
     }
   }

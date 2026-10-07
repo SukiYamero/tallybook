@@ -104,7 +104,10 @@ Native source compilation remains a separate target gate. Future commit:
 - Public mutation types preserve the existing public repository interface. New strict mutation
   validation is separate from the legacy raw/idempotent delete path.
 - An unreadable same-ID row is a terminal restoration conflict; the narrow mapper-only
-  `IllegalArgumentException` handler never catches query/storage failures.
+  `IllegalArgumentException` handler never catches query/storage failures. The mapper uses
+  [LocalDate parsing at 0.8.0](https://raw.githubusercontent.com/Kotlin/kotlinx-datetime/v0.8.0/core/common/src/LocalDate.kt)
+  and [Instant parsing](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.time/-instant/-companion/parse.html),
+  whose documented malformed-input failures share that exception family.
 - Resolved SQLDelight runtime is **2.3.2** on Android (`runtime` / `runtime-jvm`) and iOS Arm64
   (`runtime`), confirmed by the orchestrator's targeted dependency resolution.
 - [SQLDelight transaction contract](https://sqldelight.github.io/sqldelight/2.3.2/multiplatform_sqlite/transactions/)

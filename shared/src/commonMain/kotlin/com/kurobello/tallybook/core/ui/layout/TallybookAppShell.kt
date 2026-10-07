@@ -12,6 +12,7 @@ import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 internal fun TallybookAppShell(
     modifier: Modifier = Modifier,
     bottomBar: (@Composable () -> Unit)? = null,
+    overlay: (@Composable (Dp) -> Unit)? = null,
     content: @Composable (Dp) -> Unit,
 ) {
   SubcomposeLayout(modifier.background(TallybookTheme.colors.canvas)) { constraints ->
@@ -25,9 +26,13 @@ internal fun TallybookAppShell(
     val body =
         subcompose(ShellSlot.Content) { content(occupiedHeight.toDp()) }
             .map { it.measure(Constraints.fixed(width, height)) }
+    val foreground =
+        subcompose(ShellSlot.Overlay) { overlay?.invoke(occupiedHeight.toDp()) }
+            .map { it.measure(Constraints.fixed(width, height)) }
     layout(width, height) {
       body.forEach { it.placeRelative(0, 0) }
       bar.forEach { it.placeRelative(0, height - it.height) }
+      foreground.forEach { it.placeRelative(0, 0) }
     }
   }
 }
@@ -35,4 +40,5 @@ internal fun TallybookAppShell(
 private enum class ShellSlot {
   Bar,
   Content,
+  Overlay,
 }

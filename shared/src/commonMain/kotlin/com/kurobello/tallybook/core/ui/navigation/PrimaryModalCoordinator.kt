@@ -11,14 +11,48 @@ internal interface SearchFilterController {
   fun open(): Boolean
 }
 
+internal interface MovimientoManagementController {
+  val hasActiveSession: Boolean
+  val isRestoring: Boolean
+
+  fun open(id: String): Boolean
+}
+
 internal class PrimaryModalCoordinator(
     private val creation: AddMovimientoSheetSession,
     private val isSearchSelected: () -> Boolean,
 ) {
   private var filters: SearchFilterController? by mutableStateOf(null)
 
+  private var management: MovimientoManagementController? by mutableStateOf(null)
+
+  fun attachManagement(controller: MovimientoManagementController) {
+    management = controller
+  }
+
+  fun detachManagement(controller: MovimientoManagementController) {
+    if (management === controller) management = null
+  }
+
+  fun tryOpenManagement(id: String): Boolean {
+    if (!canStartModal) return false
+    return management?.open(id) ?: false
+  }
+
+  fun dispatchFeedback(isForeground: Boolean, dispatch: () -> Unit): Boolean {
+    if (!isForeground || !canStartModal) return false
+    dispatch()
+    return true
+  }
+
+  private val canStartModal: Boolean
+    get() = canNavigate && management?.isRestoring != true
+
   val canNavigate: Boolean
-    get() = !creation.hasBeenOpened && !(filters?.hasActiveSession ?: isSearchSelected())
+    get() =
+        !creation.hasBeenOpened &&
+            !(filters?.hasActiveSession ?: isSearchSelected()) &&
+            management?.hasActiveSession != true
 
   fun attach(controller: SearchFilterController) {
     filters = controller
@@ -29,13 +63,13 @@ internal class PrimaryModalCoordinator(
   }
 
   fun tryOpenCreation(): Boolean {
-    if (!canNavigate) return false
+    if (!canStartModal) return false
     creation.open()
     return true
   }
 
   fun tryOpenFilters(): Boolean {
-    if (creation.hasBeenOpened || !isSearchSelected()) return false
+    if (!canStartModal || !isSearchSelected()) return false
     return filters?.open() ?: false
   }
 }

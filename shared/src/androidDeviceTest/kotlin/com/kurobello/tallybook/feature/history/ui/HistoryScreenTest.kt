@@ -85,8 +85,32 @@ class HistoryScreenTest {
   @get:Rule val composeRule = createComposeRule()
 
   @Test
+  fun realMovementRowEmitsItsStoredId() {
+    var opened: String? = null
+    composeRule.setContent {
+      TallybookTheme {
+        HistoryScreen(
+            contentState,
+            NoActions,
+            HistoryNavigationCallbacks({}, onOpenMovimiento = { opened = it }),
+            0.dp,
+        )
+      }
+    }
+    composeRule
+        .onNodeWithContentDescription(localized(Res.string.navigation_history))
+        .performScrollToNode(hasText("Lunch with Ana"))
+    composeRule.onNodeWithText("Lunch with Ana").performClick()
+    composeRule.runOnIdle { assertEquals(movement.id, opened) }
+  }
+
+  @Test
   fun contentShowsPeriodSummaryAndReadOnlyDescriptionRowsWithoutOverallHeader() {
-    composeRule.setContent { TallybookTheme { HistoryScreen(contentState, NoActions, {}, 0.dp) } }
+    composeRule.setContent {
+      TallybookTheme {
+        HistoryScreen(contentState, NoActions, HistoryNavigationCallbacks({}), 0.dp)
+      }
+    }
 
     composeRule.onNodeWithText("Overall balance").assertDoesNotExist()
     composeRule.onNodeWithText("Balance general").assertDoesNotExist()
@@ -103,7 +127,9 @@ class HistoryScreenTest {
   @Test
   fun loadingKeepsPeriodControlsWithoutInventingZero() {
     val state = contentState.copy(period = RetainedLoadState.Loading())
-    composeRule.setContent { TallybookTheme { HistoryScreen(state, NoActions, {}, 0.dp) } }
+    composeRule.setContent {
+      TallybookTheme { HistoryScreen(state, NoActions, HistoryNavigationCallbacks({}), 0.dp) }
+    }
     composeRule.mainClock.autoAdvance = false
     composeRule.onNodeWithContentDescription(localized(Res.string.loading)).assertDoesNotExist()
     composeRule.mainClock.advanceTimeBy(240)
@@ -116,7 +142,9 @@ class HistoryScreenTest {
   @Test
   fun quickPeriodReadKeepsItsOriginalDateAndContentUntilNewResultArrives() {
     val state = mutableStateOf(contentState)
-    composeRule.setContent { TallybookTheme { HistoryScreen(state.value, NoActions, {}, 0.dp) } }
+    composeRule.setContent {
+      TallybookTheme { HistoryScreen(state.value, NoActions, HistoryNavigationCallbacks({}), 0.dp) }
+    }
     composeRule.mainClock.autoAdvance = false
     val nextSelection = HistorySelection(HistoryScope.Day, LocalDate(2026, 9, 14))
     composeRule.runOnIdle {
@@ -160,7 +188,9 @@ class HistoryScreenTest {
   @Test
   fun slowPeriodReadShowsSkeletonAndErrorsInterruptTheWait() {
     val state = mutableStateOf(contentState)
-    composeRule.setContent { TallybookTheme { HistoryScreen(state.value, NoActions, {}, 0.dp) } }
+    composeRule.setContent {
+      TallybookTheme { HistoryScreen(state.value, NoActions, HistoryNavigationCallbacks({}), 0.dp) }
+    }
     composeRule.mainClock.autoAdvance = false
     composeRule.runOnIdle {
       state.value =
@@ -217,7 +247,7 @@ class HistoryScreenTest {
         HistoryScreen(
             contentState.copy(period = RetainedLoadState.Ready(empty)),
             NoActions,
-            { additions++ },
+            HistoryNavigationCallbacks({ additions++ }),
             0.dp,
         )
       }
@@ -248,7 +278,7 @@ class HistoryScreenTest {
         HistoryScreen(
             contentState.copy(period = RetainedLoadState.Failed(failure)),
             actions,
-            {},
+            HistoryNavigationCallbacks({}),
             0.dp,
         )
       }
@@ -271,7 +301,7 @@ class HistoryScreenTest {
                 period = RetainedLoadState.Failed(HistoryFailure.CalculationOverflow)
             ),
             NoActions,
-            {},
+            HistoryNavigationCallbacks({}),
             0.dp,
         )
       }
@@ -298,7 +328,9 @@ class HistoryScreenTest {
           }
         }
     val state = contentState.copy(years = contentState.years.copy(persisted = listOf(2025)))
-    composeRule.setContent { TallybookTheme { HistoryScreen(state, actions, {}, 0.dp) } }
+    composeRule.setContent {
+      TallybookTheme { HistoryScreen(state, actions, HistoryNavigationCallbacks({}), 0.dp) }
+    }
     composeRule.onNodeWithText(localized(Res.string.history_scope_month)).performClick()
     composeRule.onNodeWithText("2026").performClick()
     composeRule.onNodeWithText("2025").performClick()
@@ -327,7 +359,7 @@ class HistoryScreenTest {
         HistoryScreen(
             contentState.copy(period = RetainedLoadState.Ready(content)),
             NoActions,
-            {},
+            HistoryNavigationCallbacks({}),
             96.dp,
         )
       }
@@ -355,7 +387,9 @@ class HistoryScreenTest {
     val groupLabel = runBlocking {
       getString(Res.string.calendar_date_content_description, 15, month, 2026)
     }
-    composeRule.setContent { TallybookTheme { HistoryScreen(contentState, actions, {}, 0.dp) } }
+    composeRule.setContent {
+      TallybookTheme { HistoryScreen(contentState, actions, HistoryNavigationCallbacks({}), 0.dp) }
+    }
     composeRule.onNodeWithContentDescription(dayLabel).performClick()
     composeRule.runOnIdle {
       assertEquals(MovimientoDateRange(LocalDate(2026, 9, 14), LocalDate(2026, 9, 14)), selected)
@@ -389,7 +423,13 @@ class HistoryScreenTest {
       CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
         TallybookTheme {
           Box(Modifier.height(320.dp).testTag("history-compact-viewport")) {
-            HistoryScreen(state, actions, {}, 96.dp, Modifier.fillMaxSize())
+            HistoryScreen(
+                state,
+                actions,
+                HistoryNavigationCallbacks({}),
+                96.dp,
+                Modifier.fillMaxSize(),
+            )
           }
         }
       }
@@ -508,7 +548,7 @@ class HistoryScreenTest {
         HistoryScreen(
             contentState.copy(period = RetainedLoadState.Loading(projection)),
             NoActions,
-            {},
+            HistoryNavigationCallbacks({}),
             0.dp,
         )
       }

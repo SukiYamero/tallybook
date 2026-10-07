@@ -263,4 +263,28 @@
         <item quantity="one">%1$d result</item>
         <item quantity="other">%1$d results</item>
     </plurals>
+
+    <string name="movimiento_detail_title">Movement details</string>
+    <string name="movimiento_edit_title">Edit movement</string>
+    <string name="movimiento_edit">Edit</string>
+    <string name="movimiento_delete">Delete</string>
+    <string name="movimiento_close">Close</string>
+    <string name="movimiento_save_changes">Save changes</string>
+    <string name="movimiento_read_error">We couldn’t load this movement. Try again.</string>
+    <string name="movimiento_missing">This movement is no longer available.</string>
+    <string name="movimiento_missing_edit">This movement is no longer available. Your draft is still open so you can review it before closing.</string>
+    <string name="movimiento_delete_title">Delete this movement?</string>
+    <string name="movimiento_delete_message">%1$s. You can undo this deletion for a few seconds.</string>
+    <string name="movimiento_delete_error">We couldn’t delete this movement. Try again.</string>
+    <string name="movimiento_future_date">The date can’t be later than today.</string>
+    <string name="movimiento_updated">Movement updated</string>
+    <string name="movimiento_deleted">Movement deleted</string>
+    <string name="movimiento_restored">Movement restored</string>
+    <string name="movimiento_undo">Undo</string>
+    <string name="movimiento_restore_error">We couldn’t restore this movement. Try again.</string>
+    <string name="movimiento_restore_conflict">We couldn’t restore this version. The current movement was kept.</string>
+    <string name="movimiento_notification_close">Close notification</string>
+    <string name="movimiento_open_detail">Open movement details</string>
+    <string name="movimiento_cancel">Cancel</string>
+    <string name="movimiento_restoring">Restoring movement</string>
 </resources>

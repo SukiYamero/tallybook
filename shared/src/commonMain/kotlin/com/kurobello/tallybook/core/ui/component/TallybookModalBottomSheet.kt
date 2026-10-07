@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,7 +35,6 @@ import androidx.compose.ui.unit.Dp
 import com.composeunstyled.DragIndication
 import com.composeunstyled.ModalBottomSheetProperties
 import com.composeunstyled.ModalBottomSheetScope
-import com.composeunstyled.ModalBottomSheetState
 import com.composeunstyled.Scrim
 import com.composeunstyled.Sheet
 import com.composeunstyled.SheetDetent
@@ -91,7 +89,7 @@ internal fun TallybookModalBottomSheet(
 
   UnstyledModalBottomSheet(
       state = sheetState,
-      properties = modalBottomSheetProperties(),
+      properties = modalBottomSheetProperties(dismissOnBackPress = callbacks.onBack == null),
       onDismiss = {},
       overlay = {
         Scrim(
@@ -103,18 +101,10 @@ internal fun TallybookModalBottomSheet(
         )
       },
   ) {
+    // Android modal windows have a separate Back dispatcher from their Activity.
+    ModalBottomSheetBackHandling(visible, currentCallbacks)
     Sheet(
-        modifier =
-            layout.modifier
-                .widthIn(max = TallybookTheme.dimensions.modalSheetMaximumWidth)
-                .fillMaxWidth()
-                .then(if (layout.sheetFillsAvailableHeight) Modifier.fillMaxHeight() else Modifier)
-                .background(
-                    color = TallybookTheme.colors.surface.card,
-                    shape = RoundedCornerShape(TallybookTheme.radii.radius30),
-                )
-                .captureContentDetentHeight(layout, detentHeights)
-                .semantics { this.paneTitle = paneTitle },
+        modifier = modalSheetModifier(layout, detentHeights, paneTitle),
     ) {
       TallybookModalSheetBody(
           layout = layout,
@@ -131,20 +121,21 @@ internal fun TallybookModalBottomSheet(
 }
 
 @Composable
-private fun ModalBottomSheetVisibilityEffect(
-    visible: Boolean,
-    state: ModalBottomSheetState,
-    expandedDetent: SheetDetent,
-    callbacks: State<ModalBottomSheetCallbacks>,
-) {
-  LaunchedEffect(visible, state.currentDetent, state.isIdle) {
-    if (!visible && state.currentDetent == SheetDetent.Hidden && state.isIdle) {
-      callbacks.value.onHidden()
-    } else if (visible && state.currentDetent == expandedDetent && state.isIdle) {
-      callbacks.value.onShown()
-    }
-  }
-}
+private fun modalSheetModifier(
+    layout: ModalBottomSheetLayout,
+    detentHeights: MutableState<Map<String, Dp>>,
+    title: String,
+): Modifier =
+    layout.modifier
+        .widthIn(max = TallybookTheme.dimensions.modalSheetMaximumWidth)
+        .fillMaxWidth()
+        .then(if (layout.sheetFillsAvailableHeight) Modifier.fillMaxHeight() else Modifier)
+        .background(
+            TallybookTheme.colors.surface.card,
+            RoundedCornerShape(TallybookTheme.radii.radius30),
+        )
+        .captureContentDetentHeight(layout, detentHeights)
+        .semantics { paneTitle = title }
 
 @Composable
 private fun rememberContentDetents(
@@ -188,9 +179,9 @@ private fun sheetTransitionAnimationSpec(isOpening: Boolean) =
             else TallybookTheme.motion.sheetDownMillis
     )
 
-private fun modalBottomSheetProperties() =
+private fun modalBottomSheetProperties(dismissOnBackPress: Boolean) =
     ModalBottomSheetProperties(
-        dismissOnBackPress = true,
+        dismissOnBackPress = dismissOnBackPress,
         dismissOnClickOutside = false,
         offsetForIme = false,
     )
@@ -242,6 +233,7 @@ internal data class ModalBottomSheetCallbacks(
     },
     val onHidden: () -> Unit = {},
     val onShown: () -> Unit = {},
+    val onBack: (() -> Unit)? = null,
 )
 
 internal data class ModalBottomSheetLayout(

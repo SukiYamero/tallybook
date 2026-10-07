@@ -53,7 +53,7 @@ private const val MOVEMENT_SKELETON_COUNT = 3
 internal fun HistoryScreen(
     uiState: HistoryUiState,
     actions: HistoryActions,
-    onAdd: () -> Unit,
+    navigation: HistoryNavigationCallbacks,
     bottomBarClearance: Dp,
     modifier: Modifier = Modifier,
 ) {
@@ -83,18 +83,29 @@ internal fun HistoryScreen(
             ),
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
     ) {
-      historyContent(renderedState, actions, onAdd, presentation.showLoading)
+      historyContent(
+          renderedState,
+          actions,
+          navigation.onAdd,
+          presentation.showLoading,
+          navigation.onOpenMovimiento,
+      )
     }
   }
 }
 
 @Composable
-internal fun HistoryRow(row: HistoryMovimientoRowUi, modifier: Modifier = Modifier) {
+internal fun HistoryRow(
+    row: HistoryMovimientoRowUi,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+) {
   MovimientoRowContent(
       row.movimiento,
       row.categoria,
       MovimientoRowText(row.title, historyDateSubtitle(row.fecha), row.categoryLabel),
       modifier = modifier.fillMaxWidth(),
+      onClick = onClick,
   )
 }
 
@@ -103,6 +114,7 @@ private fun LazyListScope.historyContent(
     actions: HistoryActions,
     onAdd: () -> Unit,
     showLoading: Boolean,
+    onOpenMovimiento: ((String) -> Unit)?,
 ) {
   val content = uiState.period.cachedValue
   item(key = "history-context") { HistoryPeriodHeader(uiState, actions) }
@@ -156,7 +168,9 @@ private fun LazyListScope.historyContent(
           style = TallybookTheme.typography.label,
       )
     }
-    items(group.rows, key = { it.key }, contentType = { "movimiento" }) { row -> HistoryRow(row) }
+    items(group.rows, key = { it.key }, contentType = { "movimiento" }) { row ->
+      HistoryRow(row, onClick = onOpenMovimiento?.let { open -> { open(row.movimiento.id) } })
+    }
   }
 }
 

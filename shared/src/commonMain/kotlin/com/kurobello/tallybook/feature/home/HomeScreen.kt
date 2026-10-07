@@ -36,6 +36,7 @@ internal fun HomeRoute(
     onSearch: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel(),
+    onOpenMovimiento: ((String) -> Unit)? = null,
 ) {
   val state = rememberHomeRouteState(viewModel)
   HomeScreen(
@@ -46,6 +47,7 @@ internal fun HomeRoute(
       onSearch = onSearch,
       modifier = modifier,
       bottomBarClearance = bottomBarClearance,
+      onOpenMovimiento = onOpenMovimiento,
   )
 }
 
@@ -59,6 +61,7 @@ internal fun HomeScreen(
     onSearch: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     bottomBarClearance: Dp = TallybookTheme.spacing.space0,
+    onOpenMovimiento: ((String) -> Unit)? = null,
 ) {
   val presentation by rememberHomePresentation(uiState)
   val renderedState = presentation.state
@@ -90,7 +93,7 @@ internal fun HomeScreen(
         renderedState.error != null -> item { HomeError(onRetry) }
         !renderedState.hasSnapshot -> homeLoading(presentation.showLoading)
         renderedState.isEmpty -> item { HomeEmpty(onAddMovimiento) }
-        else -> homePopulated(renderedState)
+        else -> homePopulated(renderedState, onOpenMovimiento)
       }
       if (onOpenCatalog != null) {
         item {

@@ -261,7 +261,10 @@ internal fun HomeEmpty(onAddMovimiento: () -> Unit) {
   }
 }
 
-internal fun LazyListScope.homePopulated(uiState: HomeUiState) {
+internal fun LazyListScope.homePopulated(
+    uiState: HomeUiState,
+    onOpenMovimiento: ((String) -> Unit)? = null,
+) {
   item {
     BalanceCard(
         summary = uiState.summary,
@@ -280,6 +283,7 @@ internal fun LazyListScope.homePopulated(uiState: HomeUiState) {
     MovimientoRow(
         movimiento = movimiento,
         categoria = uiState.categoriasById[movimiento.categoriaId],
+        onClick = onOpenMovimiento?.let { open -> { open(movimiento.id) } },
         modifier = Modifier.fillMaxWidth().padding(bottom = TallybookTheme.spacing.space10),
     )
   }

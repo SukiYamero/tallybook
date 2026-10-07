@@ -1,6 +1,9 @@
 package com.kurobello.tallybook.core.ui.movimiento
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -8,8 +11,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -24,13 +30,16 @@ import com.kurobello.tallybook.core.ui.category.CategoryAvatar
 import com.kurobello.tallybook.core.ui.category.neutralCategoryTintColors
 import com.kurobello.tallybook.core.ui.component.TallybookSurface
 import com.kurobello.tallybook.core.ui.component.TallybookSurfaceDefaults
+import com.kurobello.tallybook.core.ui.component.TallybookTapFeedback
 import com.kurobello.tallybook.core.ui.component.TallybookText
+import com.kurobello.tallybook.core.ui.component.rememberTallybookTapFeedback
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.core.ui.theme.TallybookTypeScale
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.expense
 import tallybook.shared.generated.resources.income
+import tallybook.shared.generated.resources.movimiento_open_detail
 
 internal data class MovimientoRowText(
     val primary: String,
@@ -47,24 +56,19 @@ internal fun MovimientoRowContent(
     modifier: Modifier = Modifier,
     maxDescriptionLines: Int = 2,
     maxSubtitleLines: Int = 1,
+    onClick: (() -> Unit)? = null,
 ) {
   val amountText = signedMovimientoAmountText(movimiento.monto, movimiento.tipo)
-  val typeLabel =
-      stringResource(
-          if (movimiento.tipo == TipoMovimiento.INGRESO) Res.string.income else Res.string.expense
-      )
-  val description =
-      listOfNotNull(
-              text.primary,
-              text.secondary,
-              text.categoryLabel.takeUnless { it == text.primary },
-              typeLabel,
-              amountText,
-              movimiento.monto.moneda.name,
-          )
-          .joinToString(", ")
+  val description = movimientoRowDescription(movimiento, text, amountText)
+  val interactions = remember { MutableInteractionSource() }
+  val isPressed by interactions.collectIsPressedAsState()
+  val tapFeedback = rememberTallybookTapFeedback()
+  val rowModifier = movimientoRowClickModifier(modifier, onClick, interactions, tapFeedback)
   TallybookSurface(
-      modifier = modifier.semantics(mergeDescendants = true) { contentDescription = description },
+      modifier =
+          rowModifier.semantics(mergeDescendants = true) { contentDescription = description },
+      isPressed = isPressed,
+      hasTapFeedback = tapFeedback.isActive,
       style =
           TallybookSurfaceDefaults.cardStyle()
               .copy(
@@ -102,6 +106,49 @@ internal fun MovimientoRowContent(
       )
     }
   }
+}
+
+@Composable
+private fun movimientoRowDescription(
+    movimiento: Movimiento,
+    text: MovimientoRowText,
+    amountText: String,
+): String {
+  val typeLabel =
+      stringResource(
+          if (movimiento.tipo == TipoMovimiento.INGRESO) Res.string.income else Res.string.expense
+      )
+  return listOfNotNull(
+          text.primary,
+          text.secondary,
+          text.categoryLabel.takeUnless { it == text.primary },
+          typeLabel,
+          amountText,
+          movimiento.monto.moneda.name,
+      )
+      .joinToString(", ")
+}
+
+@Composable
+private fun movimientoRowClickModifier(
+    modifier: Modifier,
+    onClick: (() -> Unit)?,
+    interactions: MutableInteractionSource,
+    tapFeedback: TallybookTapFeedback,
+): Modifier {
+  val label = stringResource(Res.string.movimiento_open_detail)
+  return if (onClick == null) modifier
+  else
+      modifier.clickable(
+          interactionSource = interactions,
+          indication = null,
+          role = Role.Button,
+          onClickLabel = label,
+          onClick = {
+            tapFeedback.trigger()
+            onClick()
+          },
+      )
 }
 
 @Composable

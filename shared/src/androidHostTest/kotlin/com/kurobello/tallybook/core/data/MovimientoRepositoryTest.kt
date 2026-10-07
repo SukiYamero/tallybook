@@ -300,6 +300,43 @@ class MovimientoRepositoryTest {
   }
 
   @Test
+  fun `capture rejects nonrestorable legacy rows and preserves their exact stored fields`() =
+      runTest {
+        JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+          TallybookDatabase.Schema.create(driver)
+          val database = TallybookDatabase(driver)
+          val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+          val whitespace = movimiento("whitespace-category", categoriaId = " ")
+          assertEquals(DataOutcome.Success(Unit), repository.insert(whitespace))
+          val oversized =
+              movimiento(
+                  "legacy-description",
+                  descripcion = "x".repeat(MOVIMIENTO_DESCRIPTION_MAX_LENGTH + 1),
+              )
+          database.movimientoQueries.insertMovimiento(
+              oversized.id,
+              oversized.tipo.name,
+              oversized.monto.minorUnits,
+              oversized.monto.moneda.name,
+              oversized.fecha.toString(),
+              oversized.categoriaId,
+              oversized.descripcion,
+              oversized.createdAt.toString(),
+          )
+          for (row in listOf(whitespace, oversized)) {
+            val raw = database.movimientoQueries.selectMovimientoById(row.id).executeAsOne()
+            assertEquals(DataOutcome.Success(row), repository.getById(row.id))
+            assertInvalid(repository.deleteAndCapture(row.id))
+            assertEquals(
+                raw,
+                database.movimientoQueries.selectMovimientoById(row.id).executeAsOne(),
+            )
+            assertEquals(DataOutcome.Success(row), repository.getById(row.id))
+          }
+        }
+      }
+
+  @Test
   fun `restore rejects invalid snapshots without writing`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       TallybookDatabase.Schema.create(driver)

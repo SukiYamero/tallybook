@@ -215,6 +215,22 @@ resolve to AndroidX 1.11.2 beneath the common Compose 1.11.1 coordinates. No dep
   does not substitute for a VoiceOver runtime check.
 - Modal measurement/layer references already live in Add's delivery document. Reuse those contracts
   and verify the actual sheet → hidden → root snackbar sequence; a timer unit test cannot prove it.
+- [Published Lifecycle 2.11.0-beta01 iOS source](https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel-compose-iosarm64/2.11.0-beta01/lifecycle-viewmodel-compose-iosarm64-2.11.0-beta01-sources.jar)
+  confirms the remembered child-owner/provider cleanup contract. Existing PrimaryEntries uses this
+  API family. Host Activity recreation and active-scene disposal tests exercise the actual provider;
+  physical iOS scene teardown remains a separate gate.
+- [Versioned NavigationBackHandler source](https://github.com/JetBrains/compose-multiplatform-core/blob/v1.11.1/navigationevent/navigationevent-compose/src/commonMain/kotlin/androidx/navigationevent/compose/NavigationEventHandler.kt)
+  supplies explicit Back handling without deprecated Compose BackHandler. Published Native
+  navigationevent-compose 1.0.1 and Android navigationevent-compose 1.0.2 signatures were audited;
+  common 1.0.1 is resolved transitively by Navigation 3. Full nested Back is a target integration check.
+- The Android hook must be composed inside the native modal content: published
+  [Unstyled 2.9.0 modal sources](https://repo.maven.apache.org/maven2/com/composables/composeunstyled-modal-android/2.9.0/composeunstyled-modal-android-2.9.0-sources.jar)
+  create a separate ComposeView in a ComponentDialog. Published
+  [ComponentDialog 1.13.0 sources](https://dl.google.com/dl/android/maven2/androidx/activity/activity/1.13.0/activity-1.13.0-sources.jar)
+  install its own navigation dispatcher; published
+  [navigationevent-compose Android 1.0.2 sources](https://dl.google.com/dl/android/maven2/androidx/navigationevent/navigationevent-compose-android/1.0.2/navigationevent-compose-android-1.0.2-sources.jar)
+  resolve that owner through the modal LocalView tree. An Activity-level hook does not establish
+  Back handling for this window. Physical KEYCODE_BACK must demonstrate the relocated integration.
 - SQL transaction integration is exercised through the project's real SQLDelight drivers. Added
   queries do not change the table schema; confirm generated APIs/affected-row results from the
   resolved version. Do not hand-edit generated queries or historical schema snapshots.

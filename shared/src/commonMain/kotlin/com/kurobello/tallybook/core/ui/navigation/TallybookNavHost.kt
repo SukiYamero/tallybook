@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.Dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.serialization.NavBackStackSerializer
@@ -27,6 +28,9 @@ import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSessionLifec
 import com.kurobello.tallybook.feature.history.ui.HistoryRoute
 import com.kurobello.tallybook.feature.home.HomeRoute
 import com.kurobello.tallybook.feature.movimientos.ui.AddMovimientoSheetRoute
+import com.kurobello.tallybook.feature.movimientos.ui.ManageMovimientoRoute
+import com.kurobello.tallybook.feature.movimientos.ui.MovimientoFeedbackRoute
+import com.kurobello.tallybook.feature.movimientos.ui.rememberOpenMovimiento
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
 import com.kurobello.tallybook.feature.search.ui.SearchRoute
 import kotlinx.serialization.KSerializer
@@ -46,6 +50,9 @@ fun TallybookNavHost(
           navigation.value.selected == Search && !navigation.value.catalogOpen
         }
       }
+  val management = rememberManageMovimientoViewModel(modals)
+  val managementState by management.uiState.collectAsStateWithLifecycle()
+  val openManagement = rememberOpenMovimiento(modals)
   var nextFocusToken by remember { mutableLongStateOf(0L) }
   var focusToken by remember { mutableStateOf<Long?>(null) }
   val openSearch: () -> Unit = {
@@ -61,26 +68,18 @@ fun TallybookNavHost(
       navigation.value = navigation.value.select(destination)
     }
   }
-  val openCatalog: (() -> Unit)? =
-      if (developmentToolsEnabled) {
-        {
-          if (modals.canNavigate) {
-            focusToken = null
-            navigation.value = navigation.value.openCatalog()
-          }
-        }
-      } else null
-  TallybookAppShell(
-      bottomBar =
-          if (navigation.value.catalogOpen) null
-          else
-              ({
-                TallybookBottomNavigation(
-                    onAddMovement = openCreation,
-                    selectedDestination = navigation.value.selected,
-                    onSelectDestination = select,
-                )
-              }),
+  val openCatalog =
+      developmentCatalogAction(developmentToolsEnabled, modals) {
+        focusToken = null
+        navigation.value = navigation.value.openCatalog()
+      }
+  PrimaryShell(
+      state = navigation.value,
+      onAdd = openCreation,
+      onSelect = select,
+      overlay = { clearance ->
+        MovimientoFeedbackRoute(managementState, management, modals, clearance)
+      },
   ) { clearance ->
     PrimaryNavigationDisplay(
         navigation,
@@ -89,11 +88,43 @@ fun TallybookNavHost(
         modals,
         openCreation,
         openSearch,
+        openManagement,
         focusToken,
         { token -> if (focusToken == token) focusToken = null },
     )
   }
   AddMovimientoSessionRoute(sheetSession)
+  ManageMovimientoRoute(managementState, management)
+}
+
+private fun developmentCatalogAction(
+    enabled: Boolean,
+    modals: PrimaryModalCoordinator,
+    onOpen: () -> Unit,
+): (() -> Unit)? = if (enabled) ({ if (modals.canNavigate) onOpen() }) else null
+
+@Composable
+private fun PrimaryShell(
+    state: PrimaryNavigationState,
+    onAdd: () -> Unit,
+    onSelect: (Destination) -> Unit,
+    overlay: @Composable (Dp) -> Unit,
+    content: @Composable (Dp) -> Unit,
+) {
+  TallybookAppShell(
+      overlay = overlay,
+      bottomBar =
+          if (state.catalogOpen) null
+          else
+              ({
+                TallybookBottomNavigation(
+                    onAddMovement = onAdd,
+                    selectedDestination = state.selected,
+                    onSelectDestination = onSelect,
+                )
+              }),
+      content = content,
+  )
 }
 
 @Suppress("LongParameterList")
@@ -105,6 +136,7 @@ private fun PrimaryNavigationDisplay(
     modals: PrimaryModalCoordinator,
     openCreation: () -> Unit,
     openSearch: () -> Unit,
+    openManagement: (String) -> Unit,
     focusToken: Long?,
     acknowledgeFocus: (Long) -> Unit,
 ) {
@@ -119,11 +151,13 @@ private fun PrimaryNavigationDisplay(
                     bottomBarClearance = clearance,
                     onOpenCatalog = openCatalog,
                     onSearch = openSearch,
+                    onOpenMovimiento = openManagement,
                 )
-            History -> HistoryRoute(openCreation, clearance)
+            History -> HistoryRoute(openCreation, clearance, onOpenMovimiento = openManagement)
             Search ->
                 SearchRoute(
                     onAdd = openCreation,
+                    onOpenMovimiento = openManagement,
                     bottomBarClearance = clearance,
                     modals = modals,
                     focusRequest = focusToken,

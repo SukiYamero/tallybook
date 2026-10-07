@@ -261,33 +261,29 @@ internal class MovimientoRepositoryImpl(
       return DataOutcome.Failure(it)
     }
     return runLocalDataOperation(dispatcher) {
-      database.transactionWithResult {
-        val queries = database.movimientoQueries
-        val captured =
-            queries.selectMovimientoById(id).executeAsOneOrNull()?.toDomain()
-                ?: return@transactionWithResult null
-        check(queries.deleteMovimiento(id).value == 1L)
-        captured
-      }
-    }
+          database.transactionWithResult {
+            val queries = database.movimientoQueries
+            val captured = queries.selectMovimientoById(id).executeAsOneOrNull()?.toDomain()
+            val invalid = captured?.let(::validateRestorable)
+            when {
+              invalid != null -> DataOutcome.Failure(invalid)
+              captured == null -> DataOutcome.Success(null)
+              else -> {
+                check(queries.deleteMovimiento(id).value == 1L)
+                DataOutcome.Success(captured)
+              }
+            }
+          }
+        }
+        .fold(onSuccess = { it }, onFailure = { DataOutcome.Failure(it) })
   }
 
   override suspend fun restoreDeleted(
       movimiento: Movimiento
   ): DataOutcome<MovimientoRestoreResult> {
-    (validateId(movimiento.id)
-            ?: validateChanges(
-                MovimientoChanges(
-                    movimiento.tipo,
-                    movimiento.monto,
-                    movimiento.fecha,
-                    movimiento.categoriaId,
-                    movimiento.descripcion,
-                )
-            ))
-        ?.let {
-          return DataOutcome.Failure(it)
-        }
+    validateRestorable(movimiento)?.let {
+      return DataOutcome.Failure(it)
+    }
     return runLocalDataOperation(dispatcher) {
       database.transactionWithResult {
         val existing =
@@ -327,6 +323,18 @@ internal class MovimientoRepositoryImpl(
             .value == 1L
     )
   }
+
+  private fun validateRestorable(movimiento: Movimiento): DataError.InvalidInput? =
+      validateId(movimiento.id)
+          ?: validateChanges(
+              MovimientoChanges(
+                  movimiento.tipo,
+                  movimiento.monto,
+                  movimiento.fecha,
+                  movimiento.categoriaId,
+                  movimiento.descripcion,
+              )
+          )
 
   private fun validateId(id: String): DataError.InvalidInput? =
       if (id.isBlank()) DataError.InvalidInput("Movimiento id must not be blank") else null

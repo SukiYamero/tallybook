@@ -54,7 +54,9 @@ class HistoryLoadingPreviewActivity : ComponentActivity() {
     setContent {
       val density = LocalDensity.current
       CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
-        TallybookTheme(darkTheme = dark) { HistoryScreen(state, NoActions, {}, 0.dp) }
+        TallybookTheme(darkTheme = dark) {
+          HistoryScreen(state, NoActions, HistoryNavigationCallbacks({}), 0.dp)
+        }
       }
     }
   }

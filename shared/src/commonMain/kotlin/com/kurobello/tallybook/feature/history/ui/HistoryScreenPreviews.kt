@@ -82,7 +82,9 @@ internal fun HistoryLargeTextPreview() {
 
 @Composable
 private fun HistoryPreview(state: HistoryUiState, dark: Boolean) {
-  TallybookTheme(darkTheme = dark) { HistoryScreen(state, PreviewActions, {}, 0.dp) }
+  TallybookTheme(darkTheme = dark) {
+    HistoryScreen(state, PreviewActions, HistoryNavigationCallbacks({}), 0.dp)
+  }
 }
 
 private val historyPreviewFailure =

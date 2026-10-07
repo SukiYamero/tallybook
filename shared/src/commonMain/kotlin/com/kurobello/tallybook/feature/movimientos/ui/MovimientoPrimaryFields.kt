@@ -15,27 +15,31 @@ import com.kurobello.tallybook.core.ui.category.CategoryAvatar
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
 import com.kurobello.tallybook.core.ui.component.TallybookInputLabel
 import com.kurobello.tallybook.core.ui.component.TallybookSelectionField
+import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
-import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoActions
-import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoUiState
+import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormActions
+import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormState
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category
 import tallybook.shared.generated.resources.category_required
+import tallybook.shared.generated.resources.movimiento_future_date
+import tallybook.shared.generated.resources.unknown_category
 
 internal data class MovimientoFieldFocus(
     val amount: FocusRequester = FocusRequester(),
     val category: FocusRequester = FocusRequester(),
+    val amountModifier: Modifier = Modifier,
 )
 
 @Suppress("LongMethod")
 @Composable
 internal fun MovimientoPrimaryFields(
-    uiState: AddMovimientoUiState,
-    actions: AddMovimientoActions,
+    uiState: MovimientoFormState,
+    actions: MovimientoFormActions,
     categoryEntry: MovimientoCategoryEntry,
     fieldFocus: MovimientoFieldFocus,
-    amountModifier: Modifier,
+    interactionEnabled: Boolean = true,
 ) {
   val focusManager = LocalFocusManager.current
   val selectedCategoria = uiState.categorias.firstOrNull { it.id == uiState.selectedCategoriaId }
@@ -46,18 +50,22 @@ internal fun MovimientoPrimaryFields(
   Column {
     MovimientoTypeSelector(
         selected = uiState.tipo,
-        enabled = !uiState.isSubmitting,
+        enabled = interactionEnabled && !uiState.isSubmitting,
         onSelected = actions::onTipoChanged,
         modifier = Modifier.padding(top = TallybookTheme.spacing.space8),
     )
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
     TallybookSelectionField(
         label = stringResource(Res.string.category),
-        value = selectedCategoria?.nombre,
+        value =
+            selectedCategoria?.nombre
+                ?: stringResource(Res.string.unknown_category).takeIf {
+                  uiState.selectedCategoriaId != null
+                },
         placeholder = stringResource(Res.string.category_required),
         onClick = categoryEntry.onOpen,
         modifier = Modifier.focusRequester(fieldFocus.category),
-        enabled = !uiState.isSubmitting && !uiState.isLoading,
+        enabled = interactionEnabled && !uiState.isSubmitting && !uiState.isLoading,
         message = categoryMessage,
         leadingContent = selectedCategoria?.let { categoria -> { CategoryAvatar(categoria) } },
         labelContent = {
@@ -72,10 +80,26 @@ internal fun MovimientoPrimaryFields(
     )
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
     MovimientoDateField(
-        state = MovimientoDateFieldState(fecha = uiState.fecha, enabled = !uiState.isSubmitting),
+        state =
+            uiState.maxSelectableDate?.let {
+              MovimientoDateFieldState(
+                  uiState.fecha,
+                  interactionEnabled && !uiState.isSubmitting,
+                  it,
+              )
+            }
+                ?: MovimientoDateFieldState(
+                    fecha = uiState.fecha,
+                    enabled = interactionEnabled && !uiState.isSubmitting,
+                ),
         onFechaChanged = actions::onFechaChanged,
         modifier = Modifier.align(Alignment.CenterHorizontally),
     )
+    if (uiState.isFechaInvalid)
+        TallybookText(
+            stringResource(Res.string.movimiento_future_date),
+            color = TallybookTheme.colors.status.danger.base,
+        )
     MovimientoAmountField(
         state =
             MovimientoAmountFieldState(
@@ -84,12 +108,12 @@ internal fun MovimientoPrimaryFields(
                 error = uiState.amountError?.message(),
                 prompt = movimientoAmountPrompt(uiState.tipo),
             ),
-        enabled = !uiState.isSubmitting && !uiState.isLoading,
+        enabled = interactionEnabled && !uiState.isSubmitting && !uiState.isLoading,
         callbacks =
             MovimientoAmountFieldCallbacks(
                 onValueChange = actions::onAmountChanged,
                 focusRequester = fieldFocus.amount,
-                inputModifier = amountModifier,
+                inputModifier = fieldFocus.amountModifier,
                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
             ),
         modifier = Modifier.padding(top = TallybookTheme.spacing.space40),

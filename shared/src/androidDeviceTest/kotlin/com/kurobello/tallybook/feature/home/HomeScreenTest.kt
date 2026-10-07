@@ -60,6 +60,16 @@ class HomeScreenTest {
   @get:Rule val composeRule = createComposeRule()
 
   @Test
+  fun realMovementRowEmitsItsStoredId() {
+    var opened: String? = null
+    composeRule.setContent {
+      TallybookTheme { HomeScreen(populatedState, {}, {}, onOpenMovimiento = { opened = it }) }
+    }
+    composeRule.onNodeWithText("Comida").performClick()
+    composeRule.runOnIdle { assertEquals(movimiento.id, opened) }
+  }
+
+  @Test
   fun outerShellKeepsBrandAndSearchVisibleWhileLoading() {
     val appName = localizedString(Res.string.app_name)
     val searchPlaceholder = localizedString(Res.string.home_search_placeholder)

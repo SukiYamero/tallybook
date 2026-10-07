@@ -1,45 +1,51 @@
 # Continuation ledger
 
-- Objective: implement the approved detail/edit/delete/Undo contract; reusable snackbar has its own
-  commit and can run in parallel with persistence. No tags, sync or dependency upgrades.
-- Baseline: `2143ce3`; existing managed worktree `/Users/sukiyamero/.codex/worktrees/0713/tallybook`,
-  detached HEAD. Planning documents are the only pre-existing dirty work and belong to this feature.
-- Agents: `snackbar` owns Wave 1 Task 1; `persistence` owns Wave 1 Task 2. Both use
-  `gpt-6.1-sol` / `high`. Integration starts after both producer checks; final reviewer is independent.
-- Shared resources: root owns Gradle workflow `21e0b8db07b796162f33b26fbe244098`, Git index/commits,
-  canonical docs and physical device commands. Workers request RED/GREEN checks and never run Gradle.
-- Baseline evidence: selected Money, MovimientoRepository, AddMovimientoViewModel and
-  PrimaryModalCoordinator host tests passed via compact wrapper; no Kotlin source changes yet.
-  Existing Gradle 10 deprecation warning remains inherited.
-- Target: user selected Xiaomi M2012K11AG, serial `aaa9cea2`, first; authorized temporary test records.
-  iPhone is connected but is not the selected first target. Never use simulators or production fixtures.
-- API gate: current Android/iOS configurations resolved; common Compose 1.11.1 / AndroidX1.11.2,
-  SQLDelight2.3.2, Koin4.2.2, Unstyled2.9.0, Lifecycle2.11.0-beta01 and Navigation3 1.1.1 confirmed.
-  Isolated diagnostic task needs `--no-configuration-cache` because it closes over Project;
-  repository build settings remain unchanged. Source links live in each task/overview.
-- Current task state: Wave 1 GREEN: 9 snackbar timing + 14 repository + 10 reactive tests pass.
-  Formatting applied. Combined target build found snackbar test DpRect API errors and structural
-  lint findings; owners corrected the cited sources. Corrected target/style run is in progress.
-  Root-owner audit identifies a remembered child owner and explicit NavigationBackHandler as the
-  existing-API integration path; no dependency upgrade is needed.
-- Next: resolve supported dependency/platform contracts, observe focused failures, implement producers,
-  verify them, then dispatch one integration owner. Required runtime gates remain unconfirmed.
+- Objective: approved detail/edit/delete/Undo feature; reusable snackbar has an independent commit.
+  No tags, sync, dependency upgrades or cross-process trash.
+- Baseline: `2143ce3`; managed worktree
+  `/Users/sukiyamero/.codex/worktrees/0713/tallybook`. Root owns Git, builds, device commands and docs.
+  SOL6.1 HIGH workers delivered snackbar, persistence and integration; an independent reviewer
+  approved the final source including confirmed SQLite/IME/modal corrections.
+- Commits: `8cb47ea` execution contract; `c59a4ee` independent snackbar;
+  `f5262b5` persistence. Integration is the feature branch HEAD at handoff.
+- Current source verification: 104 focused tests across 18 suites passed after modal corrections;
+  final shell callback extraction then passed 24 navigation/owner regressions. Zero failures/errors/skips.
+  Current Android production/device APK builds, iOS Arm64 production/test compilation, Detekt and
+  ktfmtCheck pass. Inherited Gradle 10 deprecation remains. Device formatter task is explicit because
+  shared ktfmtFormat does not include AndroidDeviceTest. Workflow `21e0b8db07b796162f33b26fbe244098`
+  is finished; its compact wrapper removed only wrapper-owned logs.
+- Required source gates: actual resolved versions and primary sources are recorded in the overview.
+  Child ViewModel ownership has real Activity/Koin/SQLite retention/disposal tests. Dialog Back uses
+  its own current window dispatcher; read-state detents cannot overwrite the detail measurement.
+  These host/source proofs do not establish actual iOS scene teardown.
+- Physical target: user confirmed Xiaomi M2012K11AG `aaa9cea2` and authorized temporary records.
+  Current APK was installed and launched. Home/History/Search opened the sole fixture's detail.
+  Actual Back closes Detail; clean Cancel returns complete detail; dirty Cancel prompts discard and
+  preserves saved value. Edit opens without IME; Save/Cancel are absent with IME and restored after
+  dismissal. Nested category Back returns to Edit.
+- Physical mutations: only `CodexManageSmoke0713` was created/changed. Expense 123 was updated to
+  Income 124; Search showed the retained query/new row and success feedback, History/Home reread it.
+  Delete confirmation Cancel preserved it; Delete/Undo restored it with success feedback.
+  Undo worked after 12 seconds in background and after more than 12 seconds covered by Add.
+  Final delete plus Close released Undo. Retained Search query showed 0 results and no fixture row.
+  No original user record was modified; no temporary movement remains.
+- Automated Android device runtime is unconfirmed: instrumentation stalled before assertions at 150s;
+  one bounded retry after Dozing-to-Awake correction also stalled at 45s. Do not retry unchanged
+  infrastructure or treat compiled fixture tests as executed. Manual Xiaomi checks provide the
+  above runtime evidence, not an assistive-technology/large-text audit.
+- Outstanding acceptance: physical iOS scene teardown/safe-area/VoiceOver, actual TalkBack/large-text
+  checks and user's acceptance. Connected iPhone is not the confirmed target; the pending target
+  question has no answer. Keep IN_PROGRESS; no merge/push or spec compaction before user acceptance.
+  Promote canonical domain/UI docs only through the repository's accepted-feature workflow.
 
 ## Current rulings
 
-- Keep existing public repository boundary, so new exposed mutation parameter/result types are public;
-  internal implementation helpers remain internal. Avoid an unrelated visibility migration.
-- An unreadable existing same-ID row is a restore conflict, not a retryable failure, and is preserved.
-  Compare safely within the pure mapping boundary; storage exceptions retain normal repository handling.
-- Use common accessibility timeout recommendations without an unrequested iOS adapter. The resolved
-  Skiko/iOS default returns the baseline; VoiceOver-adapted expiry is not claimed. If the physical
-  action window is insufficient, target adaptation becomes required before acceptance.
-- Keep the cohesive typed repository/API with narrowly explained TooManyFunctions annotations,
-  following existing SearchActions/SearchViewModel precedent. No global threshold change or other
-  suppression is permitted; final review must assess whether the repository remains one responsibility.
-- Root management uses a remembered child ViewModel owner outside primary entries: preserve Android
-  configuration retention and explicitly clear child ownership on iOS scene disposal. Use the current
-  Lifecycle provider API, not a platform adapter. Prove disposal/retention at the integration gate.
-- Give management an optional reason-specific Back hook in the shared sheet, preserving Add defaults.
-  Use existing NavigationBackHandler APIs; deprecated CMP BackHandler and nonAndroid Unstyled
-  EscapeHandler do not establish supported iOS behavior.
+- SQLDelight is the persisted owner; one shell child ViewModel owns session/draft/Undo. No second
+  form/catalog state owner, no saved-state financial snapshots and no speculative resume epoch.
+- Keep the cohesive repository boundary and public mutation types. Internal helpers stay internal;
+  narrowly explained TooManyFunctions annotations follow existing precedent. No global rule changes.
+- An unreadable same-ID row is a preserved terminal restore conflict. Capture validates strict
+  restore eligibility before deletion inside the transaction; legacy raw delete remains unchanged.
+- Feedback callbacks evaluate live foreground/modal admission and token/revision at delivery.
+  iOS's resolved accessibility manager returns baseline duration; VoiceOver extension is not claimed.
+- Preserve Add defaults, one-shot Channel conventions and origin-safe hidden callbacks.

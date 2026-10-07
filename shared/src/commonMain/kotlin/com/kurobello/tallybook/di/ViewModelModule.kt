@@ -7,6 +7,7 @@ import com.kurobello.tallybook.feature.history.viewmodel.HistoryViewModel
 import com.kurobello.tallybook.feature.home.HomeViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoRepositories
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
+import com.kurobello.tallybook.feature.movimientos.viewmodel.ManageMovimientoViewModel
 import com.kurobello.tallybook.feature.search.viewmodel.SearchDateProvider
 import com.kurobello.tallybook.feature.search.viewmodel.SearchRepositories
 import com.kurobello.tallybook.feature.search.viewmodel.SearchViewModel
@@ -38,6 +39,14 @@ internal val viewModelModule = module {
         repositories = AddMovimientoRepositories(preferences = get(), categorias = get()),
         movimientoRepository = get(),
         idGenerator = get(),
+        clock = get(),
+        timeZoneProvider = get(),
+    )
+  }
+  viewModel {
+    ManageMovimientoViewModel(
+        movimientoRepository = get(),
+        categoriaRepository = get(),
         clock = get(),
         timeZoneProvider = get(),
     )

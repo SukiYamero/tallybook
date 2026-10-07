@@ -10,13 +10,14 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoActions
-import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoUiState
+import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormActions
+import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormState
 
 private enum class CategoryEntryPhase {
   NOT_STARTED,
   CHOOSING,
   CLOSING_AFTER_SELECTION,
+  CLOSING_AFTER_DISMISSAL,
   FOCUSING_AMOUNT,
   EDITING,
 }
@@ -32,18 +33,18 @@ internal data class MovimientoCategoryEntry(
 
 @Composable
 internal fun rememberMovimientoCategoryEntry(
-    uiState: AddMovimientoUiState,
-    actions: AddMovimientoActions,
-    startWithCategory: Boolean,
+    uiState: MovimientoFormState,
+    actions: MovimientoFormActions,
     amountFocusRequester: FocusRequester,
+    policy: MovimientoCategoryEntryPolicy = MovimientoCategoryEntryPolicy(),
 ): MovimientoCategoryEntry {
   var phase by rememberSaveable { mutableStateOf(CategoryEntryPhase.NOT_STARTED) }
   val focusManager = LocalFocusManager.current
   val keyboardController = LocalSoftwareKeyboardController.current
 
-  LaunchedEffect(startWithCategory, uiState.isLoading, uiState.error) {
+  LaunchedEffect(policy.startWithCategory, uiState.isLoading, uiState.error) {
     if (phase != CategoryEntryPhase.NOT_STARTED) return@LaunchedEffect
-    if (startWithCategory && !uiState.isLoading && uiState.error == null) {
+    if (policy.startWithCategory && !uiState.isLoading && uiState.error == null) {
       phase =
           if (uiState.selectedCategoriaId == null) CategoryEntryPhase.CHOOSING
           else CategoryEntryPhase.EDITING
@@ -67,18 +68,29 @@ internal fun rememberMovimientoCategoryEntry(
       blocksValidationFocus =
           phase != CategoryEntryPhase.EDITING && phase != CategoryEntryPhase.NOT_STARTED,
       onOpen = {
-        focusManager.clearFocus(force = true)
-        phase = CategoryEntryPhase.CHOOSING
+        if (policy.interactionEnabled) {
+          focusManager.clearFocus(force = true)
+          phase = CategoryEntryPhase.CHOOSING
+        }
       },
       onSelect = {
         actions.onCategoriaSelected(it)
         phase = CategoryEntryPhase.CLOSING_AFTER_SELECTION
       },
-      onDismiss = { if (phase == CategoryEntryPhase.CHOOSING) phase = CategoryEntryPhase.EDITING },
-      onHidden = {
-        if (phase == CategoryEntryPhase.CLOSING_AFTER_SELECTION) {
-          phase = CategoryEntryPhase.FOCUSING_AMOUNT
-        }
+      onDismiss = {
+        if (phase == CategoryEntryPhase.CHOOSING)
+            phase =
+                if (policy.focusAmountAfterSelection) CategoryEntryPhase.EDITING
+                else CategoryEntryPhase.CLOSING_AFTER_DISMISSAL
       },
+      onHidden = { phase = phase.afterHidden(policy.focusAmountAfterSelection) },
   )
 }
+
+private fun CategoryEntryPhase.afterHidden(focusAmount: Boolean): CategoryEntryPhase =
+    when (this) {
+      CategoryEntryPhase.CLOSING_AFTER_DISMISSAL -> CategoryEntryPhase.EDITING
+      CategoryEntryPhase.CLOSING_AFTER_SELECTION ->
+          if (focusAmount) CategoryEntryPhase.FOCUSING_AMOUNT else CategoryEntryPhase.EDITING
+      else -> this
+    }

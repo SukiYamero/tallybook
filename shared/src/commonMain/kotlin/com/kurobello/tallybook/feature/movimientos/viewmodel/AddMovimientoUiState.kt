@@ -12,25 +12,25 @@ internal enum class MovimientoFormError {
 }
 
 internal data class AddMovimientoUiState(
-    val tipo: TipoMovimiento,
-    val amountInput: String,
-    val fecha: LocalDate,
-    val moneda: Moneda,
-    val categorias: List<Categoria>,
-    val selectedCategoriaId: String?,
-    val descripcion: String,
-    val isLoading: Boolean,
-    val isSubmitting: Boolean,
-    val submitAttempted: Boolean,
-    val error: MovimientoFormError?,
+    override val tipo: TipoMovimiento,
+    override val amountInput: String,
+    override val fecha: LocalDate,
+    override val moneda: Moneda,
+    override val categorias: List<Categoria>,
+    override val selectedCategoriaId: String?,
+    override val descripcion: String,
+    override val isLoading: Boolean,
+    override val isSubmitting: Boolean,
+    override val submitAttempted: Boolean,
+    override val error: MovimientoFormError?,
     val hasUnsavedChanges: Boolean = false,
-) {
+) : MovimientoFormState {
   private val amountResult by lazy { parseAmountInput(amountInput, moneda) }
 
-  val amountError: AmountInputError?
+  override val amountError: AmountInputError?
     get() = (amountResult as? AmountInputResult.Invalid)?.reason?.takeIf { submitAttempted }
 
-  val isCategoriaMissing: Boolean
+  override val isCategoriaMissing: Boolean
     get() = submitAttempted && !hasSelectedCategoria
 
   val canSubmit: Boolean

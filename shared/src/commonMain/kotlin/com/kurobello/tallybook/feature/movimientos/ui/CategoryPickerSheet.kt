@@ -53,6 +53,7 @@ fun CategoryPickerSheet(
     onShown: () -> Unit = {},
     headerContent: (@Composable () -> Unit)? = null,
     paneTitle: String? = null,
+    onBack: (() -> Unit)? = null,
 ) {
   val tree = remember(categorias) { buildCategoryTree(categorias) }
   var query by rememberSaveable { mutableStateOf("") }
@@ -122,7 +123,12 @@ fun CategoryPickerSheet(
       visible = visible,
       paneTitle = resolvedPaneTitle,
       callbacks =
-          ModalBottomSheetCallbacks(onDismiss = onDismiss, onHidden = onHidden, onShown = onShown),
+          ModalBottomSheetCallbacks(
+              onDismiss = onDismiss,
+              onHidden = onHidden,
+              onShown = onShown,
+              onBack = onBack,
+          ),
       layout = ModalBottomSheetLayout(modifier = modifier),
   ) {
     CategoryPickerContent(

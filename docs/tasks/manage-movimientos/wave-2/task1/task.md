@@ -117,16 +117,16 @@ a dismissing sheet. No second snackbar host in individual primary entries.
 
 ## Test-first integration slices
 
-- [ ] Pure input tests: exact round-trip prefill for COP/USD/CLP and a Long money boundary;
+- [x] Pure input tests: exact round-trip prefill for COP/USD/CLP and a Long money boundary;
       normalization/no-op Save; parent/child/missing category preservation; changed clock date error.
-- [ ] Session tests: real-ID loading, read failure→retry, missing record; detail→edit→clean/dirty
+- [x] Session tests: real-ID loading, read failure→retry, missing record; detail→edit→clean/dirty
       cancel; discard resets only the draft; save failure retains typed input; duplicate Save/Delete
       submits once; closing rejects input and old hidden callbacks; disposed reads cannot publish.
-- [ ] Undo tests with one scheduler: delete capture is sole snapshot; timeout/action accepted in
+- [x] Undo tests with one scheduler: delete capture is sole snapshot; timeout/action accepted in
       either order; late timeout after claim cannot cancel restoration; newer notification expires
       older available Undo; no modal admission while restoring; fail→retry/expire; same/different
       existing ID; stale callbacks never consume a newer token. No real clock sleeps.
-- [ ] Actual owner integration: attach root Koin/ViewModel lifecycle, recreate supported Android
+- [x] Actual owner integration (host): attach root Koin/ViewModel lifecycle, recreate supported Android
       parent while editing and while write/restore is pending, reattach modal/host, verify one DB
       write and one terminal feedback. Fresh owner starts closed without snapshots. This is an API
       integration gate; isolated state tests cannot establish Activity/controller retention.
@@ -139,7 +139,7 @@ a dismissing sheet. No second snackbar host in individual primary entries.
       hidden→snackbar sequence; usable Undo/Retry/Close semantics and IME/chrome separation.
 - [ ] Run focused tests/build/style and Native compilation; perform the authorized physical smoke
       described in the overview. Runner limitations do not turn compiled device tests into passes.
-- [ ] Run one independent final diff review, fix material findings and repeat only affected checks.
+- [x] Run one independent final diff review, fix material findings and repeat only affected checks.
 
 ## Documentation and handoff
 
@@ -152,3 +152,58 @@ Do not add this entire task ledger to business rules or duplicate earlier delive
 Future commit: `feat(movimientos): add detail editing deletion and undo`. Handoff names changed
 behavior, actual checks/target evidence and material limitations. No automatic merge; use the
 repository's existing acceptance workflow.
+
+## Integration evidence
+
+- The current fix-wave focused regression output contains 104 passing tests across 18 suites, with zero failures,
+  errors or skips. This includes management/Undo/input/Add compatibility, coordinator admission,
+  supported Activity/Koin/SQLite owner behavior and existing repository/reactive seams.
+- Initial management/Undo behavior, child-owner admission and paused current-token delivery each
+  had observed behavioral RED checkpoints. Category recovery also had an observed SAVE_FAILED RED;
+  its unchanged assertion passes after the catalog-derived presentation correction.
+- Session owns one catalog/load status and submitting status. Edit owns original/draft/validation and
+  save-error inputs; `session.form` derives a read-only presentation without another Flow or copied
+  writable catalog/status. Category recovery cannot reset typed input or an unretried save failure.
+- The actual owner fixture explicitly registers its sandbox-visible JDBC driver and deregisters only
+  that owned instance during cleanup. It uses real SQLite, Koin and Activity recreation. Active scene
+  disposal cancels pending work; supported Activity recreation retains edit/claimed restore and one
+  terminal result. These host assertions do not establish actual iOS scene teardown ordering.
+- Root feedback delivery checks live lifecycle/modal/restoration admission at callback execution.
+  One shell overlay uses measured chrome/IME/safe insets; pending restore has localized progress copy.
+  Closing interactivity derives from phase, with no false submitting spinner. Add defaults remain.
+- Device fixtures cover detail actions, Edit prefill/description/focus, Closing controls, explicit Back
+  and each source's stored row ID. Android production/device builds, mandatory style checks and Native production/test
+  compilation pass. Rebuilt-Xiaomi main-flow and pause-window evidence is recorded below; physical
+  iOS and assistive-technology acceptance remain unconfirmed.
+
+## Bounded review and target correction
+
+- Independent review found that capture accepted readable legacy rows that strict restore rejects.
+  The added real-SQL regression had an observed RED while the prior 14 repository tests passed.
+  Current capture checks the same restore eligibility before DELETE inside the transaction and
+  leaves invalid exact rows intact; strict restore and legacy raw delete behavior remain.
+- The candidate APK physically confirmed closed keyboard on Edit entry, but amount focus covered
+  Save/Cancel with the IME. Current shared form follows Add's existing footer policy: the entire
+  Save/Cancel content is absent while the IME is visible and restored after dismissal. A device
+  fixture asserts absent semantics and both reachable actions after Done; target execution remains
+  unconfirmed until the updated APK/device run.
+- Nineteen reported Detekt findings are addressed by focused rendering/wiring sections and equivalent
+  guards. No new suppressions or configuration changes were added. The modal correction passed 104 focused tests; final shell extraction passed 24 navigation/owner
+  regressions. Android builds/style/Native compilation and scoped independent re-review pass.
+
+## Rebuilt Xiaomi verification
+
+The current production APK was installed and launched on the confirmed Xiaomi. Home, History and
+Search open the stored fixture ID. Physical Back closes Detail, clean Cancel returns full detail,
+dirty Cancel prompts discard, category Back returns to Edit, and Edit starts without forced IME.
+Save/Cancel disappear with IME and return after dismissal.
+
+The authorized sole fixture changed Expense 123 to Income 124 with success feedback and reactive
+Search/History/Home rendering. Delete confirmation Cancel preserved it; Delete/Undo restored it.
+Undo remained actionable after 12 seconds in background and after more than 12 seconds covered by
+Add, then restored the record. Final Delete plus Close removed the fixture; retained Search query
+showed 0 results. No original records were modified.
+
+Instrumentation assertions remain blocked by the recorded runner stall. Actual iOS scene teardown,
+safe-area/VoiceOver and TalkBack/large-text checks are unconfirmed. User acceptance is pending;
+feature remains IN_PROGRESS and canonical docs/spec compaction wait for the accepted-feature workflow.

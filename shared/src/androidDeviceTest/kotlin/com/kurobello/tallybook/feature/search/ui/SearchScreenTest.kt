@@ -49,6 +49,25 @@ class SearchScreenTest {
   @get:Rule val composeRule = createComposeRule()
 
   @Test
+  fun realMovementRowEmitsItsStoredId() {
+    var opened: String? = null
+    composeRule.setContent {
+      TallybookTheme {
+        SearchScreen(
+            searchTestState,
+            SearchTestActions(),
+            {},
+            {},
+            0.dp,
+            onOpenMovimiento = { opened = it },
+        )
+      }
+    }
+    composeRule.onNodeWithText("Morning coffee").performScrollTo().performClick()
+    composeRule.runOnIdle { assertEquals(searchTestMovement.id, opened) }
+  }
+
+  @Test
   fun appliedFilterTagsRemoveOnlyTheirOwnDateTypeOrCategoryDimension() {
     val actions = SearchTestActions()
     val state =

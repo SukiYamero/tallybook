@@ -170,7 +170,7 @@ class HistoryVolumeDeviceTest {
               bottomBar = { TallybookBottomNavigation({}, selectedDestination = History) },
           ) { clearance ->
             clearancePixels = with(LocalDensity.current) { clearance.toPx() }
-            HistoryScreen(state, viewModel, {}, clearance)
+            HistoryScreen(state, viewModel, HistoryNavigationCallbacks({}), clearance)
           }
         }
       }

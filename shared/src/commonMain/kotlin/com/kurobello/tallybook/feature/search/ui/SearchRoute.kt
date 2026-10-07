@@ -52,6 +52,7 @@ internal fun SearchRoute(
     onFocusAcknowledged: (Long) -> Unit,
     active: Boolean,
     modifier: Modifier = Modifier,
+    onOpenMovimiento: ((String) -> Unit)? = null,
 ) {
   val label = stringResource(Res.string.unknown_category)
   val locale = LocalLocale.current.toLanguageTag()
@@ -114,6 +115,7 @@ internal fun SearchRoute(
       uiState = state.value,
       actions = actions,
       onAdd = onAdd,
+      onOpenMovimiento = onOpenMovimiento,
       onOpenFilters = {
         if (modals.tryOpenFilters()) {
           keyboard?.hide()

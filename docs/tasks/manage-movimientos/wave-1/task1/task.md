@@ -93,9 +93,9 @@ semantics. Tokens/revisions belong to the caller; message changes do not mutate 
 - [x] Add device component tests for message/action/Close semantics, one callback per click, busy
       disabling, large text/long action wrapping and caller modifier root placement.
 - [x] Add a catalog fixture that can show plain, actionable and busy messages without financial data.
-- [ ] Run only relevant host/device-fixture compilation, narrow Android build and mandatory style
+- [x] Run only relevant host/device-fixture compilation, narrow Android build and mandatory style
       checks through the orchestrator. Physical verification follows the repository's device policy.
-- [ ] Produce the independent `feat(ui): add reusable snackbar` diff/commit boundary; no movement
+- [x] Produce the independent `feat(ui): add reusable snackbar` diff/commit boundary; no movement
       integration is required for the catalog to compile or the component tests to execute.
 
 Consult the versioned accessibility source linked in the overview before implementing the timeout;
@@ -124,6 +124,8 @@ confirm the actual resolved platform behavior at the gate. Record blocked device
   on a physical iPhone requires a targeted platform adaptation; current iPhone usability remains
   unconfirmed.
 - GREEN: the orchestrator reran the focused timing class against the implementation; all nine tests
-  passed with zero errors/skips. Shared formatting was applied by the orchestrator. Device-fixture
-  compilation, Android/Native builds and mandatory style checks are in progress. Device assertions
-  and physical action/announcement/wrapping remain unexecuted until that target evidence is supplied.
+  passed with zero errors/skips. The current-tree Android production/device APK builds, iOS Arm64
+  production/test compilation and `detekt ktfmtCheck` passed through the orchestrator. Independent
+  snackbar commit: `c59a4ee`. Device assertion execution remains unconfirmed: the physical fixture
+  was installed, but the bounded instrumentation attempt stalled before assertions. Physical
+  action/announcement/wrapping and iPhone VoiceOver usability remain unconfirmed.

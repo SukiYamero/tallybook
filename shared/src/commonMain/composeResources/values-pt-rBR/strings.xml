@@ -263,4 +263,28 @@
         <item quantity="one">%1$d resultado</item>
         <item quantity="other">%1$d resultados</item>
     </plurals>
+
+    <string name="movimiento_detail_title">Detalhes da movimentação</string>
+    <string name="movimiento_edit_title">Editar movimentação</string>
+    <string name="movimiento_edit">Editar</string>
+    <string name="movimiento_delete">Excluir</string>
+    <string name="movimiento_close">Fechar</string>
+    <string name="movimiento_save_changes">Salvar alterações</string>
+    <string name="movimiento_read_error">Não conseguimos carregar esta movimentação. Tente novamente.</string>
+    <string name="movimiento_missing">Esta movimentação não está mais disponível.</string>
+    <string name="movimiento_missing_edit">Esta movimentação não está mais disponível. Seu rascunho continua aberto para você revisar antes de fechar.</string>
+    <string name="movimiento_delete_title">Excluir esta movimentação?</string>
+    <string name="movimiento_delete_message">%1$s. Você pode desfazer a exclusão por alguns segundos.</string>
+    <string name="movimiento_delete_error">Não conseguimos excluir esta movimentação. Tente novamente.</string>
+    <string name="movimiento_future_date">A data não pode ser posterior a hoje.</string>
+    <string name="movimiento_updated">Movimentação atualizada</string>
+    <string name="movimiento_deleted">Movimentação excluída</string>
+    <string name="movimiento_restored">Movimentação restaurada</string>
+    <string name="movimiento_undo">Desfazer</string>
+    <string name="movimiento_restore_error">Não conseguimos restaurar esta movimentação. Tente novamente.</string>
+    <string name="movimiento_restore_conflict">Não conseguimos restaurar esta versão. A movimentação atual foi mantida.</string>
+    <string name="movimiento_notification_close">Fechar notificação</string>
+    <string name="movimiento_open_detail">Abrir detalhes da movimentação</string>
+    <string name="movimiento_cancel">Cancelar</string>
+    <string name="movimiento_restoring">Restaurando movimentação</string>
 </resources>
