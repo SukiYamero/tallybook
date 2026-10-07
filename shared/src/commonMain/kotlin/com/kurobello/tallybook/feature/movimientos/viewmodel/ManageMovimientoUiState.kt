@@ -60,8 +60,11 @@ internal data class MovimientoManagementSession(
 
 internal data class ManageMovimientoUiState(
     val session: MovimientoManagementSession? = null,
-    val feedback: MovimientoFeedback? = null,
+    val feedbackQueue: List<MovimientoFeedback> = emptyList(),
 ) {
+  val feedback: MovimientoFeedback?
+    get() = feedbackQueue.firstOrNull()
+
   val isRestoring: Boolean
     get() = feedback?.isRestoring == true
 }

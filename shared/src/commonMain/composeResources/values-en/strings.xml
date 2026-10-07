@@ -8,6 +8,7 @@
     <string name="ui_catalog_snackbar_plain">Plain</string>
     <string name="ui_catalog_snackbar_actionable">With action</string>
     <string name="ui_catalog_snackbar_busy">Busy</string>
+    <string name="ui_catalog_snackbar_persistent">Persistent</string>
     <string name="ui_catalog_snackbar_message">The sample is ready to review</string>
     <string name="ui_catalog_snackbar_busy_message">Preparing the sample</string>
     <string name="ui_catalog_snackbar_reviewed">Sample reviewed</string>

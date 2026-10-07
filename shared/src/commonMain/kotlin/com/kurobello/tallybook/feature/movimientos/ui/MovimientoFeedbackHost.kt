@@ -24,6 +24,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookSnackbarDismissReason
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarDuration
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarHost
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarMessage
+import com.kurobello.tallybook.core.ui.component.TallybookSnackbarStatus
 import com.kurobello.tallybook.core.ui.navigation.PrimaryModalCoordinator
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.ManageMovimientoActions
@@ -59,7 +60,7 @@ internal fun MovimientoFeedbackRoute(
   val isUncovered =
       uiState.session == null && modals.canNavigate && viewport?.isScrimVisible != true
   MovimientoFeedbackHost(
-      feedback = uiState.feedback,
+      feedbackQueue = uiState.feedbackQueue,
       isActive = lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && isUncovered,
       bottomBarClearance = bottomBarClearance,
       onAction = { token, revision ->
@@ -72,8 +73,8 @@ internal fun MovimientoFeedbackRoute(
 }
 
 @Composable
-internal fun MovimientoFeedbackHost(
-    feedback: MovimientoFeedback?,
+private fun MovimientoFeedbackHost(
+    feedbackQueue: List<MovimientoFeedback>,
     isActive: Boolean,
     bottomBarClearance: Dp,
     onAction: (Long, Int) -> Unit,
@@ -105,11 +106,12 @@ internal fun MovimientoFeedbackHost(
           )
   ) {
     TallybookSnackbarHost(
-        message = feedback?.toSnackbarMessage(),
+        message = feedbackQueue.firstOrNull()?.toSnackbarMessage(),
         isActive = isActive,
         closeLabel = stringResource(Res.string.movimiento_notification_close),
         onAction = onAction,
         onDismiss = onDismiss,
+        hasWaitingMessages = feedbackQueue.size > 1,
         modifier =
             Modifier.align(Alignment.BottomCenter)
                 .widthIn(max = TallybookTheme.dimensions.screenContentMaxWidth)
@@ -146,5 +148,16 @@ private fun MovimientoFeedback.toSnackbarMessage(): TallybookSnackbarMessage {
       if (hasAction) TallybookSnackbarDuration.Long else TallybookSnackbarDuration.Short,
       actionLabel,
       isRestoring,
+      status = kind.snackbarStatus(),
   )
 }
+
+private fun MovimientoFeedbackKind.snackbarStatus(): TallybookSnackbarStatus =
+    when (this) {
+      MovimientoFeedbackKind.Saved,
+      MovimientoFeedbackKind.Deleted,
+      MovimientoFeedbackKind.Restored -> TallybookSnackbarStatus.Success
+      MovimientoFeedbackKind.Missing,
+      MovimientoFeedbackKind.RestoreConflict -> TallybookSnackbarStatus.Warning
+      MovimientoFeedbackKind.RestoreFailed -> TallybookSnackbarStatus.Error
+    }

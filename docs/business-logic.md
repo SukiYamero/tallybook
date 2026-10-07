@@ -44,9 +44,11 @@ edited or deleted; failed reads require Retry before mutation actions become ava
 - Only the exact row captured by the delete transaction is eligible for Undo. Restore preserves all
   fields and identity. An identical existing row counts as restored without writing; a different or
   unreadable same-ID row is a terminal conflict and is preserved.
-- One current feedback token owns at most one deleted snapshot. A newer completed management outcome
-  replaces an older unclaimed Undo. Close, expiry, a fresh process or disposal of its owner releases
-  it; the committed deletion remains applied. There is no persistent trash or Undo for edits.
+- Each feedback token owns at most one deleted snapshot. Completed management outcomes wait in
+  arrival order without replacing an earlier Undo. Only the visible token can claim its snapshot;
+  Close or expiry releases that token's snapshot, while a fresh process or disposal of the owner
+  releases the whole queue. The committed deletion remains applied until its own Undo succeeds.
+  There is no persistent trash or Undo for edits.
 - Undo claims the token once before restoration starts. Late action/timeout callbacks cannot consume
   a claimed operation. Restore failure retains the snapshot for Retry; success or conflict releases
   it. Primary tabs can change during restoration, but new modal sessions wait until it finishes.

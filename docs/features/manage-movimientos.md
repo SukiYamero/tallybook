@@ -2,8 +2,8 @@
 
 The Xiaomi flow is accepted; the reviewed implementation is integrated into `main`.
 Home, History and Search open Detail, Edit reuses the existing form, and confirmed deletion offers
-Undo through a reusable snackbar. Tags, bulk actions, currency changes, sync and persistent trash
-remain outside this delivery.
+Undo through a reusable snackbar with queued delivery. Tags, bulk actions, currency changes, sync
+and persistent trash remain outside this delivery.
 
 [Business logic](../business-logic.md#editing-and-deletion) owns mutation and identity rules.
 [UI architecture](../ui/architecture.md#movimiento-management-and-feedback) owns presentation,
@@ -18,33 +18,30 @@ feedback windows and lifecycle; the [component catalog](../ui/components.md) lis
   feedback and restoration. The shared form contracts preserve Add's entry and validation behavior.
 - Existing repository flows refresh Home/History/Search rather than patching a second list.
   Copy is localized in all existing resource locales.
-- Reusable snackbar commit: `c59a4ee`; persistence: `f5262b5`; management integration: `20197ce`.
-  The independent reviewer approved the actual feature diff and confirmed corrections.
+- Feedback stays in a caller-owned FIFO queue. The shared snackbar host owns its visible window,
+  monotonic deadline and backlog compaction; the component catalog exercises the same delivery policy.
 
 ## Verification boundaries
 
-The modal-corrected tree passed 104 affected host tests across 18 suites, with zero failures,
-errors or skips. The final shell callback extraction passed 24 navigation/owner regressions.
-Real SQLite fixtures cover identity-safe edits, exact capture/restore, conflict/missing records and
-capture eligibility. Owner tests use actual Activity recreation, Koin and SQLite; state tests cover
-draft/no-op behavior, stale callbacks, Undo claims, failure/retry and category recovery.
+Targeted host regressions cover queue order, per-notification Undo ownership, failure/retry, stale
+callbacks, atomic claims, lifecycle admission and retained owners. Virtual-time tests cover active
+deadline shortening, complete windows for queued messages, last-message compaction, empty-queue reset,
+hidden/busy suspension, accessibility recommendations and single timeout delivery. Real SQLite
+fixtures cover identity-safe edits, exact capture/restore, conflict/missing records and eligibility.
 
-Android production and device-test APK builds, iOS Arm64 production/test compilation, Detekt and
-ktfmtCheck pass. Compilation does not establish device-test execution or iOS runtime behavior.
+Android debug builds, Android device-test compilation, iOS Arm64 shared-source compilation, Detekt
+and ktfmtCheck pass. The final independent review has no pending findings. Compilation does not
+establish device-test execution or iOS runtime behavior.
 
-The current production APK was installed and launched on the confirmed Xiaomi M2012K11AG.
-Manual checks cover row entry from all three destinations, no forced Edit keyboard, dirty discard,
-native Back, complete Detail after Cancel/reread, nested category Back and IME footer removal/return.
-The sole authorized temporary movimiento changed expense 123 to income 124, with reactive list updates
-and saved feedback. Delete confirmation cancellation preserved it; Delete/Undo restored it.
-Undo remained usable after 12 seconds in background and after more than 12 seconds covered by Add.
-Final deletion plus Close removed the fixture; retained Search query showed 0 results. No original
-user record was modified and no temporary movimiento remains.
+The APK is installed and launched on the confirmed Xiaomi M2012K11AG. Accepted management scope
+includes entry from Home/History/Search, edit/discard, native Back and committed Delete/Undo.
+Physical catalog checks cover FIFO delivery, dynamic actions, indefinite dismissal, loading completion,
+themed outlines and timing compaction; these checks do not modify business records.
 
-The instrumented runner stalled before assertions. One bounded retry after waking the device also
-stalled and was stopped; compiled fixtures are not runtime passes. Physical iOS teardown, safe areas,
-VoiceOver, TalkBack and large-text snackbar/action usability remain unconfirmed and are tracked in
-[the backlog](../backlog.md). User acceptance covers the delivered Xiaomi scope, not those checks.
+The instrumented runner remains blocked before assertions; compiled fixtures are not runtime passes.
+Physical iOS teardown, safe areas, VoiceOver, TalkBack and large-text snackbar/action usability remain
+unconfirmed and are tracked in [the backlog](../backlog.md). User acceptance covers the delivered
+Xiaomi scope, not those checks.
 Future checks follow [proportional verification](../README.md#proportional-verification).
 
 ## Supported-version evidence
@@ -53,6 +50,10 @@ Resolved common Compose 1.11.1 uses AndroidX UI/runtime 1.11.2 on Android. The i
 Unstyled 2.9.0, Lifecycle 2.11.0-beta01, Koin 4.2.2, SQLDelight 2.3.2 and Navigation3 1.1.1; no dependency
 upgrade was required.
 
+- [Kotlin monotonic time-source contract](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.time/-time-source/)
+  supports elapsed-deadline tracking in shared code. The virtual-clock integration uses
+  [`TestCoroutineScheduler.timeSource`](https://github.com/Kotlin/kotlinx.coroutines/blob/1.9.0/kotlinx-coroutines-test/common/src/TestCoroutineScheduler.kt)
+  so elapsed time and coroutine delays share one clock in the timing regressions.
 - [Compose accessibility timeout contract](https://github.com/JetBrains/compose-multiplatform-core/blob/v1.11.1/compose/ui/ui/src/commonMain/kotlin/androidx/compose/ui/platform/AccessibilityManager.kt)
   supplies timeout recommendations.
   [Skiko default manager](https://github.com/JetBrains/compose-multiplatform-core/blob/v1.11.1/compose/ui/ui/src/skikoMain/kotlin/androidx/compose/ui/platform/DefaultAccessibilityManager.skiko.kt)

@@ -6,9 +6,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.AccessibilityManager
+import androidx.compose.ui.platform.LocalAccessibilityManager
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -26,6 +30,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.test.assertEquals
@@ -93,6 +98,79 @@ class TallybookSnackbarTest {
       assertEquals(0, actions)
       assertEquals(0, dismissals)
     }
+  }
+
+  @Test
+  fun timedMessagesKeepTheirActionWithoutACloseControl() {
+    val current = mutableStateOf(message().copy(duration = TallybookSnackbarDuration.Short))
+    composeRule.setContent {
+      TallybookTheme {
+        TallybookSnackbarHost(
+            current.value,
+            true,
+            "Close notification",
+            { _, _ -> },
+            { _, _, _ -> },
+        )
+      }
+    }
+    composeRule.onNodeWithText("Undo").assertHasClickAction()
+    composeRule.onNodeWithContentDescription("Close notification").assertDoesNotExist()
+    composeRule.runOnIdle {
+      current.value = current.value.copy(duration = TallybookSnackbarDuration.Long)
+    }
+    composeRule.onNodeWithContentDescription("Close notification").assertDoesNotExist()
+  }
+
+  @Test
+  fun accessibilityWithoutATimeoutAddsAnExplicitCloseControl() {
+    composeRule.setContent {
+      CompositionLocalProvider(LocalAccessibilityManager provides NoTimeoutAccessibilityManager) {
+        TallybookTheme {
+          TallybookSnackbarHost(
+              message().copy(duration = TallybookSnackbarDuration.Short),
+              true,
+              "Close notification",
+              { _, _ -> },
+              { _, _, _ -> },
+          )
+        }
+      }
+    }
+    composeRule.onNodeWithContentDescription("Close notification").assertHasClickAction()
+  }
+
+  @Test
+  fun busyProgressPrecedesTheMessageInBothLayoutDirections() {
+    composeRule.mainClock.autoAdvance = false
+    val direction = mutableStateOf(LayoutDirection.Ltr)
+    composeRule.setContent {
+      CompositionLocalProvider(LocalLayoutDirection provides direction.value) {
+        TallybookTheme {
+          TallybookSnackbarHost(
+              message().copy(isBusy = true),
+              true,
+              "Close notification",
+              { _, _ -> },
+              { _, _, _ -> },
+              Modifier.width(320.dp),
+          )
+        }
+      }
+    }
+    val progress =
+        composeRule.onNode(
+            SemanticsMatcher.expectValue(
+                SemanticsProperties.ProgressBarRangeInfo,
+                ProgressBarRangeInfo.Indeterminate,
+            )
+        )
+    val text = composeRule.onNodeWithText("Example saved")
+    assertTrue(progress.getUnclippedBoundsInRoot().right <= text.getUnclippedBoundsInRoot().left)
+    composeRule.runOnIdle { direction.value = LayoutDirection.Rtl }
+    composeRule.mainClock.advanceTimeByFrame()
+    assertTrue(progress.getUnclippedBoundsInRoot().left >= text.getUnclippedBoundsInRoot().right)
+    composeRule.onNodeWithText("Undo").assertDoesNotExist()
   }
 
   @Test
@@ -179,4 +257,13 @@ class TallybookSnackbarTest {
 
   private fun message() =
       TallybookSnackbarMessage(7, 2, "Example saved", TallybookSnackbarDuration.Indefinite, "Undo")
+}
+
+private object NoTimeoutAccessibilityManager : AccessibilityManager {
+  override fun calculateRecommendedTimeoutMillis(
+      originalTimeoutMillis: Long,
+      containsIcons: Boolean,
+      containsText: Boolean,
+      containsControls: Boolean,
+  ): Long = Long.MAX_VALUE
 }

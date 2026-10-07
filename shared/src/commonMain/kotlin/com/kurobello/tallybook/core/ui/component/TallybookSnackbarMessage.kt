@@ -8,6 +8,13 @@ internal enum class TallybookSnackbarDuration {
   Indefinite,
 }
 
+internal enum class TallybookSnackbarStatus {
+  Success,
+  Info,
+  Warning,
+  Error,
+}
+
 internal enum class TallybookSnackbarDismissReason {
   Timeout,
   Close,
@@ -21,4 +28,5 @@ internal data class TallybookSnackbarMessage(
     val duration: TallybookSnackbarDuration,
     val actionLabel: String? = null,
     val isBusy: Boolean = false,
+    val status: TallybookSnackbarStatus = TallybookSnackbarStatus.Info,
 )

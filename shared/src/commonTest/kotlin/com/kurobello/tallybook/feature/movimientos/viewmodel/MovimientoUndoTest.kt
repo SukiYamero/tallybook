@@ -108,7 +108,7 @@ class MovimientoUndoTest {
   }
 
   @Test
-  fun cancelledSessionPreservesUndoAndNewCommittedFeedbackExpiresOldSnapshot() = runTest {
+  fun cancelledSessionAndNewCommittedFeedbackPreserveCurrentUndoUntilDismissed() = runTest {
     val f = ManageMovimientoFixture(backgroundScope)
     f.viewModel.open("movement")
     runCurrent()
@@ -134,6 +134,8 @@ class MovimientoUndoTest {
     f.viewModel.onSheetHidden(deletedOrigin)
     assertEquals(newerOrigin, f.viewModel.uiState.value.session?.token)
     f.viewModel.onSheetHidden(newerOrigin)
+    assertEquals(old, f.viewModel.uiState.value.feedback)
+    f.viewModel.onFeedbackDismiss(old.token, old.revision)
     val saved = assertNotNull(f.viewModel.uiState.value.feedback)
     assertEquals(MovimientoFeedbackKind.Saved, saved.kind)
     f.viewModel.onFeedbackAction(old.token, old.revision)

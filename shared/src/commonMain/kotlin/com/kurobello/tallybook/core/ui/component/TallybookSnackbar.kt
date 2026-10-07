@@ -1,27 +1,53 @@
 package com.kurobello.tallybook.core.ui.component
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Constraints
+import com.kurobello.tallybook.core.ui.theme.TallybookSpacing
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+
+internal object TallybookSnackbarDefaults {
+  val verticalPadding = TallybookSpacing.space10
+}
 
 @Composable
 internal fun TallybookSnackbar(
     message: String,
     modifier: Modifier = Modifier,
+    leadingContent: (@Composable () -> Unit)? = null,
     actionContent: (@Composable () -> Unit)? = null,
     dismissContent: (@Composable () -> Unit)? = null,
 ) {
-  TallybookSurface(modifier = modifier) {
+  val shape = RoundedCornerShape(TallybookTheme.radii.radius16)
+  TallybookSurface(
+      modifier = modifier,
+      style =
+          TallybookSurfaceStyle(
+              color = TallybookTheme.colors.surface.raised,
+              contentColor = TallybookTheme.colors.foreground.primary,
+              shape = shape,
+              border =
+                  BorderStroke(
+                      TallybookTheme.dimensions.borderThin,
+                      TallybookTheme.colors.border.base,
+                  ),
+          ),
+  ) {
     SnackbarContent(
         message = message,
+        leadingContent = leadingContent,
         actionContent = actionContent,
         dismissContent = dismissContent,
     )
@@ -32,17 +58,27 @@ internal fun TallybookSnackbar(
 @Suppress("LongMethod")
 private fun SnackbarContent(
     message: String,
+    leadingContent: (@Composable () -> Unit)?,
     actionContent: (@Composable () -> Unit)?,
     dismissContent: (@Composable () -> Unit)?,
 ) {
   val spacing = TallybookTheme.spacing
   Layout(
-      modifier = Modifier.fillMaxWidth().padding(spacing.space12),
+      modifier =
+          Modifier.fillMaxWidth()
+              .padding(
+                  horizontal = spacing.space12,
+                  vertical = TallybookSnackbarDefaults.verticalPadding,
+              ),
       content = {
-        Box {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(spacing.space12),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+          leadingContent?.invoke()
           TallybookText(
               text = message,
-              modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+              modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite },
           )
         }
         actionContent?.let { Box { it() } }

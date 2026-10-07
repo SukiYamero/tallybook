@@ -726,7 +726,8 @@ dialogs consume Back before their parent management surface.
 
 One `ManageMovimientoViewModel` lives in a remembered child ViewModel owner outside primary
 Navigation 3 entries. It owns the read generation, management session, editable draft, mutation,
-pending committed feedback and transient deleted snapshot. It outlives the sheet so Undo does not
+pending committed feedback and a transient FIFO feedback queue with per-token deleted snapshots.
+It outlives the sheet so Undo does not
 depend on an entry or closing modal. The existing creation store/session remains separate.
 
 The child uses the root parent's remembered creation extras and no saved-state registry.
@@ -743,19 +744,39 @@ or consume a claimed restore. Read jobs are cancelled and late generations rejec
 
 ### Snackbar presentation
 
-The plain `TallybookSnackbar` accepts caller-provided content/action/dismiss slots and a root modifier;
-its host owns the composition timer. One shell host renders committed management feedback after
+The plain `TallybookSnackbar` accepts caller-provided leading/action/dismiss slots and a root modifier;
+its host owns the composition timer and status presentation. The snackbar uses `surface.raised`
+(`#F0EFE9` in light mode) and the default thin gray border, without a shadow. Horizontal padding is
+12 dp; vertical padding is 10 dp. Success, information, warning and error icons occupy a tinted
+32 dp leading badge. Busy progress replaces that icon in the same leading position with a transparent
+badge background.
+One shell host renders committed management feedback after
 the originating sheet is hidden. It sits above measured bottom chrome, safe drawing and IME clearance,
 respecting horizontal safe edges and the shared content width. Inline messages remain the recovery
 surface inside an open sheet; creation does not acquire a new snackbar producer.
 
-Informational feedback uses the Short 4-second token; Undo/Retry uses Long 10 seconds. Provided
-accessibility recommendations may extend the window, including indefinitely without overflow.
-Ordinary recomposition cannot restart it. Background or modal coverage hides feedback and cancels
+Informational feedback normally uses the Short 4-second token; Undo/Retry uses Long 10 seconds.
+Once messages are waiting, that visible batch uses half the baseline: Short 2 seconds and Long
+5 seconds, including its final queued message. The active deadline shortens once from its initial
+reveal, counting time already spent on screen; if that deadline has passed, it expires immediately.
+Enqueueing or recomposing cannot repeatedly halve the window or restart it. An empty queue resets
+the policy so a subsequent isolated message receives its normal baseline.
+Provided accessibility recommendations apply after the baseline is selected and may extend the
+window, including indefinitely without overflow. Indefinite and busy feedback never expires.
+Background or modal coverage hides feedback and cancels
 its timer without dismissing it; each foreground reveal receives a full usable window.
 Root delivery checks live resumed lifecycle and modal/viewport admission, then current token/revision.
 
-Claimed restoration shows localized progress, disables action/Close and suspends expiry.
-Feedback has one replaceable state rather than a queue or one-shot event. Message announcements are
-polite, controls and pane titles are localized, and no countdown is announced. The resolved iOS/Skiko
+Undo/Retry remains a dynamic trailing action, with adaptive wrapping and 48 dp controls. Timed
+Short/Long feedback has no Close control. Indefinite feedback, including an effectively indefinite
+accessibility recommendation, exposes Close. Claimed restoration shows localized progress, hides the
+action, disables any Close control and suspends expiry.
+Feedback is queued in arrival order in its owner's state. Only the head is rendered and receives a
+timer; enqueueing does not replace it or restart its current window. Queue pressure can shorten that
+window through the batch timing policy above. Close or expiry advances one
+matching token/revision. Undo/Retry updates the head through progress and its result without consuming
+waiting messages. The next head receives its selected window when first revealed; an indefinite head
+blocks delivery until explicitly dismissed or resolved. The catalog demonstrates the same sequence.
+Message announcements are polite, controls and pane titles are localized, and no countdown is
+announced. The resolved iOS/Skiko
 manager returns the baseline timeout; VoiceOver-adapted duration is not established by compilation.

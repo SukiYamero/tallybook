@@ -8,6 +8,7 @@
     <string name="ui_catalog_snackbar_plain">Simple</string>
     <string name="ui_catalog_snackbar_actionable">Con acción</string>
     <string name="ui_catalog_snackbar_busy">En progreso</string>
+    <string name="ui_catalog_snackbar_persistent">Persistente</string>
     <string name="ui_catalog_snackbar_message">La muestra está lista para revisar</string>
     <string name="ui_catalog_snackbar_busy_message">Preparando la muestra</string>
     <string name="ui_catalog_snackbar_reviewed">Muestra revisada</string>

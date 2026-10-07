@@ -40,7 +40,6 @@ internal class ManageMovimientoViewModel(
   private var readJob: Job? = null
   private var categoryJob: Job? = null
   private var pendingFeedback: PendingMovimientoFeedback? = null
-  private var deletedMovimiento: Movimiento? = null
 
   val uiState: StateFlow<ManageMovimientoUiState>
     field = MutableStateFlow(ManageMovimientoUiState())
@@ -238,54 +237,70 @@ internal class ManageMovimientoViewModel(
     val pending = pendingFeedback
     pendingFeedback = null
     if (pending != null) {
-      deletedMovimiento = pending.deleted
-      uiState.update {
-        it.copy(session = null, feedback = MovimientoFeedback(++nextToken, kind = pending.kind))
-      }
+      val feedback =
+          MovimientoFeedback(
+              token = ++nextToken,
+              kind = pending.kind,
+              deletedMovimiento = pending.deleted,
+          )
+      uiState.update { it.copy(session = null, feedbackQueue = it.feedbackQueue + feedback) }
     } else uiState.update { it.copy(session = null) }
   }
 
   override fun onFeedbackAction(token: Long, revision: Int) {
+    val current = uiState.value
     val feedback =
-        feedbackFor(token, revision)?.takeIf { it.hasAction && uiState.value.session == null }
+        feedbackFor(token, revision, current)?.takeIf { it.hasAction && current.session == null }
             ?: return
-    val deleted = deletedMovimiento ?: return
+    val deleted = feedback.deletedMovimiento ?: return
     val claimed = feedback.copy(revision = revision + 1, isRestoring = true)
-    uiState.update { it.copy(feedback = claimed) }
-    coroutineScope.launch {
-      val outcome = movimientoRepository.restoreDeleted(deleted)
-      val kind =
-          when (outcome) {
-            is DataOutcome.Failure -> MovimientoFeedbackKind.RestoreFailed
-            is DataOutcome.Success ->
-                when (outcome.data) {
-                  MovimientoRestoreResult.Restored,
-                  MovimientoRestoreResult.AlreadyPresent -> MovimientoFeedbackKind.Restored
-                  MovimientoRestoreResult.Conflict -> MovimientoFeedbackKind.RestoreConflict
-                }
-          }
-      if (kind != MovimientoFeedbackKind.RestoreFailed) deletedMovimiento = null
-      uiState.update { current ->
-        if (current.feedback == claimed)
-            current.copy(
-                feedback =
-                    claimed.copy(revision = claimed.revision + 1, kind = kind, isRestoring = false)
+    if (
+        uiState.compareAndSet(
+            current,
+            current.copy(feedbackQueue = listOf(claimed) + current.feedbackQueue.drop(1)),
+        )
+    ) {
+      coroutineScope.launch {
+        val outcome = movimientoRepository.restoreDeleted(deleted)
+        val kind =
+            when (outcome) {
+              is DataOutcome.Failure -> MovimientoFeedbackKind.RestoreFailed
+              is DataOutcome.Success ->
+                  when (outcome.data) {
+                    MovimientoRestoreResult.Restored,
+                    MovimientoRestoreResult.AlreadyPresent -> MovimientoFeedbackKind.Restored
+                    MovimientoRestoreResult.Conflict -> MovimientoFeedbackKind.RestoreConflict
+                  }
+            }
+        val completed =
+            claimed.copy(
+                revision = claimed.revision + 1,
+                kind = kind,
+                isRestoring = false,
+                deletedMovimiento = deleted.takeIf { kind == MovimientoFeedbackKind.RestoreFailed },
             )
-        else current
+        uiState.update { latest ->
+          if (latest.feedback == claimed)
+              latest.copy(feedbackQueue = listOf(completed) + latest.feedbackQueue.drop(1))
+          else latest
+        }
       }
     }
   }
 
   override fun onFeedbackDismiss(token: Long, revision: Int) {
-    if (feedbackFor(token, revision) == null) return
-    deletedMovimiento = null
-    uiState.update { it.copy(feedback = null) }
+    val feedback = feedbackFor(token, revision) ?: return
+    uiState.update {
+      if (it.feedback == feedback) it.copy(feedbackQueue = it.feedbackQueue.drop(1)) else it
+    }
   }
 
-  private fun feedbackFor(token: Long, revision: Int): MovimientoFeedback? =
-      uiState.value.feedback?.takeIf {
-        it.token == token && it.revision == revision && !it.isRestoring
-      }
+  private fun feedbackFor(
+      token: Long,
+      revision: Int,
+      current: ManageMovimientoUiState = uiState.value,
+  ): MovimientoFeedback? =
+      current.feedback?.takeIf { it.token == token && it.revision == revision && !it.isRestoring }
 
   private fun requestLeaveEdit(
       session: MovimientoManagementSession,
@@ -403,7 +418,6 @@ internal class ManageMovimientoViewModel(
 
   override fun onCleared() {
     stopReads()
-    deletedMovimiento = null
     pendingFeedback = null
     uiState.value = ManageMovimientoUiState()
   }
