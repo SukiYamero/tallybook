@@ -9,11 +9,15 @@ import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
+import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
+import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.fold
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -26,6 +30,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 
+// Reads and identity-safe mutations share one storage/error boundary and legacy validation policy.
+@Suppress("TooManyFunctions")
 internal class MovimientoRepositoryImpl(
     private val database: TallybookDatabase,
     private val dispatcher: CoroutineDispatcher,
@@ -195,27 +201,144 @@ internal class MovimientoRepositoryImpl(
     validate(movimiento)?.let {
       return DataOutcome.Failure(it)
     }
-    return runLocalDataOperation(dispatcher) {
-      check(
-          database.movimientoQueries
-              .insertMovimiento(
-                  id = movimiento.id,
-                  tipo = movimiento.tipo.name,
-                  monto_minor = movimiento.monto.minorUnits,
-                  monto_moneda = movimiento.monto.moneda.name,
-                  fecha = movimiento.fecha.toString(),
-                  categoria_id = movimiento.categoriaId,
-                  descripcion = movimiento.descripcion,
-                  created_at = movimiento.createdAt.toString(),
-              )
-              .value == 1L
-      )
-    }
+    return runLocalDataOperation(dispatcher) { insertRow(movimiento) }
   }
 
   override suspend fun getAll(): DataOutcome<List<Movimiento>> =
       runLocalDataOperation(dispatcher) {
         database.movimientoQueries.selectAllMovimientos().executeAsList().map { it.toDomain() }
+      }
+
+  override suspend fun getById(id: String): DataOutcome<Movimiento?> {
+    validateId(id)?.let {
+      return DataOutcome.Failure(it)
+    }
+    return runLocalDataOperation(dispatcher) {
+      database.movimientoQueries.selectMovimientoById(id).executeAsOneOrNull()?.toDomain()
+    }
+  }
+
+  override suspend fun update(
+      id: String,
+      changes: MovimientoChanges,
+  ): DataOutcome<MovimientoUpdateResult> {
+    (validateId(id) ?: validateChanges(changes))?.let {
+      return DataOutcome.Failure(it)
+    }
+    return runLocalDataOperation(dispatcher) {
+          database.transactionWithResult {
+            val queries = database.movimientoQueries
+            val current =
+                queries.selectMovimientoById(id).executeAsOneOrNull()?.toDomain()
+                    ?: return@transactionWithResult DataOutcome.Success(
+                        MovimientoUpdateResult.NotFound
+                    )
+            if (current.monto.moneda != changes.monto.moneda) {
+              return@transactionWithResult DataOutcome.Failure(
+                  DataError.InvalidInput("Movimiento currency cannot change")
+              )
+            }
+            check(
+                queries
+                    .updateMovimiento(
+                        tipo = changes.tipo.name,
+                        monto_minor = changes.monto.minorUnits,
+                        fecha = changes.fecha.toString(),
+                        categoria_id = changes.categoriaId,
+                        descripcion = changes.descripcion,
+                        id = id,
+                    )
+                    .value == 1L
+            )
+            DataOutcome.Success(MovimientoUpdateResult.Updated)
+          }
+        }
+        .fold(onSuccess = { it }, onFailure = { DataOutcome.Failure(it) })
+  }
+
+  override suspend fun deleteAndCapture(id: String): DataOutcome<Movimiento?> {
+    validateId(id)?.let {
+      return DataOutcome.Failure(it)
+    }
+    return runLocalDataOperation(dispatcher) {
+      database.transactionWithResult {
+        val queries = database.movimientoQueries
+        val captured =
+            queries.selectMovimientoById(id).executeAsOneOrNull()?.toDomain()
+                ?: return@transactionWithResult null
+        check(queries.deleteMovimiento(id).value == 1L)
+        captured
+      }
+    }
+  }
+
+  override suspend fun restoreDeleted(
+      movimiento: Movimiento
+  ): DataOutcome<MovimientoRestoreResult> {
+    (validateId(movimiento.id)
+            ?: validateChanges(
+                MovimientoChanges(
+                    movimiento.tipo,
+                    movimiento.monto,
+                    movimiento.fecha,
+                    movimiento.categoriaId,
+                    movimiento.descripcion,
+                )
+            ))
+        ?.let {
+          return DataOutcome.Failure(it)
+        }
+    return runLocalDataOperation(dispatcher) {
+      database.transactionWithResult {
+        val existing =
+            database.movimientoQueries.selectMovimientoById(movimiento.id).executeAsOneOrNull()
+        if (existing == null) {
+          insertRow(movimiento)
+          MovimientoRestoreResult.Restored
+        } else {
+          // An unreadable occupied ID must block restoration rather than become a retryable
+          // failure.
+          val identical =
+              try {
+                existing.toDomain() == movimiento
+              } catch (_: IllegalArgumentException) {
+                false
+              }
+          if (identical) MovimientoRestoreResult.AlreadyPresent
+          else MovimientoRestoreResult.Conflict
+        }
+      }
+    }
+  }
+
+  private fun insertRow(movimiento: Movimiento) {
+    check(
+        database.movimientoQueries
+            .insertMovimiento(
+                id = movimiento.id,
+                tipo = movimiento.tipo.name,
+                monto_minor = movimiento.monto.minorUnits,
+                monto_moneda = movimiento.monto.moneda.name,
+                fecha = movimiento.fecha.toString(),
+                categoria_id = movimiento.categoriaId,
+                descripcion = movimiento.descripcion,
+                created_at = movimiento.createdAt.toString(),
+            )
+            .value == 1L
+    )
+  }
+
+  private fun validateId(id: String): DataError.InvalidInput? =
+      if (id.isBlank()) DataError.InvalidInput("Movimiento id must not be blank") else null
+
+  private fun validateChanges(changes: MovimientoChanges): DataError.InvalidInput? =
+      when {
+        changes.monto.minorUnits <= 0 ->
+            DataError.InvalidInput("Movimiento amount must be positive")
+        changes.categoriaId.isBlank() -> DataError.InvalidInput("Categoria id must not be blank")
+        (changes.descripcion?.length ?: 0) > MOVIMIENTO_DESCRIPTION_MAX_LENGTH ->
+            DataError.InvalidInput("Movimiento description is too long")
+        else -> null
       }
 
   override suspend fun delete(id: String): DataOutcome<Unit> =

@@ -3,12 +3,17 @@ package com.kurobello.tallybook.core.data
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
+import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
+import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import kotlinx.coroutines.flow.Flow
 
+// Typed lifecycle operations preserve one compatible contract for mutations and their observations.
+@Suppress("TooManyFunctions")
 interface MovimientoRepository {
 
   fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>>
@@ -33,6 +38,14 @@ interface MovimientoRepository {
   suspend fun insert(movimiento: Movimiento): DataOutcome<Unit>
 
   suspend fun getAll(): DataOutcome<List<Movimiento>>
+
+  suspend fun getById(id: String): DataOutcome<Movimiento?>
+
+  suspend fun update(id: String, changes: MovimientoChanges): DataOutcome<MovimientoUpdateResult>
+
+  suspend fun deleteAndCapture(id: String): DataOutcome<Movimiento?>
+
+  suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<MovimientoRestoreResult>
 
   suspend fun delete(id: String): DataOutcome<Unit>
 }

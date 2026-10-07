@@ -75,6 +75,11 @@ WHERE monto_moneda = :moneda
   AND categoria_id IN :category_ids
 ORDER BY fecha DESC, created_at DESC, id DESC;
 
+updateMovimiento:
+UPDATE movimiento
+SET tipo = ?, monto_minor = ?, fecha = ?, categoria_id = ?, descripcion = ?
+WHERE id = ?;
+
 deleteMovimiento:
 DELETE FROM movimiento
 WHERE id = ?;

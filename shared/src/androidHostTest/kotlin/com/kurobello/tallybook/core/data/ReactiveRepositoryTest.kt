@@ -10,7 +10,13 @@ import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoChanges
+import com.kurobello.tallybook.core.model.MovimientoDateRange
+import com.kurobello.tallybook.core.model.MovimientoReadCriteria
+import com.kurobello.tallybook.core.model.MovimientoRestoreResult
+import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
+import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -221,6 +227,137 @@ class ReactiveRepositoryTest {
 
     assertTrue(emissions.tryReceive().isFailure)
     driver.close()
+  }
+
+  @Test
+  fun `update capture and restore invalidate home history and search observations`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      TallybookDatabase.Schema.create(driver)
+      val repository =
+          MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
+      val rows =
+          (1..7).map { day ->
+            movimiento("row-$day", monto = Money(100, Moneda.COP))
+                .copy(fecha = LocalDate(2026, 9, day))
+          }
+      rows.forEach { assertEquals(DataOutcome.Success(Unit), repository.insert(it)) }
+      val range = MovimientoDateRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30))
+      val criteria =
+          MovimientoReadCriteria(
+              Moneda.COP,
+              range = range,
+              tipo = TipoMovimiento.GASTO,
+              categoryIds = setOf("cat_comida"),
+          )
+      val recent = mutableListOf<DataOutcome<List<Movimiento>>>()
+      val summary = mutableListOf<DataOutcome<MovimientoSummary>>()
+      val history = mutableListOf<DataOutcome<List<Movimiento>>>()
+      val years = mutableListOf<DataOutcome<List<Int>>>()
+      val search = mutableListOf<DataOutcome<MovimientoSearchSnapshot>>()
+      val collectors =
+          listOf(
+              backgroundScope.launch {
+                repository.observeRecent(Moneda.COP, 6).collect(recent::add)
+              },
+              backgroundScope.launch {
+                repository.observeSummary(Moneda.COP).collect(summary::add)
+              },
+              backgroundScope.launch {
+                repository.observeRange(Moneda.COP, range).collect(history::add)
+              },
+              backgroundScope.launch { repository.observeYears(Moneda.COP).collect(years::add) },
+              backgroundScope.launch { repository.observeFiltered(criteria).collect(search::add) },
+          )
+      try {
+        testScheduler.runCurrent()
+        assertEquals(DataOutcome.Success(rows.reversed().take(6)), recent.last())
+        assertEquals(DataOutcome.Success(rows.reversed()), history.last())
+        assertEquals(DataOutcome.Success(listOf(2026)), years.last())
+        assertEquals(
+            DataOutcome.Success(MovimientoSummary(Money(0, Moneda.COP), Money(700, Moneda.COP))),
+            summary.last(),
+        )
+        assertEquals(
+            DataOutcome.Success(MovimientoSearchSnapshot(rows.reversed(), listOf(2026))),
+            search.last(),
+        )
+        val changed =
+            rows
+                .last()
+                .copy(
+                    tipo = TipoMovimiento.INGRESO,
+                    monto = Money(1_000, Moneda.COP),
+                    fecha = LocalDate(2025, 12, 31),
+                    categoriaId = "other",
+                    descripcion = "changed",
+                )
+        assertEquals(
+            DataOutcome.Success(MovimientoUpdateResult.Updated),
+            repository.update(
+                changed.id,
+                MovimientoChanges(
+                    changed.tipo,
+                    changed.monto,
+                    changed.fecha,
+                    changed.categoriaId,
+                    changed.descripcion,
+                ),
+            ),
+        )
+        testScheduler.runCurrent()
+        val remaining = rows.dropLast(1).reversed()
+        assertEquals(DataOutcome.Success(remaining), recent.last())
+        assertEquals(DataOutcome.Success(remaining), history.last())
+        assertEquals(DataOutcome.Success(listOf(2026, 2025)), years.last())
+        assertEquals(
+            DataOutcome.Success(
+                MovimientoSummary(Money(1_000, Moneda.COP), Money(600, Moneda.COP))
+            ),
+            summary.last(),
+        )
+        assertEquals(
+            DataOutcome.Success(MovimientoSearchSnapshot(remaining, listOf(2026, 2025))),
+            search.last(),
+        )
+        assertEquals(DataOutcome.Success(changed), repository.deleteAndCapture(changed.id))
+        testScheduler.runCurrent()
+        assertEquals(DataOutcome.Success(remaining), recent.last())
+        assertEquals(DataOutcome.Success(remaining), history.last())
+        assertEquals(DataOutcome.Success(listOf(2026)), years.last())
+        assertEquals(
+            DataOutcome.Success(MovimientoSummary(Money(0, Moneda.COP), Money(600, Moneda.COP))),
+            summary.last(),
+        )
+        assertEquals(
+            DataOutcome.Success(MovimientoSearchSnapshot(remaining, listOf(2026))),
+            search.last(),
+        )
+        assertEquals(
+            DataOutcome.Success(MovimientoRestoreResult.Restored),
+            repository.restoreDeleted(changed),
+        )
+        testScheduler.runCurrent()
+        assertEquals(DataOutcome.Success(remaining), recent.last())
+        assertEquals(DataOutcome.Success(remaining), history.last())
+        assertEquals(DataOutcome.Success(listOf(2026, 2025)), years.last())
+        assertEquals(
+            DataOutcome.Success(
+                MovimientoSummary(Money(1_000, Moneda.COP), Money(600, Moneda.COP))
+            ),
+            summary.last(),
+        )
+        assertEquals(
+            DataOutcome.Success(MovimientoSearchSnapshot(remaining, listOf(2026, 2025))),
+            search.last(),
+        )
+        for (emissions in listOf(recent, summary, history, years, search)) assertEquals(
+            4,
+            emissions.size,
+        )
+      } finally {
+        collectors.forEach { it.cancelAndJoin() }
+      }
+    }
   }
 
   private fun movimiento(

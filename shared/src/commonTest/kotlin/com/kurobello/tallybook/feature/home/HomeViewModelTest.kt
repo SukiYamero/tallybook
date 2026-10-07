@@ -14,10 +14,13 @@ import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
+import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
+import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -489,6 +492,23 @@ class HomeViewModelTest {
     }
 
     override suspend fun getAll(): DataOutcome<List<Movimiento>> = DataOutcome.Success(emptyList())
+
+    override suspend fun getById(id: String): DataOutcome<Movimiento?> = DataOutcome.Success(null)
+
+    override suspend fun update(
+        id: String,
+        changes: MovimientoChanges,
+    ): DataOutcome<MovimientoUpdateResult> = DataOutcome.Success(MovimientoUpdateResult.NotFound)
+
+    override suspend fun deleteAndCapture(id: String): DataOutcome<Movimiento?> =
+        DataOutcome.Success(null)
+
+    override suspend fun restoreDeleted(
+        movimiento: Movimiento
+    ): DataOutcome<MovimientoRestoreResult> =
+        DataOutcome.Failure(
+            DataError.InvalidInput("This Home fixture has no persistent movimiento store")
+        )
 
     override suspend fun delete(id: String): DataOutcome<Unit> = DataOutcome.Success(Unit)
 

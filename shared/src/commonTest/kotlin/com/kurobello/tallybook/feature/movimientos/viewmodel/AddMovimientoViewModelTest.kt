@@ -14,10 +14,13 @@ import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
+import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
+import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -450,6 +453,55 @@ class AddMovimientoViewModelTest {
     }
 
     override suspend fun getAll(): DataOutcome<List<Movimiento>> = DataOutcome.Success(inserted)
+
+    override suspend fun getById(id: String): DataOutcome<Movimiento?> =
+        DataOutcome.Success(inserted.firstOrNull { it.id == id })
+
+    override suspend fun update(
+        id: String,
+        changes: MovimientoChanges,
+    ): DataOutcome<MovimientoUpdateResult> {
+      val current =
+          inserted.firstOrNull { it.id == id }
+              ?: return DataOutcome.Success(MovimientoUpdateResult.NotFound)
+      if (current.monto.moneda != changes.monto.moneda)
+          return DataOutcome.Failure(DataError.InvalidInput("Currency cannot change"))
+      val updated =
+          current.copy(
+              tipo = changes.tipo,
+              monto = changes.monto,
+              fecha = changes.fecha,
+              categoriaId = changes.categoriaId,
+              descripcion = changes.descripcion,
+          )
+      val values = inserted.map { if (it.id == id) updated else it }
+      inserted.clear()
+      inserted.addAll(values)
+      return DataOutcome.Success(MovimientoUpdateResult.Updated)
+    }
+
+    override suspend fun deleteAndCapture(id: String): DataOutcome<Movimiento?> {
+      val captured = inserted.firstOrNull { it.id == id }
+      val values = inserted.filter { it.id != id }
+      inserted.clear()
+      inserted.addAll(values)
+      return DataOutcome.Success(captured)
+    }
+
+    override suspend fun restoreDeleted(
+        movimiento: Movimiento
+    ): DataOutcome<MovimientoRestoreResult> {
+      val current = inserted.firstOrNull { it.id == movimiento.id }
+      if (current != null)
+          return DataOutcome.Success(
+              if (current == movimiento) MovimientoRestoreResult.AlreadyPresent
+              else MovimientoRestoreResult.Conflict
+          )
+      val values = inserted + movimiento
+      inserted.clear()
+      inserted.addAll(values)
+      return DataOutcome.Success(MovimientoRestoreResult.Restored)
+    }
 
     override suspend fun delete(id: String): DataOutcome<Unit> = DataOutcome.Success(Unit)
   }
