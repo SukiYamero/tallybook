@@ -644,7 +644,7 @@ retain that old text result as an error fallback.
 | Text computation still running 200 ms after it starts | Retain bounded settled rows; small shared progress indicator beside result status | Localized loading text; no numeric count until settled |
 | Draft edits, sheet opening/cancel closing | No result query, loading or count preview | Underlying applied rows/count remain unchanged |
 | Clear filters | Atomically commit defaults and close; results follow the new applied request | Raw text remains unchanged |
-| Matching insert/delete or category/locale change | Atomically replace when projection settles; retain same-request render during work | Suppress old count as current while known reprocessing is pending; no full-screen skeleton |
+| Matching insert/update/delete/restore or category/locale change | Atomically replace when projection settles; retain same-request render during work | Suppress old count as current while known reprocessing is pending; no full-screen skeleton |
 | Same-request failure with valid snapshot | Retain readable content plus explicit error/retry; no skeleton | Count is stale/unavailable, inputs preserved |
 | Initial/different-request failure or invalid applied Custom dates | Explicit error/retry or date correction; never a perpetual skeleton/empty success | No count; fields/chip removal remain usable |
 | Settled no-data or no-results | Distinct localized state; zero count from settled result | No spinner; no-data offers existing creation; no-results offers clear text/open filters |
@@ -689,3 +689,73 @@ categories in this correction state. If currency-year metadata is unavailable, t
 uses the shared floor plus applied/draft endpoint years; cached metadata never establishes current
 no-data. Currency change clears currency-specific metadata. A future selected date remains visible
 as invalid, but its correction popup opens at a valid month capped by current today.
+
+
+## Movimiento management and feedback
+
+Domain rules live in [business logic](../business-logic.md#editing-and-deletion); accepted delivery
+evidence and supported-version sources live in [Manage movimientos](../features/manage-movimientos.md).
+Real Home/History/Search rows send their persisted ID through the shell's management admission.
+Skeletons and empty states have no click semantics. Row semantics retain complete date, type,
+currency and signed amount when the visible row uses compact presentation.
+
+### Detail and shared editor
+
+Detail is a content-sized bottom sheet with a localized pane title, signed amount/currency,
+type, civil date, category fallback and complete optional description. Its body scrolls while Edit
+and Delete remain in a separate footer. Edit replaces the body inside the same session, reusing
+creation's state-independent form controls through `MovimientoFormState`/`MovimientoFormActions`.
+It opens with populated fields, no initial category picker and no forced keyboard. Existing description
+opens expanded. Focus, disclosure, keyboard and category-entry phases belong to composition.
+
+The edit owner keeps original/draft/validation/save-error inputs. Session catalog/load/submission
+status is the sole owner of those values; `session.form` derives presentation without another writable
+copy or Flow. Field validation and failed Save remain inline. The whole Save/Cancel footer is absent
+while IME is visible and returns after dismissal; the existing scrolling/focus-reveal behavior keeps
+inputs reachable. Cancel/Back/discard behavior follows the domain contract.
+
+Use separate content-detent identifiers for loading, read failure, missing, detail, compact editor
+and expanded editor. A short loading reread must not replace the measured height of full Detail.
+Closing keeps the rendered detail/editor snapshot and disables input until its originating hidden
+callback. Android reason-specific Back handling is composed inside Unstyled's modal content, where
+the current ComposeView resolves the native dialog dispatcher; an Activity-level registration cannot
+handle that window. Add's default behavior remains unchanged. Nested selectors/popups and confirmation
+dialogs consume Back before their parent management surface.
+
+### Shell ownership and admission
+
+One `ManageMovimientoViewModel` lives in a remembered child ViewModel owner outside primary
+Navigation 3 entries. It owns the read generation, management session, editable draft, mutation,
+pending committed feedback and transient deleted snapshot. It outlives the sheet so Undo does not
+depend on an entry or closing modal. The existing creation store/session remains separate.
+
+The child uses the root parent's remembered creation extras and no saved-state registry.
+Supported Android configuration recreation retains the owner and claimed mutation; current iOS
+ownership is scene-based and clears the child on active-scene disposal. Financial drafts, snapshots,
+jobs and feedback tokens never enter saved state or preferences. A fresh process/scene starts closed.
+Host tests establish the actual owner/provider seam; physical iOS teardown is a separate runtime check.
+
+`PrimaryModalCoordinator` admits creation, filters and management through their existing controllers,
+including loading, confirmations, submission and Closing. Primary navigation waits while a modal
+owns the window. During Undo restoration, tabs can change but all new modal sessions wait.
+Callbacks carry origin/token/revision; delayed callbacks cannot close a new session, duplicate feedback
+or consume a claimed restore. Read jobs are cancelled and late generations rejected.
+
+### Snackbar presentation
+
+The plain `TallybookSnackbar` accepts caller-provided content/action/dismiss slots and a root modifier;
+its host owns the composition timer. One shell host renders committed management feedback after
+the originating sheet is hidden. It sits above measured bottom chrome, safe drawing and IME clearance,
+respecting horizontal safe edges and the shared content width. Inline messages remain the recovery
+surface inside an open sheet; creation does not acquire a new snackbar producer.
+
+Informational feedback uses the Short 4-second token; Undo/Retry uses Long 10 seconds. Provided
+accessibility recommendations may extend the window, including indefinitely without overflow.
+Ordinary recomposition cannot restart it. Background or modal coverage hides feedback and cancels
+its timer without dismissing it; each foreground reveal receives a full usable window.
+Root delivery checks live resumed lifecycle and modal/viewport admission, then current token/revision.
+
+Claimed restoration shows localized progress, disables action/Close and suspends expiry.
+Feedback has one replaceable state rather than a queue or one-shot event. Message announcements are
+polite, controls and pane titles are localized, and no countdown is announced. The resolved iOS/Skiko
+manager returns the baseline timeout; VoiceOver-adapted duration is not established by compilation.

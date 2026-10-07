@@ -11,8 +11,8 @@ guides composition; its sample data, chart and eye control do not enable additio
   balance label, the period-owned snapshot and signed secondary values. Its typography is owned by
   [UI architecture](../ui/architecture.md#balance-summary-cards).
 - The screen uses Day/Week/Month and year context, with a scrollable selected-period summary and
-  date-grouped, description-first read-only rows. There is no fixed global-balance banner. Home
-  retains its global balance. The History header starts 20dp below the top safe inset.
+  date-grouped, description-first rows that open [movimiento management](manage-movimientos.md).
+  There is no fixed global-balance banner. Home retains its global balance. The History header starts 20dp below the top safe inset.
 - SQLDelight owns persisted movements. Currency/date-bounded repository observations feed one
   History ViewModel selection and a pure rows/count/totals projection. Loading, empty, failures,
   retry, cancellation and stale-request protection use the same ownership boundary.
@@ -26,7 +26,8 @@ guides composition; its sample data, chart and eye control do not enable additio
 - The shell owns one creation session. Its store lives until the sheet finishes hiding; originating
   session identity guards delayed callbacks. The existing creation flow is shared by Home/History.
 - Profile remains a reserved destination. Text search and non-date filters belong to the separate
-  [Search delivery](search.md); charts and transaction editing are outside these deliveries.
+  [Search delivery](search.md); shared row actions belong to movimiento management. Charts remain
+  outside the delivered scope.
 
 ## Verification boundaries
 

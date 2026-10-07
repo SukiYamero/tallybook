@@ -7,17 +7,26 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 - **iOS physical end-to-end** — Shared production/test sources compile for Native, but physical
   iPhone runtime validation remains pending and was explicitly deferred for History. Confirm the
   authorized connected iPhone and developer services, then run the app from Xcode using the existing
-  shared `TEAM_ID`. Validate Home/History/Search, filters, creation, lifecycle and safe areas.
+  shared `TEAM_ID`. Validate Home/History/Search, filters, creation, lifecycle and safe areas,
+  including management scene teardown, edit/delete/Undo and VoiceOver action-window usability.
+  Precise management evidence lives in [Manage movimientos](features/manage-movimientos.md#verification-boundaries).
   Compilation does not establish runtime behavior; follow the physical-device policy in `AGENTS.md`.
 
 ## Media
 
-- **Search scale and automated device checks** — The 2,000-row isolated scale fixture is prepared
+- **Android automated device checks and Search scale** — The 2,000-row isolated scale fixture is prepared
   and compiled but unexecuted; dataset authorization and a usable runner remain prerequisites.
   The Xiaomi UI runner stalled before assertions (0/20 completed) and was stopped after bounded
   diagnosis. Prioritize runner repair before retrying, then execute the agreed bounded scale check
   with correctness, latency, responsiveness and subscription/allocation evidence. Existing manual
   Android evidence and precise limits live in [Search](features/search.md#verification-boundaries).
+  Management sheet fixtures also compile but remain unexecuted after a bounded stalled-runner retry;
+  execute them after runner repair, preserving their Back, reread-height and IME assertions.
+
+- **Management accessibility on Android** — Verify TalkBack announcements/focus and enlarged-text
+  snackbar, Undo, Close and sheet-action reachability on a confirmed physical device. Manual Xiaomi
+  main-flow checks do not establish these cases; see
+  [Manage movimientos](features/manage-movimientos.md#verification-boundaries).
 
 - **Taxonomía detallada de errores** — `DataError` arranca con `Local`/`Unknown` en
   `docs/tasks/fundacion/wave-1/task1/task.md`; falta expandirlo (causas de red granulares, mapeo a

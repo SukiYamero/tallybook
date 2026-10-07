@@ -18,6 +18,44 @@ Un **movimiento** registra un gasto o un ingreso.
 - **Opcionales**: descripción (por ahora el único campo opcional). `createdAt` es metadata técnica para
   ordenar de forma estable, no un campo solicitado al usuario.
 
+### Editing and deletion
+
+Home, History and Search open the current persisted movimiento by ID. Missing records cannot be
+edited or deleted; failed reads require Retry before mutation actions become available.
+
+- Editing permits type, positive exact amount, civil date, category and optional description.
+  Stored currency, ID and `createdAt` remain fixed. Amount input round-trips through the stored
+  currency's scale and decimal separator without grouping or a currency symbol.
+- Creation's validation and description normalization also apply to editing. Civil today/timezone
+  is captured at editor entry and again on Save; future dates are rejected without silently changing
+  the draft when the clock moves backward.
+- The picker selects existing parent categories. An existing child or missing category remains
+  visible and valid when untouched; a replacement must exist in the loaded catalog. Category updates
+  cannot overwrite typed input or clear an unretried save failure.
+- Unsaved-change guarding compares input with its opening baseline. A valid normalized no-op performs
+  no database update and returns to Detail without saved feedback. A changed successful Save closes
+  management; failure retains the draft for explicit retry. Saving a missing ID never inserts it.
+- Cancel or Back from Edit returns to a freshly read Detail. Changed input first requires Continue
+  or Discard. Scrim/drag closes management through the same draft guard. Nested selection surfaces
+  close first; submission cannot be dismissed or repeated.
+- Delete requires confirmation from Detail and commits immediately. The transaction validates that
+  its captured row can be restored before deleting it; an ineligible legacy record stays intact.
+  Failure keeps Detail for retry. An already-missing record produces informational feedback.
+- Only the exact row captured by the delete transaction is eligible for Undo. Restore preserves all
+  fields and identity. An identical existing row counts as restored without writing; a different or
+  unreadable same-ID row is a terminal conflict and is preserved.
+- One current feedback token owns at most one deleted snapshot. A newer completed management outcome
+  replaces an older unclaimed Undo. Close, expiry, a fresh process or disposal of its owner releases
+  it; the committed deletion remains applied. There is no persistent trash or Undo for edits.
+- Undo claims the token once before restoration starts. Late action/timeout callbacks cannot consume
+  a claimed operation. Restore failure retains the snapshot for Retry; success or conflict releases
+  it. Primary tabs can change during restoration, but new modal sessions wait until it finishes.
+- SQLDelight emissions refresh list membership, counts and balances. Mutations preserve History
+  selection and Search input/filters; normal list clamping may occur when rows disappear.
+
+Presentation, feedback windows and lifecycle ownership live in
+[UI architecture](ui/architecture.md#movimiento-management-and-feedback).
+
 ## Moneda e idioma
 
 Multi-moneda: COP, MXN, ARS, CLP, BRL, USD, DOP, PEN. Moneta hoy soporta COP, MXN, ARS, BRL, USD, PEN —
@@ -119,7 +157,8 @@ Search is a separate destination over the primary currency. Its implementation c
 - Removing an applied chip commits just that dimension. Draft edits never update results, applied
   chips or count. Closing sheets accept no edits or repeated commits.
 - Rows use `fecha DESC, created_at DESC, id DESC`, description-first titles with category fallback,
-  date/category subtitles and signed exact amounts. Search has no global balance or detail/edit action.
+  date/category subtitles and signed exact amounts. A real row opens movimiento management; Search
+  has no global balance.
 - Count derives from the exact settled result list. Pending/stale/failed work never reports an old
   count as current. No-data means no stored movements in this currency; no-results means currency
   data exists but criteria/text match none. Currency presence metadata and structural rows come from
