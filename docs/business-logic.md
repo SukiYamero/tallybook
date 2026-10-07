@@ -180,7 +180,46 @@ Tema claro y oscuro — de dónde salen los colores/tokens concretos, ver `docs/
 
 ## Alcance del MVP
 
-Login con Google + acceso a Drive desde la primera versión usable — no es local-only. El criterio de
-"anda": el usuario inicia sesión, agrega un movimiento, y persiste (local + Drive). El motor de sync
-completo (HLC, outbox, resolución de conflictos) es una feature propia, no un bloqueante del primer
-movimiento persistido.
+The MVP includes a local-only guest mode and an optional Google-connected mode. Cloud backup requires
+Google authentication and explicit Drive permission; guest data never uploads before association.
+The connected acceptance flow is sign in, grant Drive, create a movimiento, and verify local plus
+Drive persistence. The complete HLC/outbox/conflict-merge engine is a separate feature.
+
+### Access, association and backup
+
+- One primary device publishes the account's accepted backup. Retained Google-owned data can be
+  created, edited, deleted and restored with Undo locally without connectivity, regardless of the
+  cached primary role. Upload requires connectivity, authentication as the owner, Drive permission
+  and a fresh primary-device check. A secondary must explicitly become primary before publishing.
+  Taking that role preserves pending local data; it does not restore a cloud copy over it.
+- Guest data and retained Google-owned data are isolated. The MVP exposes no multiple-account/profile
+  switcher. Its storage ownership must nevertheless support these two access modes without mixing data.
+- A Google-account setting controls local access after explicit sign-out. When enabled, the same
+  retained account dataset remains locally readable and editable without login. Backup requires
+  signing in again to the same account and checking current cloud ownership. When disabled, Google-owned data
+  stays inaccessible until authentication; entering guest mode opens separate local data.
+- Association or recovery previews available copies and requires confirmation of the complete dataset
+  to keep. Apply that copy by replacement, not additive merging. Preserve a recovery copy before
+  destructive replacement; new data from another stale installation must not silently overwrite the
+  choice. Cancelling leaves existing data and ownership unchanged.
+- Guest and accessible Google-owned datasets persist mutations without connectivity or cloud checks.
+  Eligible connected sessions
+  retry pending backup when connectivity returns while the app is foregrounded or on reopen;
+  signed-out local access and guest mode never upload automatically. No closed-app upload is promised.
+  Cloud failure does not reverse a successful local mutation or report a false backup success.
+- Before publication, compare pending local data and the current accepted Drive copy against the
+  last acknowledged baseline. If both changed, require confirmation of which complete copy to keep;
+  replace the other only after protecting it. No automatic field/record merging or newest-wins choice.
+  A new primary checks this divergence before uploading. Changed candidates invalidate a stale choice.
+- Drive copies use hidden app-specific storage. Retain two normal verified backups and one protected
+  recovery copy before a restoration that replaces nonempty data. Permission and local mode govern
+  whether the protective copy belongs in Drive or remains only on the device.
+- Guest/local-only erasure can run offline after confirmation. Erasing Google-associated local and
+  Drive data requires authentication as its owner, Drive authorization, connectivity and confirmation.
+  Partial deletion stays visibly incomplete and cannot be followed by automatic re-upload. The exact
+  deletion boundary includes only Tallybook data; legacy Moneta data and the Google account itself
+  are excluded.
+
+Implementation contracts, unresolved device/deletion gates and delivery evidence live in the active
+[Google + Drive plan](tasks/google-drive-persistence.md). These rules describe accepted scope, not
+already implemented behavior.
