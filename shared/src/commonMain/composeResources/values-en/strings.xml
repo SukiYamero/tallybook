@@ -4,6 +4,15 @@
     <string name="ui_catalog_foundations">Foundations</string>
     <string name="ui_catalog_actions">Actions</string>
     <string name="ui_catalog_data_display">Data display</string>
+    <string name="ui_catalog_snackbar_title">Notifications</string>
+    <string name="ui_catalog_snackbar_plain">Plain</string>
+    <string name="ui_catalog_snackbar_actionable">With action</string>
+    <string name="ui_catalog_snackbar_busy">Busy</string>
+    <string name="ui_catalog_snackbar_message">The sample is ready to review</string>
+    <string name="ui_catalog_snackbar_busy_message">Preparing the sample</string>
+    <string name="ui_catalog_snackbar_reviewed">Sample reviewed</string>
+    <string name="ui_catalog_snackbar_action">Review sample</string>
+    <string name="ui_catalog_snackbar_close">Close notification</string>
     <string name="ui_catalog_navigation">Navigation</string>
     <string name="ui_catalog_system">System</string>
     <string name="ui_catalog_light">Light</string>

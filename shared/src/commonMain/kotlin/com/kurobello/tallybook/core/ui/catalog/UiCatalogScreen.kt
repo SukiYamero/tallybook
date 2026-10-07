@@ -52,6 +52,7 @@ import tallybook.shared.generated.resources.ui_catalog_sample_body_small
 import tallybook.shared.generated.resources.ui_catalog_sample_caption
 import tallybook.shared.generated.resources.ui_catalog_sample_label
 import tallybook.shared.generated.resources.ui_catalog_sample_text
+import tallybook.shared.generated.resources.ui_catalog_snackbar_title
 import tallybook.shared.generated.resources.ui_catalog_system
 import tallybook.shared.generated.resources.ui_catalog_title
 
@@ -84,6 +85,7 @@ internal fun UiCatalogScreen(
   val foundations = stringResource(Res.string.ui_catalog_foundations)
   val actions = stringResource(Res.string.ui_catalog_actions)
   val dataDisplay = stringResource(Res.string.ui_catalog_data_display)
+  val snackbarTitle = stringResource(Res.string.ui_catalog_snackbar_title)
   TallybookScreenFrame(
       modifier = modifier,
       bottomBar = { TallybookBottomNavigation(onAddMovement = {}, selectedDestination = null) },
@@ -107,6 +109,7 @@ internal fun UiCatalogScreen(
           onThemeModeChange = onThemeModeChange,
       )
       catalogActions(title = actions)
+      catalogSection(key = "snackbar", title = snackbarTitle) { UiCatalogSnackbar() }
       catalogControlMatrices()
       catalogDataDisplay(title = dataDisplay, fixtures = fixtures)
     }
