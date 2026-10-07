@@ -8,6 +8,7 @@ accepted scope, integration details and verification boundaries.
 | Add movimiento | DONE | [Add movimiento](add-movimiento.md) |
 | History | DONE | [History](history.md) |
 | Search and filters | DONE | [Search and filters](search.md) |
+| Manage movimientos and Undo | IN_PROGRESS | [Active planning contract](../tasks/manage-movimientos/README.md) |
 
 ## Status rules
 
