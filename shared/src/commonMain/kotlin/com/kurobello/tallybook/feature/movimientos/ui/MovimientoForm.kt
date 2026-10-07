@@ -80,6 +80,8 @@ internal fun MovimientoForm(
     startWithCategory: Boolean = false,
     onCategoryLayerReady: () -> Unit = {},
     presentation: MovimientoFormPresentation? = null,
+    headerAction: (@Composable () -> Unit)? = null,
+    supportingContent: (@Composable () -> Unit)? = null,
     footerContent: (@Composable () -> Unit)? = null,
     interactionEnabled: Boolean = true,
 ) {
@@ -123,9 +125,7 @@ internal fun MovimientoForm(
               .padding(horizontal = TallybookTheme.dimensions.screenHorizontal)
               .clearFocusOnUnconsumedTap(),
   ) {
-    TallybookSheetTitle(
-        text = title,
-    )
+    MovimientoFormHeader(title, headerAction)
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space16))
     Column(
         modifier =
@@ -195,6 +195,7 @@ internal fun MovimientoForm(
             )
           }
         }
+        supportingContent?.invoke()
         MovimientoFormErrorMessage(
             error = uiState.error,
             onRetry = actions::onRetryLoad,
@@ -215,8 +216,15 @@ internal fun MovimientoForm(
               .height(TallybookTheme.dimensions.minimumTouchTarget + TallybookTheme.spacing.space8)
       )
     } else {
-      MovimientoFormSubmit(uiState, actions::onSubmit, presentation, interactionEnabled)
-      footerContent?.invoke()
+      if (footerContent == null) {
+        MovimientoFormSubmit(
+            uiState,
+            actions::onSubmit,
+            presentation,
+            interactionEnabled,
+            modifier = Modifier.padding(bottom = TallybookTheme.spacing.space8),
+        )
+      } else footerContent()
     }
   }
   CategoryPickerSheet(

@@ -45,6 +45,15 @@ internal object TallybookButtonDefaults {
       )
 
   @Composable
+  fun destructiveColors(): TallybookButtonColors =
+      TallybookButtonColors(
+          container = TallybookTheme.colors.status.danger.strong,
+          content = TallybookTheme.colors.status.danger.foreground,
+          disabledContainer = TallybookTheme.colors.surface.high,
+          disabledContent = TallybookTheme.colors.foreground.disabled,
+      )
+
+  @Composable
   fun textColors(): TallybookButtonColors =
       TallybookButtonColors(
           container = Color.Transparent,

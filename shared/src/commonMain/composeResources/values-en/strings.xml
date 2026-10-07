@@ -275,7 +275,7 @@
     <string name="movimiento_missing">This movement is no longer available.</string>
     <string name="movimiento_missing_edit">This movement is no longer available. Your draft is still open so you can review it before closing.</string>
     <string name="movimiento_delete_title">Delete this movement?</string>
-    <string name="movimiento_delete_message">%1$s. You can undo this deletion for a few seconds.</string>
+    <string name="movimiento_delete_message">Are you sure you want to delete this movement?</string>
     <string name="movimiento_delete_error">We couldn’t delete this movement. Try again.</string>
     <string name="movimiento_future_date">The date can’t be later than today.</string>
     <string name="movimiento_updated">Movement updated</string>

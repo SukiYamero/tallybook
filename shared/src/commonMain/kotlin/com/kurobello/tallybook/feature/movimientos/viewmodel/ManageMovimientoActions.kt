@@ -4,8 +4,6 @@ import androidx.compose.runtime.Stable
 
 @Stable
 internal interface ManageMovimientoSheetActions : MovimientoFormActions {
-  fun onEdit()
-
   fun onCancelEdit()
 
   fun onRequestDelete()

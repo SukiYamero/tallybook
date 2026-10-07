@@ -44,7 +44,7 @@ class ManageMovimientoViewModelTest {
     assertFalse(f.viewModel.open("other"))
     runCurrent()
     val session = assertNotNull(f.viewModel.uiState.value.session)
-    assertEquals(MovimientoManagementPhase.Detail, session.phase)
+    assertEquals(MovimientoManagementPhase.Edit, session.phase)
     assertEquals(managementMovimiento(), session.movimiento)
     assertTrue(f.viewModel.onRequestDismiss())
     assertFalse(f.viewModel.open("other"))
@@ -65,58 +65,56 @@ class ManageMovimientoViewModelTest {
     f.viewModel.onRetryLoad()
     runCurrent()
     assertEquals(MovimientoManagementPhase.Missing, f.viewModel.uiState.value.session?.phase)
-    f.viewModel.onEdit()
     f.viewModel.onRequestDelete()
     assertNull(f.viewModel.uiState.value.session?.form)
     assertEquals(0, f.repository.deletes)
   }
 
   @Test
-  fun editUsesExactPrefillAndCleanCancelRereadsDetail() = runTest {
+  fun exactPrefillAndCleanCancelCloseWithoutReread() = runTest {
     val f = ManageMovimientoFixture(backgroundScope)
     f.viewModel.open("movement")
     runCurrent()
-    f.viewModel.onEdit()
     assertEquals("12.34", f.viewModel.uiState.value.session?.form?.amountInput)
     assertEquals("Lunch", f.viewModel.uiState.value.session?.form?.descripcion)
     f.repository.readResult = managementFailure()
     f.viewModel.onCancelEdit()
     runCurrent()
-    assertEquals(MovimientoManagementPhase.LoadFailed, f.viewModel.uiState.value.session?.phase)
-    assertEquals(2, f.repository.reads)
+    assertEquals(MovimientoManagementPhase.Closing, f.viewModel.uiState.value.session?.phase)
+    assertEquals(1, f.repository.reads)
   }
 
   @Test
-  fun dirtyCancelContinueAndDiscardPreserveThenResetDraft() = runTest {
+  fun dirtyCancelContinueAndDiscardPreserveThenCloseDraft() = runTest {
     val f = ManageMovimientoFixture(backgroundScope)
     f.viewModel.open("movement")
     runCurrent()
-    f.viewModel.onEdit()
     f.viewModel.onAmountChanged("50.00")
     f.viewModel.onCancelEdit()
-    assertEquals(MovimientoDiscardTarget.Detail, f.viewModel.uiState.value.session?.discardTarget)
+    assertEquals(MovimientoDiscardTarget.Close, f.viewModel.uiState.value.session?.discardTarget)
     f.viewModel.onContinueEditing()
     assertEquals("50.00", f.viewModel.uiState.value.session?.form?.amountInput)
     assertFalse(f.viewModel.onRequestDismiss())
     assertEquals(MovimientoDiscardTarget.Close, f.viewModel.uiState.value.session?.discardTarget)
     f.viewModel.onDiscardChanges()
     assertEquals(MovimientoManagementPhase.Closing, f.viewModel.uiState.value.session?.phase)
-    assertEquals("12.34", f.viewModel.uiState.value.session?.form?.amountInput)
+    assertEquals("50.00", f.viewModel.uiState.value.session?.form?.amountInput)
   }
 
   @Test
-  fun normalizedNoOpDoesNotWriteOrAnnounceAndRereadsMissing() = runTest {
+  fun normalizedNoOpClosesWithoutWriteRereadOrFeedback() = runTest {
     val f = ManageMovimientoFixture(backgroundScope)
     f.viewModel.open("movement")
     runCurrent()
-    f.viewModel.onEdit()
     f.viewModel.onAmountChanged("012.340".dropLast(1))
     f.viewModel.onDescripcionChanged("  Lunch  ")
     f.repository.current = null
     f.viewModel.onSubmit()
     runCurrent()
     assertEquals(0, f.repository.updates)
-    assertEquals(MovimientoManagementPhase.Missing, f.viewModel.uiState.value.session?.phase)
+    assertEquals(MovimientoManagementPhase.Closing, f.viewModel.uiState.value.session?.phase)
+    assertEquals(1, f.repository.reads)
+    f.viewModel.onSheetHidden(assertNotNull(f.viewModel.uiState.value.session).token)
     assertNull(f.viewModel.uiState.value.feedback)
   }
 
@@ -134,7 +132,6 @@ class ManageMovimientoViewModelTest {
         )
     f.viewModel.open("movement")
     runCurrent()
-    f.viewModel.onEdit()
     f.viewModel.onCategoriaSelected("other-child")
     assertEquals("child", f.viewModel.uiState.value.session?.form?.selectedCategoriaId)
     f.categorias.values.value = DataOutcome.Success(emptyList())
@@ -151,7 +148,6 @@ class ManageMovimientoViewModelTest {
     val f = ManageMovimientoFixture(backgroundScope)
     f.viewModel.open("movement")
     runCurrent()
-    f.viewModel.onEdit()
     f.viewModel.onAmountChanged("20.00")
     f.clock.instant = Instant.parse("2026-09-14T12:00:00Z")
     f.viewModel.onSubmit()
@@ -167,7 +163,6 @@ class ManageMovimientoViewModelTest {
     val f = ManageMovimientoFixture(backgroundScope)
     f.viewModel.open("movement")
     runCurrent()
-    f.viewModel.onEdit()
     val origin = assertNotNull(f.viewModel.uiState.value.session).token
     f.viewModel.onAmountChanged("20.00")
     f.viewModel.onSubmit()
@@ -190,7 +185,6 @@ class ManageMovimientoViewModelTest {
     f.repository.updateGate = CompletableDeferred()
     f.viewModel.open("movement")
     runCurrent()
-    f.viewModel.onEdit()
     f.viewModel.onAmountChanged("20.00")
     f.viewModel.onSubmit()
     runCurrent()
@@ -210,7 +204,6 @@ class ManageMovimientoViewModelTest {
     f.repository.updateResult = managementFailure()
     f.viewModel.open("movement")
     runCurrent()
-    f.viewModel.onEdit()
     f.viewModel.onAmountChanged("20.00")
     f.viewModel.onDescripcionChanged(" Keep\nthis ")
     f.viewModel.onSubmit()
@@ -230,7 +223,6 @@ class ManageMovimientoViewModelTest {
     f.repository.updateResult = managementFailure()
     f.viewModel.open("movement")
     runCurrent()
-    f.viewModel.onEdit()
     f.viewModel.onAmountChanged("20.00")
     f.viewModel.onSubmit()
     runCurrent()

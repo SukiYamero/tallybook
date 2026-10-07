@@ -46,7 +46,12 @@ internal class ManageMovimientoFixture(scope: CoroutineScope) {
 internal class ManagementClock : Clock {
   var instant: Instant = Instant.parse("2026-09-15T12:00:00Z")
 
-  override fun now(): Instant = instant
+  var reads = 0
+
+  override fun now(): Instant {
+    reads++
+    return instant
+  }
 }
 
 internal class ManagementCategorias : CategoriaRepository {
@@ -74,6 +79,7 @@ internal class ManagementRepository : MovimientoRepository {
   var readGate: CompletableDeferred<Unit>? = null
   var updateGate: CompletableDeferred<Unit>? = null
   var restoreGate: CompletableDeferred<Unit>? = null
+  var deleteGate: CompletableDeferred<Unit>? = null
   var reads = 0
   var updates = 0
   var deletes = 0
@@ -109,6 +115,7 @@ internal class ManagementRepository : MovimientoRepository {
 
   override suspend fun deleteAndCapture(id: String): DataOutcome<Movimiento?> {
     deletes++
+    deleteGate?.await()
     val result = deleteResult ?: DataOutcome.Success(current)
     if (result is DataOutcome.Success) current = null
     return result

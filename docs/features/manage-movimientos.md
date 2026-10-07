@@ -1,7 +1,7 @@
 # Manage movimientos and Undo
 
-The Xiaomi flow is accepted; the reviewed implementation is integrated into `main`.
-Home, History and Search open Detail, Edit reuses the existing form, and confirmed deletion offers
+The direct movement editor is delivered and accepted for the verified Xiaomi scope.
+Home, History and Search open the prefilled editor using the existing form, and confirmed deletion offers
 Undo through a reusable snackbar with queued delivery. Tags, bulk actions, currency changes, sync
 and persistent trash remain outside this delivery.
 
@@ -23,8 +23,10 @@ feedback windows and lifecycle; the [component catalog](../ui/components.md) lis
 
 ## Verification boundaries
 
-Targeted host regressions cover queue order, per-notification Undo ownership, failure/retry, stale
-callbacks, atomic claims, lifecycle admission and retained owners. Virtual-time tests cover active
+Targeted host regressions cover direct editor entry, clean/dirty closing, normalized no-op Save,
+confirmation admission, draft-preserving deletion failure/cancellation, queue order, per-notification
+Undo ownership, failure/retry, stale callbacks, atomic claims, lifecycle admission and retained owners.
+Virtual-time tests cover active
 deadline shortening, complete windows for queued messages, last-message compaction, empty-queue reset,
 hidden/busy suspension, accessibility recommendations and single timeout delivery. Real SQLite
 fixtures cover identity-safe edits, exact capture/restore, conflict/missing records and eligibility.
@@ -33,15 +35,16 @@ Android debug builds, Android device-test compilation, iOS Arm64 shared-source c
 and ktfmtCheck pass. The final independent review has no pending findings. Compilation does not
 establish device-test execution or iOS runtime behavior.
 
-The APK is installed and launched on the confirmed Xiaomi M2012K11AG. Accepted management scope
-includes entry from Home/History/Search, edit/discard, native Back and committed Delete/Undo.
-Physical catalog checks cover FIFO delivery, dynamic actions, indefinite dismissal, loading completion,
-themed outlines and timing compaction; these checks do not modify business records.
+The adjusted APK is verified on the confirmed Xiaomi M2012K11AG for direct row entry, header deletion
+confirmation/cancellation, the soft-red Trash background, footer placement, keyboard transitions and
+clean/dirty closing. Creation's default form remains available. This read-only smoke does not mutate
+business records; Delete/Undo
+mutation and FIFO ownership are covered by targeted host fixtures.
 
 The instrumented runner remains blocked before assertions; compiled fixtures are not runtime passes.
 Physical iOS teardown, safe areas, VoiceOver, TalkBack and large-text snackbar/action usability remain
-unconfirmed and are tracked in [the backlog](../backlog.md). User acceptance covers the delivered
-Xiaomi scope, not those checks.
+unconfirmed and are tracked in [the backlog](../backlog.md). Acceptance applies to the delivered
+Xiaomi scope; those checks require separate evidence.
 Future checks follow [proportional verification](../README.md#proportional-verification).
 
 ## Supported-version evidence
@@ -67,5 +70,5 @@ upgrade was required.
   [Navigation-event-compose Android 1.0.2 sources](https://dl.google.com/dl/android/maven2/androidx/navigationevent/navigationevent-compose-android/1.0.2/navigationevent-compose-android-1.0.2-sources.jar)
   resolve that owner through the modal view tree. Physical KEYCODE_BACK confirms the integrated path.
 - Modal measurement and focus sources remain in
-  [Add's integration contract](add-movimiento.md#layout-integration); the distinct read-mode detents
-  have rebuilt-Xiaomi reread evidence.
+  [Add's integration contract](add-movimiento.md#layout-integration); editor detents retain the shared
+  content measurement and focus rules.

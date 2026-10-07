@@ -7,13 +7,11 @@ internal enum class MovimientoManagementPhase {
   Loading,
   LoadFailed,
   Missing,
-  Detail,
   Edit,
   Closing,
 }
 
 internal enum class MovimientoDiscardTarget {
-  Detail,
   Close,
 }
 

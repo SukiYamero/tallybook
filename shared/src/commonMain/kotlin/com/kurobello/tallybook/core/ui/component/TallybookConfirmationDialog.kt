@@ -23,6 +23,7 @@ internal fun TallybookConfirmationDialog(
     copy: TallybookConfirmationDialogCopy,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    confirmColors: TallybookButtonColors = TallybookButtonDefaults.primaryColors(),
 ) {
   UnstyledDialog(
       visible = visible,
@@ -56,21 +57,31 @@ internal fun TallybookConfirmationDialog(
                 color = TallybookTheme.colors.foreground.secondary,
                 style = TallybookTheme.typography.body,
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-              TallybookTextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                TallybookText(text = copy.dismissLabel)
-              }
-              TallybookButton(onClick = onConfirm, modifier = Modifier.weight(1f)) {
-                TallybookText(text = copy.confirmLabel)
-              }
-            }
+            ConfirmationActions(copy, confirmColors, onConfirm, onDismiss)
           }
         }
       }
+    }
+  }
+}
+
+@Composable
+private fun ConfirmationActions(
+    copy: TallybookConfirmationDialogCopy,
+    confirmColors: TallybookButtonColors,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+  Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+      verticalAlignment = Alignment.CenterVertically,
+  ) {
+    TallybookTextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+      TallybookText(text = copy.dismissLabel)
+    }
+    TallybookButton(onClick = onConfirm, modifier = Modifier.weight(1f), colors = confirmColors) {
+      TallybookText(text = copy.confirmLabel)
     }
   }
 }

@@ -49,38 +49,22 @@ internal class ManageMovimientoViewModel(
     val session = MovimientoManagementSession(token = ++nextToken, movimientoId = id)
     uiState.update { it.copy(session = session) }
     loadCategories(session.token)
-    loadDetail(session.token)
+    loadMovimiento(session.token)
     return true
   }
 
   override fun onRetryLoad() {
     val session = uiState.value.session ?: return
-    if (!session.canInteract) return
+    if (
+        !session.canInteract ||
+            session.phase == MovimientoManagementPhase.Loading ||
+            session.hasPendingConfirmation
+    )
+        return
     if (session.phase == MovimientoManagementPhase.Edit) loadCategories(session.token)
     else {
       if (session.isCategoriesFailed) loadCategories(session.token)
-      loadDetail(session.token)
-    }
-  }
-
-  override fun onEdit() {
-    val session =
-        uiState.value.session?.takeIf {
-          it.phase == MovimientoManagementPhase.Detail && it.canInteract
-        } ?: return
-    val movimiento = session.movimiento ?: return
-    val draft = movimiento.toDraft()
-    updateSession(session.token) {
-      copy(
-          phase = MovimientoManagementPhase.Edit,
-          edit =
-              EditMovimientoDraftState(
-                  original = movimiento,
-                  draft = draft,
-                  maxSelectableDate = today(),
-              ),
-          error = null,
-      )
+      loadMovimiento(session.token)
     }
   }
 
@@ -102,8 +86,8 @@ internal class ManageMovimientoViewModel(
 
   override fun onCancelEdit() {
     val session = uiState.value.session ?: return
-    if (session.phase != MovimientoManagementPhase.Edit || !session.canInteract) return
-    requestLeaveEdit(session, MovimientoDiscardTarget.Detail)
+    if (!session.canModifyDraft) return
+    requestLeaveEdit(session)
   }
 
   override fun onRequestDismiss(): Boolean {
@@ -114,8 +98,7 @@ internal class ManageMovimientoViewModel(
         onCancelDelete()
         false
       }
-      session.phase == MovimientoManagementPhase.Edit ->
-          requestLeaveEdit(session, MovimientoDiscardTarget.Close)
+      session.phase == MovimientoManagementPhase.Edit -> requestLeaveEdit(session)
       else -> {
         close(session.token)
         true
@@ -136,17 +119,14 @@ internal class ManageMovimientoViewModel(
 
   override fun onContinueEditing() {
     val session = uiState.value.session ?: return
-    if (session.canInteract) updateSession(session.token) { copy(discardTarget = null) }
+    if (session.canInteract && session.discardTarget != null)
+        updateSession(session.token) { copy(discardTarget = null) }
   }
 
   override fun onDiscardChanges() {
     val session =
         uiState.value.session?.takeIf { it.canInteract && it.discardTarget != null } ?: return
-    val target = requireNotNull(session.discardTarget)
-    updateSession(session.token) {
-      copy(edit = edit?.copy(draft = requireNotNull(edit).original.toDraft()), discardTarget = null)
-    }
-    leaveEdit(session.token, target)
+    close(session.token)
   }
 
   override fun onSubmit() {
@@ -161,7 +141,7 @@ internal class ManageMovimientoViewModel(
     val changes = ready.form?.toChangesOrNull()
     when {
       changes == null -> Unit
-      changes == validated.original.toChanges() -> loadDetail(session.token)
+      changes == validated.original.toChanges() -> close(session.token)
       else -> {
         updateSession(session.token) { copy(isSubmitting = true) }
         submitUpdate(session, changes)
@@ -192,9 +172,9 @@ internal class ManageMovimientoViewModel(
   override fun onRequestDelete() {
     val session = uiState.value.session ?: return
     if (
-        session.phase != MovimientoManagementPhase.Detail ||
+        !session.canModifyDraft ||
             session.movimiento == null ||
-            !session.canInteract
+            session.error == MovimientoManagementError.MissingOnSave
     )
         return
     updateSession(session.token) { copy(isDeleteConfirmationVisible = true, error = null) }
@@ -202,7 +182,7 @@ internal class ManageMovimientoViewModel(
 
   override fun onCancelDelete() {
     val session = uiState.value.session ?: return
-    if (session.canInteract)
+    if (session.canInteract && session.isDeleteConfirmationVisible)
         updateSession(session.token) { copy(isDeleteConfirmationVisible = false) }
   }
 
@@ -302,27 +282,17 @@ internal class ManageMovimientoViewModel(
   ): MovimientoFeedback? =
       current.feedback?.takeIf { it.token == token && it.revision == revision && !it.isRestoring }
 
-  private fun requestLeaveEdit(
-      session: MovimientoManagementSession,
-      target: MovimientoDiscardTarget,
-  ): Boolean =
+  private fun requestLeaveEdit(session: MovimientoManagementSession): Boolean =
       when (dismissalDecision(session.hasUnsavedChanges)) {
         DismissalDecision.RequestConfirmation -> {
-          updateSession(session.token) { copy(discardTarget = target) }
+          updateSession(session.token) { copy(discardTarget = MovimientoDiscardTarget.Close) }
           false
         }
         DismissalDecision.Dismiss -> {
-          leaveEdit(session.token, target)
-          target == MovimientoDiscardTarget.Close
+          close(session.token)
+          true
         }
       }
-
-  private fun leaveEdit(token: Long, target: MovimientoDiscardTarget) {
-    when (target) {
-      MovimientoDiscardTarget.Detail -> loadDetail(token)
-      MovimientoDiscardTarget.Close -> close(token)
-    }
-  }
 
   private fun updateDraft(transform: MovimientoDraft.() -> MovimientoDraft) {
     val session = uiState.value.session ?: return
@@ -335,7 +305,7 @@ internal class ManageMovimientoViewModel(
     }
   }
 
-  private fun loadDetail(token: Long) {
+  private fun loadMovimiento(token: Long) {
     val session = uiState.value.session ?: return
     if (session.token != token) return
     readJob?.cancel()
@@ -352,6 +322,18 @@ internal class ManageMovimientoViewModel(
     readJob = coroutineScope.launch {
       val result = movimientoRepository.getById(session.movimientoId)
       if (generation != readGeneration) return@launch
+      val loadedEdit =
+          when (result) {
+            is DataOutcome.Failure -> null
+            is DataOutcome.Success ->
+                result.data?.let {
+                  EditMovimientoDraftState(
+                      original = it,
+                      draft = it.toDraft(),
+                      maxSelectableDate = today(),
+                  )
+                }
+          }
       updateSession(token) {
         if (phase == MovimientoManagementPhase.Closing) this
         else
@@ -360,9 +342,10 @@ internal class ManageMovimientoViewModel(
               is DataOutcome.Success ->
                   copy(
                       phase =
-                          if (result.data == null) MovimientoManagementPhase.Missing
-                          else MovimientoManagementPhase.Detail,
+                          if (loadedEdit == null) MovimientoManagementPhase.Missing
+                          else MovimientoManagementPhase.Edit,
                       movimiento = result.data,
+                      edit = loadedEdit,
                   )
             }
       }
@@ -439,8 +422,11 @@ private data class PendingMovimientoFeedback(
 private val MovimientoManagementSession.canInteract: Boolean
   get() = !isSubmitting && phase != MovimientoManagementPhase.Closing
 
+private val MovimientoManagementSession.hasPendingConfirmation: Boolean
+  get() = discardTarget != null || isDeleteConfirmationVisible
+
 private val MovimientoManagementSession.canModifyDraft: Boolean
-  get() = phase == MovimientoManagementPhase.Edit && canInteract && discardTarget == null
+  get() = phase == MovimientoManagementPhase.Edit && canInteract && !hasPendingConfirmation
 
 internal fun Money.toAmountInput(): String {
   val digits = minorUnits.toString().padStart(moneda.scale + 1, '0')

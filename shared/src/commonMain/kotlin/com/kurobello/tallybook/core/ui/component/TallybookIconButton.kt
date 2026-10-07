@@ -65,6 +65,14 @@ internal fun resolveTallybookIconButtonColors(
 
 internal object TallybookIconButtonDefaults {
   @Composable
+  fun destructiveColors(): TallybookIconButtonColors =
+      colors(TallybookIconButtonStyle.Neutral)
+          .copy(
+              container = TallybookTheme.colors.status.danger.base.copy(alpha = 0.12f),
+              content = TallybookTheme.colors.status.danger.base,
+          )
+
+  @Composable
   fun colors(style: TallybookIconButtonStyle): TallybookIconButtonColors =
       resolveTallybookIconButtonColors(
           style = style,
@@ -89,11 +97,11 @@ internal fun TallybookIconButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     style: TallybookIconButtonStyle = TallybookIconButtonStyle.Neutral,
+    colors: TallybookIconButtonColors = TallybookIconButtonDefaults.colors(style),
 ) {
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
   val tapFeedback = rememberTallybookTapFeedback()
-  val colors = TallybookIconButtonDefaults.colors(style)
   val containerColor = if (enabled) colors.container else colors.disabledContainer
   val contentColor = if (enabled) colors.content else colors.disabledContent
   TallybookSurface(

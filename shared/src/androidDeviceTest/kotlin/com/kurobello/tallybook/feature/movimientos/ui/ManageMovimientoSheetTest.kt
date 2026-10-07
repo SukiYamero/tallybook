@@ -5,12 +5,14 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -21,12 +23,15 @@ import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.EditMovimientoDraftState
 import com.kurobello.tallybook.feature.movimientos.viewmodel.ManageMovimientoSheetActions
+import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoDiscardTarget
+import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoManagementError
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoManagementPhase
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoManagementSession
 import com.kurobello.tallybook.feature.movimientos.viewmodel.managementCategoria
 import com.kurobello.tallybook.feature.movimientos.viewmodel.managementMovimiento
 import com.kurobello.tallybook.feature.movimientos.viewmodel.toDraft
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.StringResource
@@ -36,38 +41,48 @@ import org.junit.Test
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.movimiento_amount_expense_prompt
 import tallybook.shared.generated.resources.movimiento_cancel
+import tallybook.shared.generated.resources.movimiento_close
 import tallybook.shared.generated.resources.movimiento_delete
-import tallybook.shared.generated.resources.movimiento_edit
+import tallybook.shared.generated.resources.movimiento_edit_title
 import tallybook.shared.generated.resources.movimiento_save_changes
 
 class ManageMovimientoSheetTest {
   @get:Rule val composeRule = createComposeRule()
 
   @Test
-  fun detailKeepsEditAndDeleteActionsReachableWithCompleteDescription() {
+  fun editorShowsPrefilledFieldsWithHeaderDeleteAndOneFooterRow() {
     val actions = ManagementSheetActions()
-    val movimiento = managementMovimiento().copy(descripcion = "A complete movement description")
-    composeRule.setContent {
-      TallybookTheme {
-        ManageMovimientoContent(
-            MovimientoManagementSession(
-                1,
-                movimiento.id,
-                MovimientoManagementPhase.Detail,
-                movimiento,
-                listOf(managementCategoria()),
-            ),
-            actions,
-        )
-      }
-    }
-    composeRule.onNodeWithText(movimiento.descripcion.orEmpty()).assertIsDisplayed()
-    composeRule.onNodeWithText(managementString(Res.string.movimiento_edit)).performClick()
-    composeRule.onNodeWithText(managementString(Res.string.movimiento_delete)).performClick()
+    composeRule.setContent { TallybookTheme { ManageMovimientoContent(editSession(), actions) } }
+    composeRule.onNodeWithText("12.34").assertIsNotFocused()
+    composeRule.onNodeWithText("Lunch").assertIsDisplayed()
+    composeRule.onNodeWithText("Food").assertIsDisplayed()
+    assertEditorActionPlacement()
+    composeRule.onNodeWithText(managementString(Res.string.movimiento_save_changes)).performClick()
+    composeRule
+        .onNodeWithContentDescription(managementString(Res.string.movimiento_delete))
+        .performClick()
+    composeRule.onNodeWithText(managementString(Res.string.movimiento_cancel)).performClick()
     composeRule.runOnIdle {
-      assertEquals(1, actions.edits)
+      assertEquals(1, actions.saves)
       assertEquals(1, actions.deleteRequests)
+      assertEquals(1, actions.cancels)
     }
+  }
+
+  @Test
+  fun editorSubmissionAndPendingDiscardDisableHeaderAndFooterActions() {
+    composeRule.mainClock.autoAdvance = false
+    val ready = editSession()
+    var session by mutableStateOf(ready)
+    composeRule.setContent {
+      TallybookTheme { ManageMovimientoContent(session, ManagementSheetActions()) }
+    }
+    composeRule.runOnIdle { session = ready.copy(isSubmitting = true) }
+    composeRule.mainClock.advanceTimeByFrame()
+    assertEditorActionsDisabled()
+    composeRule.runOnIdle { session = ready.copy(discardTarget = MovimientoDiscardTarget.Close) }
+    composeRule.mainClock.advanceTimeByFrame()
+    assertEditorActionsDisabled()
   }
 
   @Test
@@ -137,6 +152,10 @@ class ManageMovimientoSheetTest {
     composeRule.waitUntil(5_000) { imeBottom > 0 }
     composeRule.onNodeWithText(save).assertDoesNotExist()
     composeRule.onNodeWithText(cancel).assertDoesNotExist()
+    composeRule
+        .onNodeWithContentDescription(managementString(Res.string.movimiento_delete))
+        .assertIsDisplayed()
+        .assertIsEnabled()
     composeRule.onNodeWithContentDescription(amount).performImeAction()
     composeRule.waitUntil(5_000) { imeBottom == 0 }
     composeRule.onNodeWithText(save).assertIsDisplayed().assertIsEnabled().performClick()
@@ -181,74 +200,40 @@ class ManageMovimientoSheetTest {
         .onNodeWithText(managementString(Res.string.movimiento_save_changes))
         .assertIsNotEnabled()
     composeRule.onNodeWithText(managementString(Res.string.movimiento_cancel)).assertIsNotEnabled()
+    composeRule
+        .onNodeWithContentDescription(managementString(Res.string.movimiento_delete))
+        .assertIsNotEnabled()
   }
 
   @Test
-  fun detailBackDispatchesTheIntentFromTheNativeModalWindow() {
+  fun editorBackDispatchesTheIntentFromTheNativeModalWindow() {
     val actions = ManagementSheetActions()
-    val movimiento = managementMovimiento()
-    composeRule.setContent {
-      TallybookTheme {
-        ManageMovimientoContent(
-            MovimientoManagementSession(
-                8,
-                movimiento.id,
-                MovimientoManagementPhase.Detail,
-                movimiento,
-                listOf(managementCategoria()),
-                isCategoriesLoading = false,
-            ),
-            actions,
-        )
-      }
-    }
-    composeRule.onNodeWithText(managementString(Res.string.movimiento_edit)).assertIsDisplayed()
+    composeRule.setContent { TallybookTheme { ManageMovimientoContent(editSession(), actions) } }
+    composeRule
+        .onNodeWithText(managementString(Res.string.movimiento_save_changes))
+        .assertIsDisplayed()
     InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
     composeRule.waitForIdle()
     composeRule.runOnIdle { assertEquals(1, actions.backs) }
   }
 
   @Test
-  fun cleanCancelRereadRendersTheCompleteDetailAfterLoadingDetentSettles() {
+  fun categoryCatalogFailureKeepsDeleteReachableAndMissingRowDisablesMutations() {
     val actions = ManagementSheetActions()
-    val movimiento = managementMovimiento()
-    val ready =
-        MovimientoManagementSession(
-            8,
-            movimiento.id,
-            MovimientoManagementPhase.Detail,
-            movimiento,
-            listOf(managementCategoria()),
-            isCategoriesLoading = false,
-        )
-    var session by androidx.compose.runtime.mutableStateOf(ready)
+    val ready = editSession().copy(isCategoriesLoading = true, isCategoriesFailed = true)
+    var session by mutableStateOf(ready)
     composeRule.setContent { TallybookTheme { ManageMovimientoContent(session, actions) } }
-    composeRule.onNodeWithText(managementString(Res.string.movimiento_edit)).performClick()
+    val delete = managementString(Res.string.movimiento_delete)
+    val save = managementString(Res.string.movimiento_save_changes)
+    composeRule.onNodeWithContentDescription(delete).assertIsEnabled().performClick()
+    composeRule.onNodeWithContentDescription(save).assertIsNotEnabled()
     composeRule.runOnIdle {
-      session =
-          ready.copy(
-              phase = MovimientoManagementPhase.Edit,
-              edit =
-                  EditMovimientoDraftState(
-                      movimiento,
-                      movimiento.toDraft(),
-                      LocalDate(2026, 9, 15),
-                  ),
-          )
+      assertEquals(1, actions.deleteRequests)
+      session = ready.copy(error = MovimientoManagementError.MissingOnSave)
     }
-    composeRule.onNodeWithText(managementString(Res.string.movimiento_cancel)).performClick()
-    composeRule.mainClock.autoAdvance = false
-    composeRule.runOnIdle {
-      session = ready.copy(phase = MovimientoManagementPhase.Loading, movimiento = null)
-    }
-    composeRule.mainClock.advanceTimeBy(500)
-    composeRule.runOnIdle { session = ready }
-    composeRule.mainClock.advanceTimeBy(500)
-    composeRule.onNodeWithText("USD").assertIsDisplayed()
-    composeRule.onNodeWithText("Food").assertIsDisplayed()
-    composeRule.onNodeWithText("Lunch").assertIsDisplayed()
-    composeRule.onNodeWithText(managementString(Res.string.movimiento_edit)).assertIsDisplayed()
-    composeRule.onNodeWithText(managementString(Res.string.movimiento_delete)).assertIsDisplayed()
+    composeRule.onNodeWithContentDescription(delete).assertIsNotEnabled()
+    composeRule.onNodeWithContentDescription(save).assertIsNotEnabled()
+    composeRule.onNodeWithText(managementString(Res.string.movimiento_close)).assertIsEnabled()
   }
 
   @Test
@@ -287,22 +272,50 @@ class ManageMovimientoSheetTest {
         .onNodeWithText(managementString(Res.string.movimiento_save_changes))
         .assertIsDisplayed()
   }
+
+  private fun assertEditorActionPlacement() {
+    val title =
+        composeRule
+            .onNodeWithText(managementString(Res.string.movimiento_edit_title))
+            .getUnclippedBoundsInRoot()
+    val delete =
+        composeRule
+            .onNodeWithContentDescription(managementString(Res.string.movimiento_delete))
+            .getUnclippedBoundsInRoot()
+    val cancel =
+        composeRule
+            .onNodeWithText(managementString(Res.string.movimiento_cancel))
+            .getUnclippedBoundsInRoot()
+    val save =
+        composeRule
+            .onNodeWithText(managementString(Res.string.movimiento_save_changes))
+            .getUnclippedBoundsInRoot()
+    assertTrue(title.right <= delete.left)
+    assertTrue(title.top < delete.bottom && delete.top < title.bottom)
+    assertTrue(cancel.right <= save.left)
+    assertTrue(cancel.top < save.bottom && save.top < cancel.bottom)
+  }
+
+  private fun assertEditorActionsDisabled() {
+    composeRule
+        .onNodeWithContentDescription(managementString(Res.string.movimiento_delete))
+        .assertIsNotEnabled()
+    composeRule
+        .onNodeWithContentDescription(managementString(Res.string.movimiento_save_changes))
+        .assertIsNotEnabled()
+    composeRule.onNodeWithText(managementString(Res.string.movimiento_cancel)).assertIsNotEnabled()
+  }
 }
 
 // The fixture implements the whole route contract while asserting only emitted presentation
 // intents.
 @Suppress("TooManyFunctions")
 private class ManagementSheetActions : ManageMovimientoSheetActions {
-  var edits = 0
   var deleteRequests = 0
   var saves = 0
   var cancels = 0
   var backs = 0
   var hidden = 0
-
-  override fun onEdit() {
-    edits++
-  }
 
   override fun onRequestDelete() {
     deleteRequests++
@@ -348,3 +361,16 @@ private class ManagementSheetActions : ManageMovimientoSheetActions {
 }
 
 private fun managementString(resource: StringResource) = runBlocking { getString(resource) }
+
+private fun editSession(): MovimientoManagementSession {
+  val movimiento = managementMovimiento()
+  return MovimientoManagementSession(
+      token = 1,
+      movimientoId = movimiento.id,
+      phase = MovimientoManagementPhase.Edit,
+      movimiento = movimiento,
+      categorias = listOf(managementCategoria()),
+      isCategoriesLoading = false,
+      edit = EditMovimientoDraftState(movimiento, movimiento.toDraft(), LocalDate(2026, 9, 15)),
+  )
+}

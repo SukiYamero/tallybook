@@ -2,6 +2,7 @@ package com.kurobello.tallybook.feature.movimientos.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -9,18 +10,26 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Trash2
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
 import com.kurobello.tallybook.core.ui.component.TallybookButton
+import com.kurobello.tallybook.core.ui.component.TallybookButtonDefaults
 import com.kurobello.tallybook.core.ui.component.TallybookConfirmationDialog
 import com.kurobello.tallybook.core.ui.component.TallybookConfirmationDialogCopy
+import com.kurobello.tallybook.core.ui.component.TallybookIconButton
+import com.kurobello.tallybook.core.ui.component.TallybookIconButtonDefaults
 import com.kurobello.tallybook.core.ui.component.TallybookModalBottomSheet
 import com.kurobello.tallybook.core.ui.component.TallybookProgressIndicator
 import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
-import com.kurobello.tallybook.core.ui.movimiento.signedMovimientoAmountText
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.ManageMovimientoSheetActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoManagementError
@@ -39,17 +48,15 @@ import tallybook.shared.generated.resources.movimiento_delete
 import tallybook.shared.generated.resources.movimiento_delete_error
 import tallybook.shared.generated.resources.movimiento_delete_message
 import tallybook.shared.generated.resources.movimiento_delete_title
-import tallybook.shared.generated.resources.movimiento_detail_title
 import tallybook.shared.generated.resources.movimiento_edit_title
 import tallybook.shared.generated.resources.movimiento_missing
 import tallybook.shared.generated.resources.movimiento_missing_edit
 import tallybook.shared.generated.resources.movimiento_read_error
 import tallybook.shared.generated.resources.movimiento_save_changes
 import tallybook.shared.generated.resources.retry
-import tallybook.shared.generated.resources.unknown_category
 
 private val MANAGEMENT_CONTENT_DETENTS =
-    listOf("loading", "load-failed", "missing", "detail", "edit-compact", "edit-details")
+    listOf("loading", "load-failed", "missing", "edit-compact", "edit-details")
 
 @Composable
 internal fun ManageMovimientoContent(
@@ -58,10 +65,7 @@ internal fun ManageMovimientoContent(
 ) {
   val origin = session.token
   val isEditing = session.form != null
-  val title =
-      stringResource(
-          if (isEditing) Res.string.movimiento_edit_title else Res.string.movimiento_detail_title
-      )
+  val title = stringResource(Res.string.movimiento_edit_title)
   var detailsExpanded by
       rememberSaveable(origin, isEditing) {
         mutableStateOf(session.form?.descripcion?.isNotEmpty() == true)
@@ -91,7 +95,6 @@ internal fun ManageMovimientoContent(
 private fun MovimientoManagementSession.contentDetent(detailsExpanded: Boolean): String =
     when {
       edit != null -> if (detailsExpanded) "edit-details" else "edit-compact"
-      movimiento != null -> "detail"
       phase == MovimientoManagementPhase.LoadFailed -> "load-failed"
       phase == MovimientoManagementPhase.Missing -> "missing"
       else -> "loading"
@@ -106,30 +109,16 @@ private fun ManagementSheetBody(
     onDetailsExpandedChange: (Boolean) -> Unit,
 ) {
   val interactionEnabled = session.phase != MovimientoManagementPhase.Closing
-  when {
-    session.form != null ->
-        ManagementEditContent(session, actions, title, detailsExpanded, onDetailsExpandedChange)
-    session.movimiento != null ->
-        MovimientoDetailContent(
-            movimiento = session.movimiento,
-            categoria = session.categorias.firstOrNull { it.id == session.movimiento.categoriaId },
-            isSubmitting = session.isSubmitting,
-            interactionEnabled = interactionEnabled,
-            error =
-                stringResource(Res.string.movimiento_delete_error).takeIf {
-                  session.error == MovimientoManagementError.DeleteFailed
-                },
-            onEdit = actions::onEdit,
-            onDelete = actions::onRequestDelete,
-        )
-    else ->
-        ManagementReadContent(
-            session.phase,
-            title,
-            actions::onRetryLoad,
-            { actions.onRequestDismiss() },
-            interactionEnabled,
-        )
+  if (session.form != null) {
+    ManagementEditContent(session, actions, title, detailsExpanded, onDetailsExpandedChange)
+  } else {
+    ManagementReadContent(
+        session.phase,
+        title,
+        actions::onRetryLoad,
+        { actions.onRequestDismiss() },
+        interactionEnabled,
+    )
   }
 }
 
@@ -141,19 +130,57 @@ private fun ManagementEditContent(
     detailsExpanded: Boolean,
     onDetailsExpandedChange: (Boolean) -> Unit,
 ) {
+  val interactionEnabled = session.canInteractWithEditor
+  val presentation =
+      MovimientoFormPresentation(
+          title,
+          stringResource(Res.string.movimiento_save_changes),
+          session.error != MovimientoManagementError.MissingOnSave,
+      )
   MovimientoForm(
       uiState = requireNotNull(session.form),
-      interactionEnabled = session.phase != MovimientoManagementPhase.Closing,
+      interactionEnabled = interactionEnabled,
       actions = actions,
       detailsExpanded = detailsExpanded,
       onDetailsExpandedChange = onDetailsExpandedChange,
-      presentation =
-          MovimientoFormPresentation(
-              title,
-              stringResource(Res.string.movimiento_save_changes),
-              session.error != MovimientoManagementError.MissingOnSave,
-          ),
-      footerContent = { ManagementEditFooter(session, actions) },
+      presentation = presentation,
+      headerAction = {
+        TallybookIconButton(
+            onClick = actions::onRequestDelete,
+            icon = Lucide.Trash2,
+            contentDescription = stringResource(Res.string.movimiento_delete),
+            colors = TallybookIconButtonDefaults.destructiveColors(),
+            enabled =
+                interactionEnabled &&
+                    !session.isSubmitting &&
+                    session.movimiento != null &&
+                    session.error != MovimientoManagementError.MissingOnSave,
+        )
+      },
+      supportingContent = { ManagementEditError(session.error) },
+      footerContent = { ManagementEditFooter(session, actions, presentation) },
+  )
+}
+
+private val MovimientoManagementSession.canInteractWithEditor: Boolean
+  get() =
+      phase == MovimientoManagementPhase.Edit &&
+          !isDeleteConfirmationVisible &&
+          discardTarget == null
+
+@Composable
+private fun ManagementEditError(error: MovimientoManagementError?) {
+  val message =
+      when (error) {
+        MovimientoManagementError.MissingOnSave ->
+            stringResource(Res.string.movimiento_missing_edit)
+        MovimientoManagementError.DeleteFailed -> stringResource(Res.string.movimiento_delete_error)
+        null -> return
+      }
+  TallybookText(
+      message,
+      color = TallybookTheme.colors.status.danger.base,
+      modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
   )
 }
 
@@ -161,20 +188,31 @@ private fun ManagementEditContent(
 private fun ManagementEditFooter(
     session: MovimientoManagementSession,
     actions: ManageMovimientoSheetActions,
+    presentation: MovimientoFormPresentation,
 ) {
   val isMissing = session.error == MovimientoManagementError.MissingOnSave
-  if (isMissing)
-      TallybookText(
-          stringResource(Res.string.movimiento_missing_edit),
-          color = TallybookTheme.colors.status.danger.base,
-      )
-  TallybookTextButton(
-      onClick = { if (isMissing) actions.onRequestDismiss() else actions.onCancelEdit() },
+  Row(
       modifier = Modifier.fillMaxWidth(),
-      enabled = session.phase != MovimientoManagementPhase.Closing && !session.isSubmitting,
+      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+      verticalAlignment = Alignment.CenterVertically,
   ) {
-    TallybookText(
-        stringResource(if (isMissing) Res.string.movimiento_close else Res.string.movimiento_cancel)
+    TallybookTextButton(
+        onClick = { if (isMissing) actions.onRequestDismiss() else actions.onCancelEdit() },
+        modifier = Modifier.weight(1f),
+        enabled = session.canInteractWithEditor && !session.isSubmitting,
+    ) {
+      TallybookText(
+          stringResource(
+              if (isMissing) Res.string.movimiento_close else Res.string.movimiento_cancel
+          )
+      )
+    }
+    MovimientoFormSubmit(
+        uiState = requireNotNull(session.form),
+        onSubmit = actions::onSubmit,
+        presentation = presentation,
+        interactionEnabled = session.canInteractWithEditor,
+        modifier = Modifier.weight(1f),
     )
   }
 }
@@ -214,31 +252,18 @@ private fun ManagementConfirmations(
     session: MovimientoManagementSession,
     actions: ManageMovimientoSheetActions,
 ) {
-  val movimiento = session.movimiento
-  val identity =
-      movimiento
-          ?.let {
-            listOf(
-                    signedMovimientoAmountText(it.monto, it.tipo),
-                    movimientoDetailDate(it),
-                    session.categorias
-                        .firstOrNull { categoria -> categoria.id == it.categoriaId }
-                        ?.nombre ?: stringResource(Res.string.unknown_category),
-                )
-                .joinToString(" · ")
-          }
-          .orEmpty()
   TallybookConfirmationDialog(
       visible = session.isDeleteConfirmationVisible,
       copy =
           TallybookConfirmationDialogCopy(
               title = stringResource(Res.string.movimiento_delete_title),
-              message = stringResource(Res.string.movimiento_delete_message, identity),
+              message = stringResource(Res.string.movimiento_delete_message),
               confirmLabel = stringResource(Res.string.movimiento_delete),
               dismissLabel = stringResource(Res.string.movimiento_cancel),
           ),
       onConfirm = actions::onConfirmDelete,
       onDismiss = actions::onCancelDelete,
+      confirmColors = TallybookButtonDefaults.destructiveColors(),
   )
   TallybookConfirmationDialog(
       visible = session.discardTarget != null,

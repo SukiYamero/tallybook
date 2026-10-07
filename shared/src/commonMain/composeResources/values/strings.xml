@@ -275,7 +275,7 @@
     <string name="movimiento_missing">Este movimiento ya no está disponible.</string>
     <string name="movimiento_missing_edit">Este movimiento ya no está disponible. Tu borrador sigue abierto; puedes revisarlo antes de cerrar.</string>
     <string name="movimiento_delete_title">¿Eliminar este movimiento?</string>
-    <string name="movimiento_delete_message">%1$s. Puedes deshacer la eliminación durante unos segundos.</string>
+    <string name="movimiento_delete_message">¿Seguro que quieres eliminar este movimiento?</string>
     <string name="movimiento_delete_error">No pudimos eliminar el movimiento. Intenta de nuevo.</string>
     <string name="movimiento_future_date">La fecha no puede ser posterior a hoy.</string>
     <string name="movimiento_updated">Movimiento actualizado</string>

@@ -126,7 +126,6 @@ class MovimientoUndoTest {
     assertEquals(old, f.viewModel.uiState.value.feedback)
     f.viewModel.open("next")
     runCurrent()
-    f.viewModel.onEdit()
     f.viewModel.onAmountChanged("20.00")
     f.viewModel.onSubmit()
     runCurrent()

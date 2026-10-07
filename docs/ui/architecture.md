@@ -699,25 +699,37 @@ Real Home/History/Search rows send their persisted ID through the shell's manage
 Skeletons and empty states have no click semantics. Row semantics retain complete date, type,
 currency and signed amount when the visible row uses compact presentation.
 
-### Detail and shared editor
+### Direct editor and shared form
 
-Detail is a content-sized bottom sheet with a localized pane title, signed amount/currency,
-type, civil date, category fallback and complete optional description. Its body scrolls while Edit
-and Delete remain in a separate footer. Edit replaces the body inside the same session, reusing
-creation's state-independent form controls through `MovimientoFormState`/`MovimientoFormActions`.
-It opens with populated fields, no initial category picker and no forced keyboard. Existing description
+Selecting a movement opens a content-sized bottom sheet with the localized Edit movement title,
+including during its initial read. A successful read supplies the original record and prefilled draft.
+The editor reuses creation's state-independent controls
+through `MovimientoFormState`/`MovimientoFormActions`: the type selector retains its directional icons
+and status colors, the currency precedes the numeric input, and the category selector shows its avatar
+beside its name. It opens with no initial category picker and no forced keyboard. Existing description
 opens expanded. Focus, disclosure, keyboard and category-entry phases belong to composition.
+
+An icon-only Delete action sits at the logical end of the title row with its localized accessible name.
+Its rounded container uses the danger color at 12% opacity, matching snackbar status-icon backgrounds,
+and the icon uses the full danger color; disabled styling retains the shared icon-button defaults.
+It depends on a loaded persisted record, submission/Closing state and pending confirmations, not category
+catalog readiness. Delete confirmation contains one concise question and a themed red primary CTA;
+it does not repeat the amount, date or category. Cancelling it preserves the draft. Other confirmation
+dialogs retain their default CTA styling.
 
 The edit owner keeps original/draft/validation/save-error inputs. Session catalog/load/submission
 status is the sole owner of those values; `session.form` derives presentation without another writable
-copy or Flow. Field validation and failed Save remain inline. The whole Save/Cancel footer is absent
-while IME is visible and returns after dismissal; the existing scrolling/focus-reveal behavior keeps
+copy or Flow. Field validation, failed Save and management errors remain inline in the scrollable body.
+Cancel and Save changes share one footer row. The whole footer is absent while IME is visible and
+returns after dismissal; the existing scrolling/focus-reveal behavior keeps
 inputs reachable. Cancel/Back/discard behavior follows the domain contract.
 
-Use separate content-detent identifiers for loading, read failure, missing, detail, compact editor
-and expanded editor. A short loading reread must not replace the measured height of full Detail.
-Closing keeps the rendered detail/editor snapshot and disables input until its originating hidden
-callback. Android reason-specific Back handling is composed inside Unstyled's modal content, where
+The shared form accepts optional header-action, supporting-content and footer slots; creation keeps
+its default header and submit footer. Management replaces the entire footer while retaining the shared
+submit readiness/loading behavior. Use separate content-detent identifiers for loading, read failure,
+missing, compact editor and expanded editor. Closing keeps the rendered editor snapshot and disables
+input until its originating hidden callback. Android reason-specific Back handling is composed
+inside Unstyled's modal content, where
 the current ComposeView resolves the native dialog dispatcher; an Activity-level registration cannot
 handle that window. Add's default behavior remains unchanged. Nested selectors/popups and confirmation
 dialogs consume Back before their parent management surface.

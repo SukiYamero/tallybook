@@ -33,14 +33,18 @@ edited or deleted; failed reads require Retry before mutation actions become ava
   visible and valid when untouched; a replacement must exist in the loaded catalog. Category updates
   cannot overwrite typed input or clear an unretried save failure.
 - Unsaved-change guarding compares input with its opening baseline. A valid normalized no-op performs
-  no database update and returns to Detail without saved feedback. A changed successful Save closes
+  no database update and closes the editor without saved feedback. A changed successful Save closes
   management; failure retains the draft for explicit retry. Saving a missing ID never inserts it.
-- Cancel or Back from Edit returns to a freshly read Detail. Changed input first requires Continue
-  or Discard. Scrim/drag closes management through the same draft guard. Nested selection surfaces
+- Selecting a movement opens its prefilled editor directly after the read succeeds. Cancel or Back
+  closes the editor. Changed input first requires Continue or Discard; Continue preserves the draft,
+  while Discard closes without saving. Scrim/drag uses the same draft guard. Nested selection surfaces
   close first; submission cannot be dismissed or repeated.
-- Delete requires confirmation from Detail and commits immediately. The transaction validates that
+- Delete requires confirmation from the editor and commits immediately against the persisted row,
+  without saving the draft first. Cancelling deletion retains all unsaved input. Invalid drafts and
+  unavailable category catalogs do not block deletion. Pending confirmations and submission reject
+  competing edits or mutations. The transaction validates that
   its captured row can be restored before deleting it; an ineligible legacy record stays intact.
-  Failure keeps Detail for retry. An already-missing record produces informational feedback.
+  Failure keeps the editor and draft for retry. An already-missing record produces informational feedback.
 - Only the exact row captured by the delete transaction is eligible for Undo. Restore preserves all
   fields and identity. An identical existing row counts as restored without writing; a different or
   unreadable same-ID row is a terminal conflict and is preserved.
