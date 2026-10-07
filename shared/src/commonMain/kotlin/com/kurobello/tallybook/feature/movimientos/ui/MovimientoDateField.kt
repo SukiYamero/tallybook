@@ -7,7 +7,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.kurobello.tallybook.core.ui.component.TallybookDateChipPicker
 import com.kurobello.tallybook.core.ui.component.TallybookDateChipSize
-import com.kurobello.tallybook.core.ui.component.TallybookText
+import com.kurobello.tallybook.core.ui.component.TallybookInputLabel
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.time.Clock
 import kotlinx.datetime.LocalDate
@@ -35,10 +35,8 @@ internal fun MovimientoDateField(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.dimensions.fieldLabelSpacing),
   ) {
-    TallybookText(
+    TallybookInputLabel(
         text = stringResource(Res.string.date),
-        style = TallybookTheme.typography.label,
-        color = TallybookTheme.colors.foreground.tertiary,
     )
     TallybookDateChipPicker(
         value = state.fecha,

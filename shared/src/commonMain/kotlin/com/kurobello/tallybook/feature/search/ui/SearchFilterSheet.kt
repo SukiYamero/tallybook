@@ -26,9 +26,11 @@ import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookChoicePill
 import com.kurobello.tallybook.core.ui.component.TallybookDateChipPicker
 import com.kurobello.tallybook.core.ui.component.TallybookModalBottomSheet
+import com.kurobello.tallybook.core.ui.component.TallybookSectionHeading
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentOption
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentedControl
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentedControlStyle
+import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -120,6 +122,7 @@ internal fun SearchFilterSheetContent(
         modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space20),
     ) {
+      TallybookSheetTitle(stringResource(Res.string.search_filters))
       SearchDateFilters(filters, uiState, enabled) { actions.onFilterDraftChanged(id, it) }
       SearchTypeFilters(filters.tipo, enabled) {
         actions.onFilterDraftChanged(id, filters.copy(tipo = it))
@@ -148,7 +151,7 @@ private fun SearchTypeFilters(
     onSelect: (TipoMovimiento?) -> Unit,
 ) {
   Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8)) {
-    SearchFilterHeading(stringResource(Res.string.search_type))
+    TallybookSectionHeading(stringResource(Res.string.search_type))
     TallybookSegmentedControl(
         options =
             listOf(
@@ -170,6 +173,7 @@ private fun SearchTypeFilters(
         modifier = Modifier.fillMaxWidth(),
         enabled = enabled,
         style = TallybookSegmentedControlStyle.Neutral,
+        labelStyle = TallybookTheme.typography.controlValue,
     )
   }
 }
@@ -206,7 +210,7 @@ private fun SearchDateFilters(
     onChange: (SearchFilters) -> Unit,
 ) {
   Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8)) {
-    SearchFilterHeading(stringResource(Res.string.search_date_range))
+    TallybookSectionHeading(stringResource(Res.string.search_date_range))
     FlowRow(
         modifier = Modifier.selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
@@ -278,7 +282,8 @@ private fun SearchCustomDateRow(
     TallybookText(
         label,
         modifier = Modifier.widthIn(min = TallybookTheme.spacing.space48),
-        style = TallybookTheme.typography.bodySmall,
+        style = TallybookTheme.typography.label,
+        color = TallybookTheme.colors.foreground.secondary,
     )
     content()
   }

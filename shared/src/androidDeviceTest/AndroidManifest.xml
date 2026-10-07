@@ -17,5 +17,13 @@
             android:name="com.kurobello.tallybook.feature.home.HomeLoadingPreviewActivity"
             android:exported="true"
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <activity
+            android:name="com.kurobello.tallybook.core.ui.movimiento.BalanceCardPreviewActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <activity
+            android:name="com.kurobello.tallybook.core.ui.component.DatePickerPreviewActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
     </application>
 </manifest>

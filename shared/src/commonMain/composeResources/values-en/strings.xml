@@ -71,6 +71,7 @@
     <string name="navigation_profile">Profile</string>
 
     <string name="add_movimiento_pane_title">Add movement</string>
+    <string name="movement_type">Type</string>
     <string name="expense">Expense</string>
     <string name="income">Income</string>
     <string name="amount">Amount</string>

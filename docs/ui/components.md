@@ -28,13 +28,24 @@ creating another one. Visual tokens, interaction rules, and ownership remain def
 | `TallybookSelectionField` | Opening a dedicated selection flow from a form | It displays a value or placeholder; it is not a free-text input or inline dropdown. |
 | `CategoryChip` | Selecting a category inside the category picker | Use it in the selection flow, not as a substitute for the form field. |
 
+## Sheet headings
+
+Existing and future bottom sheets use these shared headings and the standard defined in
+[UI architecture](architecture.md#bottom-sheet-typography-hierarchy).
+
+| Component | Use it for | Notes |
+|---|---|---|
+| `TallybookSheetTitle` | The visible primary title of a bottom sheet | Manrope sheetTitle token, 20sp/800; heading semantics and caller placement. |
+| `TallybookSectionHeading` | A section label above its values or controls | Manrope sectionHeading token, 16sp/600; tertiary gray, optional error color and heading semantics. |
+
 ## Inputs and feedback
 
 | Component | Use it for | Notes |
 |---|---|---|
-| `TallybookTextField` | A themed single-line or multi-line text input with label, placeholder, error, and leading or trailing content | It owns focus, cursor, border, and disabled appearance. |
+| `TallybookInputLabel` | Identifying an input field, including Description | Independent inputLabel token, 14sp/400; gray or supplied error color, without section-heading semantics. |
+| `TallybookTextField` | A themed single-line or multi-line text input with label, placeholder, error, and leading or trailing content | It owns focus, cursor, border, and disabled appearance; optional `labelContent` preserves the semantic label. |
 | `TallybookSearchField` | Search queries with a search affordance and optional clear action | Its outer size remains stable while the query changes. |
-| `TallybookAmountInput` | A prominent monetary value with its currency symbol, decimal keyboard, and field feedback | It does not parse, normalize, or format while the user is editing. |
+| `TallybookAmountInput` | A prominent monetary value with its currency symbol, decimal keyboard, and field feedback | It does not parse, normalize, or format while the user is editing; optional `labelContent` supplies a field label. |
 | `TallybookDateChipPicker` | Selecting one calendar date from a compact date chip | S and M variants preserve the minimum touch target; both apply a date immediately and support inclusive `minDate`/`maxDate`. Omitted bounds preserve existing callers. |
 | `TallybookChoicePill` | Choosing one option in a wrapping group, including Search date presets | Caller owns selection and layout. Centered 36 dp visual surface, minimum 48 dp target, selected/disabled semantics and no press ripple or shading. |
 | `TallybookFilterTag` | Showing an applied filter with one remove action | Compact 28 dp surface and caption text, centered in a minimum 48 dp target. Caller supplies the localized remove description and optional category palette. |
@@ -49,9 +60,9 @@ creating another one. Visual tokens, interaction rules, and ownership remain def
 
 | Component | Use it for | Notes |
 |---|---|---|
-| `BalanceCard` | The Home summary of total balance and income/expense context | Use the semantic balance colors; do not reuse it as a generic card. |
+| `BalanceCard` | The Home or selected-period summary of balance and income/expense context | Full-width stacked income/expense rows with trailing amounts. Caller supplies the localized label, typed secondary-amount formatter and optional feedback footer; reuse its matching skeleton. |
 | `BalanceCardSkeleton` | A pending Home balance summary | Matches the existing card's typography, spacing, surfaces and income/expense mini-cards; placeholder text has no semantics. |
-| `MovimientoRow` | A compact movement item in a list | It renders movement-specific presentation only. |
+| `MovimientoRow` | A compact movement item in a list | It renders movement-specific presentation only; shared card amounts and skeletons use the size14 token. |
 | `MovimientoRowSkeleton` | A pending movement row | Shares the current row's avatar size, spacing, surface and responsive amount layout. Placeholder height represents a typical two-line row. |
 | `TallybookBottomNavigation` | Stable primary destinations and the centered Add movimiento action | Reserved destinations remain non-interactive until their screens exist. |
 | `TallybookNavHost` | Connecting approved routes to shared navigation UI | It owns route composition, not feature business logic. |

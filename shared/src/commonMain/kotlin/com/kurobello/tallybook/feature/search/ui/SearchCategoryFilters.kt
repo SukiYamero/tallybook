@@ -7,11 +7,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.ui.category.CategoryChip
+import com.kurobello.tallybook.core.ui.component.TallybookSectionHeading
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -42,7 +42,7 @@ internal fun SearchCategoryFilters(
       modifier = modifier,
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
   ) {
-    SearchFilterHeading(stringResource(Res.string.search_category_label))
+    TallybookSectionHeading(stringResource(Res.string.search_category_label))
     groups.forEach { group ->
       FlowRow(
           horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
@@ -70,20 +70,10 @@ internal fun SearchCategoryFilters(
                 selected = true
               },
       ) {
-        TallybookText(label)
+        TallybookText(label, style = TallybookTheme.typography.controlValue)
       }
     }
   }
-}
-
-@Composable
-internal fun SearchFilterHeading(text: String) {
-  TallybookText(
-      text,
-      modifier = Modifier.semantics { heading() },
-      color = TallybookTheme.colors.foreground.tertiary,
-      style = TallybookTheme.typography.label,
-  )
 }
 
 internal fun searchCategoryGroups(categories: List<Categoria>): List<List<Categoria>> {

@@ -1,5 +1,7 @@
 package com.kurobello.tallybook.feature.movimientos.ui
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -8,6 +10,7 @@ import com.composables.icons.lucide.ArrowDownLeft
 import com.composables.icons.lucide.ArrowUpRight
 import com.composables.icons.lucide.Lucide
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.component.TallybookSectionHeading
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentOption
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentTone
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentedControl
@@ -16,6 +19,7 @@ import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.expense
 import tallybook.shared.generated.resources.income
+import tallybook.shared.generated.resources.movement_type
 
 @Composable
 internal fun MovimientoTypeSelector(
@@ -43,12 +47,18 @@ internal fun MovimientoTypeSelector(
             ),
         )
       }
-  TallybookSegmentedControl(
-      options = options,
-      selected = selected,
-      onSelect = onSelected,
+  Column(
       modifier = modifier.fillMaxWidth(),
-      enabled = enabled,
-      labelStyle = TallybookTheme.typography.bodySmall,
-  )
+      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+  ) {
+    TallybookSectionHeading(stringResource(Res.string.movement_type))
+    TallybookSegmentedControl(
+        options = options,
+        selected = selected,
+        onSelect = onSelected,
+        modifier = Modifier.fillMaxWidth(),
+        enabled = enabled,
+        labelStyle = TallybookTheme.typography.controlValue,
+    )
+  }
 }

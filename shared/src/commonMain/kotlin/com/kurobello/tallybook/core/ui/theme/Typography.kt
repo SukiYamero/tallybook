@@ -21,6 +21,7 @@ import tallybook.shared.generated.resources.manrope_semibold
 internal data class TallybookTypography(
     val caption: TextStyle,
     val label: TextStyle,
+    val controlValue: TextStyle,
     val bodySmall: TextStyle,
     val body: TextStyle,
     val bodyEmphasis: TextStyle,
@@ -28,7 +29,24 @@ internal data class TallybookTypography(
     val headline: TextStyle,
     val amountSymbol: TextStyle,
     val amount: TextStyle,
-)
+) {
+  val inputLabel: TextStyle =
+      label.copy(
+          fontSize = TallybookTypeScale.size14,
+          lineHeight = TallybookTypeScale.size20,
+          fontWeight = FontWeight.Normal,
+      )
+  val balanceLabel: TextStyle =
+      label.copy(fontSize = TallybookTypeScale.size15, lineHeight = TallybookTypeScale.size20)
+  val balanceSecondaryAmount: TextStyle =
+      bodyEmphasis.copy(
+          fontSize = TallybookTypeScale.size17,
+          lineHeight = TallybookTypeScale.size22,
+      )
+  val sheetTitle: TextStyle = headline.copy(fontSize = TallybookTypeScale.size20)
+  val sectionHeading: TextStyle =
+      title.copy(fontSize = TallybookTypeScale.size16, fontWeight = FontWeight.SemiBold)
+}
 
 internal object TallybookTypeScale {
   val size10 = 10.sp
@@ -104,6 +122,13 @@ private fun createTallybookTypography(fontFamily: FontFamily): TallybookTypograp
                 lineHeight = TallybookTypeScale.size18,
                 fontWeight = FontWeight.SemiBold,
             ),
+        controlValue =
+            TextStyle(
+                fontFamily = fontFamily,
+                fontSize = TallybookTypeScale.size13,
+                lineHeight = TallybookTypeScale.size18,
+                fontWeight = FontWeight.Normal,
+            ),
         bodySmall =
             TextStyle(
                 fontFamily = fontFamily,
@@ -144,13 +169,13 @@ private fun createTallybookTypography(fontFamily: FontFamily): TallybookTypograp
                 fontFamily = fontFamily,
                 fontSize = TallybookTypeScale.size30,
                 lineHeight = TallybookTypeScale.size30,
-                fontWeight = FontWeight.ExtraBold,
+                fontWeight = FontWeight.Normal,
             ),
         amount =
             TextStyle(
                 fontFamily = fontFamily,
                 fontSize = TallybookTypeScale.amountInputM,
                 lineHeight = TallybookTypeScale.amountInputM,
-                fontWeight = FontWeight.ExtraBold,
+                fontWeight = FontWeight.Normal,
             ),
     )

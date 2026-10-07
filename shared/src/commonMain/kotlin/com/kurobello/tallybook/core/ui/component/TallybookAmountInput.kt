@@ -37,6 +37,7 @@ internal fun TallybookAmountInput(
     focusRequester: FocusRequester? = null,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     inputModifier: Modifier = Modifier,
+    labelContent: (@Composable () -> Unit)? = null,
 ) {
   val appearance = tallybookAmountInputAppearance(enabled = enabled, message = message)
   Column(
@@ -44,11 +45,11 @@ internal fun TallybookAmountInput(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.dimensions.fieldLabelSpacing),
   ) {
-    TallybookText(
-        text = label,
-        color = appearance.labelColor,
-        style = TallybookTheme.typography.bodyEmphasis,
-    )
+    if (labelContent != null) {
+      labelContent()
+    } else {
+      TallybookInputLabel(text = label, color = appearance.labelColor)
+    }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,

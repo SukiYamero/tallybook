@@ -24,22 +24,30 @@ references; their sample data and quantity-bearing Apply button are not requirem
   default filters, closes and preserves raw text. Custom shows labeled From/To controls with inclusive
   opposite-endpoint bounds and today's cap; legacy reversed saved input keeps normalization.
 - Shared `TallybookChoicePill` and `TallybookFilterTag` preserve 48dp interaction targets with smaller
-  visuals and no press shading. Shared movement-row amounts and skeletons use the next size token,
-  17sp; monetary formatting is unchanged. Reusable APIs live in the [catalog](../ui/components.md).
+  visuals and no press shading. Shared movement-row amounts and skeletons follow the
+  [global card typography](../ui/architecture.md#movement-card-amounts); monetary formatting is unchanged. Reusable APIs live in the [catalog](../ui/components.md).
 - No editing, chart, currency selector, category authoring, sync, FTS, pager or dependency upgrade is
   included. The unified Custom range selector is deferred to [the backlog](../backlog.md).
 
 ## Verification boundaries
 
-The feature passed 337 shared host tests. Current follow-ups passed 80 focused date-bound/Search host
-tests with zero failures/skips, plus Detekt, ktfmtCheck, Android production/test APK builds and Native
-production/common-test compilation. Earlier amount changes passed 19 focused money/row host tests.
-Independent final review found no mandatory issues; its read-only reviewer context was reused.
+The baseline passed 337 shared host tests. The final reviewed tree passed 121 focused Search,
+navigation/modal lifecycle, calendar geometry, History and movement-row host tests with zero failures,
+errors or skips, plus Detekt, ktfmtCheck, Android production/test APK builds and Native production
+compilation. Two independent final reviews covered the data/state and UI/component boundaries.
+Review fixes align Home's Search press feedback with the shared surface and bound calendar width to
+safe viewport margins while preserving day targets through horizontal grid scrolling.
 
 The current production APK was installed and launched on one authorized Xiaomi M2012K11AG, API 33.
 Physical checks cover search/clear/debounce feedback, independent filter application/removal, draft
 cancellation, Clear-and-close, Home-entry focus/tab retention, partial sheet/footer reachability,
 landscape calendar scrolling, compact tags, choice-pill press shading and smaller movement amounts.
+The final calendar fixture ran on the Xiaomi with local 320dp and 360dp window constraints: popup
+widths were 288dp and 328dp, and horizontal grid scrolling exposed full 48dp Saturday/Sunday targets
+with pointer selection. These are isolated component constraints, not a physical screen-size change.
+The final production smoke repeated text/clear, draft cancellation, type application/removal,
+Clear-and-close and Home-focus/tab-return checks against the existing 16 movimientos. Home press
+feedback and the shared History balance were visually checked; no production records were changed.
 Custom checks cover visible endpoint labels, rejected inverted/future selections, same-day apply and
 reopening unchanged. Device rotation and keep-awake settings were restored.
 

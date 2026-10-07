@@ -3,6 +3,7 @@ package com.kurobello.tallybook.core.ui.movimiento
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
@@ -21,7 +22,10 @@ import tallybook.shared.generated.resources.home_expenses
 import tallybook.shared.generated.resources.home_income
 
 @Composable
-internal fun BalanceCardSkeleton(modifier: Modifier = Modifier) {
+internal fun BalanceCardSkeleton(
+    modifier: Modifier = Modifier,
+    label: String = stringResource(Res.string.home_balance),
+) {
   Surface(
       modifier = modifier.clearAndSetSemantics {},
       shape = MaterialTheme.shapes.extraLarge,
@@ -34,22 +38,22 @@ internal fun BalanceCardSkeleton(modifier: Modifier = Modifier) {
     ) {
       Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4)) {
         TallybookSkeletonLine(
-            sampleText = stringResource(Res.string.home_balance),
-            style = MaterialTheme.typography.labelLarge,
+            sampleText = label,
+            style = TallybookTheme.typography.balanceLabel,
         )
         TallybookSkeletonLine(
             sampleText = "$ 000.000",
-            style = MaterialTheme.typography.headlineMedium,
+            style = TallybookTheme.typography.headline,
         )
       }
-      Row(horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12)) {
+      Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12)) {
         SummaryAmountSkeleton(
             labelSample = stringResource(Res.string.home_income),
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.fillMaxWidth(),
         )
         SummaryAmountSkeleton(
             labelSample = stringResource(Res.string.home_expenses),
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.fillMaxWidth(),
         )
       }
     }
@@ -63,28 +67,32 @@ private fun SummaryAmountSkeleton(labelSample: String, modifier: Modifier) {
       shape = MaterialTheme.shapes.large,
       color = MaterialTheme.colorScheme.surfaceContainerLowest,
   ) {
-    Column(
+    BalanceSummaryAmountLayout(
         modifier =
             Modifier.padding(
                 horizontal = TallybookTheme.spacing.space14,
                 vertical = TallybookTheme.spacing.space12,
             ),
-        verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space6),
-    ) {
-      Row(
-          horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space6),
-          verticalAlignment = Alignment.CenterVertically,
-      ) {
-        TallybookSkeleton(modifier = Modifier.size(TallybookTheme.dimensions.movementSummaryIcon))
-        TallybookSkeletonLine(
-            sampleText = labelSample,
-            style = MaterialTheme.typography.labelMedium,
-        )
-      }
-      TallybookSkeletonLine(
-          sampleText = "$ 000.000",
-          style = MaterialTheme.typography.titleSmall,
-      )
-    }
+        labelContent = {
+          Row(
+              horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space6),
+              verticalAlignment = Alignment.CenterVertically,
+          ) {
+            TallybookSkeleton(
+                modifier = Modifier.size(TallybookTheme.dimensions.movementSummaryIcon)
+            )
+            TallybookSkeletonLine(
+                sampleText = labelSample,
+                style = TallybookTheme.typography.balanceLabel,
+            )
+          }
+        },
+        amountContent = {
+          TallybookSkeletonLine(
+              sampleText = "$ -0.000.000,00",
+              style = TallybookTheme.typography.balanceSecondaryAmount,
+          )
+        },
+    )
   }
 }

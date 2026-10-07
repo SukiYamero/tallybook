@@ -5,6 +5,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.WindowInfo
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -19,6 +23,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -30,6 +35,7 @@ import org.jetbrains.compose.resources.getStringArray
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.calendar_date_content_description
 import tallybook.shared.generated.resources.calendar_next_month
 import tallybook.shared.generated.resources.calendar_previous_month
 import tallybook.shared.generated.resources.date_picker_months
@@ -37,6 +43,59 @@ import tallybook.shared.generated.resources.date_picker_months
 class TallybookDateChipPickerTest {
 
   @get:Rule val composeRule = createComposeRule()
+
+  @Test
+  fun compactWidthsKeepSaturdayAndSundayReachableWithFullClickableTargets() {
+    val windowWidth = mutableStateOf(320)
+    val selections = mutableListOf<LocalDate>()
+    val month = runBlocking { getStringArray(Res.array.date_picker_months)[8] }
+    composeRule.setContent {
+      val density = LocalDensity.current
+      val compactWindow =
+          object : WindowInfo {
+            override val isWindowFocused = true
+            override val containerSize =
+                with(density) { IntSize(windowWidth.value.dp.roundToPx(), 640.dp.roundToPx()) }
+          }
+      CompositionLocalProvider(LocalWindowInfo provides compactWindow) {
+        TallybookTheme {
+          TallybookDateChipPicker(
+              value = LocalDate(2026, 9, 15),
+              onValueChange = { selections += it },
+              label = "Date",
+              maxDate = LocalDate(2026, 9, 30),
+              calendarDaySize = 48.dp,
+          )
+        }
+      }
+    }
+    listOf(320, 360).forEach { width ->
+      composeRule.runOnIdle { windowWidth.value = width }
+      composeRule.onNodeWithContentDescription("Date").performClick()
+      composeRule
+          .onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.HorizontalScrollAxisRange))
+          .performTouchInput { swipeLeft() }
+      listOf(26, 27).forEach { day ->
+        val description = runBlocking {
+          getString(Res.string.calendar_date_content_description, day, month, 2026)
+        }
+        val cell =
+            composeRule
+                .onNodeWithContentDescription(description)
+                .assertIsEnabled()
+                .assertIsDisplayed()
+                .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+        val pixels = with(composeRule.density) { 48.dp.toPx() }
+        val bounds = cell.fetchSemanticsNode().boundsInRoot
+        assertEquals(pixels, bounds.width, absoluteTolerance = 1f)
+        assertEquals(pixels, bounds.height, absoluteTolerance = 1f)
+        if (day == 27) cell.performTouchInput { click() }
+      }
+    }
+    composeRule.runOnIdle {
+      assertEquals(listOf(LocalDate(2026, 9, 27), LocalDate(2026, 9, 27)), selections)
+    }
+  }
 
   @Test
   fun raisingTheYearFloorWhileBrowsingKeepsNextMonthAvailableForRecovery() {

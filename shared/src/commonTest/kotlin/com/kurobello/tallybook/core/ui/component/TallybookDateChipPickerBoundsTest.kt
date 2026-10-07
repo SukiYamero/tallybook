@@ -59,8 +59,18 @@ class TallybookDateChipPickerBoundsTest {
 
   @Test
   fun compactPopupHeightExcludesSafeInsetsAndBothEdgeMargins() {
-    assertEquals(278.dp, calendarPopupMaximumHeight(350.dp, 40.dp, 16.dp))
-    assertEquals(0.dp, calendarPopupMaximumHeight(40.dp, 40.dp, 16.dp))
+    assertEquals(278.dp, calendarPopupMaximumExtent(350.dp, 40.dp, 16.dp))
+    assertEquals(0.dp, calendarPopupMaximumExtent(40.dp, 40.dp, 16.dp))
+  }
+
+  @Test
+  fun compactPopupWidthKeepsSevenFullTargetsScrollableInsideSafeEdges() {
+    assertEquals(288.dp, calendarPopupMaximumExtent(320.dp, 0.dp, 16.dp, 360.dp))
+    assertEquals(328.dp, calendarPopupMaximumExtent(360.dp, 0.dp, 16.dp, 360.dp))
+    assertEquals(304.dp, calendarPopupMaximumExtent(360.dp, 24.dp, 16.dp, 360.dp))
+    assertEquals(360.dp, calendarPopupMaximumExtent(400.dp, 0.dp, 16.dp, 360.dp))
+    assertEquals(336.dp, calendarPopupMaximumExtent(400.dp, 0.dp, 16.dp, 336.dp))
+    assertEquals(360.dp, calendarPopupMaximumExtent(0.dp, 0.dp, 16.dp, 360.dp))
   }
 
   @Test

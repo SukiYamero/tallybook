@@ -65,7 +65,7 @@ internal fun TallybookChoicePill(
                   horizontal = TallybookTheme.spacing.space12,
                   vertical = TallybookTheme.spacing.space4,
               ),
-          style = TallybookTheme.typography.label,
+          style = TallybookTheme.typography.controlValue,
       )
     }
   }

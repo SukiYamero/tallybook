@@ -7,6 +7,9 @@ guides composition; its sample data, chart and eye control do not enable additio
 
 ## Integration
 
+- The period summary reuses Home's shared balance card and skeleton, with the localized Period
+  balance label, the period-owned snapshot and signed secondary values. Its typography is owned by
+  [UI architecture](../ui/architecture.md#balance-summary-cards).
 - The screen uses Day/Week/Month and year context, with a scrollable selected-period summary and
   date-grouped, description-first read-only rows. There is no fixed global-balance banner. Home
   retains its global balance. The History header starts 20dp below the top safe inset.
@@ -26,6 +29,18 @@ guides composition; its sample data, chart and eye control do not enable additio
   [Search delivery](search.md); charts and transaction editing are outside these deliveries.
 
 ## Verification boundaries
+
+The shared balance-card follow-up passed 21 focused History presentation/projection and money-row
+host tests, Kotlin style, Android production/device-fixture builds and Native production compilation.
+Independent read-only review found no mandatory issues. Xiaomi checks cover Home/History cards,
+Period balance wording, selected-day/month totals and signed period values. The stacked-row follow-up
+passes style and Android/device-fixture/Native compilation. An isolated preview on Xiaomi verifies
+50,000 COP income and 2,000,000 COP expenses at 320dp and 100%/130% font scale: labels and amounts
+remain complete, amount right edges align, and narrow rows move the label above the trailing value.
+The preview uses no database or preferences; no production money was seeded. Original device settings
+and the production foreground app are preserved.
+The new retained/error/retry UI fixture is compiled but unexecuted because the instrumented runner
+remains blocked; manual ready-state checks do not establish runtime coverage of its failure branches.
 
 Android app/device-test builds, shared host tests, Detekt and format checks pass. Independent review
 approved the shared loading contracts, Home integration and compact date selection controls.

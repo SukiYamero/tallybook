@@ -3,6 +3,7 @@ package com.kurobello.tallybook.core.ui.movimiento
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -13,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.composables.icons.lucide.ArrowDownLeft
@@ -21,6 +23,7 @@ import com.composables.icons.lucide.Lucide
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.MovimientoSummary
+import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.theme.LocalTallybookColors
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
@@ -30,7 +33,13 @@ import tallybook.shared.generated.resources.home_expenses
 import tallybook.shared.generated.resources.home_income
 
 @Composable
-fun BalanceCard(summary: MovimientoSummary, modifier: Modifier = Modifier) {
+fun BalanceCard(
+    summary: MovimientoSummary,
+    modifier: Modifier = Modifier,
+    label: String = stringResource(Res.string.home_balance),
+    secondaryAmountFormatter: (Money, TipoMovimiento) -> String = { amount, _ -> amount.format() },
+    footerContent: (@Composable () -> Unit)? = null,
+) {
   Surface(
       modifier = modifier,
       shape = MaterialTheme.shapes.extraLarge,
@@ -38,31 +47,32 @@ fun BalanceCard(summary: MovimientoSummary, modifier: Modifier = Modifier) {
       contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
   ) {
     Column(
-        modifier = Modifier.padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.padding(TallybookTheme.spacing.space20),
+        verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16),
     ) {
-      Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+      Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4)) {
         Text(
-            text = stringResource(Res.string.home_balance),
+            text = label,
             color = MaterialTheme.colorScheme.onPrimaryContainer,
-            style = MaterialTheme.typography.labelLarge,
+            style = TallybookTheme.typography.balanceLabel,
         )
-        Text(text = summary.balance.format(), style = MaterialTheme.typography.headlineMedium)
+        Text(text = summary.balance.format(), style = TallybookTheme.typography.headline)
       }
-      Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+      Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12)) {
         SummaryAmount(
             label = stringResource(Res.string.home_income),
-            amount = summary.ingresos,
+            amountText = secondaryAmountFormatter(summary.ingresos, TipoMovimiento.INGRESO),
             positive = true,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.fillMaxWidth(),
         )
         SummaryAmount(
             label = stringResource(Res.string.home_expenses),
-            amount = summary.gastos,
+            amountText = secondaryAmountFormatter(summary.gastos, TipoMovimiento.GASTO),
             positive = false,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.fillMaxWidth(),
         )
       }
+      footerContent?.invoke()
     }
   }
 }
@@ -70,7 +80,7 @@ fun BalanceCard(summary: MovimientoSummary, modifier: Modifier = Modifier) {
 @Composable
 private fun SummaryAmount(
     label: String,
-    amount: Money,
+    amountText: String,
     positive: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -82,24 +92,34 @@ private fun SummaryAmount(
       shape = MaterialTheme.shapes.large,
       color = MaterialTheme.colorScheme.surfaceContainerLowest,
   ) {
-    Column(
-        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-      Row(
-          horizontalArrangement = Arrangement.spacedBy(6.dp),
-          verticalAlignment = Alignment.CenterVertically,
-      ) {
-        Icon(
-            imageVector = if (positive) Lucide.ArrowDownLeft else Lucide.ArrowUpRight,
-            contentDescription = null,
-            modifier = Modifier.size(TallybookTheme.dimensions.movementSummaryIcon),
-            tint = accent,
-        )
-        Text(text = label, color = accent, style = MaterialTheme.typography.labelMedium)
-      }
-      Text(text = amount.format(), style = MaterialTheme.typography.titleSmall)
-    }
+    BalanceSummaryAmountLayout(
+        modifier =
+            Modifier.padding(
+                horizontal = TallybookTheme.spacing.space14,
+                vertical = TallybookTheme.spacing.space12,
+            ),
+        labelContent = {
+          Row(
+              horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space6),
+              verticalAlignment = Alignment.CenterVertically,
+          ) {
+            Icon(
+                imageVector = if (positive) Lucide.ArrowDownLeft else Lucide.ArrowUpRight,
+                contentDescription = null,
+                modifier = Modifier.size(TallybookTheme.dimensions.movementSummaryIcon),
+                tint = accent,
+            )
+            Text(text = label, color = accent, style = TallybookTheme.typography.balanceLabel)
+          }
+        },
+        amountContent = {
+          Text(
+              text = amountText,
+              style = TallybookTheme.typography.balanceSecondaryAmount,
+              textAlign = TextAlign.End,
+          )
+        },
+    )
   }
 }
 

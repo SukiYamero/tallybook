@@ -11,6 +11,41 @@ import kotlinx.datetime.LocalDate
 class TallybookAnchoredPopupPositionProviderTest {
 
   @Test
+  fun compactCalendarsFitWithinBothEdgesAndSafeInsets() {
+    listOf(320, 360).forEach { windowWidth ->
+      val popupWidth = windowWidth - 32
+      val provider = TallybookAnchoredPopupPositionProvider(verticalOffset = 8, edgeMargin = 16)
+      listOf(0, windowWidth - 40).forEach { anchorLeft ->
+        val position =
+            provider.calculatePosition(
+                IntRect(anchorLeft, 100, anchorLeft + 40, 148),
+                IntSize(windowWidth, 800),
+                LayoutDirection.Ltr,
+                IntSize(popupWidth, 300),
+            )
+        assertEquals(16, position.x)
+        assertEquals(windowWidth - 16, position.x + popupWidth)
+      }
+    }
+    val provider =
+        TallybookAnchoredPopupPositionProvider(
+            verticalOffset = 8,
+            edgeMargin = 16,
+            leftSafeInset = 24,
+            rightSafeInset = 8,
+        )
+    val position =
+        provider.calculatePosition(
+            IntRect(0, 100, 40, 148),
+            IntSize(360, 800),
+            LayoutDirection.Rtl,
+            IntSize(296, 300),
+        )
+    assertEquals(40, position.x)
+    assertEquals(336, position.x + 296)
+  }
+
+  @Test
   fun positionsTheCalendarBelowWhenTheViewportHasEnoughTrailingSpace() {
     val provider = TallybookAnchoredPopupPositionProvider(verticalOffset = 8, edgeMargin = 16)
 

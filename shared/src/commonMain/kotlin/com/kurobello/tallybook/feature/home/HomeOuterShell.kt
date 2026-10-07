@@ -4,6 +4,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +20,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -40,6 +44,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookSurface
 import com.kurobello.tallybook.core.ui.component.TallybookSurfaceDefaults
 import com.kurobello.tallybook.core.ui.component.TallybookSurfaceStyle
 import com.kurobello.tallybook.core.ui.component.TallybookText
+import com.kurobello.tallybook.core.ui.component.rememberTallybookTapFeedback
 import com.kurobello.tallybook.core.ui.movimiento.BalanceCard
 import com.kurobello.tallybook.core.ui.movimiento.BalanceCardSkeleton
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoRow
@@ -74,13 +79,25 @@ internal fun HomeHeader(modifier: Modifier = Modifier) {
 
 @Composable
 internal fun HomeSearch(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+  val interactionSource = remember { MutableInteractionSource() }
+  val isPressed by interactionSource.collectIsPressedAsState()
+  val tapFeedback = rememberTallybookTapFeedback()
   TallybookSurface(
       modifier =
           modifier
               .fillMaxWidth()
               .heightIn(min = TallybookTheme.dimensions.minimumTouchTarget)
               .then(
-                  if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick)
+                  if (onClick != null)
+                      Modifier.clickable(
+                          interactionSource = interactionSource,
+                          indication = null,
+                          role = Role.Button,
+                          onClick = {
+                            tapFeedback.trigger()
+                            onClick()
+                          },
+                      )
                   else Modifier
               ),
       style =
@@ -94,6 +111,8 @@ internal fun HomeSearch(modifier: Modifier = Modifier, onClick: (() -> Unit)? = 
                           TallybookTheme.colors.border.base,
                       ),
               ),
+      isPressed = isPressed,
+      hasTapFeedback = tapFeedback.isActive,
   ) {
     Row(
         modifier =

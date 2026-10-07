@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -25,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.rememberTallybookTapFeedback
 import com.kurobello.tallybook.core.ui.component.resolveTallybookSurfaceContainerColor
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -82,10 +82,10 @@ fun CategoryChip(
       verticalAlignment = Alignment.CenterVertically,
   ) {
     CategoryAvatar(categoria = categoria, modifier = Modifier.size(28.dp))
-    Text(
+    TallybookText(
         text = categoria.nombre,
         color = if (selected) colors.content else MaterialTheme.colorScheme.onSurface,
-        style = MaterialTheme.typography.labelLarge,
+        style = TallybookTheme.typography.controlValue,
     )
   }
 }

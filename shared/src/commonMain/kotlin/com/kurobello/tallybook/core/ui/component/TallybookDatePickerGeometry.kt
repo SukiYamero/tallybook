@@ -65,14 +65,17 @@ internal fun minimumCalendarMonth(years: IntRange, minDate: LocalDate?): YearMon
     if (minDate != null && minDate.year == years.first) YearMonth(minDate.year, minDate.month)
     else YearMonth(years.first, Month.JANUARY)
 
-internal fun calendarPopupMaximumHeight(
-    windowHeight: Dp,
-    verticalSafeInsets: Dp,
+internal fun calendarPopupMaximumExtent(
+    windowExtent: Dp,
+    safeInsets: Dp,
     edgeMargin: Dp,
-): Dp =
-    if (windowHeight > 0.dp)
-        (windowHeight - verticalSafeInsets - edgeMargin * 2).coerceAtLeast(0.dp)
-    else Dp.Unspecified
+    desiredMaximum: Dp = Dp.Unspecified,
+): Dp {
+  val available =
+      if (windowExtent > 0.dp) (windowExtent - safeInsets - edgeMargin * 2).coerceAtLeast(0.dp)
+      else desiredMaximum
+  return if (desiredMaximum == Dp.Unspecified) available else minOf(available, desiredMaximum)
+}
 
 internal fun yearSelectorRowCount(years: IntRange): Int =
     if (years.isEmpty()) 0

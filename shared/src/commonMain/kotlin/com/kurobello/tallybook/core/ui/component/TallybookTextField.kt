@@ -50,6 +50,7 @@ internal fun TallybookTextField(
     leadingContent: (@Composable () -> Unit)? = null,
     trailingContent: (@Composable () -> Unit)? = null,
     inputModifier: Modifier = Modifier,
+    labelContent: (@Composable () -> Unit)? = null,
 ) {
   val interactionSource = remember { MutableInteractionSource() }
   val isFocused by interactionSource.collectIsFocusedAsState()
@@ -72,7 +73,8 @@ internal fun TallybookTextField(
       modifier = modifier,
       verticalArrangement = Arrangement.spacedBy(TallybookSpacing.space4),
   ) {
-    TallybookTextFieldLabel(label = label, color = appearance.labelColor)
+    if (labelContent != null) labelContent()
+    else TallybookTextFieldLabel(label = label, color = appearance.labelColor)
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
@@ -107,7 +109,7 @@ internal fun TallybookTextField(
 @Composable
 private fun TallybookTextFieldLabel(label: String?, color: Color) {
   if (label != null) {
-    TallybookText(text = label, color = color, style = TallybookTheme.typography.label)
+    TallybookInputLabel(text = label, color = color)
   }
 }
 

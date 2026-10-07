@@ -71,6 +71,7 @@
     <string name="navigation_profile">Perfil</string>
 
     <string name="add_movimiento_pane_title">Agregar movimiento</string>
+    <string name="movement_type">Tipo</string>
     <string name="expense">Gasto</string>
     <string name="income">Ingreso</string>
     <string name="amount">Monto</string>

@@ -40,7 +40,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -52,7 +51,9 @@ import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
+import com.kurobello.tallybook.core.ui.component.TallybookInputLabel
 import com.kurobello.tallybook.core.ui.component.TallybookProgressIndicator
+import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
 import com.kurobello.tallybook.core.ui.component.TallybookTextField
@@ -141,10 +142,8 @@ internal fun MovimientoForm(
               .padding(horizontal = TallybookTheme.dimensions.screenHorizontal)
               .clearFocusOnUnconsumedTap(),
   ) {
-    TallybookText(
+    TallybookSheetTitle(
         text = stringResource(Res.string.add_movimiento_pane_title),
-        style = TallybookTheme.typography.title,
-        modifier = Modifier.semantics { heading() },
     )
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space16))
     Column(
@@ -242,6 +241,9 @@ internal fun MovimientoForm(
                 singleLine = false,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                labelContent = {
+                  TallybookInputLabel(stringResource(Res.string.description_optional))
+                },
             )
           }
         }
@@ -302,10 +304,8 @@ internal fun MovimientoForm(
       allowSubcategories = false,
       headerContent = {
         Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space20)) {
-          TallybookText(
+          TallybookSheetTitle(
               text = stringResource(Res.string.add_movimiento_pane_title),
-              style = TallybookTheme.typography.title,
-              modifier = Modifier.semantics { heading() },
           )
           MovimientoTypeSelector(
               selected = uiState.tipo,
@@ -315,6 +315,7 @@ internal fun MovimientoForm(
           MovimientoCategoryGuidance(uiState.tipo)
         }
       },
+      paneTitle = stringResource(Res.string.add_movimiento_pane_title),
   )
 }
 

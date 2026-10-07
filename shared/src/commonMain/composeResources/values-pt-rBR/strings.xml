@@ -71,6 +71,7 @@
     <string name="navigation_profile">Perfil</string>
 
     <string name="add_movimiento_pane_title">Adicionar movimento</string>
+    <string name="movement_type">Tipo</string>
     <string name="expense">Despesa</string>
     <string name="income">Receita</string>
     <string name="amount">Valor</string>

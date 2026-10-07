@@ -7,6 +7,8 @@ import androidx.compose.ui.focus.FocusRequester
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.ui.component.TallybookAmountInput
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
+import com.kurobello.tallybook.core.ui.component.TallybookInputLabel
+import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.amount
@@ -32,10 +34,11 @@ internal fun MovimientoAmountField(
     callbacks: MovimientoAmountFieldCallbacks,
     modifier: Modifier = Modifier,
 ) {
+  val label = state.prompt ?: stringResource(Res.string.amount)
   TallybookAmountInput(
       value = state.value,
       onValueChange = callbacks.onValueChange,
-      label = state.prompt ?: stringResource(Res.string.amount),
+      label = label,
       currencySymbol = state.moneda.symbol,
       modifier = modifier,
       enabled = enabled,
@@ -43,5 +46,13 @@ internal fun MovimientoAmountField(
       focusRequester = callbacks.focusRequester,
       keyboardActions = callbacks.keyboardActions,
       inputModifier = callbacks.inputModifier,
+      labelContent = {
+        TallybookInputLabel(
+            text = label,
+            color =
+                if (state.error != null) TallybookTheme.colors.status.danger.base
+                else TallybookTheme.colors.foreground.tertiary,
+        )
+      },
   )
 }

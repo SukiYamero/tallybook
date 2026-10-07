@@ -20,8 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.ui.category.CategoryChip
@@ -29,6 +27,7 @@ import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
 import com.kurobello.tallybook.core.ui.component.TallybookModalBottomSheet
 import com.kurobello.tallybook.core.ui.component.TallybookSearchField
+import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -53,6 +52,7 @@ fun CategoryPickerSheet(
     onHidden: () -> Unit = {},
     onShown: () -> Unit = {},
     headerContent: (@Composable () -> Unit)? = null,
+    paneTitle: String? = null,
 ) {
   val tree = remember(categorias) { buildCategoryTree(categorias) }
   var query by rememberSaveable { mutableStateOf("") }
@@ -78,14 +78,14 @@ fun CategoryPickerSheet(
         parent != null -> listOf(parent) + tree.childrenByParent[parent.id].orEmpty()
         else -> tree.roots
       }
-  val paneTitle = stringResource(Res.string.category)
+  val resolvedPaneTitle = paneTitle ?: stringResource(Res.string.category)
   val contentState =
       CategoryPickerContentState(
           query = query,
           parent = parent,
           shownCategories = shownCategories,
           selectedId = selectedId,
-          paneTitle = paneTitle,
+          paneTitle = resolvedPaneTitle,
           searchMinimumHeight = with(LocalDensity.current) { searchMinimumHeightPx.toDp() },
       )
   val callbacks =
@@ -120,7 +120,7 @@ fun CategoryPickerSheet(
 
   TallybookModalBottomSheet(
       visible = visible,
-      paneTitle = paneTitle,
+      paneTitle = resolvedPaneTitle,
       callbacks =
           ModalBottomSheetCallbacks(onDismiss = onDismiss, onHidden = onHidden, onShown = onShown),
       layout = ModalBottomSheetLayout(modifier = modifier),
@@ -210,10 +210,8 @@ private fun CategoryPickerHeader(
     onBack: () -> Unit,
 ) {
   if (parent != null) CategoryPickerBackButton(onClick = onBack)
-  TallybookText(
+  TallybookSheetTitle(
       text = parent?.nombre ?: paneTitle,
-      modifier = Modifier.semantics { heading() },
-      style = TallybookTheme.typography.title,
   )
 }
 

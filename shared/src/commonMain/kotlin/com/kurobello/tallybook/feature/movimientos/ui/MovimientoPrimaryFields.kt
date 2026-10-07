@@ -13,6 +13,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import com.kurobello.tallybook.core.ui.category.CategoryAvatar
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
+import com.kurobello.tallybook.core.ui.component.TallybookInputLabel
 import com.kurobello.tallybook.core.ui.component.TallybookSelectionField
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoActions
@@ -59,6 +60,15 @@ internal fun MovimientoPrimaryFields(
         enabled = !uiState.isSubmitting && !uiState.isLoading,
         message = categoryMessage,
         leadingContent = selectedCategoria?.let { categoria -> { CategoryAvatar(categoria) } },
+        labelContent = {
+          TallybookInputLabel(
+              text = stringResource(Res.string.category),
+              color =
+                  if (categoryMessage is TallybookFieldMessage.Error)
+                      TallybookTheme.colors.status.danger.base
+                  else TallybookTheme.colors.foreground.tertiary,
+          )
+        },
     )
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
     MovimientoDateField(

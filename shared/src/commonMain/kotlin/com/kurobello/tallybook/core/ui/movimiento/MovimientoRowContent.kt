@@ -107,7 +107,7 @@ internal fun MovimientoRowContent(
 @Composable
 @ReadOnlyComposable
 internal fun movementRowAmountStyle(): TextStyle =
-    TallybookTheme.typography.title.copy(fontSize = TallybookTypeScale.size17)
+    TallybookTheme.typography.title.copy(fontSize = TallybookTypeScale.size14)
 
 internal fun signedMovimientoAmountText(monto: Money, tipo: TipoMovimiento): String {
   val formatted = (if (tipo == TipoMovimiento.GASTO) -monto else monto).format()

@@ -198,9 +198,65 @@ nearest existing value merely to avoid adding a token.
 | `size30` | 30 sp |
 
 `TallybookTypography` maps these primitives to semantic roles such as `caption`, `label`, `body`,
-`bodyEmphasis`, `title`, `headline`, and `displayAmount`, including weight and line height. Feature code
+`controlValue`, `bodyEmphasis`, `title`, `headline`, `amount`, and `amountSymbol`, including weight and line height. Feature code
 uses those roles rather than primitive sizes. If a new visual role needs a different size, weight, or
 line height, define or extend the semantic role first; even one-off display text must be named.
+
+### Bottom-sheet typography hierarchy
+
+Bottom sheets use Tallybook's Manrope tokens and own visual language. Radix's distinction between
+[Heading and Text](https://www.radix-ui.com/themes/docs/theme/typography) is a hierarchy reference;
+its theme, fonts and components are not adopted.
+
+This is the standard for existing and future bottom sheets. Use `TallybookSheetTitle` and
+`TallybookSectionHeading` with their shared semantic roles; do not define sheet-specific font sizes
+in feature content.
+
+- `TallybookSheetTitle`: `sheetTitle`, 20sp/800, primary foreground, heading semantics.
+- `TallybookSectionHeading`: `sectionHeading`, 16sp/600, tertiary gray foreground, heading semantics.
+  These sheet-specific roles preserve typography outside bottom sheets. Section headings identify
+  filter date/type/category groups and creation's type/category-choice groups.
+- `TallybookInputLabel`: `inputLabel`, 14sp/400 with 20sp line height, gray foreground and optional
+  error color. Category/Date/Amount/Description field labels use this separate role, not the sheet
+  section heading. Input labels retain their field descriptions without heading semantics.
+- Section values use regular weight: `controlValue` is 13sp/400 for compact choice/category/type
+  options; `body` is 15sp/400 for field/date values. Selection is conveyed by existing surfaces,
+  borders, icons and color, without adding bold text.
+- Amount-entry values/symbols keep their 36sp/30sp sizes and use regular weight. Movement-card
+  monetary values keep their separate row style.
+- From/To identify nested endpoint fields; they remain subordinate labels, not section headings.
+  Scrollable bodies, reachable footers, 48dp interaction targets and font scaling remain required.
+
+Shared inputs retain their semantic label strings and accept optional `labelContent` for caller-owned
+labels. Omitted slots use the same `inputLabel` role. Category-picker pane titles follow the
+visible caller header when overridden.
+
+### Balance summary cards
+
+Home and History reuse `BalanceCard` and its matching `BalanceCardSkeleton`. Home uses the global
+summary and its default localized balance label. History supplies the selected period's snapshot and
+localized Period balance label; it does not observe the global summary.
+
+Income and Expenses occupy two full-width white rows under the total. Each row places its icon/label
+at the start and the complete amount at the end, preserving currency, sign and decimals. A shared
+single-pass layout measures both regions at the available width. If both fit beside one another,
+place them on one line; otherwise place the whole label above the trailing amount in the same
+full-width surface. Both real rows and skeletons use this layout, respecting font scale and direction. The
+usual COP range through 2,000,000 must remain legible at the physical target's default and enlarged
+font sizes; no abbreviation, rounding, ellipsis or arbitrary font shrinking is introduced.
+
+The shared card uses `balanceLabel` (size15, semibold) for its title and Income/Expenses labels,
+`balanceSecondaryAmount` (size17, bold) for income/expense values, and the existing `headline`
+(size21, extrabold) for the total. Skeletons consume the same roles. History retains signed secondary
+values through the existing money formatter; Home retains its current unsigned value convention.
+Caller-owned loading/error/retry/stale notices remain associated with History's retained period state.
+A failed initial read displays feedback without invented zero totals; deferred loading remains delayed.
+
+### Movement-card amounts
+
+All movement cards in Home, History and Search share `movementRowAmountStyle`: the `title` role with
+`TallybookTypeScale.size14`, retaining bold weight and its line height. The row skeleton consumes the
+same style. Formatting, signs and currency rules remain in the existing money presentation helper.
 
 ### Token organization
 
@@ -299,7 +355,7 @@ complexity. The application remains rotatable; this policy does not authorize lo
 Every new top-level layout is checked in at least these conditions:
 
 - Android gesture navigation and three-button navigation.
-- iPhone with a Dynamic Island or notch and a device/simulator without one when available.
+- Authorized physical iPhone with a Dynamic Island or notch and a physical device without one when available.
 - Portrait as the visual acceptance reference, with keyboard open and enlarged system text.
 - Landscape as a functional smoke check against the compatibility requirements above.
 - Light and dark themes.
@@ -444,8 +500,9 @@ Explicitly out of scope:
 - A redesign of balance, chart, category, or movement-row internals.
 - New navigation destinations or business behavior.
 
-The pilot is accepted only after side-by-side review against Moneta on a real Android device and an
-iPhone, with light/dark screenshots and no content under system UI.
+Visual acceptance uses side-by-side review against Moneta on the authorized physical target, with
+light/dark screenshots and no content under system UI. Android and iPhone runtime evidence remain
+separate; record unavailable targets explicitly and retain their checks in the backlog.
 
 ### Later increments
 
@@ -495,8 +552,9 @@ The narrowest useful verification for a UI increment includes:
 - Screenshot/golden coverage for stable visual components when the project adds a supported harness.
 - `./gradlew detekt ktfmtCheck`.
 - `./gradlew :shared:testAndroidHostTest` and `./gradlew :androidApp:assembleDebug` for shared UI changes.
-- iOS compilation and device/simulator review for APIs or layout behavior affected by the change.
-- Final visual review on physical Android and iPhone devices before merge.
+- Native iOS compilation and available authorized physical iPhone checks for affected APIs or layout.
+- Final visual review on the confirmed physical target before merge; record unverified platforms
+  and the user-accepted runtime scope. Compilation does not establish iPhone runtime acceptance.
 
 Pixel comparison is evidence, not the only acceptance criterion. Accessibility, dynamic text, system
 insets, and state behavior may require intentional differences from the web reference.
@@ -563,6 +621,9 @@ year in display and full date semantics. Earlier persisted/restored years extend
 picker's 2019 floor without changing its default behavior for existing callers. The expanded year
 selector uses bounded lazy/scrollable rows, with selected-year reveal once on opening; older history
 such as 1900 must remain selectable on compact screens without constructing an unbounded popup.
+Calendar width respects horizontal safe insets and viewport margins. On narrow windows, only the
+weekday/day grid scrolls horizontally; its 48dp Search targets retain their size while the month header
+and year selector stay within the popup bounds.
 
 ### Loading and result currency
 

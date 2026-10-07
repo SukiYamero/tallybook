@@ -41,6 +41,7 @@ internal fun TallybookSelectionField(
     enabled: Boolean = true,
     message: TallybookFieldMessage? = null,
     leadingContent: (@Composable () -> Unit)? = null,
+    labelContent: (@Composable () -> Unit)? = null,
 ) {
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
@@ -73,11 +74,11 @@ internal fun TallybookSelectionField(
               },
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.dimensions.fieldLabelSpacing),
   ) {
-    TallybookText(
-        text = label,
-        color = appearance.labelColor,
-        style = TallybookTheme.typography.label,
-    )
+    if (labelContent != null) {
+      labelContent()
+    } else {
+      TallybookInputLabel(text = label, color = appearance.labelColor)
+    }
     TallybookSelectionFieldContainer(
         value = value,
         placeholder = placeholder,
