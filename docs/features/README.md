@@ -7,7 +7,7 @@ accepted scope, integration details and verification boundaries.
 | --- | --- | --- |
 | Add movimiento | DONE | [Add movimiento](add-movimiento.md) |
 | History | DONE | [History](history.md) |
-| Search and filters | IN_PROGRESS | [Search and filters](search.md) |
+| Search and filters | DONE | [Search and filters](search.md) |
 
 ## Status rules
 

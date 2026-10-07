@@ -1,7 +1,7 @@
 # Search and filters
 
 Search is a shared Android/iOS primary destination over persisted movimientos in the primary currency.
-The user accepted the Android flow and follow-ups; integration into `main` remains pending.
+The user accepted the Android flow and follow-ups; the reviewed implementation is integrated into `main`.
 [Business logic](../business-logic.md#search-and-filters) owns matching, date and filter rules;
 [UI architecture](../ui/architecture.md#search-presentation) owns presentation and lifecycle contracts.
 The [screen](references/search-screen.png) and [filters](references/search-filters.png) are composition
