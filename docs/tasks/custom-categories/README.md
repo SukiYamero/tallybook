@@ -43,12 +43,10 @@ entry), voice dictation.
 
 Data (`Categoria.sq`, migration `3.sqm`):
 
-```sql
-ALTER TABLE categoria ADD COLUMN descripcion TEXT;
-ALTER TABLE categoria ADD COLUMN origen TEXT NOT NULL DEFAULT 'sistema'
-    CHECK (origen IN ('sistema', 'usuario'));
-ALTER TABLE categoria ADD COLUMN oculta INTEGER NOT NULL DEFAULT 0 CHECK (oculta IN (0, 1));
-```
+`3.sqm` rebuilds `categoria` (rename → create → copy → drop, like `2.sqm`) because SQLDelight
+2.3.2 cannot resolve a `CHECK` naming a column added by `ALTER TABLE ... ADD COLUMN`. New columns:
+`descripcion TEXT`, `origen TEXT NOT NULL DEFAULT 'sistema' CHECK (origen IN ('sistema','usuario'))`,
+`oculta INTEGER NOT NULL DEFAULT 0 CHECK (oculta IN (0, 1))`.
 
 Existing positional `insertCategoria`/`insertCategoriaIfAbsent` keep their five columns, so seeding
 and existing fixtures keep compiling; new named queries handle custom rows.
