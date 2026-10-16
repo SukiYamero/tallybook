@@ -4,11 +4,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -17,9 +20,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.ui.category.CategoryChip
 import com.kurobello.tallybook.core.ui.category.categoryGroups
@@ -38,19 +43,22 @@ import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_new_title
 import tallybook.shared.generated.resources.category_picker_create
+import tallybook.shared.generated.resources.category_picker_current
 import tallybook.shared.generated.resources.category_picker_single_title
 import tallybook.shared.generated.resources.clear_search
 import tallybook.shared.generated.resources.no_categories_found
 import tallybook.shared.generated.resources.search_categories
 
 internal const val CATEGORY_PICKER_OFFER_CREATE_TAG = "category_picker_offer_create"
+internal const val CATEGORY_PICKER_CURRENT_TAG = "category_picker_current"
 
 /**
  * One level of categories grouped by family, so no tap ever navigates. Tapping a category reports
- * it through [onSelect] (unless it is [selectedId] already) and closes the sheet. With [creation],
- * a search without results offers creating the typed name in a pane of this same sheet; Back from
- * that pane returns to the results with the query kept. The caller's quick-create effect selects
- * the created category, which closes the sheet like a tap.
+ * it through [onSelect] (unless it is [selectedId] already) and closes the sheet. A selected
+ * category other than Otros stays pinned above the results, which open scrolled to its family. With
+ * [creation], a search without results offers creating the typed name in a pane of this same sheet;
+ * Back from that pane returns to the results with the query kept. The caller's quick-create effect
+ * selects the created category, which closes the sheet like a tap.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -131,6 +139,20 @@ private fun CategoryPickerHost(
       remember(options.categorias, options.excludedIds, search.query) {
         categoryGroups(options.categorias, options.excludedIds, search.query)
       }
+  val current =
+      remember(options.categorias, selection.selectedId) {
+        options.categorias.firstOrNull {
+          it.id == selection.selectedId && it.id != CATEGORIA_OTROS_ID
+        }
+      }
+  val listState = rememberLazyListState()
+  LaunchedEffect(options.visible) {
+    if (!options.visible) return@LaunchedEffect
+    // Opening resets the search, so the family index comes from the unfiltered groups.
+    val families = categoryGroups(options.categorias, options.excludedIds, query = "")
+    val family = families.indexOfFirst { group -> group.any { it.id == selection.selectedId } }
+    listState.scrollToItem(family.coerceAtLeast(0))
+  }
   val resolvedPaneTitle = paneTitle ?: stringResource(Res.string.category_picker_single_title)
   val focusManager = LocalFocusManager.current
   val creation = options.creation
@@ -145,6 +167,8 @@ private fun CategoryPickerHost(
           search = search,
           groups = groups,
           selectedId = selection.selectedId,
+          current = current,
+          listState = listState,
           paneTitle = resolvedPaneTitle,
       )
   val callbacks =
@@ -207,6 +231,8 @@ private data class CategoryPickerContentState(
     val search: PickerSearchState,
     val groups: List<List<Categoria>>,
     val selectedId: String?,
+    val current: Categoria?,
+    val listState: LazyListState,
     val paneTitle: String,
 )
 
@@ -234,6 +260,9 @@ private fun CategoryPickerContent(
         query = state.search.query,
         onQueryChange = state.search::onQueryChange,
     )
+    state.current?.let { current ->
+      CategoryPickerCurrent(categoria = current, onClick = { callbacks.onCategoryClick(current) })
+    }
     CategoryPickerResults(
         state = state,
         onCategoryClick = callbacks.onCategoryClick,
@@ -255,6 +284,22 @@ private fun CategoryPickerSearchField(query: String, onQueryChange: (String) -> 
 }
 
 @Composable
+private fun CategoryPickerCurrent(categoria: Categoria, onClick: () -> Unit) {
+  Row(
+      modifier = Modifier.fillMaxWidth().testTag(CATEGORY_PICKER_CURRENT_TAG),
+      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+      verticalAlignment = Alignment.CenterVertically,
+  ) {
+    TallybookText(
+        text = stringResource(Res.string.category_picker_current),
+        color = TallybookTheme.colors.foreground.tertiary,
+        style = TallybookTheme.typography.caption,
+    )
+    CategoryChip(categoria = categoria, selected = true, onClick = onClick)
+  }
+}
+
+@Composable
 private fun CategoryPickerResults(
     state: CategoryPickerContentState,
     onCategoryClick: (Categoria) -> Unit,
@@ -264,9 +309,10 @@ private fun CategoryPickerResults(
     CategoryPickerNoResults(query = state.search.query, onCreate = onCreate)
   } else {
     LazyColumn(
+        state = state.listState,
         modifier =
             Modifier.fillMaxWidth()
-                .heightIn(max = TallybookTheme.dimensions.categoryPickerResultsMaximumHeight)
+                .heightIn(max = TallybookTheme.dimensions.pickerResultsHeight)
                 .testTag("category_picker_results"),
         contentPadding = PaddingValues(bottom = TallybookTheme.spacing.space4),
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space24),

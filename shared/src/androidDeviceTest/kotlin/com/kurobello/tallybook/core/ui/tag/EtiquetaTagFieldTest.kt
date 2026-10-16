@@ -5,6 +5,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -26,6 +27,7 @@ import org.junit.Test
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_tag_field_suggestions
 import tallybook.shared.generated.resources.movimiento_tags_section
+import tallybook.shared.generated.resources.optional_marker
 import tallybook.shared.generated.resources.tag_add_description
 import tallybook.shared.generated.resources.tag_remove
 
@@ -39,12 +41,15 @@ class EtiquetaTagFieldTest {
   }
 
   @Test
-  fun theSectionHeaderIsAHeadingAndTagsAreSelected() {
+  fun theSectionHeaderReadsAsOneOptionalHeadingAndTagsAreSelected() {
     composeRule.setContent {
       TallybookTheme { EtiquetaTagField(listOf(trip), max = LIMIT, onRemove = {}, onAdd = {}) }
     }
 
-    composeRule.onNodeWithText(string(Res.string.movimiento_tags_section)).assert(isHeading())
+    composeRule
+        .onNodeWithText(string(Res.string.movimiento_tags_section))
+        .assert(isHeading())
+        .assert(hasText(string(Res.string.optional_marker)))
     composeRule.onNodeWithText(trip.nombre).assertIsSelected()
   }
 

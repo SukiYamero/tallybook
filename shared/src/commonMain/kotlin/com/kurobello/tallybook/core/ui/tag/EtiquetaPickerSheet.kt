@@ -1,11 +1,16 @@
 package com.kurobello.tallybook.core.ui.tag
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -13,11 +18,15 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import com.composables.icons.lucide.Hash
+import com.composables.icons.lucide.Lucide
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
@@ -38,6 +47,7 @@ import tallybook.shared.generated.resources.clear_search
 import tallybook.shared.generated.resources.search_tags
 import tallybook.shared.generated.resources.tag_picker_create
 import tallybook.shared.generated.resources.tag_picker_done
+import tallybook.shared.generated.resources.tag_picker_empty_hint
 import tallybook.shared.generated.resources.tag_picker_limit_reached
 import tallybook.shared.generated.resources.tag_picker_title
 import tallybook.shared.generated.resources.tag_save_error
@@ -46,14 +56,15 @@ import tallybook.shared.generated.resources.tags_search_empty
 
 internal const val ETIQUETA_PICKER_SELECTED_TAG = "etiqueta_picker_selected"
 internal const val ETIQUETA_PICKER_OFFER_CREATE_TAG = "etiqueta_picker_offer_create"
+internal const val ETIQUETA_PICKER_RESULTS_TAG = "etiqueta_picker_results"
 
 /**
- * Multi-select tag picker: a search field, the selected tags as removable tags under it, every
- * matching tag as a toggle and a "Done (n)" action that closes. Each toggle reports the whole new
- * selection through [onSelectionChange]; additions stop at [max] and a hint explains why. A search
- * without results offers creating the trimmed query through [onCreate] in one tap, also at [max];
- * the caller creates it and selects it only while the limit allows. While the query still names
- * [failedCreateNombre], the offer explains that creating it failed.
+ * Multi-select tag picker: a "Done (n)" action beside the title that closes, a search field, the
+ * selected tags as removable tags under it and every matching tag as a toggle. Each toggle reports
+ * the whole new selection through [onSelectionChange]; additions stop at [max] and a hint explains
+ * why. A search without results offers creating the trimmed query through [onCreate] in one tap,
+ * also at [max]; the caller creates it and selects it only while the limit allows. While the query
+ * still names [failedCreateNombre], the offer explains that creating it failed.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -130,10 +141,11 @@ private fun EtiquetaPickerContent(
       modifier =
           Modifier.fillMaxWidth()
               .pickerSearchHeight(state.search)
-              .padding(horizontal = TallybookTheme.spacing.space22),
+              .padding(horizontal = TallybookTheme.spacing.space22)
+              .padding(bottom = TallybookTheme.spacing.space8),
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16),
   ) {
-    TallybookSheetTitle(text = state.title)
+    EtiquetaPickerHeader(title = state.title, count = state.selectedIds.size, onDone = onDone)
     TallybookSearchField(
         query = state.search.query,
         onQueryChange = state.search::onQueryChange,
@@ -145,8 +157,29 @@ private fun EtiquetaPickerContent(
     if (state.selected.isNotEmpty()) {
       EtiquetaPickerSelected(state.selected) { onToggle(it.id) }
     }
+    if (state.isFull) {
+      TallybookText(
+          text = stringResource(Res.string.tag_picker_limit_reached, state.max),
+          color = TallybookTheme.colors.foreground.tertiary,
+          style = TallybookTheme.typography.caption,
+      )
+    }
     EtiquetaPickerResults(state = state, onToggle = onToggle, onCreate = onCreate)
-    EtiquetaPickerFooter(state = state, onDone = onDone)
+  }
+}
+
+/** Done lives beside the title so it stays reachable while the keyboard covers the sheet bottom. */
+@Composable
+private fun EtiquetaPickerHeader(title: String, count: Int, onDone: () -> Unit) {
+  Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
+      verticalAlignment = Alignment.CenterVertically,
+  ) {
+    TallybookSheetTitle(text = title, modifier = Modifier.weight(1f))
+    TallybookTextButton(onClick = onDone) {
+      TallybookText(stringResource(Res.string.tag_picker_done, count))
+    }
   }
 }
 
@@ -163,41 +196,75 @@ private fun EtiquetaPickerSelected(selected: List<Etiqueta>, onRemove: (Etiqueta
   }
 }
 
+/**
+ * A fixed area as tall as the category picker's results, so the sheet opens tall with the search
+ * near the top and the keyboard does not cover it however few tags exist.
+ */
 @Composable
 private fun EtiquetaPickerResults(
     state: EtiquetaPickerContentState,
     onToggle: (String) -> Unit,
     onCreate: (String) -> Unit,
 ) {
-  when {
-    state.results.isEmpty() && state.search.isSearching ->
-        EtiquetaPickerNoResults(
-            query = state.search.query,
-            failedCreateNombre = state.failedCreateNombre,
-            onCreate = onCreate,
-        )
-    state.catalogIsEmpty -> EtiquetaPickerMessage(stringResource(Res.string.tags_empty))
-    else ->
-        FlowRow(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .heightIn(max = TallybookTheme.dimensions.categoryPickerResultsMaximumHeight)
-                    .verticalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
-            verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
-        ) {
-          state.results.forEach { etiqueta ->
-            key(etiqueta.id) {
-              val isSelected = etiqueta.id in state.selectedIds
-              EtiquetaChip(
-                  etiqueta = etiqueta,
-                  selected = isSelected,
-                  onClick = { onToggle(etiqueta.id) },
-                  enabled = isSelected || !state.isFull,
-              )
+  Box(
+      modifier =
+          Modifier.fillMaxWidth()
+              .height(TallybookTheme.dimensions.pickerResultsHeight)
+              .testTag(ETIQUETA_PICKER_RESULTS_TAG),
+      contentAlignment = Alignment.Center,
+  ) {
+    when {
+      state.results.isEmpty() && state.search.isSearching ->
+          EtiquetaPickerNoResults(
+              query = state.search.query,
+              failedCreateNombre = state.failedCreateNombre,
+              onCreate = onCreate,
+          )
+      state.catalogIsEmpty -> EtiquetaPickerEmpty()
+      else ->
+          FlowRow(
+              modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+              horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+              verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+          ) {
+            state.results.forEach { etiqueta ->
+              key(etiqueta.id) {
+                val isSelected = etiqueta.id in state.selectedIds
+                EtiquetaChip(
+                    etiqueta = etiqueta,
+                    selected = isSelected,
+                    onClick = { onToggle(etiqueta.id) },
+                    enabled = isSelected || !state.isFull,
+                )
+              }
             }
           }
-        }
+    }
+  }
+}
+
+@Composable
+private fun EtiquetaPickerEmpty() {
+  Column(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+  ) {
+    Image(
+        imageVector = Lucide.Hash,
+        contentDescription = null,
+        modifier = Modifier.size(TallybookTheme.dimensions.iconLarge),
+        colorFilter = ColorFilter.tint(TallybookTheme.colors.foreground.tertiary),
+    )
+    TallybookText(
+        text = stringResource(Res.string.tags_empty),
+        style = TallybookTheme.typography.bodyEmphasis.copy(textAlign = TextAlign.Center),
+    )
+    TallybookText(
+        text = stringResource(Res.string.tag_picker_empty_hint),
+        color = TallybookTheme.colors.foreground.tertiary,
+        style = TallybookTheme.typography.bodySmall.copy(textAlign = TextAlign.Center),
+    )
   }
 }
 
@@ -209,17 +276,19 @@ private fun EtiquetaPickerNoResults(
 ) {
   val nombre = query.trim()
   Column(
-      modifier = Modifier.padding(vertical = TallybookTheme.spacing.space24),
-      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+      modifier = Modifier.fillMaxWidth(),
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
   ) {
     TallybookText(
         text = stringResource(Res.string.tags_search_empty, nombre),
-        style = TallybookTheme.typography.body,
+        color = TallybookTheme.colors.foreground.secondary,
+        style = TallybookTheme.typography.body.copy(textAlign = TextAlign.Center),
     )
     if (nombre.isNotEmpty()) {
-      TallybookTextButton(
+      TallybookButton(
           onClick = { onCreate(nombre) },
-          modifier = Modifier.testTag(ETIQUETA_PICKER_OFFER_CREATE_TAG),
+          modifier = Modifier.fillMaxWidth().testTag(ETIQUETA_PICKER_OFFER_CREATE_TAG),
       ) {
         TallybookText(stringResource(Res.string.tag_picker_create, nombre))
       }
@@ -229,37 +298,8 @@ private fun EtiquetaPickerNoResults(
           text = stringResource(Res.string.tag_save_error),
           color = TallybookTheme.colors.status.danger.base,
           modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-          style = TallybookTheme.typography.body,
+          style = TallybookTheme.typography.body.copy(textAlign = TextAlign.Center),
       )
-    }
-  }
-}
-
-@Composable
-private fun EtiquetaPickerMessage(text: String) {
-  TallybookText(
-      text = text,
-      modifier = Modifier.padding(vertical = TallybookTheme.spacing.space24),
-      color = TallybookTheme.colors.foreground.secondary,
-      style = TallybookTheme.typography.body,
-  )
-}
-
-@Composable
-private fun EtiquetaPickerFooter(state: EtiquetaPickerContentState, onDone: () -> Unit) {
-  Column(
-      modifier = Modifier.padding(bottom = TallybookTheme.spacing.space8),
-      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
-  ) {
-    if (state.isFull) {
-      TallybookText(
-          text = stringResource(Res.string.tag_picker_limit_reached, state.max),
-          color = TallybookTheme.colors.foreground.tertiary,
-          style = TallybookTheme.typography.caption,
-      )
-    }
-    TallybookButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) {
-      TallybookText(stringResource(Res.string.tag_picker_done, state.selectedIds.size))
     }
   }
 }

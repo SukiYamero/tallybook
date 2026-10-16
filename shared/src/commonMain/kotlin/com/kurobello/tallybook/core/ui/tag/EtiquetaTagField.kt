@@ -3,11 +3,14 @@ package com.kurobello.tallybook.core.ui.tag
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
@@ -18,9 +21,10 @@ import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_tag_field_suggestions
 import tallybook.shared.generated.resources.movimiento_tags_section
+import tallybook.shared.generated.resources.optional_marker
 
 /**
- * The optional tags of a movimiento: a "Tags · optional" heading, [etiquetas] as removable tags in
+ * The optional tags of a movimiento: the [EtiquetaSectionHeading], [etiquetas] as removable tags in
  * display order and an Add tag that disappears once [max] is reached. [suggestions] already
  * selected are skipped, and none is offered while the field is full.
  */
@@ -43,7 +47,7 @@ internal fun EtiquetaTagField(
       modifier = modifier.fillMaxWidth(),
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
   ) {
-    TallybookSectionHeading(stringResource(Res.string.movimiento_tags_section))
+    EtiquetaSectionHeading()
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
@@ -59,6 +63,26 @@ internal fun EtiquetaTagField(
     if (offered.isNotEmpty()) {
       EtiquetaTagFieldSuggestions(offered, onSuggestion, enabled)
     }
+  }
+}
+
+/** "Tags" followed by a barely perceptible "optional" marker, read as a single heading. */
+@Composable
+internal fun EtiquetaSectionHeading(modifier: Modifier = Modifier) {
+  Row(
+      modifier = modifier.semantics(mergeDescendants = true) { heading() },
+      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space6),
+  ) {
+    TallybookSectionHeading(
+        text = stringResource(Res.string.movimiento_tags_section),
+        modifier = Modifier.alignByBaseline(),
+    )
+    TallybookText(
+        text = stringResource(Res.string.optional_marker),
+        modifier = Modifier.alignByBaseline(),
+        color = TallybookTheme.colors.foreground.faint,
+        style = TallybookTheme.typography.caption,
+    )
   }
 }
 

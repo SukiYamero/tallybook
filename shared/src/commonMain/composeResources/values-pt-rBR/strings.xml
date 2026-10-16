@@ -500,10 +500,12 @@
     <string name="ui_catalog_state_duplicate">Duplicada</string>
     <string name="ui_catalog_state_ghost">Sem fundo</string>
     <string name="movimiento_category_section">Categoria</string>
-    <string name="movimiento_tags_section">Tags · opcional</string>
+    <string name="movimiento_tags_section">Tags</string>
+    <string name="optional_marker">opcional</string>
     <string name="category_choose">Escolher</string>
     <string name="category_suggestion_replaces">Substitui %1$s</string>
     <string name="category_picker_single_title">Escolha uma categoria</string>
+    <string name="category_picker_current">Atual</string>
     <string name="tag_add">Adicionar</string>
     <string name="tag_add_description">Adicionar tag</string>
     <string name="tag_remove">Remover %1$s</string>
@@ -511,6 +513,7 @@
     <string name="tag_picker_create">Criar tag “%1$s”</string>
     <string name="tag_picker_limit_reached">Você atingiu o limite de %1$d tags</string>
     <string name="tag_picker_done">Concluir (%1$d)</string>
+    <string name="tag_picker_empty_hint">Digite um nome acima para criar a primeira.</string>
     <string name="search_tags">Buscar tags</string>
     <string name="tags_unavailable">Não conseguimos carregar suas tags. O que você informou continua aqui. Tente carregar de novo.</string>
     <string name="profile_tags_label">Tags</string>

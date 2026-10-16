@@ -75,7 +75,7 @@ internal fun CategoryPickerCreationPane(
           TallybookSheetFormLayout(
               horizontalPadding = TallybookTheme.spacing.space22,
               minimumBodyHeight = TallybookTheme.dimensions.categorySheetFormMinimumHeight,
-              maximumBodyHeight = TallybookTheme.dimensions.categoryPickerResultsMaximumHeight,
+              maximumBodyHeight = TallybookTheme.dimensions.pickerResultsHeight,
           ),
   ) {
     CategoryForm(

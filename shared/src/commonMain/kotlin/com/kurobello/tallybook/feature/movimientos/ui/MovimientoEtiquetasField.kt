@@ -7,14 +7,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
-import com.kurobello.tallybook.core.ui.component.TallybookSectionHeading
+import com.kurobello.tallybook.core.ui.tag.EtiquetaSectionHeading
 import com.kurobello.tallybook.core.ui.tag.EtiquetaTagField
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.EtiquetasLoad
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoEtiquetaActions
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.movimiento_tags_section
 import tallybook.shared.generated.resources.tags_unavailable
 
 internal data class MovimientoEtiquetasCallbacks(
@@ -48,7 +47,7 @@ internal fun MovimientoEtiquetasField(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
     ) {
-      TallybookSectionHeading(stringResource(Res.string.movimiento_tags_section))
+      EtiquetaSectionHeading()
       MovimientoFormRetryError(
           message = stringResource(Res.string.tags_unavailable),
           onRetry = callbacks.onRetry,

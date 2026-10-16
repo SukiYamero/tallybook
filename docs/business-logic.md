@@ -229,26 +229,31 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
 - A movimiento has exactly one category: what the money was for. Category totals therefore add up to
   the overall total, and a category breakdown can be read as parts of a whole.
 - A movimiento has zero to six **tags**: user-created labels that group movimientos across
-  categories ("Empresa", "Viaje Chile"). Tags are flat, have only a name and keep the user's order on
-  the movimiento for display. A tag can share its name with a category; they are different concepts.
-- Every creation and editing surface shows a "Category" section followed by a "Tags · optional"
-  section. A category shows its icon and tint; a tag is a neutral chip with a tag icon and no icon or
+  categories ("Empresa", "Viaje Chile"). Tags are flat, have a name and an optional description, and
+  keep the user's order on the movimiento for display. A tag can share its name with a category; they are different concepts.
+- Every creation and editing surface shows a "Category" section followed by a "Tags" section whose
+  header carries a barely perceptible "optional" marker. A category shows its icon and tint; a tag is a neutral chip with a tag icon and no icon or
   tint of its own.
+- The category picker keeps the current category visible: a pinned row between the search field and
+  the results shows it, and the results open scrolled to it.
 - The tags section shows the selected tags, each removable, and an "Add" tag that opens a
-  multi-select tag picker with search; the Add tag disappears at six. A search without results offers
-  to create a tag with the typed name in one tap, and the created tag becomes selected while the limit
-  allows.
+  multi-select tag picker with search; the Add tag disappears at six. The tag picker opens at the same
+  tall height as the category picker, so its search field stays above the keyboard, and its Done
+  action stays reachable while typing. Without any tag it shows an empty state that invites typing a
+  name to create the first one; a search without results offers to create a tag with the typed name
+  in one tap, and the created tag becomes selected while the limit allows.
 - Choosing a real category resolves the Otros fallback. Movimiento rows show the category only, never
   tags.
 
 ### Tags
 
 - A tag name is trimmed, up to 40 characters and unique among tags ignoring case and supported
-  accents. Creating a name that already exists offers the existing tag instead of a duplicate;
+  accents. A tag may have an optional description of up to 140 characters, edited from its sheet in
+  the Tags screen; quick creation from the picker sets only the name. Creating a name that already exists offers the existing tag instead of a duplicate;
   renaming to an existing name is rejected with an inline error. Tag names are not translated.
 - Profile links to a Tags screen modeled on Categories: search, a create action, and the tags sorted
   by name, each with its movimiento count in the primary currency. Tapping a tag opens its sheet with
-  rename, "View movements" (opens Search filtered by that tag) and delete.
+  name and description, "View movements" (opens Search filtered by that tag) and delete.
 - Tags are never hidden. Deleting a tag asks for confirmation showing how many movimientos use it,
   then removes it from those movimientos and deletes it; the movimientos themselves stay and no Undo
   is offered.
