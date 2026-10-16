@@ -68,8 +68,15 @@ internal fun CategoriesScreen(
           onClear = actions::onClearQuery,
       )
       LazyColumn(
-          modifier = Modifier.weight(1f).fillMaxWidth(),
-          contentPadding = PaddingValues(vertical = TallybookTheme.spacing.space16),
+          // The top padding outside the list keeps scrolled chips from clipping flush under the
+          // search field; the content padding completes the resting gap.
+          modifier =
+              Modifier.weight(1f).fillMaxWidth().padding(top = TallybookTheme.spacing.space8),
+          contentPadding =
+              PaddingValues(
+                  top = TallybookTheme.spacing.space8,
+                  bottom = TallybookTheme.spacing.space16,
+              ),
           verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16),
       ) {
         when (val content = uiState.content) {
