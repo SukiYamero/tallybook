@@ -108,7 +108,7 @@ class CategoriesScreenTest {
 
     val title = composeRule.onNodeWithText(text(Res.string.categories_title))
     val back = composeRule.onNodeWithContentDescription(text(Res.string.back))
-    val create = composeRule.onNodeWithText(text(Res.string.category_new_title))
+    val create = composeRule.onNodeWithContentDescription(text(Res.string.category_new_title))
     val titleCenter = title.getUnclippedBoundsInRoot().centerY()
     assertEquals(titleCenter.value, back.getUnclippedBoundsInRoot().centerY().value, 1f)
     assertEquals(titleCenter.value, create.getUnclippedBoundsInRoot().centerY().value, 1f)

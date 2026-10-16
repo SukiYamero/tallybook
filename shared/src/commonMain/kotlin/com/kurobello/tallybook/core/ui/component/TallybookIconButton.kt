@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 
 @Immutable
@@ -101,6 +102,7 @@ internal fun TallybookIconButton(
     enabled: Boolean = true,
     style: TallybookIconButtonStyle = TallybookIconButtonStyle.Neutral,
     colors: TallybookIconButtonColors = TallybookIconButtonDefaults.colors(style),
+    iconSize: Dp = TallybookTheme.dimensions.iconButtonIconSize,
 ) {
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
@@ -135,8 +137,7 @@ internal fun TallybookIconButton(
     Image(
         imageVector = icon,
         contentDescription = null,
-        modifier =
-            Modifier.align(Alignment.Center).size(TallybookTheme.dimensions.iconButtonIconSize),
+        modifier = Modifier.align(Alignment.Center).size(iconSize),
         colorFilter = ColorFilter.tint(contentColor),
     )
   }

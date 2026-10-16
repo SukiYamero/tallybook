@@ -1,6 +1,5 @@
 package com.kurobello.tallybook.feature.categories.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -8,25 +7,23 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ColorFilter
 import com.composables.icons.lucide.ChevronLeft
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Plus
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookIconButton
+import com.kurobello.tallybook.core.ui.component.TallybookIconButtonDefaults
 import com.kurobello.tallybook.core.ui.component.TallybookIconButtonStyle
 import com.kurobello.tallybook.core.ui.component.TallybookLoadingState
 import com.kurobello.tallybook.core.ui.component.TallybookScreenHeader
 import com.kurobello.tallybook.core.ui.component.TallybookSearchField
 import com.kurobello.tallybook.core.ui.component.TallybookSectionHeading
 import com.kurobello.tallybook.core.ui.component.TallybookText
-import com.kurobello.tallybook.core.ui.component.TallybookTextButton
 import com.kurobello.tallybook.core.ui.layout.TallybookScreenFrame
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.categories.viewmodel.CategoriesActions
@@ -142,15 +139,15 @@ private fun CategoriesTopBar(onBack: () -> Unit, onNewCategory: () -> Unit) {
         )
       },
       actions = {
-        TallybookTextButton(onClick = onNewCategory) {
-          Image(
-              imageVector = Lucide.Plus,
-              contentDescription = null,
-              modifier = Modifier.size(TallybookTheme.dimensions.iconMedium),
-              colorFilter = ColorFilter.tint(TallybookTheme.colors.brand.primary),
-          )
-          TallybookText(stringResource(Res.string.category_new_title))
-        }
+        TallybookIconButton(
+            onClick = onNewCategory,
+            icon = Lucide.Plus,
+            contentDescription = stringResource(Res.string.category_new_title),
+            colors =
+                TallybookIconButtonDefaults.colors(TallybookIconButtonStyle.Ghost)
+                    .copy(content = TallybookTheme.colors.brand.primary),
+            iconSize = TallybookTheme.dimensions.iconLarge,
+        )
       },
   )
 }
