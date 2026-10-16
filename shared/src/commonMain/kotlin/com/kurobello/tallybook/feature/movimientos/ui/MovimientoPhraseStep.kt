@@ -1,17 +1,12 @@
 package com.kurobello.tallybook.feature.movimientos.ui
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -27,17 +22,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoMovimiento
-import com.kurobello.tallybook.core.ui.category.CategoryAvatar
-import com.kurobello.tallybook.core.ui.category.tintColors
+import com.kurobello.tallybook.core.ui.category.CategoryTag
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
-import com.kurobello.tallybook.core.ui.component.TallybookSurface
-import com.kurobello.tallybook.core.ui.component.TallybookSurfaceStyle
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
 import com.kurobello.tallybook.core.ui.component.TallybookTextField
@@ -162,7 +153,7 @@ private fun PhrasePreviewRow(preview: PhrasePreviewUi, today: LocalDate) {
       itemVerticalAlignment = Alignment.CenterVertically,
   ) {
     if (monto != null) PhraseAmount(monto, preview.tipo)
-    if (categoria != null) PhraseCategoryTag(categoria)
+    if (categoria != null) CategoryTag(categoria)
     if (fecha != null) {
       TallybookText(
           text = relativeDateLabel(fecha, today),
@@ -182,33 +173,4 @@ private fun PhraseAmount(monto: Money, tipo: TipoMovimiento?) {
           else TallybookTheme.colors.foreground.primary,
       style = TallybookTheme.typography.bodyEmphasis,
   )
-}
-
-@Composable
-private fun PhraseCategoryTag(categoria: Categoria) {
-  val tint = categoria.color.tintColors()
-  TallybookSurface(
-      style =
-          TallybookSurfaceStyle(
-              color = tint.container,
-              contentColor = tint.content,
-              shape = RoundedCornerShape(TallybookTheme.radii.radius20),
-              border = BorderStroke(TallybookTheme.dimensions.borderThin, tint.border),
-          )
-  ) {
-    Row(
-        modifier =
-            Modifier.padding(
-                start = TallybookTheme.spacing.space4,
-                end = TallybookTheme.spacing.space12,
-                top = TallybookTheme.spacing.space4,
-                bottom = TallybookTheme.spacing.space4,
-            ),
-        horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-      CategoryAvatar(categoria, Modifier.size(TallybookTheme.spacing.space28))
-      TallybookText(text = categoria.nombre, style = TallybookTheme.typography.controlValue)
-    }
-  }
 }

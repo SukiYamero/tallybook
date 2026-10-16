@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.CategoriaSelection
 import com.kurobello.tallybook.core.ui.category.CategoryChip
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
@@ -34,13 +35,12 @@ import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.back
-import tallybook.shared.generated.resources.category
 import tallybook.shared.generated.resources.clear_search
 import tallybook.shared.generated.resources.no_categories_found
 import tallybook.shared.generated.resources.search_categories
 
-@Suppress("LongMethod", "LongParameterList")
 @Composable
+@Suppress("LongParameterList")
 fun CategoryPickerSheet(
     visible: Boolean,
     categorias: List<Categoria>,
@@ -56,15 +56,108 @@ fun CategoryPickerSheet(
     paneTitle: String? = null,
     onBack: (() -> Unit)? = null,
 ) {
+  CategoryPickerHost(
+      mode = CategoryPickerMode.Single(selectedId, onSelect),
+      options =
+          CategoryPickerOptions(
+              visible = visible,
+              categorias = categorias,
+              allowSubcategories = allowSubcategories,
+              excludedIds = excludedIds,
+          ),
+      sheet =
+          CategoryPickerSheetHooks(
+              onDismiss = onDismiss,
+              onHidden = onHidden,
+              onShown = onShown,
+              onBack = onBack,
+              modifier = modifier,
+          ),
+      headerContent = headerContent,
+      paneTitle = paneTitle,
+  )
+}
+
+/**
+ * Multi-select flavor: rows toggle through [CategoriaSelection], so a parent and its children never
+ * coexist and [max] is respected, and every change is reported live through [onSelectionChange].
+ * Drilling into a parent never selects it; its own row inside the group does. "Done" closes the
+ * sheet.
+ */
+@Composable
+@Suppress("LongParameterList")
+internal fun CategoryPickerSheet(
+    visible: Boolean,
+    categorias: List<Categoria>,
+    selectedIds: List<String>,
+    onSelectionChange: (List<String>) -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    max: Int = CategoriaSelection.DEFAULT_LIMIT,
+    excludedIds: Set<String> = emptySet(),
+    onHidden: () -> Unit = {},
+    onShown: () -> Unit = {},
+    paneTitle: String? = null,
+    onBack: (() -> Unit)? = null,
+) {
+  CategoryPickerHost(
+      mode = CategoryPickerMode.Multiple(selectedIds, max, onSelectionChange),
+      options =
+          CategoryPickerOptions(
+              visible = visible,
+              categorias = categorias,
+              allowSubcategories = true,
+              excludedIds = excludedIds,
+          ),
+      sheet =
+          CategoryPickerSheetHooks(
+              onDismiss = onDismiss,
+              onHidden = onHidden,
+              onShown = onShown,
+              onBack = onBack,
+              modifier = modifier,
+          ),
+      headerContent = null,
+      paneTitle = paneTitle,
+  )
+}
+
+private data class CategoryPickerOptions(
+    val visible: Boolean,
+    val categorias: List<Categoria>,
+    val allowSubcategories: Boolean,
+    val excludedIds: Set<String>,
+)
+
+private data class CategoryPickerSheetHooks(
+    val onDismiss: () -> Unit,
+    val onHidden: () -> Unit,
+    val onShown: () -> Unit,
+    val onBack: (() -> Unit)?,
+    val modifier: Modifier,
+)
+
+@Composable
+@Suppress("LongMethod")
+private fun CategoryPickerHost(
+    mode: CategoryPickerMode,
+    options: CategoryPickerOptions,
+    sheet: CategoryPickerSheetHooks,
+    headerContent: (@Composable () -> Unit)?,
+    paneTitle: String?,
+) {
+  val categorias = options.categorias
   val tree =
-      remember(categorias, excludedIds) { buildCategoryTree(categorias).without(excludedIds) }
+      remember(categorias, options.excludedIds) {
+        buildCategoryTree(categorias).without(options.excludedIds)
+      }
   var query by rememberSaveable { mutableStateOf("") }
   var parentId by rememberSaveable { mutableStateOf<String?>(null) }
   var shownContentHeightPx by remember { mutableIntStateOf(0) }
   var searchMinimumHeightPx by remember { mutableIntStateOf(0) }
 
-  LaunchedEffect(visible) {
-    if (visible) {
+  LaunchedEffect(options.visible) {
+    if (options.visible) {
       query = ""
       parentId = null
       shownContentHeightPx = 0
@@ -74,21 +167,25 @@ fun CategoryPickerSheet(
 
   val parent = tree.roots.firstOrNull { it.id == parentId }
   val isSearching = query.isNotBlank()
-  val searchableCategories =
-      if (allowSubcategories) categorias.filterNot { it.id in excludedIds } else tree.roots
   val shownCategories =
-      when {
-        isSearching -> searchCategorias(searchableCategories, query)
-        parent != null -> listOf(parent) + tree.childrenByParent[parent.id].orEmpty()
-        else -> tree.roots
-      }
-  val resolvedPaneTitle = paneTitle ?: stringResource(Res.string.category)
+      tree.shownCategories(
+          catalog = categorias,
+          options = options,
+          parent = parent,
+          query = query,
+      )
+  val opensChildren: (Categoria) -> Boolean = { categoria ->
+    tree.shouldOpenChildren(categoria, options.allowSubcategories, isSearching, parent)
+  }
+  val resolvedPaneTitle = paneTitle ?: stringResource(mode.defaultPaneTitle)
   val contentState =
       CategoryPickerContentState(
           query = query,
           parent = parent,
           shownCategories = shownCategories,
-          selectedId = selectedId,
+          mode = mode,
+          catalog = categorias,
+          opensChildren = opensChildren,
           paneTitle = resolvedPaneTitle,
           searchMinimumHeight = with(LocalDensity.current) { searchMinimumHeightPx.toDp() },
       )
@@ -107,13 +204,13 @@ fun CategoryPickerSheet(
           },
           onBack = { parentId = null },
           onCategoryClick = { categoria ->
-            if (tree.shouldOpenChildren(categoria, allowSubcategories, isSearching, parent)) {
+            if (opensChildren(categoria)) {
               parentId = categoria.id
             } else {
-              onSelect(categoria.id)
-              onDismiss()
+              mode.choose(categoria.id, categorias, sheet.onDismiss)
             }
           },
+          onDone = sheet.onDismiss,
           onShownContentHeightChanged = { height ->
             if (!isSearching && shownContentHeightPx != height) {
               shownContentHeightPx = height
@@ -122,16 +219,16 @@ fun CategoryPickerSheet(
       )
 
   TallybookModalBottomSheet(
-      visible = visible,
+      visible = options.visible,
       paneTitle = resolvedPaneTitle,
       callbacks =
           ModalBottomSheetCallbacks(
-              onDismiss = onDismiss,
-              onHidden = onHidden,
-              onShown = onShown,
-              onBack = onBack,
+              onDismiss = sheet.onDismiss,
+              onHidden = sheet.onHidden,
+              onShown = sheet.onShown,
+              onBack = sheet.onBack,
           ),
-      layout = ModalBottomSheetLayout(modifier = modifier),
+      layout = ModalBottomSheetLayout(modifier = sheet.modifier),
   ) {
     CategoryPickerContent(
         state = contentState,
@@ -141,47 +238,51 @@ fun CategoryPickerSheet(
   }
 }
 
-// Filters after building so an excluded parent never promotes its children to roots.
-internal fun CategoryTree.without(excludedIds: Set<String>): CategoryTree =
-    if (excludedIds.isEmpty()) {
-      this
-    } else {
-      CategoryTree(
-          roots = roots.filterNot { it.id in excludedIds },
-          childrenByParent =
-              childrenByParent.mapValues { (_, children) ->
-                children.filterNot { it.id in excludedIds }
-              },
-      )
-    }
-
-internal fun CategoryTree.shouldOpenChildren(
-    categoria: Categoria,
-    allowSubcategories: Boolean,
-    isSearching: Boolean,
+private fun CategoryTree.shownCategories(
+    catalog: List<Categoria>,
+    options: CategoryPickerOptions,
     parent: Categoria?,
-): Boolean =
-    allowSubcategories &&
-        !isSearching &&
-        parent == null &&
-        childrenByParent[categoria.id].orEmpty().isNotEmpty()
+    query: String,
+): List<Categoria> {
+  val searchable =
+      if (options.allowSubcategories) catalog.filterNot { it.id in options.excludedIds } else roots
+  return when {
+    query.isNotBlank() -> searchCategorias(searchable, query)
+    parent != null -> listOf(parent) + childrenByParent[parent.id].orEmpty()
+    else -> roots
+  }
+}
 
 private data class CategoryPickerContentState(
     val query: String,
     val parent: Categoria?,
     val shownCategories: List<Categoria>,
-    val selectedId: String?,
+    val mode: CategoryPickerMode,
+    val catalog: List<Categoria>,
+    val opensChildren: (Categoria) -> Boolean,
     val paneTitle: String,
     val searchMinimumHeight: Dp,
 ) {
   val isSearching: Boolean
     get() = query.isNotBlank()
+
+  // Only a row that would change nothing (at the limit, not a replacement) is disabled: rows that
+  // drill into children and rows already selected stay enabled.
+  fun isEnabled(categoria: Categoria): Boolean =
+      when (mode) {
+        is CategoryPickerMode.Single -> true
+        is CategoryPickerMode.Multiple ->
+            opensChildren(categoria) ||
+                categoria.id in mode.selectedIds ||
+                mode.toggled(categoria.id, catalog) != mode.selectedIds
+      }
 }
 
 private data class CategoryPickerContentCallbacks(
     val onQueryChange: (String) -> Unit,
     val onBack: () -> Unit,
     val onCategoryClick: (Categoria) -> Unit,
+    val onDone: () -> Unit,
     val onShownContentHeightChanged: (Int) -> Unit,
 )
 
@@ -222,6 +323,10 @@ private fun CategoryPickerContent(
         state = state,
         onCategoryClick = callbacks.onCategoryClick,
     )
+    val mode = state.mode
+    if (mode is CategoryPickerMode.Multiple) {
+      CategoryPickerFooter(mode = mode, onDone = callbacks.onDone)
+    }
   }
 }
 
@@ -261,20 +366,28 @@ private fun CategoryPickerResults(
         style = TallybookTheme.typography.body,
     )
   } else {
+    val isMultiple = state.mode is CategoryPickerMode.Multiple
     LazyColumn(
         modifier =
             Modifier.fillMaxWidth()
                 .heightIn(max = TallybookTheme.dimensions.categoryPickerResultsMaximumHeight)
                 .testTag("category_picker_results"),
-        contentPadding = PaddingValues(bottom = TallybookTheme.spacing.space24),
+        contentPadding =
+            PaddingValues(
+                bottom =
+                    if (isMultiple) TallybookTheme.spacing.space4
+                    else TallybookTheme.spacing.space24
+            ),
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
     ) {
       items(state.shownCategories, key = Categoria::id) { categoria ->
         CategoryChip(
             categoria = categoria,
-            selected = categoria.id == state.selectedId,
+            selected = categoria.id in state.mode.selectedIds,
             onClick = { onCategoryClick(categoria) },
             modifier = Modifier.fillMaxWidth(),
+            enabled = state.isEnabled(categoria),
+            trailingCheck = isMultiple,
         )
       }
     }

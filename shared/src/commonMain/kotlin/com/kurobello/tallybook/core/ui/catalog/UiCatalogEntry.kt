@@ -14,7 +14,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import com.kurobello.tallybook.core.ui.category.CategoryAvatar
-import com.kurobello.tallybook.core.ui.category.CategorySuggestionChip
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoRow
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.ui.MovimientoEntrySamples
@@ -33,22 +32,14 @@ import tallybook.shared.generated.resources.ui_catalog_pending_row
 import tallybook.shared.generated.resources.ui_catalog_pending_treatment
 import tallybook.shared.generated.resources.ui_catalog_state_ambiguous_amount
 import tallybook.shared.generated.resources.ui_catalog_state_complete
-import tallybook.shared.generated.resources.ui_catalog_state_disabled
 import tallybook.shared.generated.resources.ui_catalog_state_empty
 import tallybook.shared.generated.resources.ui_catalog_state_missing_amount
 import tallybook.shared.generated.resources.ui_catalog_state_partial
 import tallybook.shared.generated.resources.ui_catalog_state_pending_category
 import tallybook.shared.generated.resources.ui_catalog_state_submitting
-import tallybook.shared.generated.resources.ui_catalog_state_suggested
-import tallybook.shared.generated.resources.ui_catalog_suggestion_chips
 
 internal fun LazyListScope.catalogEntryComponents(fixtures: UiCatalogFixtures) {
-  catalogControlSection(
-      "suggestion-chips",
-      { stringResource(Res.string.ui_catalog_suggestion_chips) },
-  ) {
-    CatalogSuggestionChipMatrix()
-  }
+  catalogTagComponents()
   catalogControlSection(
       "pending-treatment",
       { stringResource(Res.string.ui_catalog_pending_treatment) },
@@ -66,19 +57,6 @@ internal fun LazyListScope.catalogEntryComponents(fixtures: UiCatalogFixtures) {
       { stringResource(Res.string.ui_catalog_entry_summary_step) },
   ) {
     CatalogSummaryStepMatrix()
-  }
-}
-
-@Composable
-private fun CatalogSuggestionChipMatrix() {
-  val category = rememberMovimientoEntrySamples().cinema
-  CatalogSurface {
-    CatalogSample(label = stringResource(Res.string.ui_catalog_state_suggested)) {
-      CategorySuggestionChip(category, onClick = {})
-    }
-    CatalogSample(label = stringResource(Res.string.ui_catalog_state_disabled)) {
-      CategorySuggestionChip(category, onClick = {}, enabled = false)
-    }
   }
 }
 

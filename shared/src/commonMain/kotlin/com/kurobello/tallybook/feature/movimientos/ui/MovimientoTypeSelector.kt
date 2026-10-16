@@ -6,19 +6,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import com.composables.icons.lucide.ArrowDownLeft
-import com.composables.icons.lucide.ArrowUpRight
-import com.composables.icons.lucide.Lucide
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.component.TallybookSectionHeading
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentOption
-import com.kurobello.tallybook.core.ui.component.TallybookSegmentTone
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentedControl
+import com.kurobello.tallybook.core.ui.movimiento.presentation
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.expense
-import tallybook.shared.generated.resources.income
 import tallybook.shared.generated.resources.movement_type
 
 @Composable
@@ -28,24 +23,17 @@ internal fun MovimientoTypeSelector(
     onSelected: (TipoMovimiento) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-  val expense = stringResource(Res.string.expense)
-  val income = stringResource(Res.string.income)
+  val labels = TipoMovimiento.entries.map { stringResource(it.presentation.label) }
   val options =
-      remember(expense, income) {
-        listOf(
-            TallybookSegmentOption(
-                value = TipoMovimiento.GASTO,
-                label = expense,
-                icon = Lucide.ArrowUpRight,
-                tone = TallybookSegmentTone.Expense,
-            ),
-            TallybookSegmentOption(
-                value = TipoMovimiento.INGRESO,
-                label = income,
-                icon = Lucide.ArrowDownLeft,
-                tone = TallybookSegmentTone.Income,
-            ),
-        )
+      remember(labels) {
+        TipoMovimiento.entries.mapIndexed { index, tipo ->
+          TallybookSegmentOption(
+              value = tipo,
+              label = labels[index],
+              icon = tipo.presentation.icon,
+              tone = tipo.presentation.tone,
+          )
+        }
       }
   Column(
       modifier = modifier.fillMaxWidth(),
