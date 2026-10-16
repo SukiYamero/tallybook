@@ -441,8 +441,11 @@ History is visited lazily and retained when hidden. Official saveable and ViewMo
 hoisted above the active display, in that order, with stable content keys and parent creation extras.
 Snapshotting extras for each parent lifetime prevents Activity Intent Bundles from resetting stores.
 Tabs select existing entries; History root Back selects Home, Home root delegates platform exit, and
-Search and Profile root Back select Home; catalog Back returns to the previous primary. Home search
-opens Search with a one-time focus intent.
+Search and Profile root Back select Home. One `secondary` slot shows a secondary destination over the
+selected primary with the bottom bar hidden: the UI catalog over any primary, Categories only over
+Profile. Back closes the secondary first, and selecting any primary clears it. Home search opens Search
+with a one-time focus intent; a category tapped in Categories selects Search with a one-shot
+`SearchCategoryRequest` that the retained Search ViewModel applies once.
 
 Home/History repository observations use five-second subscription sharing. Feature routes revalidate
 before lifecycle collection. `RetainedLoadState<Content, Failure>` is the shared snapshot contract:
