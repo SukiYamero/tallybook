@@ -153,7 +153,7 @@ class FirstMovimientoIntegrationTest {
                       tipo = TipoMovimiento.INGRESO,
                       monto = Money(9_999, Moneda.USD),
                       fecha = FIXED_DATE,
-                      categoriaId = "cat_ingresos",
+                      categoriaIds = listOf("cat_ingresos"),
                       descripcion = null,
                       createdAt = FIXED_INSTANT,
                   )
@@ -241,7 +241,7 @@ class FirstMovimientoIntegrationTest {
           val saved = assertSuccess(movimientos.getAll()).single()
           assertEquals("first", saved.id)
           assertEquals("Aceite 30 mil", saved.descripcion)
-          assertEquals("cat_supermercado", saved.categoriaId)
+          assertEquals(listOf("cat_supermercado"), saved.categoriaIds)
           assertEquals(Money(3_000_000, Moneda.COP), saved.monto)
           assertEquals(FIXED_DATE, saved.fecha)
 
@@ -266,8 +266,8 @@ class FirstMovimientoIntegrationTest {
           testScheduler.advanceUntilIdle()
 
           assertEquals(
-              CATEGORIA_OTROS_ID,
-              assertSuccess(movimientos.getAll()).single { it.id == "second" }.categoriaId,
+              listOf(CATEGORIA_OTROS_ID),
+              assertSuccess(movimientos.getAll()).single { it.id == "second" }.categoriaIds,
           )
         } finally {
           scopes.forEach(CoroutineScope::cancel)

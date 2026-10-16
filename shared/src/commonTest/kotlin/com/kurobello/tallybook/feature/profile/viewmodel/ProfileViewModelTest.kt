@@ -266,7 +266,7 @@ internal class ProfileFakeMovimientos : MovimientoRepository {
                   tipo = TipoMovimiento.GASTO,
                   monto = Money(1250, Moneda.COP),
                   fecha = LocalDate(2026, 10, 14),
-                  categoriaId = "cat_comida",
+                  categoriaIds = listOf("cat_comida"),
                   descripcion = "café",
                   createdAt = Instant.parse("2026-10-14T12:00:00Z"),
               )

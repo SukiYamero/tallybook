@@ -58,7 +58,7 @@ class SearchRepositoryTest {
                   movimiento("upper", "2026-09-30"),
                   movimiento("before", "2026-08-31"),
                   movimiento("after", "2026-10-01"),
-                  movimiento("child", "2026-09-15", categoryId = "food-child"),
+                  movimiento("child", "2026-09-15", categoryIds = listOf("food-child")),
                   movimiento("income", "2026-09-15", tipo = TipoMovimiento.INGRESO),
                   movimiento("usd", "2026-09-15", moneda = Moneda.USD),
               )
@@ -148,6 +148,34 @@ class SearchRepositoryTest {
   }
 
   @Test
+  fun `a movimiento matches through any of its categories exactly once with roll-up`() = runTest {
+    withHierarchy { repository, _ ->
+      val multi = movimiento("multi", "2026-09-15", categoryIds = listOf("other", "food-child"))
+      val redundant = movimiento("both", "2026-09-15", categoryIds = listOf("food", "food-sibling"))
+      repository.insert(multi)
+      repository.insert(redundant)
+
+      assertEquals(setOf("on-unrelated", "multi"), ids(repository, setOf("other")))
+      assertEquals(setOf("on-child", "multi"), ids(repository, setOf("food-child")))
+      assertEquals(
+          setOf("on-parent", "on-child", "on-sibling", "multi", "both"),
+          ids(repository, setOf("food")),
+      )
+      val found =
+          snapshot(repository, MovimientoReadCriteria(Moneda.COP, categoryIds = setOf("food")))
+      assertEquals(
+          found.movimientos.size,
+          found.movimientos.map { it.id }.distinct().size,
+          "a row matched through several categories is returned once",
+      )
+      assertEquals(
+          listOf("other", "food-child"),
+          found.movimientos.single { it.id == "multi" }.categoriaIds,
+      )
+    }
+  }
+
+  @Test
   fun `Otros is filterable and unknown ids are tolerated next to a parent`() = runTest {
     withHierarchy { repository, _ ->
       assertEquals(setOf("on-otros"), ids(repository, setOf(CATEGORIA_OTROS_ID)))
@@ -167,7 +195,7 @@ class SearchRepositoryTest {
               "child-income",
               "2026-09-15",
               tipo = TipoMovimiento.INGRESO,
-              categoryId = "food-child",
+              categoryIds = listOf("food-child"),
           )
       )
 
@@ -178,7 +206,7 @@ class SearchRepositoryTest {
       assertEquals(setOf("child-income"), ids(repository, setOf("food"), TipoMovimiento.INGRESO))
 
       database.categoriaQueries.insertCategoria("late-child", "Late", "other", "i", "c")
-      repository.insert(movimiento("on-late", "2026-09-15", categoryId = "late-child"))
+      repository.insert(movimiento("on-late", "2026-09-15", categoryIds = listOf("late-child")))
       assertEquals(setOf("on-unrelated", "on-late"), ids(repository, setOf("other")))
     }
   }
@@ -202,7 +230,10 @@ class SearchRepositoryTest {
               emissions.single(),
           )
           assertEquals(1, driver.listeners)
-          assertEquals(setOf("movimiento", "categoria"), driver.listenerKeys)
+          assertEquals(
+              setOf("movimiento", "movimiento_categoria", "categoria"),
+              driver.listenerKeys,
+          )
 
           val matching = movimiento("matching", "2026-09-15")
           assertEquals(DataOutcome.Success(Unit), repository.insert(matching))
@@ -218,7 +249,7 @@ class SearchRepositoryTest {
                       "excluded",
                       "2024-01-01",
                       tipo = TipoMovimiento.INGRESO,
-                      categoryId = "other",
+                      categoryIds = listOf("other"),
                   )
               ),
           )
@@ -248,25 +279,27 @@ class SearchRepositoryTest {
                   100,
                   "COP",
                   "2026-09-15",
-                  "food",
                   null,
                   "2026-09-15T12:00:00Z",
               )
+              database.movimientoQueries.insertMovimientoCategoria("transaction-$index", "food", 0)
               database.movimientoQueries.insertMovimiento(
                   "old-$index",
                   "INGRESO",
                   100,
                   "COP",
                   "2023-01-01",
-                  "other",
                   null,
                   "2026-09-15T12:00:00Z",
               )
+              database.movimientoQueries.insertMovimientoCategoria("old-$index", "other", 0)
             }
             runCurrent()
             database.transaction {
               database.movimientoQueries.deleteMovimiento("transaction-$index")
+              database.movimientoQueries.deleteMovimientoCategorias("transaction-$index")
               database.movimientoQueries.deleteMovimiento("old-$index")
+              database.movimientoQueries.deleteMovimientoCategorias("old-$index")
             }
             runCurrent()
           }
@@ -328,7 +361,7 @@ class SearchRepositoryTest {
           val ids = listOf("quote' OR 1=1 --", "percent%", "underscore_", "unrelated")
           val dates = listOf("-0001-01-01", "0000-01-01", "+10000-01-01", "2026-01-01")
           for ((index, id) in ids.withIndex()) repository.insert(
-              movimiento("row-$index", dates[index], categoryId = id)
+              movimiento("row-$index", dates[index], categoryIds = listOf(id))
           )
           val selected =
               snapshot(
@@ -397,10 +430,10 @@ class SearchRepositoryTest {
               0,
               "COP",
               "2026-09-15",
-              "food",
               null,
               "2026-09-15T12:00:00Z",
           )
+          database.movimientoQueries.insertMovimientoCategoria("invalid", "food", 0)
           runCurrent()
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(emissions.last()).error)
           assertTrue(job.isCompleted)
@@ -417,10 +450,10 @@ class SearchRepositoryTest {
               100,
               "COP",
               "02026-09-15",
-              "other",
               null,
               "2026-09-15T12:00:00Z",
           )
+          database.movimientoQueries.insertMovimientoCategoria("invalid-year", "other", 0)
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(flow.first()).error)
           repository.delete("invalid-year")
           assertEquals(
@@ -513,7 +546,7 @@ class SearchRepositoryTest {
                   "row-$index",
                   if (index % 2 == 0) "2026-09-15" else "2024-01-01",
                   if (index % 3 == 0) Moneda.USD else Moneda.COP,
-                  categoryId = if (index % 4 == 0) "sparse" else "food",
+                  categoryIds = listOf(if (index % 4 == 0) "sparse" else "food"),
               )
           )
           val criteria =
@@ -584,7 +617,7 @@ class SearchRepositoryTest {
               "on-otros" to CATEGORIA_OTROS_ID,
           )
       for ((id, categoryId) in rows) repository.insert(
-          movimiento(id, "2026-09-15", categoryId = categoryId)
+          movimiento(id, "2026-09-15", categoryIds = listOf(categoryId))
       )
       block(repository, database)
     }
@@ -627,7 +660,7 @@ class SearchRepositoryTest {
         parameters: Int,
         binders: (SqlPreparedStatement.() -> Unit)?,
     ): QueryResult<R> {
-      val structural = sql.trimStart().startsWith("SELECT movimiento.id")
+      val structural = sql.trimStart().startsWith("SELECT movimiento_con_categorias.id")
       if (sql.trimStart().startsWith("SELECT")) readTransactions += currentTransaction()
       if (structural) structuralRead = StructuralRead(sql, parameters, binders)
       val result = delegate.executeQuery(identifier, sql, mapper, parameters, binders)
@@ -662,7 +695,7 @@ class SearchRepositoryTest {
       fecha: String,
       moneda: Moneda = Moneda.COP,
       tipo: TipoMovimiento = TipoMovimiento.GASTO,
-      categoryId: String = "food",
+      categoryIds: List<String> = listOf("food"),
       createdAt: String = "2026-09-15T12:00:00Z",
   ) =
       Movimiento(
@@ -670,7 +703,7 @@ class SearchRepositoryTest {
           tipo,
           Money(100, moneda),
           LocalDate.parse(fecha),
-          categoryId,
+          categoryIds,
           "Lunch",
           Instant.parse(createdAt),
       )

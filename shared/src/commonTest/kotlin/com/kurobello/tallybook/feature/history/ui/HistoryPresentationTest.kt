@@ -129,7 +129,7 @@ class HistoryPresentationTest {
             TipoMovimiento.GASTO,
             Money(100, Moneda.USD),
             today,
-            "food",
+            listOf("food"),
             null,
             Instant.parse("2026-10-06T12:00:00Z"),
         )

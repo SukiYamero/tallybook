@@ -110,7 +110,7 @@ internal class ManagementRepository : MovimientoRepository {
               tipo = changes.tipo,
               monto = changes.monto,
               fecha = changes.fecha,
-              categoriaId = changes.categoriaId,
+              categoriaIds = changes.categoriaIds,
               descripcion = changes.descripcion,
           )
     }
@@ -174,7 +174,7 @@ internal fun managementMovimiento() =
         TipoMovimiento.GASTO,
         Money(1234, Moneda.USD),
         LocalDate(2026, 9, 15),
-        "food",
+        listOf("food"),
         "Lunch",
         Instant.parse("2026-09-15T10:00:00Z"),
     )

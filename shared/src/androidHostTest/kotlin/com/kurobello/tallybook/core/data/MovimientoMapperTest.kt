@@ -1,6 +1,6 @@
 package com.kurobello.tallybook.core.data
 
-import com.kurobello.tallybook.core.database.Movimiento as DatabaseMovimiento
+import com.kurobello.tallybook.core.database.Movimiento_con_categorias as DatabaseMovimiento
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -22,7 +22,7 @@ class MovimientoMapperTest {
             tipo = TipoMovimiento.GASTO,
             monto = Money(1_050, Moneda.USD),
             fecha = LocalDate(2026, 9, 3),
-            categoriaId = "cat_comida",
+            categoriaIds = listOf("cat_comida"),
             descripcion = "almuerzo",
             createdAt = createdAt,
         ),
@@ -44,6 +44,26 @@ class MovimientoMapperTest {
     }
   }
 
+  @Test
+  fun `toDomain orders categorias by posicion whatever the concatenation order`() {
+    val shuffled = "2\u001Fc\u001E0\u001Fa\u001E1\u001Fb"
+
+    assertEquals(
+        listOf("a", "b", "c"),
+        databaseMovimiento("2026-09-03T12:00:00Z")
+            .copy(categoria_ids = shuffled)
+            .toDomain()
+            .categoriaIds,
+    )
+  }
+
+  @Test
+  fun `toDomain rejects a movimiento without categorias`() {
+    assertFailsWith<IllegalArgumentException> {
+      databaseMovimiento("2026-09-03T12:00:00Z").copy(categoria_ids = "").toDomain()
+    }
+  }
+
   private fun databaseMovimiento(createdAt: String) =
       DatabaseMovimiento(
           id = "mov1",
@@ -51,7 +71,7 @@ class MovimientoMapperTest {
           monto_minor = 1_050,
           monto_moneda = "USD",
           fecha = "2026-09-03",
-          categoria_id = "cat_comida",
+          categoria_ids = "0\u001Fcat_comida",
           descripcion = "almuerzo",
           created_at = createdAt,
       )

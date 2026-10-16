@@ -1,0 +1,49 @@
+CREATE TABLE movimiento_categoria (
+    movimiento_id TEXT NOT NULL,
+    categoria_id TEXT NOT NULL,
+    posicion INTEGER NOT NULL,
+    PRIMARY KEY (movimiento_id, categoria_id)
+);
+
+CREATE INDEX movimiento_categoria_categoria ON movimiento_categoria(categoria_id);
+
+INSERT INTO movimiento_categoria(movimiento_id, categoria_id, posicion)
+SELECT id, categoria_id, 0
+FROM movimiento;
+
+-- SQLite 3.32 (Android 12) has no DROP COLUMN. The old table is renamed instead of the new one so the
+-- recreated movimiento keeps the exact unquoted DDL of a fresh install.
+ALTER TABLE movimiento RENAME TO movimiento_legacy;
+
+CREATE TABLE movimiento (
+    id TEXT NOT NULL PRIMARY KEY,
+    tipo TEXT NOT NULL,
+    monto_minor INTEGER NOT NULL,
+    monto_moneda TEXT NOT NULL,
+    fecha TEXT NOT NULL,
+    descripcion TEXT,
+    created_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00Z'
+);
+
+INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, descripcion, created_at)
+SELECT id, tipo, monto_minor, monto_moneda, fecha, descripcion, created_at
+FROM movimiento_legacy;
+
+DROP INDEX movimiento_recent;
+
+DROP TABLE movimiento_legacy;
+
+CREATE INDEX movimiento_recent ON movimiento(fecha DESC, created_at DESC, id DESC);
+
+CREATE VIEW movimiento_con_categorias AS
+SELECT
+    movimiento.*,
+    COALESCE(
+        (
+            SELECT group_concat(movimiento_categoria.posicion || char(31) || movimiento_categoria.categoria_id, char(30))
+            FROM movimiento_categoria
+            WHERE movimiento_categoria.movimiento_id = movimiento.id
+        ),
+        ''
+    ) AS categoria_ids
+FROM movimiento;

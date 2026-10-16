@@ -73,7 +73,7 @@ class MovimientoCsvTest {
             movimiento(
                 id = "gasto",
                 fecha = LocalDate(2026, 3, 5),
-                categoriaId = "super",
+                categoriaIds = listOf("super"),
                 descripcion = "Feria",
                 monto = Money(1500, Moneda.CLP),
             ),
@@ -81,7 +81,7 @@ class MovimientoCsvTest {
                 id = "ingreso",
                 fecha = LocalDate(2026, 3, 1),
                 tipo = TipoMovimiento.INGRESO,
-                categoriaId = "sueldo",
+                categoriaIds = listOf("sueldo"),
                 monto = Money(250_000_000, Moneda.COP),
             ),
         )
@@ -127,7 +127,9 @@ class MovimientoCsvTest {
     descriptions.forEach { (descripcion, expected) ->
       val csv =
           buildMovimientoCsv(
-              listOf(movimiento(id = "a", categoriaId = "sueldo", descripcion = descripcion)),
+              listOf(
+                  movimiento(id = "a", categoriaIds = listOf("sueldo"), descripcion = descripcion)
+              ),
               categorias,
               labels,
           )
@@ -164,7 +166,7 @@ class MovimientoCsvTest {
     val row =
         dataRows(
                 buildMovimientoCsv(
-                    listOf(movimiento(id = "a", categoriaId = "f")),
+                    listOf(movimiento(id = "a", categoriaIds = listOf("f"))),
                     listOf(formulaCategoria),
                     labels,
                 ),
@@ -174,12 +176,29 @@ class MovimientoCsvTest {
   }
 
   @Test
+  fun joinsEveryCategoryNameInDisplayOrderAndListsEachParentOnce() {
+    val movimientos =
+        listOf(
+            movimiento(id = "a", categoriaIds = listOf("sueldo", "super", "comida")),
+            movimiento(id = "b", categoriaIds = listOf("super", "missing"), createdAtSeconds = 5),
+        )
+
+    assertEquals(
+        listOf(
+            "2026-01-15,Gasto,Supermercado,Comida,,1000,CLP",
+            "2026-01-15,Gasto,Sueldo · Supermercado · Comida,Comida,,1000,CLP",
+        ),
+        dataRows(buildMovimientoCsv(movimientos, categorias, labels)),
+    )
+  }
+
+  @Test
   fun leavesUnknownCategoryAndMissingParentOrDescriptionEmpty() {
     val orphan = categoria(id = "orphan", nombre = "Huérfana", padreId = "deleted")
     val movimientos =
         listOf(
-            movimiento(id = "b", categoriaId = "missing", descripcion = null),
-            movimiento(id = "a", categoriaId = "orphan", descripcion = null),
+            movimiento(id = "b", categoriaIds = listOf("missing"), descripcion = null),
+            movimiento(id = "a", categoriaIds = listOf("orphan"), descripcion = null),
         )
 
     assertEquals(
@@ -207,7 +226,7 @@ private fun movimiento(
     createdAtSeconds: Long = 0,
     tipo: TipoMovimiento = TipoMovimiento.GASTO,
     monto: Money = Money(1000, Moneda.CLP),
-    categoriaId: String = "comida",
+    categoriaIds: List<String> = listOf("comida"),
     descripcion: String? = null,
 ) =
     Movimiento(
@@ -215,7 +234,7 @@ private fun movimiento(
         tipo = tipo,
         monto = monto,
         fecha = fecha,
-        categoriaId = categoriaId,
+        categoriaIds = categoriaIds,
         descripcion = descripcion,
         createdAt = Instant.fromEpochSeconds(createdAtSeconds),
     )

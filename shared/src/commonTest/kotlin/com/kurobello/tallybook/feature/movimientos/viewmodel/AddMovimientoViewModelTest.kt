@@ -168,7 +168,7 @@ class AddMovimientoViewModelTest {
             tipo = TipoMovimiento.INGRESO,
             monto = com.kurobello.tallybook.core.model.Money(1234, Moneda.USD),
             fecha = LocalDate(2026, 9, 14),
-            categoriaId = category.id,
+            categoriaIds = listOf(category.id),
             descripcion = "Salary September",
             createdAt = ADD_TEST_NOW,
         ),

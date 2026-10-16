@@ -7,7 +7,6 @@ CREATE TABLE movimiento (
     monto_minor INTEGER NOT NULL,
     monto_moneda TEXT NOT NULL,
     fecha TEXT NOT NULL,
-    categoria_id TEXT NOT NULL,
     descripcion TEXT,
     created_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00Z'
 );
@@ -16,13 +15,45 @@ CREATE TABLE movimiento (
 -- aggregate queries still benefit from fecha as the leading key.
 CREATE INDEX movimiento_recent ON movimiento(fecha DESC, created_at DESC, id DESC);
 
+-- The repository owns integrity because SQLite foreign keys are not enabled: both tables are always
+-- written in one transaction. posicion only orders the display; every category is equal.
+CREATE TABLE movimiento_categoria (
+    movimiento_id TEXT NOT NULL,
+    categoria_id TEXT NOT NULL,
+    posicion INTEGER NOT NULL,
+    PRIMARY KEY (movimiento_id, categoria_id)
+);
+
+CREATE INDEX movimiento_categoria_categoria ON movimiento_categoria(categoria_id);
+
+-- Every read goes through this view so a row and its categories come from one statement, hence one
+-- snapshot, and observers invalidate on both tables. group_concat order is unspecified on SQLite 3.32,
+-- so each id carries its posicion (unit separator) and the mapper sorts; groups use the record separator.
+-- COALESCE keeps the column non-null for a row without categories, which the mapper rejects explicitly.
+CREATE VIEW movimiento_con_categorias AS
+SELECT
+    movimiento.*,
+    COALESCE(
+        (
+            SELECT group_concat(movimiento_categoria.posicion || char(31) || movimiento_categoria.categoria_id, char(30))
+            FROM movimiento_categoria
+            WHERE movimiento_categoria.movimiento_id = movimiento.id
+        ),
+        ''
+    ) AS categoria_ids
+FROM movimiento;
+
 insertMovimiento:
-INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, categoria_id, descripcion, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, descripcion, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+insertMovimientoCategoria:
+INSERT INTO movimiento_categoria(movimiento_id, categoria_id, posicion)
+VALUES (?, ?, ?);
 
 selectAllMovimientos:
 SELECT *
-FROM movimiento
+FROM movimiento_con_categorias
 ORDER BY fecha DESC, created_at DESC, id DESC;
 
 -- SQLite date functions have a narrower year domain than the canonical LocalDate text we persist.
@@ -34,38 +65,45 @@ ORDER BY CAST(movimiento_year AS INTEGER) DESC;
 
 selectRecentMovimientos:
 SELECT *
-FROM movimiento
+FROM movimiento_con_categorias
 ORDER BY fecha DESC, created_at DESC, id DESC
 LIMIT ?;
 
 selectRecentMovimientosByMoneda:
 SELECT *
-FROM movimiento
+FROM movimiento_con_categorias
 WHERE monto_moneda = ?
 ORDER BY fecha DESC, created_at DESC, id DESC
 LIMIT ?;
 
+-- The limit counts movimientos, not (movimiento, categoria) rows, so a multi-category movimiento
+-- cannot push older history out of the window.
 selectCategoryHistory:
-SELECT descripcion, categoria_id, created_at
-FROM movimiento
-WHERE descripcion IS NOT NULL AND trim(descripcion) <> ''
-ORDER BY created_at DESC, id DESC
-LIMIT ?;
+SELECT recent.descripcion, movimiento_categoria.categoria_id, recent.created_at
+FROM (
+    SELECT id, descripcion, created_at
+    FROM movimiento
+    WHERE descripcion IS NOT NULL AND trim(descripcion) <> ''
+    ORDER BY created_at DESC, id DESC
+    LIMIT ?
+) AS recent
+JOIN movimiento_categoria ON movimiento_categoria.movimiento_id = recent.id
+ORDER BY recent.created_at DESC, recent.id DESC, movimiento_categoria.posicion;
 
 selectMovimientoById:
 SELECT *
-FROM movimiento
+FROM movimiento_con_categorias
 WHERE id = ?;
 
 selectMovimientosInRange:
 SELECT *
-FROM movimiento
+FROM movimiento_con_categorias
 WHERE monto_moneda = ? AND fecha >= ? AND fecha <= ?
 ORDER BY fecha DESC, created_at DESC, id DESC;
 
 selectFilteredMovimientos:
 SELECT *
-FROM movimiento
+FROM movimiento_con_categorias
 WHERE monto_moneda = :moneda
   AND (:start_date IS NULL OR fecha >= :start_date)
   AND (:end_date IS NULL OR fecha <= :end_date)
@@ -73,24 +111,36 @@ WHERE monto_moneda = :moneda
 ORDER BY fecha DESC, created_at DESC, id DESC;
 
 -- A selected parent also matches its children; the roll-up never goes upward, so a selected child
--- matches only itself. It lives in the query so rows, years and listeners share one snapshot.
+-- matches only itself. A movimiento matches through any of its categories. It lives in the query so
+-- rows, years and listeners share one snapshot.
 selectFilteredMovimientosByCategory:
 SELECT *
-FROM movimiento
+FROM movimiento_con_categorias
 WHERE monto_moneda = :moneda
   AND (:start_date IS NULL OR fecha >= :start_date)
   AND (:end_date IS NULL OR fecha <= :end_date)
   AND (:movement_type IS NULL OR tipo = :movement_type)
-  AND (
-      categoria_id IN :category_ids
-      OR categoria_id IN (SELECT id FROM categoria WHERE padre_id IN :category_ids)
+  AND EXISTS (
+      SELECT 1
+      FROM movimiento_categoria
+      WHERE movimiento_categoria.movimiento_id = movimiento_con_categorias.id
+        AND (
+            movimiento_categoria.categoria_id IN :category_ids
+            OR movimiento_categoria.categoria_id IN (
+                SELECT id FROM categoria WHERE padre_id IN :category_ids
+            )
+        )
   )
 ORDER BY fecha DESC, created_at DESC, id DESC;
 
 updateMovimiento:
 UPDATE movimiento
-SET tipo = ?, monto_minor = ?, fecha = ?, categoria_id = ?, descripcion = ?
+SET tipo = ?, monto_minor = ?, fecha = ?, descripcion = ?
 WHERE id = ?;
+
+deleteMovimientoCategorias:
+DELETE FROM movimiento_categoria
+WHERE movimiento_id = ?;
 
 deleteMovimiento:
 DELETE FROM movimiento
@@ -103,10 +153,12 @@ WHERE monto_moneda = ?
 GROUP BY tipo;
 
 -- Grouped by tipo as well as categoria_id so gastos and ingresos in the same categoria never net
--- each other out, and so the balance general falls out of the same result. Filtered by moneda
--- because minor units of different currencies are different units and adding them is meaningless.
+-- each other out. Filtered by moneda because minor units of different currencies are different units
+-- and adding them is meaningless. A movimiento counts its full amount in every one of its categorias,
+-- so these totals do not add up to sumMovimientosByTipo.
 sumMovimientosPorCategoria:
-SELECT categoria_id, tipo, SUM(monto_minor) AS total_minor
+SELECT movimiento_categoria.categoria_id, movimiento.tipo, SUM(movimiento.monto_minor) AS total_minor
 FROM movimiento
-WHERE monto_moneda = ? AND fecha BETWEEN ? AND ?
-GROUP BY categoria_id, tipo;
+JOIN movimiento_categoria ON movimiento_categoria.movimiento_id = movimiento.id
+WHERE movimiento.monto_moneda = ? AND movimiento.fecha BETWEEN ? AND ?
+GROUP BY movimiento_categoria.categoria_id, movimiento.tipo;

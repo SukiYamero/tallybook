@@ -434,7 +434,7 @@ private data class MovimientoCandidate(
                 tipo = tipo,
                 monto = requireNotNull(amount),
                 fecha = fecha,
-                categoriaId = requireNotNull(categoriaId),
+                categoriaIds = listOf(requireNotNull(categoriaId)),
                 descripcion = descripcion,
                 createdAt = createdAt,
             )

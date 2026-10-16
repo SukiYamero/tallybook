@@ -171,7 +171,7 @@ internal fun HomePopulatedPreview() {
                   com.kurobello.tallybook.core.model.Moneda.COP,
               ),
           fecha = kotlinx.datetime.LocalDate(2026, 9, 15),
-          categoriaId = categoria.id,
+          categoriaIds = listOf(categoria.id),
           descripcion = null,
           createdAt = kotlin.time.Instant.parse("2026-09-15T00:00:00Z"),
       )

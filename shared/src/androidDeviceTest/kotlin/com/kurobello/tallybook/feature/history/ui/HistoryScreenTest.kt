@@ -599,7 +599,7 @@ class HistoryScreenTest {
             TipoMovimiento.GASTO,
             Money(100, Moneda.COP),
             today,
-            "food",
+            listOf("food"),
             "Lunch with Ana",
             Instant.parse("2026-09-15T12:00:00Z"),
         )

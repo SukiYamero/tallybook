@@ -64,7 +64,7 @@ internal fun projectHistory(
             HistoryDayGroupUi(
                 fecha,
                 rows.map { movimiento ->
-                  val categoria = categoriasById[movimiento.categoriaId]
+                  val categoria = categoriasById[movimiento.categoriaIds.first()]
                   val categoryLabel = categoria?.nombre ?: unknownCategoryLabel
                   HistoryMovimientoRowUi(
                       movimiento = movimiento,

@@ -187,7 +187,7 @@ class AddMovimientoEntryFlowTest {
     runCurrent()
 
     val saved = movimientos.inserted.single()
-    assertEquals(CATEGORIA_OTROS_ID, saved.categoriaId)
+    assertEquals(listOf(CATEGORIA_OTROS_ID), saved.categoriaIds)
     assertEquals("Gasté 5.000 en algo raro", saved.descripcion)
     assertEquals(AddMovimientoEffect.Saved, viewModel.effects.first())
   }
