@@ -2,6 +2,7 @@ package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
+import com.kurobello.tallybook.core.text.isAsciiDigit
 
 internal sealed interface AmountInputResult {
 
@@ -63,5 +64,3 @@ private fun DecimalParts.toAmountResult(moneda: Moneda): AmountInputResult {
 }
 
 private data class DecimalParts(val integerPart: String, val decimals: String)
-
-private fun Char.isAsciiDigit(): Boolean = this in '0'..'9'

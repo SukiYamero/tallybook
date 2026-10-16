@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.core.data.entry
 
-import com.kurobello.tallybook.core.ui.text.normalizeSearchText
+import com.kurobello.tallybook.core.text.isAsciiDigit
+import com.kurobello.tallybook.core.text.normalizeSearchText
 
 internal fun tokenizePhrase(text: String): List<PhraseToken> {
   val tokens = mutableListOf<PhraseToken>()
@@ -82,8 +83,6 @@ private fun rawToken(kind: PhraseTokenKind, text: String, start: Int, end: Int):
 
 private fun Char.isWordCharacter(): Boolean =
     isLetter() || category == CharCategory.NON_SPACING_MARK
-
-internal fun Char.isAsciiDigit(): Boolean = this in '0'..'9'
 
 private const val MAX_DATE_PARTS = 3
 private val numberSeparators = setOf('.', ',')

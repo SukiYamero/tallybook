@@ -1,4 +1,4 @@
-package com.kurobello.tallybook.core.ui.text
+package com.kurobello.tallybook.core.text
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
