@@ -23,3 +23,28 @@ internal fun buildCategoryTree(categorias: List<Categoria>): CategoryTree {
 
   return CategoryTree(roots = roots, childrenByParent = childrenByParent)
 }
+
+// Filters after building so an excluded parent never promotes its children to roots.
+internal fun CategoryTree.without(excludedIds: Set<String>): CategoryTree =
+    if (excludedIds.isEmpty()) {
+      this
+    } else {
+      CategoryTree(
+          roots = roots.filterNot { it.id in excludedIds },
+          childrenByParent =
+              childrenByParent.mapValues { (_, children) ->
+                children.filterNot { it.id in excludedIds }
+              },
+      )
+    }
+
+internal fun CategoryTree.shouldOpenChildren(
+    categoria: Categoria,
+    allowSubcategories: Boolean,
+    isSearching: Boolean,
+    parent: Categoria?,
+): Boolean =
+    allowSubcategories &&
+        !isSearching &&
+        parent == null &&
+        childrenByParent[categoria.id].orEmpty().isNotEmpty()

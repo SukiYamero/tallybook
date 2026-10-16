@@ -30,8 +30,8 @@ import com.composables.icons.lucide.TriangleAlert
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoMovimiento
-import com.kurobello.tallybook.core.ui.category.CategoryChip
-import com.kurobello.tallybook.core.ui.category.CategorySuggestionChip
+import com.kurobello.tallybook.core.ui.category.CategorySuggestionTag
+import com.kurobello.tallybook.core.ui.category.CategoryTag
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookButtonDefaults
 import com.kurobello.tallybook.core.ui.component.TallybookProgressIndicator
@@ -199,12 +199,7 @@ private fun SummaryCategories(
       horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
       itemVerticalAlignment = Alignment.CenterVertically,
   ) {
-    CategoryChip(
-        categoria = summary.categoria,
-        selected = true,
-        onClick = null,
-        pending = summary.categoriaIsPending,
-    )
+    CategoryTag(categoria = summary.categoria, pending = summary.categoriaIsPending)
     if (summary.categoriaIsPending) {
       TallybookText(
           text = stringResource(Res.string.movimiento_pending_label),
@@ -213,7 +208,7 @@ private fun SummaryCategories(
       )
     }
     summary.suggestions.forEach { suggestion ->
-      CategorySuggestionChip(
+      CategorySuggestionTag(
           categoria = suggestion,
           onClick = { onSelectSuggestion(suggestion) },
           enabled = !summary.isSubmitting,

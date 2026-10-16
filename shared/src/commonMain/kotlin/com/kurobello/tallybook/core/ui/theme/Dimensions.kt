@@ -48,6 +48,9 @@ internal object TallybookDimensions {
   val datePickerYearSelectorMaximumHeight = 240.dp
   val choicePillVisualHeight = 36.dp
   val filterTagVisualHeight = 28.dp
+  val categoryTagVisualHeight = 36.dp
+  val categoryTagRemoveTargetWidth = 44.dp
+  val voiceDictationButton = 56.dp
   val categoryPickerResultsMaximumHeight = 420.dp
   val yearMenuMaximumWidth = 128.dp
   val segmentedControlMinimumHeight = minimumTouchTarget
