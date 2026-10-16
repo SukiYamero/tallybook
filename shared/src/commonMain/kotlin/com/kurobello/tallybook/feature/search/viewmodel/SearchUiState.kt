@@ -4,8 +4,8 @@ import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
+import com.kurobello.tallybook.core.text.normalizeSearchText
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
-import com.kurobello.tallybook.core.ui.text.normalizeSearchText
 import com.kurobello.tallybook.feature.search.ui.SearchCurrencyYears
 import com.kurobello.tallybook.feature.search.ui.SearchResultsUi
 import kotlinx.datetime.LocalDate

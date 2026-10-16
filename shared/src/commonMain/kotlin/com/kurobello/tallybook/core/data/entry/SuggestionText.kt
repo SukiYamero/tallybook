@@ -1,6 +1,6 @@
 package com.kurobello.tallybook.core.data.entry
 
-import com.kurobello.tallybook.core.ui.text.normalizeSearchText
+import com.kurobello.tallybook.core.text.normalizeSearchText
 
 /**
  * Normalized, stop-word-free, singularized words of [text], in order. Dictionary phrases and

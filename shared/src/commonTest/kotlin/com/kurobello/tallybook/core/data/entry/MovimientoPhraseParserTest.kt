@@ -157,10 +157,130 @@ class MovimientoPhraseParserTest {
   }
 
   @Test
-  fun aLoneUnitWordIsNotAnAmount() {
+  fun aConnectorJoinsAValueToTheLargerOneBeforeIt() {
+    val cases =
+        listOf(
+            AmountCase("mil e quinhentos", Moneda.BRL, 150_000),
+            AmountCase("dois mil e quinhentos", Moneda.BRL, 250_000),
+            AmountCase("cento e vinte", Moneda.BRL, 12_000),
+            AmountCase("cento e vinte e cinco", Moneda.BRL, 12_500),
+            AmountCase("mil y quinientos", Moneda.COP, 150_000),
+            AmountCase("dos mil y quinientos", Moneda.COP, 250_000),
+            AmountCase("ciento veinte", Moneda.COP, 12_000),
+            AmountCase("ciento y veinte", Moneda.COP, 12_000),
+            AmountCase("dos mil veinte y cinco", Moneda.COP, 202_500),
+            AmountCase("one hundred and twenty", Moneda.USD, 12_000),
+            AmountCase("one thousand and five", Moneda.USD, 100_500),
+            AmountCase("dos millones y quinientos mil", Moneda.COP, 250_000_000),
+        )
+
+    cases.forEach { case ->
+      assertEquals(case.minorUnits, minor(case.text, case.moneda), "${case.text} ${case.moneda}")
+    }
+    val sentence = parse("Gastei mil e quinhentos", moneda = Moneda.BRL, locale = AppLocale.PT_BR)
+    assertEquals(150_000, sentence.monto?.minorUnits)
+    assertEquals(emptySet(), sentence.reviewFlags)
+    assertEquals("", sentence.subject)
+  }
+
+  @Test
+  fun aConnectorNeverJoinsTwoIndependentNumbers() {
+    listOf("veinte y veinte", "veinte y diez", "cien y cien", "mil e mil").forEach { text ->
+      val result = parse("Gasté $text")
+      assertEquals(setOf(PhraseReviewFlag.AMBIGUOUS_AMOUNT), result.reviewFlags, text)
+    }
+    assertNull(minor("cinco y cinco"))
+  }
+
+  @Test
+  fun aLoneSpelledUnitBelowTenIsNotAnAmountWithoutAMarker() {
+    assertNull(parse("Compré dos pasajes").monto)
+    assertEquals("dos pasajes", parse("Compré dos pasajes").subject)
+    assertNull(parse("I bought two tickets").monto)
     assertNull(parse("Compré un café").monto)
     assertNull(parse("I bought one coffee").monto)
     assertEquals("un café", parse("Compré un café").subject)
+  }
+
+  @Test
+  fun aSpelledUnitStaysAnAmountWithAScaleOrMarker() {
+    val cases =
+        listOf(
+            AmountCase("dos mil", Moneda.COP, 200_000),
+            AmountCase("cinco dólares", Moneda.USD, 500),
+            AmountCase("5 dólares", Moneda.USD, 500),
+            AmountCase("one dollar", Moneda.USD, 100),
+            AmountCase("\$ cinco", Moneda.USD, 500),
+            AmountCase("cinco lucas", Moneda.COP, 500_000),
+            AmountCase("veinte", Moneda.COP, 2_000),
+            AmountCase("diez", Moneda.COP, 1_000),
+        )
+
+    cases.forEach { case ->
+      assertEquals(case.minorUnits, minor(case.text, case.moneda), "${case.text} ${case.moneda}")
+    }
+  }
+
+  @Test
+  fun spelledNumbersThatOverflowAreNotAmounts() {
+    listOf(
+            "dos millones millones millones millones",
+            "veinte mil millones millones millones",
+            "mil millones millones millones millones",
+        )
+        .forEach { text ->
+          assertNull(parse("Gasté $text", moneda = Moneda.CLP).monto, text)
+          assertNull(minor(text, Moneda.CLP), text)
+        }
+  }
+
+  @Test
+  fun aSingleSeparatorGroupsOnlyAfterAValidLeadingGroup() {
+    val cases =
+        listOf(
+            AmountCase("100.000", Moneda.COP, 10_000_000),
+            AmountCase("999.999", Moneda.COP, 99_999_900),
+            AmountCase("1.000", Moneda.COP, 100_000),
+            AmountCase("1234,5", Moneda.COP, 123_450),
+            AmountCase("0,50", Moneda.COP, 50),
+            AmountCase("0.5", Moneda.USD, 50),
+            AmountCase("0,5", Moneda.COP, 50),
+        )
+
+    cases.forEach { case ->
+      assertEquals(case.minorUnits, minor(case.text, case.moneda), "${case.text} ${case.moneda}")
+    }
+  }
+
+  @Test
+  fun zeroLeadingThreeDigitsAreDecimalAndExceedEveryMonedaScale() {
+    val cases =
+        listOf(
+            AmountCase("0,500", Moneda.COP, null),
+            AmountCase("0.500", Moneda.USD, null),
+            AmountCase("0.500", Moneda.CLP, null),
+            AmountCase("0.500.000", Moneda.COP, null),
+        )
+
+    cases.forEach { case ->
+      assertNull(minor(case.text, case.moneda), "${case.text} ${case.moneda}")
+    }
+  }
+
+  @Test
+  fun aLeadingGroupLongerThanThreeDigitsMakesTheSeparatorDecimal() {
+    val cases =
+        listOf(
+            AmountCase("1234.567", Moneda.COP, null),
+            AmountCase("1234.567", Moneda.USD, null),
+            AmountCase("1234,567", Moneda.COP, null),
+            AmountCase("1234.567.890", Moneda.COP, null),
+            AmountCase("1234.5,6", Moneda.COP, null),
+        )
+
+    cases.forEach { case ->
+      assertNull(minor(case.text, case.moneda), "${case.text} ${case.moneda}")
+    }
   }
 
   @Test
@@ -220,6 +340,38 @@ class MovimientoPhraseParserTest {
     assertEquals(2_000_000, result.monto?.minorUnits)
     assertEquals(LocalDate(2026, 10, 12), result.fecha)
     assertEquals(emptySet(), result.reviewFlags)
+  }
+
+  @Test
+  fun anExplicitDateWinsOverAWeekdayBesideIt() {
+    val cases =
+        listOf(
+            DateCase("el lunes 12 de octubre", AppLocale.ES, LocalDate(2026, 10, 12)),
+            DateCase("el martes 12 de octubre", AppLocale.ES, LocalDate(2026, 10, 12)),
+            DateCase("lunes, 12 de octubre", AppLocale.ES, LocalDate(2026, 10, 12)),
+            DateCase("lunes el 12 de octubre", AppLocale.ES, LocalDate(2026, 10, 12)),
+            DateCase("lunes 12/10", AppLocale.ES, LocalDate(2026, 10, 12)),
+            DateCase("na segunda-feira 12 de outubro", AppLocale.PT_BR, LocalDate(2026, 10, 12)),
+            DateCase("on monday october 12", AppLocale.EN, LocalDate(2026, 10, 12)),
+            DateCase("on monday, october 12th", AppLocale.EN, LocalDate(2026, 10, 12)),
+        )
+
+    cases.forEach { case ->
+      val result = parse("Gasté 20000 ${case.expression}", locale = case.locale)
+      assertEquals(case.expected, result.fecha, case.expression)
+      assertEquals(2_000_000, result.monto?.minorUnits, case.expression)
+      assertEquals(emptySet(), result.reviewFlags, case.expression)
+      assertEquals("", result.subject, case.expression)
+    }
+    assertNull(parse("Gasté el lunes 12 de octubre").monto)
+  }
+
+  @Test
+  fun aWeekdayStaysAloneWhenNoExplicitDateFollows() {
+    val result = parse("Pagué el lunes 12 pesos")
+
+    assertEquals(LocalDate(2026, 10, 12), result.fecha)
+    assertEquals(1_200, result.monto?.minorUnits)
   }
 
   @Test

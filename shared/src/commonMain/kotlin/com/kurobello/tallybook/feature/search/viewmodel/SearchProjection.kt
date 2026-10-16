@@ -2,8 +2,8 @@ package com.kurobello.tallybook.feature.search.viewmodel
 
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.Movimiento
-import com.kurobello.tallybook.core.ui.text.matchesNormalizedSearchText
-import com.kurobello.tallybook.core.ui.text.normalizeSearchText
+import com.kurobello.tallybook.core.text.matchesNormalizedSearchText
+import com.kurobello.tallybook.core.text.normalizeSearchText
 import com.kurobello.tallybook.feature.search.ui.SearchResultRowUi
 import com.kurobello.tallybook.feature.search.ui.searchCategoryLabel
 import kotlinx.coroutines.currentCoroutineContext

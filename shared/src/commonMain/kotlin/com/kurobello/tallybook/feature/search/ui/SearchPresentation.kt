@@ -4,10 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.key
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
+import com.kurobello.tallybook.core.text.normalizeSearchText
 import com.kurobello.tallybook.core.ui.component.LoadingPresentation
 import com.kurobello.tallybook.core.ui.component.deferLoading
 import com.kurobello.tallybook.core.ui.component.rememberLoadingPresentation
-import com.kurobello.tallybook.core.ui.text.normalizeSearchText
 import com.kurobello.tallybook.feature.search.viewmodel.SearchUiState
 import com.kurobello.tallybook.feature.search.viewmodel.SearchWork
 import kotlin.time.TimeSource

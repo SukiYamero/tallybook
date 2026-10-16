@@ -7,7 +7,7 @@ import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.TipoMovimiento
-import com.kurobello.tallybook.core.ui.text.normalizeSearchText
+import com.kurobello.tallybook.core.text.normalizeSearchText
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
