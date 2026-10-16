@@ -171,7 +171,7 @@ private fun SearchFilterRequestEffect(
   val latestHandled = rememberUpdatedState(onHandled)
   LaunchedEffect(request, active, actions) {
     if (request != null && active) {
-      request.categoryIds.firstOrNull()?.let(actions::onShowCategory)
+      actions.onShowFilters(request.categoryIds, request.etiquetaIds)
       latestHandled.value(request.token)
     }
   }
@@ -211,6 +211,7 @@ private data class SearchScrollIdentity(
     val end: String?,
     val tipo: String?,
     val categoryIds: List<String>,
+    val etiquetaIds: List<String> = emptyList(),
     val normalizedQuery: String,
 )
 
@@ -221,5 +222,6 @@ private fun SearchRequest.scrollIdentity(): SearchScrollIdentity =
         criteria.range?.end?.toString(),
         criteria.tipo?.name,
         criteria.categoryIds.sorted(),
+        criteria.etiquetaIds.sorted(),
         normalizedQuery,
     )

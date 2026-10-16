@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.feature.search.viewmodel
 
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.text.matchesNormalizedSearchText
 import com.kurobello.tallybook.core.text.normalizeSearchText
@@ -17,17 +18,20 @@ internal data class SearchCandidate(val row: SearchResultRowUi, val normalizedFi
 internal suspend fun buildSearchCandidates(
     movimientos: List<Movimiento>,
     categorias: List<Categoria>,
+    etiquetas: List<Etiqueta>,
     unknownCategoryLabel: String,
 ): List<SearchCandidate> {
   val context = currentCoroutineContext()
   val categoriesById = categorias.associateBy { it.id }
+  val etiquetaNamesById = etiquetas.associate { it.id to it.nombre }
   return movimientos.map { movimiento ->
     context.ensureActive()
     val categoria = categoriesById[movimiento.categoriaId]
     val categoryLabel = searchCategoryLabel(categoria, unknownCategoryLabel)
     SearchCandidate(
         SearchResultRowUi(movimiento, categoria, movimiento.rowTitle(categoryLabel), categoryLabel),
-        listOfNotNull(movimiento.rowTitulo, movimiento.rowDescription, categoryLabel)
+        (listOfNotNull(movimiento.rowTitulo, movimiento.rowDescription, categoryLabel) +
+                movimiento.etiquetaIds.mapNotNull(etiquetaNamesById::get))
             .map(::normalizeSearchText),
     )
   }

@@ -17,6 +17,7 @@ import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -247,7 +248,7 @@ class SearchViewModelTest {
   }
 
   @Test
-  fun showCategoryResetsQueryAndFiltersToThatCategoryAndClosesTheOpenSession() = runTest {
+  fun showFiltersResetsQueryAndFiltersToThatCategoryAndClosesTheOpenSession() = runTest {
     val fixture = SearchFixture(this)
     val vm = fixture.create()
     backgroundScope.launch { vm.uiState.collect {} }
@@ -267,7 +268,7 @@ class SearchViewModelTest {
     val editing = requireNotNull(vm.onOpenFilters())
     fixture.clock.instant = Instant.parse("2026-10-07T12:00:00Z")
 
-    vm.onShowCategory("cat_comida")
+    vm.onShowFilters(setOf("cat_comida"), emptySet())
     runCurrent()
 
     assertEquals("", vm.uiState.value.rawQuery)
@@ -280,6 +281,132 @@ class SearchViewModelTest {
     assertEquals(setOf("cat_comida"), vm.uiState.value.filters.categoryIds)
     vm.onFiltersHidden(editing)
     assertFalse(vm.hasActiveFilterSession)
+  }
+
+  @Test
+  fun showFiltersReplacesEveryFilterWithExactlyTheRequestedTags() = runTest {
+    val fixture = SearchFixture(this)
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+    vm.onShowFilters(setOf("food"), setOf("t_viaje"))
+    vm.onQueryChanged("lunch")
+    val editing = requireNotNull(vm.onOpenFilters())
+
+    vm.onShowFilters(emptySet(), setOf("t_empresa"))
+    runCurrent()
+
+    assertEquals("", vm.uiState.value.rawQuery)
+    assertEquals(
+        SearchFilters.initial(TODAY).copy(etiquetaIds = setOf("t_empresa")),
+        vm.uiState.value.filters,
+    )
+    assertEquals(setOf("t_empresa"), vm.uiState.value.criteria?.etiquetaIds)
+    assertEquals(emptySet(), vm.uiState.value.criteria?.categoryIds)
+    assertIs<SearchFilterSession.Closing>(vm.uiState.value.filterSession)
+    vm.onApplyFilters(editing)
+    assertEquals(setOf("t_empresa"), vm.uiState.value.filters.etiquetaIds)
+    assertEquals(listOf("0"), vm.uiState.value.displayResults?.rows?.map { it.id })
+    assertEquals(1, vm.uiState.value.currentCount)
+  }
+
+  @Test
+  fun showFiltersWithoutIdsKeepsTheCurrentInput() = runTest {
+    val fixture = SearchFixture(this)
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+    vm.onShowFilters(emptySet(), setOf("t_empresa"))
+    vm.onQueryChanged("cafe")
+
+    vm.onShowFilters(setOf(" "), setOf(""))
+
+    assertEquals("cafe", vm.uiState.value.rawQuery)
+    assertEquals(setOf("t_empresa"), vm.uiState.value.filters.etiquetaIds)
+  }
+
+  @Test
+  fun removingATagFilterCommitsOnlyThatTag() = runTest {
+    val fixture = SearchFixture(this)
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+    vm.onShowFilters(setOf("food"), setOf("t_empresa", "t_viaje"))
+
+    vm.onRemoveTagFilter("t_viaje")
+
+    assertEquals(
+        SearchFilters.initial(TODAY)
+            .copy(categoryIds = setOf("food"), etiquetaIds = setOf("t_empresa")),
+        vm.uiState.value.filters,
+    )
+  }
+
+  @Test
+  fun deletedTagLeavesAppliedFiltersCriteriaAndDraftWithoutAFailure() = runTest {
+    val fixture = SearchFixture(this)
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+    vm.onShowFilters(emptySet(), setOf("t_empresa", "t_viaje"))
+    runCurrent()
+    assertEquals(1, vm.uiState.value.currentCount)
+    val editing = requireNotNull(vm.onOpenFilters())
+
+    fixture.etiquetas.delete("t_empresa")
+    runCurrent()
+
+    assertEquals(setOf("t_viaje"), vm.uiState.value.filters.etiquetaIds)
+    assertEquals(setOf("t_viaje"), vm.uiState.value.criteria?.etiquetaIds)
+    assertEquals(listOf(VIAJE), vm.uiState.value.etiquetas.values)
+    val session = assertIs<SearchFilterSession.Editing>(vm.uiState.value.filterSession)
+    assertEquals(setOf("t_viaje"), session.draft.etiquetaIds)
+    assertNull(vm.uiState.value.results.failure)
+    assertEquals(0, vm.uiState.value.currentCount)
+    vm.onApplyFilters(editing)
+    assertEquals(setOf("t_viaje"), vm.uiState.value.filters.etiquetaIds)
+  }
+
+  @Test
+  fun tagFiltersAppliedBeforeTheFirstCatalogDropTagsMissingFromIt() = runTest {
+    val fixture = SearchFixture(this)
+    val vm = fixture.create()
+    vm.onShowFilters(emptySet(), setOf("t_gone", "t_empresa"))
+    assertEquals(setOf("t_gone", "t_empresa"), vm.uiState.value.filters.etiquetaIds)
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+
+    assertEquals(setOf("t_empresa"), vm.uiState.value.filters.etiquetaIds)
+    assertNull(vm.uiState.value.results.failure)
+    assertEquals(1, vm.uiState.value.currentCount)
+  }
+
+  @Test
+  fun textMatchesTagNamesWithoutRestartingTheRead() = runTest {
+    val fixture = SearchFixture(this)
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+
+    vm.onQueryChanged("EMPRESA")
+    advanceTimeBy(250)
+    runCurrent()
+
+    assertEquals(listOf("0"), vm.uiState.value.displayResults?.rows?.map { it.id })
+    assertEquals(1, fixture.movimientos.starts)
+  }
+
+  @Test
+  fun tagCatalogFailureSurfacesWithoutOpeningFilters() = runTest {
+    val fixture = SearchFixture(this)
+    fixture.etiquetas.failure = DataError.Local(IllegalStateException())
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+
+    val failure = assertIs<SearchFailure.Repository>(vm.uiState.value.results.failure)
+    assertEquals(SearchSource.Etiquetas, failure.source)
+    assertFalse(vm.uiState.value.canOpenFilters)
   }
 
   @Test
@@ -474,16 +601,19 @@ class SearchViewModelTest {
 }
 
 private val TODAY = LocalDate(2026, 10, 6)
+private val EMPRESA = Etiqueta("t_empresa", "Empresa", Instant.parse("2026-01-01T00:00:00Z"))
+private val VIAJE = Etiqueta("t_viaje", "Viaje Chile", Instant.parse("2026-01-01T00:00:00Z"))
 
 private class SearchFixture(private val scope: TestScope) {
   val preferences = SearchPreferences()
   val categorias = SearchCategorias()
   val movimientos = SearchMovimientos()
+  val etiquetas = FakeEtiquetaRepository(listOf(EMPRESA, VIAJE))
   val clock = SearchClock()
 
   fun create(dispatcher: CoroutineDispatcher = StandardTestDispatcher(scope.testScheduler)) =
       SearchViewModel(
-          SearchRepositories(preferences, movimientos, categorias, FakeEtiquetaRepository()),
+          SearchRepositories(preferences, movimientos, categorias, etiquetas),
           SavedStateHandle(),
           "Unknown",
           SearchDateProvider(clock, TimeZoneProvider { TimeZone.UTC }),
@@ -541,6 +671,7 @@ private class SearchMovimientos : MovimientoRepository {
             text,
             null,
             Instant.parse("2026-10-06T12:00:00Z"),
+            if (index == 0) listOf("t_empresa") else emptyList(),
         )
       }
   val source =
@@ -570,7 +701,9 @@ private class SearchMovimientos : MovimientoRepository {
                             } != false) &&
                             (criteria.tipo == null || it.tipo == criteria.tipo) &&
                             (criteria.categoryIds.isEmpty() ||
-                                it.categoriaId in criteria.categoryIds)
+                                it.categoriaId in criteria.categoryIds) &&
+                            (criteria.etiquetaIds.isEmpty() ||
+                                it.etiquetaIds.any { id -> id in criteria.etiquetaIds })
                       }
               )
             }

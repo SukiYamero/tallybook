@@ -170,18 +170,23 @@ class MovimientoComponentsTest {
   }
 
   @Test
-  fun rowShowsNoCategoryCount() {
+  fun taggedRowShowsOnlyItsCategoryWithoutCountOrTags() {
     composeRule.setContent {
       TallybookTheme {
         MovimientoRow(
-            movimiento(TipoMovimiento.GASTO, 100).copy(categoriaId = "cat_comida"),
+            movimiento(TipoMovimiento.GASTO, 100)
+                .copy(categoriaId = "cat_comida", etiquetaIds = listOf("t_empresa", "t_viaje")),
             comida,
         )
       }
     }
 
-    composeRule.onNodeWithText("+0", useUnmergedTree = true).assertDoesNotExist()
+    composeRule.onNodeWithText("Comida", useUnmergedTree = true).assertExists()
     composeRule.onNodeWithText("+1", useUnmergedTree = true).assertDoesNotExist()
+    composeRule.onNodeWithText("+2", useUnmergedTree = true).assertDoesNotExist()
+    composeRule
+        .onNodeWithText("t_empresa", substring = true, useUnmergedTree = true)
+        .assertDoesNotExist()
   }
 
   private fun movimiento(tipo: TipoMovimiento, minorUnits: Long) =

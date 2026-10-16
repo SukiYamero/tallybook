@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.DataError
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.text.normalizeSearchText
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import kotlinx.coroutines.CoroutineDispatcher
@@ -53,6 +54,7 @@ internal class SearchViewModel(
   private var nextSessionId = 0L
   private var preferenceLoad: SearchSourceLoad<AppPreferencesState> = SearchSourceLoad.Loading
   private var categoryLoad: SearchSourceLoad<List<Categoria>> = SearchSourceLoad.Loading
+  private var etiquetaLoad: SearchSourceLoad<List<Etiqueta>> = SearchSourceLoad.Loading
   private var readLoad: SearchRead = SearchRead(null, SearchSourceLoad.Loading)
 
   val uiState: StateFlow<SearchUiState>
@@ -134,15 +136,22 @@ internal class SearchViewModel(
     it.copy(filters = it.filters.copy(categoryIds = it.filters.categoryIds - id))
   }
 
-  override fun onShowCategory(id: String) {
-    if (id.isBlank()) return
+  override fun onRemoveTagFilter(id: String) = changeInputs {
+    it.copy(filters = it.filters.copy(etiquetaIds = it.filters.etiquetaIds - id))
+  }
+
+  override fun onShowFilters(categoryIds: Set<String>, etiquetaIds: Set<String>) {
+    val categories = categoryIds.filterNot { it.isBlank() }.toSet()
+    val etiquetas = etiquetaIds.filterNot { it.isBlank() }.toSet()
+    if (categories.isEmpty() && etiquetas.isEmpty()) return
     onQueryChanged("")
     val today = dateProvider.today()
     changeInputs {
       val session = it.session
       it.copy(
           today = today,
-          filters = SearchFilters.initial(today).copy(categoryIds = setOf(id)),
+          filters =
+              SearchFilters.initial(today).copy(categoryIds = categories, etiquetaIds = etiquetas),
           session =
               if (session is SearchFilterSession.Editing) session.cancel(session.sessionId)
               else session,
@@ -297,6 +306,22 @@ internal class SearchViewModel(
           updatePending(SearchWork.Reading)
         }
 
+        override fun onEtiquetas(reload: Long, load: SearchSourceLoad<List<Etiqueta>>) {
+          if (!isActive(epoch, reload)) return
+          candidateGeneration += 1
+          etiquetaLoad = load
+          uiState.update { state ->
+            state.copy(
+                etiquetas = SearchEtiquetaState(load.data ?: state.etiquetas.values, load.failure)
+            )
+          }
+          load.data?.let { catalog ->
+            val known = catalog.mapTo(mutableSetOf()) { it.id }
+            changeInputs { it.retainingEtiquetas(known) }
+          }
+          updatePending(SearchWork.Reading)
+        }
+
         override fun onRead(read: SearchRead) {
           if (epoch != observationEpoch || read.request?.let { !requestMatches(it) } == true) return
           candidateGeneration += 1
@@ -350,6 +375,7 @@ internal class SearchViewModel(
     return invalid?.let { SearchFailure.InvalidDates(it.failure) }
         ?: preferenceFailure()?.let { SearchFailure.Repository(SearchSource.Preferences, it) }
         ?: categoryLoad.failure?.let { SearchFailure.Repository(SearchSource.Categories, it) }
+        ?: etiquetaLoad.failure?.let { SearchFailure.Repository(SearchSource.Etiquetas, it) }
         ?: readLoad
             .takeIf { it.request?.let(::requestMatches) == true }
             ?.load
@@ -428,6 +454,22 @@ internal class SearchViewModel(
 
 private const val STOP_TIMEOUT_MILLIS = 5_000L
 private const val TEXT_DEBOUNCE_MILLIS = 250L
+
+// Unlike a missing category, which stays visible for explicit removal, a deleted tag silently
+// leaves the applied filters and any open draft.
+private fun SearchInputs.retainingEtiquetas(known: Set<String>): SearchInputs {
+  val current = session
+  return copy(
+      filters = filters.retainingEtiquetas(known),
+      session =
+          if (current is SearchFilterSession.Editing)
+              current.copy(draft = current.draft.retainingEtiquetas(known))
+          else current,
+  )
+}
+
+private fun SearchFilters.retainingEtiquetas(known: Set<String>): SearchFilters =
+    copy(etiquetaIds = etiquetaIds intersect known)
 
 private fun SearchUiState.pendingWork(
     sourceChanged: Boolean,

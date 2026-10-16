@@ -11,5 +11,6 @@ internal sealed interface SearchFailure {
 internal enum class SearchSource {
   Preferences,
   Categories,
+  Etiquetas,
   Movimientos,
 }

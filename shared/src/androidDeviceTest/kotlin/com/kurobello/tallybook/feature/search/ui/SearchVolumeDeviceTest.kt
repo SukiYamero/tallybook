@@ -318,7 +318,7 @@ class SearchVolumeDeviceTest {
       val candidatesStarted = TimeSource.Monotonic.markNow()
       val candidates =
           withContext(Dispatchers.Default) {
-            buildSearchCandidates(snapshot.movimientos, categories, fallback)
+            buildSearchCandidates(snapshot.movimientos, categories, emptyList(), fallback)
           }
       val candidateMs = candidatesStarted.elapsedNow().inWholeNanoseconds / 1_000_000.0
       val matchStarted = TimeSource.Monotonic.markNow()

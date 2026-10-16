@@ -34,6 +34,7 @@ import tallybook.shared.generated.resources.navigation_home
 import tallybook.shared.generated.resources.navigation_profile
 import tallybook.shared.generated.resources.navigation_search
 import tallybook.shared.generated.resources.profile_tags_body
+import tallybook.shared.generated.resources.search_remove_filter
 import tallybook.shared.generated.resources.tag_edit_title
 import tallybook.shared.generated.resources.tag_view_movimientos_count
 
@@ -74,6 +75,11 @@ internal class TagsNavigationTest {
           )
           .performClick()
       searchTab().assertIsSelected()
+      composeRule
+          .onNodeWithContentDescription(
+              runBlocking { getString(Res.string.search_remove_filter, EMPRESA.nombre) }
+          )
+          .assertIsDisplayed()
       systemBack()
       homeTab().assertIsSelected()
     }

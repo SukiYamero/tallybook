@@ -137,6 +137,36 @@ class SearchScreenTest {
   }
 
   @Test
+  fun appliedTagChipRemovesOnlyItsTagAndDeletedTagsShowNoChip() {
+    val actions = SearchTestActions()
+    val state =
+        searchTestState.copy(
+            filters =
+                searchTestState.filters.copy(
+                    categoryIds = setOf("food"),
+                    etiquetaIds = setOf(searchTestEtiqueta.id, "t_deleted"),
+                )
+        )
+    composeRule.setContent { TallybookTheme { SearchScreen(state, actions, {}, {}, 0.dp) } }
+    val unknownRemoval = runBlocking {
+      getString(Res.string.search_remove_filter, getString(Res.string.unknown_category))
+    }
+
+    composeRule
+        .onNodeWithContentDescription(
+            runBlocking { getString(Res.string.search_remove_filter, searchTestEtiqueta.nombre) }
+        )
+        .performScrollTo()
+        .performClick()
+
+    composeRule.onNodeWithText("t_deleted").assertDoesNotExist()
+    composeRule.onNodeWithContentDescription(unknownRemoval).assertDoesNotExist()
+    composeRule.runOnIdle {
+      assertEquals(listOf("remove-tag:${searchTestEtiqueta.id}"), actions.events)
+    }
+  }
+
+  @Test
   fun pendingResultsShowLoadingWithoutCountOrSearchUpdateWording() {
     val state = mutableStateOf(searchTestState)
     composeRule.setContent {

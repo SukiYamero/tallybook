@@ -10,6 +10,7 @@ import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.DataError
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -19,6 +20,7 @@ import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.search.viewmodel.SearchActions
 import com.kurobello.tallybook.feature.search.viewmodel.SearchCategoryState
+import com.kurobello.tallybook.feature.search.viewmodel.SearchEtiquetaState
 import com.kurobello.tallybook.feature.search.viewmodel.SearchFailure
 import com.kurobello.tallybook.feature.search.viewmodel.SearchFilterSessionId
 import com.kurobello.tallybook.feature.search.viewmodel.SearchFilters
@@ -44,6 +46,19 @@ internal fun SearchEmptyPreview() {
       state.copy(
           results =
               RetainedLoadState.Ready(checkNotNull(state.displayResults).copy(rows = emptyList()))
+      ),
+      dark = false,
+  )
+}
+
+@Preview
+@Composable
+internal fun SearchAppliedFiltersPreview() {
+  val state = searchPreviewState()
+  SearchPreview(
+      state.copy(
+          filters =
+              state.filters.copy(categoryIds = setOf("food"), etiquetaIds = setOf("t_empresa"))
       ),
       dark = false,
   )
@@ -117,6 +132,10 @@ private fun searchPreviewState(): SearchUiState {
       date,
       Moneda.USD,
       categories = SearchCategoryState(listOf(category), false),
+      etiquetas =
+          SearchEtiquetaState(
+              listOf(Etiqueta("t_empresa", "Empresa", Instant.parse("2026-01-01T00:00:00Z")))
+          ),
       years = years,
       results = RetainedLoadState.Ready(content),
       work = null,
@@ -137,7 +156,9 @@ private object SearchPreviewActions : SearchActions {
 
   override fun onRemoveCategoryFilter(id: String) = Unit
 
-  override fun onShowCategory(id: String) = Unit
+  override fun onRemoveTagFilter(id: String) = Unit
+
+  override fun onShowFilters(categoryIds: Set<String>, etiquetaIds: Set<String>) = Unit
 
   override fun onRetry() = Unit
 
