@@ -40,50 +40,51 @@ import kotlinx.coroutines.test.runTest
 @OptIn(ExperimentalCoroutinesApi::class)
 class CategoriesViewModelTest {
   @Test
-  fun splitsCustomByNameAndPredefinedByFamilyWithPrimaryMonedaCountsDefaultingToZero() = runTest {
+  fun browsesCustomByNameThenPredefinedFamiliesWithPrimaryMonedaCountsDefaultingToZero() = runTest {
     val fixture = CategoriesFixture(this)
     fixture.categorias.counts[Moneda.COP] = mapOf("cat_comida" to 3L, "zz" to 1L)
     fixture.categorias.counts[Moneda.USD] = mapOf("cat_comida" to 9L)
     val vm = fixture.create()
     runCurrent()
 
-    val content = assertIs<CategoriesContent.Ready>(vm.uiState.value.content)
+    val content = assertIs<CategoriesContent.Browse>(vm.uiState.value.content)
     assertEquals(listOf("Ábaco", "zumo"), content.custom.map { it.categoria.nombre })
     assertEquals(listOf(0L, 1L), content.custom.map { it.count })
     assertEquals(
         listOf(listOf("cat_comida", "cat_cafe"), listOf(CATEGORIA_OTROS_ID)),
-        content.predefined.map { family -> family.map { it.categoria.id } },
+        content.families.map { family -> family.map { it.categoria.id } },
     )
-    assertEquals(listOf(3L, 0L), content.predefined.first().map { it.count })
-    assertEquals(listOf(false, true), content.predefined.first().map { it.isChild })
-    assertEquals(false, content.predefined.last().single().canChangeVisibility)
+    assertEquals(listOf(3L, 0L), content.families.first().map { it.count })
 
     fixture.preferences.moneda.value = Moneda.USD
     runCurrent()
-    val usd = assertIs<CategoriesContent.Ready>(vm.uiState.value.content)
-    assertEquals(9L, usd.predefined.first().first().count)
+    val usd = assertIs<CategoriesContent.Browse>(vm.uiState.value.content)
+    assertEquals(9L, usd.families.first().first().count)
   }
 
   @Test
-  fun searchMatchesNormalizedNamesAndKeepsMatchingFamilyRows() = runTest {
+  fun searchShowsOneFlatBlockOfNormalizedMatchesWithTheCustomOnesFirst() = runTest {
     val fixture = CategoriesFixture(this)
     val vm = fixture.create()
     runCurrent()
 
     vm.onQueryChanged("  CAFÉ ")
-    val cafe = assertIs<CategoriesContent.Ready>(vm.uiState.value.content)
-    assertTrue(cafe.custom.isEmpty())
-    assertEquals(listOf(listOf("cat_cafe")), cafe.predefined.map { f -> f.map { it.categoria.id } })
+    val cafe = assertIs<CategoriesContent.Search>(vm.uiState.value.content)
+    assertEquals("CAFÉ", cafe.query)
+    assertEquals(listOf("cat_cafe"), cafe.matches.map { it.categoria.id })
 
-    vm.onQueryChanged("abaco")
-    val abaco = assertIs<CategoriesContent.Ready>(vm.uiState.value.content)
-    assertEquals(listOf("cus_abaco"), abaco.custom.map { it.categoria.id })
-    assertTrue(abaco.predefined.isEmpty())
+    vm.onQueryChanged("o")
+    assertEquals(
+        listOf("cus_abaco", "zz", "cat_comida", CATEGORIA_OTROS_ID),
+        assertIs<CategoriesContent.Search>(vm.uiState.value.content).matches.map {
+          it.categoria.id
+        },
+    )
 
     vm.onQueryChanged("nothing")
-    assertTrue(assertIs<CategoriesContent.Ready>(vm.uiState.value.content).isEmpty)
+    assertTrue(assertIs<CategoriesContent.Search>(vm.uiState.value.content).matches.isEmpty())
     vm.onClearQuery()
-    assertEquals(2, assertIs<CategoriesContent.Ready>(vm.uiState.value.content).custom.size)
+    assertEquals(2, assertIs<CategoriesContent.Browse>(vm.uiState.value.content).custom.size)
   }
 
   @Test
@@ -93,12 +94,97 @@ class CategoriesViewModelTest {
     val vm = fixture.create()
     runCurrent()
     assertEquals(CategoriesContent.Failed, vm.uiState.value.content)
-    assertEquals(false, vm.onOpenEditor(CategoryEditorRequest.New("")))
+    assertEquals(false, vm.onOpenSheet(CategorySheetRequest.New("")))
 
     fixture.categorias.all.value = DataOutcome.Success(CATEGORIAS)
     vm.onRetry()
     runCurrent()
-    assertIs<CategoriesContent.Ready>(vm.uiState.value.content)
+    assertIs<CategoriesContent.Browse>(vm.uiState.value.content)
+  }
+
+  @Test
+  fun openingACategoryShowsTheEditorForCustomAndDetailsForPredefinedWithItsCount() = runTest {
+    val fixture = CategoriesFixture(this)
+    fixture.categorias.counts[Moneda.COP] = mapOf("cat_comida" to 3L, "zz" to 1L)
+    val vm = fixture.create()
+    runCurrent()
+
+    assertTrue(vm.onOpenSheet(CategorySheetRequest.Open("zz")))
+    val editor = assertNotNull(vm.uiState.value.editor)
+    assertEquals("zz", editor.editing?.id)
+    assertEquals(1L, editor.count)
+    assertEquals(false, vm.onOpenSheet(CategorySheetRequest.Open("cat_comida")))
+    vm.onRequestCloseSheet()
+    vm.onSheetHidden()
+    assertNull(vm.uiState.value.sheet)
+
+    assertTrue(vm.onOpenSheet(CategorySheetRequest.Open("cat_comida")))
+    val details = assertNotNull(vm.uiState.value.details)
+    assertEquals("cat_comida", details.categoria.id)
+    assertEquals(3L, details.count)
+    fixture.categorias.counts[Moneda.COP] = mapOf("cat_comida" to 4L)
+    fixture.categorias.recount()
+    runCurrent()
+    assertEquals(4L, vm.uiState.value.details?.count)
+    vm.onRequestCloseSheet()
+    vm.onSheetHidden()
+
+    assertEquals(false, vm.onOpenSheet(CategorySheetRequest.Open("missing")))
+  }
+
+  @Test
+  fun viewingMovimientosClosesTheSheetAndOpensSearchOnlyOnceItHid() = runTest {
+    val fixture = CategoriesFixture(this)
+    fixture.categorias.counts[Moneda.COP] = mapOf("cat_comida" to 3L)
+    val vm = fixture.create()
+    val effects = fixture.collectEffects(vm)
+    runCurrent()
+
+    vm.onOpenSheet(CategorySheetRequest.Open("cat_cafe"))
+    vm.onViewMovimientos()
+    assertEquals(false, vm.uiState.value.details?.isClosing)
+    vm.onRequestCloseSheet()
+    vm.onSheetHidden()
+
+    vm.onOpenSheet(CategorySheetRequest.Open("cat_comida"))
+    vm.onViewMovimientos()
+    assertEquals(true, vm.uiState.value.details?.isClosing)
+    runCurrent()
+    assertTrue(effects.isEmpty())
+    vm.onSheetHidden()
+    runCurrent()
+    assertNull(vm.uiState.value.sheet)
+    assertEquals(listOf<CategoriesEffect>(CategoriesEffect.OpenSearch("cat_comida")), effects)
+  }
+
+  @Test
+  fun viewingMovimientosFromAnEditorWithUnsavedChangesAsksBeforeDiscarding() = runTest {
+    val fixture = CategoriesFixture(this)
+    fixture.categorias.counts[Moneda.COP] = mapOf("zz" to 2L)
+    val vm = fixture.create()
+    val effects = fixture.collectEffects(vm)
+    runCurrent()
+
+    vm.onOpenSheet(CategorySheetRequest.Open("zz"))
+    vm.onDescripcionChanged("Jugos")
+    vm.onViewMovimientos()
+    assertEquals(true, vm.uiState.value.editor?.confirmingDiscard)
+    vm.onContinueEditing()
+    assertEquals(false, vm.uiState.value.editor?.opensSearch)
+    vm.onRequestCloseSheet()
+    vm.onConfirmDiscard()
+    vm.onSheetHidden()
+    runCurrent()
+    assertTrue(effects.isEmpty())
+
+    vm.onOpenSheet(CategorySheetRequest.Open("zz"))
+    vm.onDescripcionChanged("Jugos")
+    vm.onViewMovimientos()
+    vm.onConfirmDiscard()
+    assertEquals(true, vm.uiState.value.editor?.isClosing)
+    vm.onSheetHidden()
+    runCurrent()
+    assertEquals(listOf<CategoriesEffect>(CategoriesEffect.OpenSearch("zz")), effects)
   }
 
   @Test
@@ -108,9 +194,11 @@ class CategoriesViewModelTest {
     val effects = fixture.collectEffects(vm)
     runCurrent()
 
-    assertTrue(vm.onOpenEditor(CategoryEditorRequest.New(" Gimnasio ")))
+    assertTrue(vm.onOpenSheet(CategorySheetRequest.New(" Gimnasio ")))
     assertEquals("Gimnasio", vm.uiState.value.editor?.draft?.nombre)
-    assertEquals(false, vm.onOpenEditor(CategoryEditorRequest.New("other")))
+    assertEquals(false, vm.onOpenSheet(CategorySheetRequest.New("other")))
+    vm.onViewMovimientos()
+    assertEquals(false, vm.uiState.value.editor?.isClosing)
     vm.onSaveEditor()
     runCurrent()
 
@@ -120,7 +208,7 @@ class CategoriesViewModelTest {
         listOf<CategoriesEffect>(CategoriesEffect.Feedback(CategoriesFeedback.Created)),
         effects,
     )
-    vm.onEditorHidden()
+    vm.onSheetHidden()
     assertNull(vm.uiState.value.editor)
   }
 
@@ -132,7 +220,7 @@ class CategoriesViewModelTest {
     runCurrent()
     vm.onQueryChanged("zu")
 
-    assertTrue(vm.onOpenEditor(CategoryEditorRequest.Edit("zz")))
+    assertTrue(vm.onOpenSheet(CategorySheetRequest.Open("zz")))
     vm.onNombreChanged("abaco")
     vm.onSaveEditor()
     runCurrent()
@@ -145,9 +233,9 @@ class CategoriesViewModelTest {
     val editor = assertNotNull(vm.uiState.value.editor)
     assertEquals("cus_abaco", editor.editing?.id)
     assertEquals("Ábaco", editor.draft.nombre)
-    assertEquals("", vm.uiState.value.query)
-    assertEquals("cus_abaco", vm.uiState.value.highlightedId)
-    assertEquals(listOf<CategoriesEffect>(CategoriesEffect.Reveal("cus_abaco")), effects)
+    assertEquals(false, editor.isClosing)
+    assertEquals("zu", vm.uiState.value.query)
+    assertTrue(effects.isEmpty())
 
     vm.onNombreChanged("Ábacos")
     vm.onSaveEditor()
@@ -157,17 +245,17 @@ class CategoriesViewModelTest {
   }
 
   @Test
-  fun duplicateOfAPredefinedCategoryClosesTheEditorAndRevealsItsRow() = runTest {
+  fun duplicateOfAPredefinedCategoryOpensItsDetailsInTheSameSheet() = runTest {
     val fixture = CategoriesFixture(this)
     val vm = fixture.create()
-    fixture.collectEffects(vm)
     runCurrent()
-    vm.onOpenEditor(CategoryEditorRequest.New("Comida"))
+    vm.onOpenSheet(CategorySheetRequest.New("Comida"))
     vm.onSaveEditor()
     runCurrent()
     vm.onOpenDuplicate()
-    assertEquals(true, vm.uiState.value.editor?.isClosing)
-    assertEquals("cat_comida", vm.uiState.value.highlightedId)
+    val details = assertNotNull(vm.uiState.value.details)
+    assertEquals("cat_comida", details.categoria.id)
+    assertEquals(false, details.isClosing)
   }
 
   @Test
@@ -175,54 +263,63 @@ class CategoriesViewModelTest {
     val fixture = CategoriesFixture(this)
     val vm = fixture.create()
     runCurrent()
-    vm.onOpenEditor(CategoryEditorRequest.Edit("zz"))
-    vm.onRequestCloseEditor()
+    vm.onOpenSheet(CategorySheetRequest.Open("zz"))
+    vm.onRequestCloseSheet()
     assertEquals(true, vm.uiState.value.editor?.isClosing)
-    vm.onEditorHidden()
+    vm.onSheetHidden()
 
-    vm.onOpenEditor(CategoryEditorRequest.Edit("zz"))
+    vm.onOpenSheet(CategorySheetRequest.Open("zz"))
     vm.onDescripcionChanged("Jugos")
-    vm.onRequestCloseEditor()
+    vm.onRequestCloseSheet()
     assertEquals(true, vm.uiState.value.editor?.confirmingDiscard)
     vm.onContinueEditing()
     assertEquals(false, vm.uiState.value.editor?.isClosing)
-    vm.onRequestCloseEditor()
+    vm.onRequestCloseSheet()
     vm.onConfirmDiscard()
     assertEquals(true, vm.uiState.value.editor?.isClosing)
   }
 
   @Test
-  fun rowToggleHidesAndShowsWithFeedbackButNeverOtros() = runTest {
+  fun detailsToggleHidesAndShowsInPlaceButNeverOtros() = runTest {
     val fixture = CategoriesFixture(this)
     val vm = fixture.create()
     val effects = fixture.collectEffects(vm)
     runCurrent()
 
     vm.onToggleHidden("cat_cafe")
-    assertEquals(setOf("cat_cafe"), vm.uiState.value.pendingVisibility)
+    runCurrent()
+    assertTrue(fixture.categorias.visibility.isEmpty())
+
+    vm.onOpenSheet(CategorySheetRequest.Open("cat_cafe"))
     vm.onToggleHidden("cat_cafe")
+    assertEquals(true, vm.uiState.value.details?.visibilityPending)
+    vm.onToggleHidden("cat_cafe")
+    vm.onRequestCloseSheet()
     runCurrent()
     assertEquals(listOf("cat_cafe" to true), fixture.categorias.visibility)
-    assertTrue(vm.uiState.value.pendingVisibility.isEmpty())
-    val cafe = assertIs<CategoriesContent.Ready>(vm.uiState.value.content).predefined.first().last()
+    val details = assertNotNull(vm.uiState.value.details)
+    assertTrue(details.categoria.oculta)
+    assertEquals(false, details.visibilityPending)
+    assertEquals(false, details.isClosing)
+    val cafe = assertIs<CategoriesContent.Browse>(vm.uiState.value.content).families[0].last()
     assertTrue(cafe.categoria.oculta)
 
     vm.onToggleHidden("cat_cafe")
-    vm.onToggleHidden(CATEGORIA_OTROS_ID)
     runCurrent()
     assertEquals(listOf("cat_cafe" to true, "cat_cafe" to false), fixture.categorias.visibility)
-    assertEquals(
-        listOf<CategoriesEffect>(
-            CategoriesEffect.Feedback(CategoriesFeedback.Hidden("Café")),
-            CategoriesEffect.Feedback(CategoriesFeedback.Shown("Café")),
-        ),
-        effects,
-    )
-
     fixture.categorias.failVisibility = true
     vm.onToggleHidden("cat_cafe")
     runCurrent()
-    assertEquals(CategoriesEffect.Feedback(CategoriesFeedback.VisibilityFailed), effects.last())
+    assertEquals(true, vm.uiState.value.details?.visibilityFailed)
+    vm.onRequestCloseSheet()
+    vm.onSheetHidden()
+
+    fixture.categorias.failVisibility = false
+    vm.onOpenSheet(CategorySheetRequest.Open(CATEGORIA_OTROS_ID))
+    vm.onToggleHidden(CATEGORIA_OTROS_ID)
+    runCurrent()
+    assertEquals(2, fixture.categorias.visibility.size)
+    assertTrue(effects.isEmpty())
   }
 
   @Test
@@ -231,12 +328,17 @@ class CategoriesViewModelTest {
     val vm = fixture.create()
     val effects = fixture.collectEffects(vm)
     runCurrent()
-    vm.onOpenEditor(CategoryEditorRequest.Edit("zz"))
+    vm.onOpenSheet(CategorySheetRequest.Open("zz"))
     vm.onToggleHidden("zz")
     runCurrent()
     assertEquals(true, vm.uiState.value.editor?.editing?.oculta)
     assertEquals(false, vm.uiState.value.editor?.isClosing)
     assertTrue(effects.isEmpty())
+
+    fixture.categorias.failVisibility = true
+    vm.onToggleHidden("zz")
+    runCurrent()
+    assertEquals(CategoryEditorError.VISIBILITY, vm.uiState.value.editor?.error)
   }
 
   @Test
@@ -245,7 +347,7 @@ class CategoriesViewModelTest {
     val vm = fixture.create()
     val effects = fixture.collectEffects(vm)
     runCurrent()
-    vm.onOpenEditor(CategoryEditorRequest.Edit("cus_abaco"))
+    vm.onOpenSheet(CategorySheetRequest.Open("cus_abaco"))
     vm.onRequestDelete()
     assertEquals(CategoryDeletion.Checking, vm.uiState.value.editor?.deletion)
     runCurrent()
@@ -262,7 +364,7 @@ class CategoriesViewModelTest {
     assertEquals(CategoriesEffect.Feedback(CategoriesFeedback.Deleted), effects.single())
     assertEquals(
         listOf("zz"),
-        assertIs<CategoriesContent.Ready>(vm.uiState.value.content).custom.map { it.categoria.id },
+        assertIs<CategoriesContent.Browse>(vm.uiState.value.content).custom.map { it.categoria.id },
     )
   }
 
@@ -273,7 +375,7 @@ class CategoriesViewModelTest {
     val vm = fixture.create()
     val effects = fixture.collectEffects(vm)
     runCurrent()
-    vm.onOpenEditor(CategoryEditorRequest.Edit("zz"))
+    vm.onOpenSheet(CategorySheetRequest.Open("zz"))
     vm.onRequestDelete()
     runCurrent()
     assertEquals(CategoryDeletion.InUse(2L), vm.uiState.value.editor?.deletion)
@@ -291,27 +393,13 @@ class CategoriesViewModelTest {
     val fixture = CategoriesFixture(this)
     val vm = fixture.create()
     runCurrent()
-    vm.onOpenEditor(CategoryEditorRequest.Edit("cus_abaco"))
+    vm.onOpenSheet(CategorySheetRequest.Open("cus_abaco"))
     vm.onRequestDelete()
     runCurrent()
     fixture.categorias.deleteResult = CategoriaDelete.InUse(1L)
     vm.onConfirmDelete()
     runCurrent()
     assertEquals(CategoryDeletion.InUse(1L), vm.uiState.value.editor?.deletion)
-  }
-
-  @Test
-  fun tappingARowOpensSearchOnlyWithoutAnEditor() = runTest {
-    val fixture = CategoriesFixture(this)
-    val vm = fixture.create()
-    val effects = fixture.collectEffects(vm)
-    runCurrent()
-    vm.onOpenCategory("cat_cafe")
-    vm.onOpenEditor(CategoryEditorRequest.New(""))
-    vm.onOpenCategory("cat_comida")
-    vm.onOpenCategory("missing")
-    runCurrent()
-    assertEquals(listOf<CategoriesEffect>(CategoriesEffect.OpenSearch("cat_cafe")), effects)
   }
 }
 
@@ -379,6 +467,10 @@ private class FakeCategorias : CategoriaRepository by UnsupportedCategoriaReposi
   val deleted = mutableListOf<String>()
   var failVisibility = false
   var deleteResult: CategoriaDelete = CategoriaDelete.Deleted
+
+  fun recount() {
+    countRevision.value++
+  }
 
   override fun observeAll(): Flow<DataOutcome<List<Categoria>>> = all
 

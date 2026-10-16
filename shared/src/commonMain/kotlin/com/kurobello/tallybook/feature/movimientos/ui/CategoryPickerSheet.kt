@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.Dp
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.ui.category.CategoryChip
+import com.kurobello.tallybook.core.ui.category.categoryGroups
 import com.kurobello.tallybook.core.ui.category.toImageVector
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
@@ -137,7 +138,7 @@ private fun CategoryPickerHost(
   val isSearching = query.isNotBlank()
   val groups =
       remember(options.categorias, options.excludedIds, query) {
-        categoryPickerGroups(options.categorias, options.excludedIds, query)
+        categoryGroups(options.categorias, options.excludedIds, query)
       }
   val selected =
       remember(options.categorias, selection.selectedIds) {

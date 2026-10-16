@@ -6,6 +6,7 @@ import com.kurobello.tallybook.core.model.CategoriaOrigen
 import com.kurobello.tallybook.core.model.CategoriaSelection
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.ui.category.categoryGroups
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -20,7 +21,7 @@ class CategoryPickerGroupsTest {
             listOf("other"),
             listOf("movies"),
         ),
-        ids(categoryPickerGroups(catalog, emptySet(), query = "")),
+        ids(categoryGroups(catalog, emptySet(), query = "")),
     )
   }
 
@@ -28,7 +29,7 @@ class CategoryPickerGroupsTest {
   fun excludedCategoriesLeaveTheirFamily() {
     assertEquals(
         listOf(listOf("food", "groceries"), listOf("transport", "gas", "taxi"), listOf("movies")),
-        ids(categoryPickerGroups(catalog, setOf("other"), query = "")),
+        ids(categoryGroups(catalog, setOf("other"), query = "")),
     )
   }
 
@@ -41,7 +42,7 @@ class CategoryPickerGroupsTest {
             listOf("other"),
             listOf("movies"),
         ),
-        ids(categoryPickerGroups(catalog, setOf("food"), query = "")),
+        ids(categoryGroups(catalog, setOf("food"), query = "")),
     )
   }
 
@@ -49,7 +50,7 @@ class CategoryPickerGroupsTest {
   fun searchShowsParentsAndChildrenInOneFlatBlockInFamilyOrder() {
     assertEquals(
         listOf(listOf("groceries", "transport", "gas", "movies")),
-        ids(categoryPickerGroups(catalog, emptySet(), query = "s")),
+        ids(categoryGroups(catalog, emptySet(), query = "s")),
     )
   }
 
@@ -57,13 +58,13 @@ class CategoryPickerGroupsTest {
   fun searchIgnoresExcludedCategories() {
     assertEquals(
         emptyList(),
-        ids(categoryPickerGroups(catalog, setOf("other"), query = "other")),
+        ids(categoryGroups(catalog, setOf("other"), query = "other")),
     )
   }
 
   @Test
   fun searchWithoutMatchesHasNoBlocks() {
-    assertEquals(emptyList(), ids(categoryPickerGroups(catalog, emptySet(), query = "zzz")))
+    assertEquals(emptyList(), ids(categoryGroups(catalog, emptySet(), query = "zzz")))
   }
 
   @Test
@@ -89,7 +90,7 @@ class CategoryPickerGroupsTest {
 
     assertEquals(
         listOf(listOf("abaco", "yoga", "zumba"), listOf("food", "groceries"), listOf("other")),
-        ids(categoryPickerGroups(withCustom, emptySet(), query = "")),
+        ids(categoryGroups(withCustom, emptySet(), query = "")),
     )
   }
 
@@ -99,7 +100,7 @@ class CategoryPickerGroupsTest {
 
     assertEquals(
         listOf(listOf("yoga", "food", "groceries", "other")),
-        ids(categoryPickerGroups(withCustom, emptySet(), query = "o")),
+        ids(categoryGroups(withCustom, emptySet(), query = "o")),
     )
   }
 
@@ -115,7 +116,7 @@ class CategoryPickerGroupsTest {
     assertEquals(setOf(CATEGORIA_OTROS_ID, hiddenMovies.id), excluded)
     assertEquals(
         listOf(listOf("yoga"), listOf("food", "groceries")),
-        ids(categoryPickerGroups(withHidden, excluded, query = "")),
+        ids(categoryGroups(withHidden, excluded, query = "")),
     )
   }
 
@@ -127,7 +128,7 @@ class CategoryPickerGroupsTest {
 
     assertEquals(
         listOf(listOf("groceries")),
-        ids(categoryPickerGroups(listOf(hiddenFood, groceries), excluded, query = "")),
+        ids(categoryGroups(listOf(hiddenFood, groceries), excluded, query = "")),
     )
   }
 

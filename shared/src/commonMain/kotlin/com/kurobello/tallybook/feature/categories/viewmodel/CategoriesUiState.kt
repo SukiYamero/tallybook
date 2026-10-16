@@ -8,59 +8,73 @@ import com.kurobello.tallybook.core.model.CategoriaOrigen
 internal data class CategoriesUiState(
     val query: String = "",
     val content: CategoriesContent = CategoriesContent.Loading,
-    val editor: CategoryEditor? = null,
-    val pendingVisibility: Set<String> = emptySet(),
-    val highlightedId: String? = null,
-)
+    val sheet: CategorySheet? = null,
+) {
+  val editor: CategoryEditor?
+    get() = sheet as? CategoryEditor
+
+  val details: CategoryDetails?
+    get() = sheet as? CategoryDetails
+}
 
 internal sealed interface CategoriesContent {
   data object Loading : CategoriesContent
 
   data object Failed : CategoriesContent
 
-  /** Both sections already match the query; [predefined] keeps each family's catalog order. */
-  data class Ready(
+  /** No query: the custom block sorted by name, then each predefined family in catalog order. */
+  data class Browse(
       val custom: List<CategoryRow>,
-      val predefined: List<List<CategoryRow>>,
-  ) : CategoriesContent {
-    val isEmpty: Boolean
-      get() = custom.isEmpty() && predefined.isEmpty()
-  }
+      val families: List<List<CategoryRow>>,
+  ) : CategoriesContent
+
+  /** Every category matching [query], as one flat block in browsing order. */
+  data class Search(val query: String, val matches: List<CategoryRow>) : CategoriesContent
 }
 
 /** [count] is the primary moneda's movimientos carrying the categoria, children included. */
-internal data class CategoryRow(val categoria: Categoria, val count: Long) {
-  val isCustom: Boolean
-    get() = categoria.origen == CategoriaOrigen.USUARIO
+internal data class CategoryRow(val categoria: Categoria, val count: Long)
 
-  val canChangeVisibility: Boolean
-    get() = categoria.id != CATEGORIA_OTROS_ID
+internal val Categoria.isCustom: Boolean
+  get() = origen == CategoriaOrigen.USUARIO
 
-  val isChild: Boolean
-    get() = categoria.padreId != null
-}
+internal val Categoria.canChangeVisibility: Boolean
+  get() = id != CATEGORIA_OTROS_ID
 
-internal sealed interface CategoryEditorRequest {
-  data class New(val nombre: String) : CategoryEditorRequest
+internal sealed interface CategorySheetRequest {
+  data class New(val nombre: String) : CategorySheetRequest
 
-  data class Edit(val id: String) : CategoryEditorRequest
+  /** A custom categoria opens its editor; a predefined one its read-only details. */
+  data class Open(val id: String) : CategorySheetRequest
 }
 
 /**
- * The open create/edit sheet. [editing] follows the stored row, so Hide/Show reflects writes made
- * while the sheet is open; [baseline] is what the draft started from, to tell unsaved changes. A
- * closing editor keeps the shell modal-owned until the sheet reports it hid.
+ * The one open category sheet. Its stored categoria and [count] follow the source, so writes made
+ * while it is open show at once. A closing sheet keeps the shell modal-owned until it reports it
+ * hid; [opensSearch] then shows the categoria's movimientos in Search.
+ */
+internal sealed interface CategorySheet {
+  val count: Long
+  val isClosing: Boolean
+  val opensSearch: Boolean
+}
+
+/**
+ * The create/edit sheet of a custom categoria; [baseline] is what the draft started from, to tell
+ * unsaved changes.
  */
 internal data class CategoryEditor(
     val editing: Categoria?,
     val draft: CategoryDraftState,
     val baseline: CategoriaDraft,
+    override val count: Long = 0L,
     val error: CategoryEditorError? = null,
     val deletion: CategoryDeletion? = null,
     val confirmingDiscard: Boolean = false,
     val visibilityPending: Boolean = false,
-    val isClosing: Boolean = false,
-) {
+    override val isClosing: Boolean = false,
+    override val opensSearch: Boolean = false,
+) : CategorySheet {
   val hasUnsavedChanges: Boolean
     get() = draft.toDraft() != baseline
 
@@ -68,10 +82,20 @@ internal data class CategoryEditor(
     get() = draft.saving || visibilityPending || deletion?.isBusy == true
 
   companion object {
-    fun of(editing: Categoria?, draft: CategoryDraftState): CategoryEditor =
-        CategoryEditor(editing = editing, draft = draft, baseline = draft.toDraft())
+    fun of(editing: Categoria?, draft: CategoryDraftState, count: Long = 0L): CategoryEditor =
+        CategoryEditor(editing = editing, draft = draft, baseline = draft.toDraft(), count = count)
   }
 }
+
+/** The read-only sheet of a predefined categoria, whose only write is hiding or showing it. */
+internal data class CategoryDetails(
+    val categoria: Categoria,
+    override val count: Long,
+    val visibilityPending: Boolean = false,
+    val visibilityFailed: Boolean = false,
+    override val isClosing: Boolean = false,
+    override val opensSearch: Boolean = false,
+) : CategorySheet
 
 internal enum class CategoryEditorError {
   SAVE,

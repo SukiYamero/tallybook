@@ -9,16 +9,14 @@ import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoriaDelete
-import com.kurobello.tallybook.core.model.CategoriaOrigen
-import com.kurobello.tallybook.core.model.CategoriaRules
 import com.kurobello.tallybook.core.model.CategoriaWrite
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
-import com.kurobello.tallybook.core.text.normalizeSearchText
-import com.kurobello.tallybook.core.ui.category.categoryFamilies
+import com.kurobello.tallybook.core.ui.category.categoryBlocks
+import com.kurobello.tallybook.core.ui.category.categoryGroups
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -66,7 +64,7 @@ internal class CategoriesViewModel(
   }
 
   override fun onQueryChanged(query: String) {
-    uiState.update { it.copy(query = query, highlightedId = null, content = source.content(query)) }
+    uiState.update { it.copy(query = query, content = source.content(query)) }
   }
 
   override fun onClearQuery() = onQueryChanged("")
@@ -75,16 +73,10 @@ internal class CategoriesViewModel(
     if (source is CategoriesSource.Failed) retryRequests.update { it + 1 }
   }
 
-  override fun onOpenCategory(id: String) {
-    if (uiState.value.editor != null || source.find(id) == null) return
-    uiState.update { it.copy(highlightedId = null) }
-    effectChannel.trySend(CategoriesEffect.OpenSearch(id))
-  }
-
-  override fun onOpenEditor(request: CategoryEditorRequest): Boolean {
-    val editor = if (uiState.value.editor == null) newEditor(request) else null
-    if (editor != null) uiState.update { it.copy(editor = editor) }
-    return editor != null
+  override fun onOpenSheet(request: CategorySheetRequest): Boolean {
+    val sheet = if (uiState.value.sheet == null) newSheet(request) else null
+    if (sheet != null) uiState.update { it.copy(sheet = sheet) }
+    return sheet != null
   }
 
   override fun onNombreChanged(value: String) = updateDraft { it.onNombre(value, suggester) }
@@ -98,12 +90,35 @@ internal class CategoriesViewModel(
   override fun onMoreOptions() = updateDraft { it.onMoreOptions() }
 
   override fun onToggleHidden(id: String) {
-    val categoria = source.find(id) ?: return
-    if (categoria.id == CATEGORIA_OTROS_ID) return
-    val editor = uiState.value.editor
-    when {
-      editor == null -> toggleFromRow(categoria)
-      editor.editing?.id == id && editor.isEditable -> toggleFromEditor(categoria)
+    val categoria = source.find(id)?.takeIf { it.canChangeVisibility } ?: return
+    val shown =
+        when (val sheet = uiState.value.sheet) {
+          is CategoryEditor -> sheet.isEditable && sheet.editing?.id == id
+          is CategoryDetails -> sheet.isInteractive && sheet.categoria.id == id
+          null -> false
+        }
+    if (!shown) return
+    updateSheet { it.withVisibility(pending = true, failed = false) }
+    coroutineScope.launch {
+      val failed = categorias.setOculta(categoria.id, !categoria.oculta) is DataOutcome.Failure
+      updateSheet { it.withVisibility(pending = false, failed = failed) }
+    }
+  }
+
+  override fun onViewMovimientos() {
+    when (val sheet = uiState.value.sheet) {
+      is CategoryEditor ->
+          if (sheet.isEditable && sheet.editing != null && sheet.count > 0) {
+            updateEditor {
+              if (it.hasUnsavedChanges) it.copy(confirmingDiscard = true, opensSearch = true)
+              else it.copy(isClosing = true, opensSearch = true)
+            }
+          }
+      is CategoryDetails ->
+          if (sheet.isInteractive && sheet.count > 0) {
+            updateDetails { it.copy(isClosing = true, opensSearch = true) }
+          }
+      null -> Unit
     }
   }
 
@@ -138,10 +153,17 @@ internal class CategoriesViewModel(
     }
   }
 
-  override fun onRequestCloseEditor() {
-    val editor = uiState.value.editor?.takeIf { it.isEditable } ?: return
-    updateEditor {
-      if (editor.hasUnsavedChanges) it.copy(confirmingDiscard = true) else it.copy(isClosing = true)
+  override fun onRequestCloseSheet() {
+    when (val sheet = uiState.value.sheet) {
+      is CategoryEditor ->
+          if (sheet.isEditable) {
+            updateEditor {
+              if (it.hasUnsavedChanges) it.copy(confirmingDiscard = true)
+              else it.copy(isClosing = true)
+            }
+          }
+      is CategoryDetails -> if (sheet.isInteractive) updateDetails { it.copy(isClosing = true) }
+      null -> Unit
     }
   }
 
@@ -149,28 +171,28 @@ internal class CategoriesViewModel(
     if (it.confirmingDiscard) it.copy(confirmingDiscard = false, isClosing = true) else it
   }
 
-  override fun onContinueEditing() = updateEditor { it.copy(confirmingDiscard = false) }
+  override fun onContinueEditing() = updateEditor {
+    it.copy(confirmingDiscard = false, opensSearch = false)
+  }
 
-  override fun onEditorHidden() {
-    uiState.update { if (it.editor?.isClosing == true) it.copy(editor = null) else it }
+  override fun onSheetHidden() {
+    val sheet = uiState.value.sheet?.takeIf { it.isClosing } ?: return
+    uiState.update { it.copy(sheet = null) }
+    val id = sheet.categoriaId
+    if (sheet.opensSearch && id != null) effectChannel.trySend(CategoriesEffect.OpenSearch(id))
   }
 
   override fun onOpenDuplicate() {
-    val editor = uiState.value.editor?.takeIf { it.isEditable } ?: return
-    val duplicate = editor.draft.duplicate?.takeIf { it.id != CATEGORIA_OTROS_ID } ?: return
-    val stored = source.find(duplicate.id) ?: duplicate
-    uiState.update {
-      it.copy(
-          query = "",
-          content = source.content(""),
-          highlightedId = stored.id,
-          editor =
-              if (stored.origen == CategoriaOrigen.USUARIO)
-                  CategoryEditor.of(stored, CategoryDraftState.forEdit(stored))
-              else editor.copy(isClosing = true),
-      )
-    }
-    effectChannel.trySend(CategoriesEffect.Reveal(stored.id))
+    val loaded = source as? CategoriesSource.Ready
+    val duplicate =
+        uiState.value.editor
+            ?.takeIf { it.isEditable }
+            ?.draft
+            ?.duplicate
+            ?.takeIf { it.id != CATEGORIA_OTROS_ID }
+    if (loaded == null || duplicate == null) return
+    val stored = loaded.find(duplicate.id) ?: duplicate
+    uiState.update { it.copy(sheet = loaded.sheetFor(stored)) }
   }
 
   override fun onRequestDelete() {
@@ -238,45 +260,12 @@ internal class CategoriesViewModel(
     if (it.deletion?.isBusy == false) it.copy(deletion = null) else it
   }
 
-  private fun newEditor(request: CategoryEditorRequest): CategoryEditor? {
+  private fun newSheet(request: CategorySheetRequest): CategorySheet? {
     val loaded = source as? CategoriesSource.Ready ?: return null
     return when (request) {
-      is CategoryEditorRequest.New ->
+      is CategorySheetRequest.New ->
           CategoryEditor.of(null, CategoryDraftState.forNew(request.nombre.trim(), suggester))
-      is CategoryEditorRequest.Edit ->
-          loaded
-              .find(request.id)
-              ?.takeIf { it.origen == CategoriaOrigen.USUARIO }
-              ?.let { CategoryEditor.of(it, CategoryDraftState.forEdit(it)) }
-    }
-  }
-
-  private fun toggleFromRow(categoria: Categoria) {
-    if (categoria.id in uiState.value.pendingVisibility) return
-    uiState.update { it.copy(pendingVisibility = it.pendingVisibility + categoria.id) }
-    coroutineScope.launch {
-      val written = categorias.setOculta(categoria.id, !categoria.oculta)
-      uiState.update { it.copy(pendingVisibility = it.pendingVisibility - categoria.id) }
-      feedback(
-          when {
-            written is DataOutcome.Failure -> CategoriesFeedback.VisibilityFailed
-            categoria.oculta -> CategoriesFeedback.Shown(categoria.nombre)
-            else -> CategoriesFeedback.Hidden(categoria.nombre)
-          }
-      )
-    }
-  }
-
-  private fun toggleFromEditor(categoria: Categoria) {
-    updateEditor { it.copy(visibilityPending = true, error = null) }
-    coroutineScope.launch {
-      val failed = categorias.setOculta(categoria.id, !categoria.oculta) is DataOutcome.Failure
-      updateEditor {
-        it.copy(
-            visibilityPending = false,
-            error = if (failed) CategoryEditorError.VISIBILITY else it.error,
-        )
-      }
+      is CategorySheetRequest.Open -> loaded.find(request.id)?.let(loaded::sheetFor)
     }
   }
 
@@ -285,7 +274,15 @@ internal class CategoriesViewModel(
   }
 
   private fun updateEditor(transform: (CategoryEditor) -> CategoryEditor) {
-    uiState.update { state -> state.editor?.let { state.copy(editor = transform(it)) } ?: state }
+    uiState.update { state -> state.editor?.let { state.copy(sheet = transform(it)) } ?: state }
+  }
+
+  private fun updateDetails(transform: (CategoryDetails) -> CategoryDetails) {
+    uiState.update { state -> state.details?.let { state.copy(sheet = transform(it)) } ?: state }
+  }
+
+  private fun updateSheet(transform: (CategorySheet) -> CategorySheet) {
+    uiState.update { state -> state.sheet?.let { state.copy(sheet = transform(it)) } ?: state }
   }
 
   private fun feedback(feedback: CategoriesFeedback) {
@@ -314,13 +311,45 @@ internal class CategoriesViewModel(
 private val CategoryEditor.isEditable: Boolean
   get() = !isClosing && !isBusy && deletion == null && !confirmingDiscard
 
+private val CategoryDetails.isInteractive: Boolean
+  get() = !isClosing && !visibilityPending
+
+private val CategorySheet.categoriaId: String?
+  get() =
+      when (this) {
+        is CategoryEditor -> editing?.id
+        is CategoryDetails -> categoria.id
+      }
+
+private fun CategorySheet.withVisibility(pending: Boolean, failed: Boolean): CategorySheet =
+    when (this) {
+      is CategoryEditor ->
+          copy(
+              visibilityPending = pending,
+              error =
+                  when {
+                    failed -> CategoryEditorError.VISIBILITY
+                    pending -> null
+                    else -> error
+                  },
+          )
+      is CategoryDetails -> copy(visibilityPending = pending, visibilityFailed = failed)
+    }
+
 private sealed interface CategoriesSource {
   data object Loading : CategoriesSource
 
   data object Failed : CategoriesSource
 
   data class Ready(val categorias: List<Categoria>, val counts: Map<String, Long>) :
-      CategoriesSource
+      CategoriesSource {
+    fun count(id: String): Long = counts[id] ?: 0L
+
+    fun sheetFor(categoria: Categoria): CategorySheet =
+        if (categoria.isCustom)
+            CategoryEditor.of(categoria, CategoryDraftState.forEdit(categoria), count(categoria.id))
+        else CategoryDetails(categoria, count(categoria.id))
+  }
 }
 
 private fun CategoriesSource.find(id: String): Categoria? =
@@ -331,32 +360,33 @@ private fun CategoriesSource.content(query: String): CategoriesContent =
       CategoriesSource.Loading -> CategoriesContent.Loading
       CategoriesSource.Failed -> CategoriesContent.Failed
       is CategoriesSource.Ready -> {
-        val key = normalizeSearchText(query)
-        fun row(categoria: Categoria) = CategoryRow(categoria, counts[categoria.id] ?: 0L)
-        fun matches(categoria: Categoria) =
-            key.isEmpty() || normalizeSearchText(categoria.nombre).contains(key)
-        val (custom, predefined) = categorias.partition { it.origen == CategoriaOrigen.USUARIO }
-        CategoriesContent.Ready(
-            custom =
-                custom
-                    .filter(::matches)
-                    .sortedBy { CategoriaRules.nombreKey(it.nombre) }
-                    .map(::row),
-            predefined =
-                categoryFamilies(predefined)
-                    .map { family -> family.filter(::matches).map(::row) }
-                    .filter { it.isNotEmpty() },
-        )
+        fun row(categoria: Categoria) = CategoryRow(categoria, count(categoria.id))
+        if (query.isBlank()) {
+          val blocks = categoryBlocks(categorias)
+          CategoriesContent.Browse(
+              custom = blocks.custom.map(::row),
+              families = blocks.families.map { family -> family.map(::row) },
+          )
+        } else {
+          CategoriesContent.Search(
+              query = query.trim(),
+              matches = categoryGroups(categorias, emptySet(), query).flatten().map(::row),
+          )
+        }
       }
     }
 
-private fun CategoriesUiState.withSource(loaded: CategoriesSource): CategoriesUiState {
-  val current = editor
-  val refreshed = current?.editing?.let { editing -> loaded.find(editing.id) }
-  return copy(
-      content = loaded.content(query),
-      editor = if (refreshed != null) current.copy(editing = refreshed) else current,
-  )
+private fun CategoriesUiState.withSource(loaded: CategoriesSource): CategoriesUiState =
+    copy(content = loaded.content(query), sheet = sheet?.refreshedFrom(loaded))
+
+private fun CategorySheet.refreshedFrom(loaded: CategoriesSource): CategorySheet {
+  val ready = loaded as? CategoriesSource.Ready
+  val stored = categoriaId?.let { id -> ready?.find(id) }
+  if (ready == null || stored == null) return this
+  return when (this) {
+    is CategoryEditor -> copy(editing = stored, count = ready.count(stored.id))
+    is CategoryDetails -> copy(categoria = stored, count = ready.count(stored.id))
+  }
 }
 
 private fun DataOutcome<AppPreferencesState>.primaryMoneda(): DataOutcome<Moneda> =

@@ -39,8 +39,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.Dp
-import com.composables.icons.lucide.Check
-import com.composables.icons.lucide.Lucide
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.CategoriaRules
 import com.kurobello.tallybook.core.model.CategoryIcon
@@ -100,14 +98,18 @@ internal interface CategoryFormActions {
 /**
  * The fields of one custom categoria. Saving, titles and dismissal belong to the caller.
  * [duplicateAction] is never shown for the Otros fallback, which can never be selected.
+ * [revealFocusedInput] decorates each text field, so a scrolling caller keeps it above the
+ * keyboard.
  */
 @Composable
+@Suppress("LongParameterList")
 internal fun CategoryForm(
     state: CategoryDraftState,
     actions: CategoryFormActions,
     mode: CategoryFormMode,
     modifier: Modifier = Modifier,
     duplicateAction: CategoryDuplicateAction? = null,
+    revealFocusedInput: @Composable Modifier.() -> Modifier = { this },
 ) {
   val enabled = !state.saving
   Column(
@@ -115,7 +117,7 @@ internal fun CategoryForm(
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16),
   ) {
     Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4)) {
-      CategoryNombreField(state, actions, enabled)
+      CategoryNombreField(state, actions, enabled, Modifier.revealFocusedInput())
       val duplicate = state.duplicate
       if (duplicateAction != null && duplicate != null && duplicate.id != CATEGORIA_OTROS_ID) {
         TallybookTextButton(onClick = duplicateAction.onClick, enabled = enabled) {
@@ -129,8 +131,13 @@ internal fun CategoryForm(
         TallybookText(stringResource(Res.string.category_form_more_options))
       }
     } else {
-      CategoryTintPicker(state.color, actions::onColorSelected, enabled)
-      CategoryDescripcionField(state.descripcion, actions::onDescripcionChanged, enabled)
+      CategoryTintPicker(state.color, state.icono, actions::onColorSelected, enabled)
+      CategoryDescripcionField(
+          state.descripcion,
+          actions::onDescripcionChanged,
+          enabled,
+          Modifier.revealFocusedInput(),
+      )
     }
   }
 }
@@ -140,12 +147,13 @@ private fun CategoryNombreField(
     state: CategoryDraftState,
     actions: CategoryFormActions,
     enabled: Boolean,
+    modifier: Modifier,
 ) {
   val focusManager = LocalFocusManager.current
   TallybookTextField(
       value = state.nombre,
       onValueChange = actions::onNombreChanged,
-      modifier = Modifier.fillMaxWidth(),
+      modifier = modifier.fillMaxWidth(),
       label = stringResource(Res.string.category_form_name_label),
       placeholder = stringResource(Res.string.category_form_name_placeholder),
       message = nombreMessage(state),
@@ -271,9 +279,11 @@ private fun CategoryIconOption(
 @Composable
 private fun CategoryTintPicker(
     selected: CategoryTint,
+    icono: CategoryIcon,
     onSelect: (CategoryTint) -> Unit,
     enabled: Boolean,
 ) {
+  val imageVector = icono.toImageVector()
   Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8)) {
     TallybookInputLabel(stringResource(Res.string.category_form_color_label))
     FlowRow(
@@ -283,8 +293,9 @@ private fun CategoryTintPicker(
     ) {
       CategoryTint.entries.forEach { tint ->
         key(tint) {
-          CategoryTintSwatch(
+          CategoryTintOption(
               tint = tint,
+              imageVector = imageVector,
               selected = tint == selected,
               enabled = enabled,
               onClick = { onSelect(tint) },
@@ -295,30 +306,31 @@ private fun CategoryTintPicker(
   }
 }
 
+/** Previews [imageVector] as the avatar it would become in [tint]. */
 @Composable
-private fun CategoryTintSwatch(
+private fun CategoryTintOption(
     tint: CategoryTint,
+    imageVector: ImageVector,
     selected: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-  val accent = tint.tintColors().content
+  val colors = tint.tintColors()
+  val disabled = TallybookTheme.colors.foreground.disabled
   CategoryOptionTarget(
       label = stringResource(tint.labelResource()),
       selected = selected,
       enabled = enabled,
       onClick = onClick,
-      visualSize = TallybookTheme.dimensions.categoryTintSwatchVisualSize,
-      containerColor = if (enabled) accent else TallybookTheme.colors.foreground.disabled,
-      borderColor = if (selected) TallybookTheme.colors.foreground.primary else Color.Transparent,
+      visualSize = TallybookTheme.dimensions.categoryIconOptionVisualSize,
+      containerColor = colors.container,
+      borderColor = if (selected) colors.content else Color.Transparent,
   ) {
-    if (selected) {
-      CategoryOptionIcon(
-          imageVector = Lucide.Check,
-          color = TallybookTheme.colors.surface.card,
-          size = TallybookTheme.dimensions.iconSmall,
-      )
-    }
+    CategoryOptionIcon(
+        imageVector = imageVector,
+        color = if (enabled) colors.content else disabled,
+        size = TallybookTheme.dimensions.iconMedium,
+    )
   }
 }
 
@@ -396,12 +408,13 @@ private fun CategoryDescripcionField(
     value: String,
     onValueChange: (String) -> Unit,
     enabled: Boolean,
+    modifier: Modifier,
 ) {
   val focusManager = LocalFocusManager.current
   TallybookTextField(
       value = value,
       onValueChange = onValueChange,
-      modifier = Modifier.fillMaxWidth(),
+      modifier = modifier.fillMaxWidth(),
       label = stringResource(Res.string.description_optional),
       message =
           TallybookFieldMessage.Supporting("${value.length}/${CategoriaRules.DESCRIPCION_MAX}"),

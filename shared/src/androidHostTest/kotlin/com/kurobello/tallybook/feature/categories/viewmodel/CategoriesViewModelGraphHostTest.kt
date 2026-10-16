@@ -95,26 +95,26 @@ internal class CategoriesViewModelGraphHostTest {
           )
       runCurrent()
       assertEquals(
-          CategoriesContent.Ready(emptyList(), emptyList()),
+          CategoriesContent.Browse(emptyList(), emptyList()),
           vm.uiState.value.content,
       )
 
-      vm.onOpenEditor(CategoryEditorRequest.New("Gimnasio"))
+      vm.onOpenSheet(CategorySheetRequest.New("Gimnasio"))
       vm.onSaveEditor()
       runCurrent()
-      val created = assertIs<CategoriesContent.Ready>(vm.uiState.value.content).custom.single()
+      val created = assertIs<CategoriesContent.Browse>(vm.uiState.value.content).custom.single()
       assertEquals("custom-gym", created.categoria.id)
       assertEquals(CategoryIcon.DUMBBELL, created.categoria.icono)
       assertEquals(0L, created.count)
-      vm.onEditorHidden()
+      vm.onSheetHidden()
 
       movimientos.insert(movimiento("cop", Moneda.COP))
       movimientos.insert(movimiento("usd", Moneda.USD))
       runCurrent()
-      val counted = assertIs<CategoriesContent.Ready>(vm.uiState.value.content).custom.single()
+      val counted = assertIs<CategoriesContent.Browse>(vm.uiState.value.content).custom.single()
       assertEquals(1L, counted.count)
 
-      vm.onOpenEditor(CategoryEditorRequest.Edit("custom-gym"))
+      vm.onOpenSheet(CategorySheetRequest.Open("custom-gym"))
       vm.onRequestDelete()
       runCurrent()
       assertEquals(CategoryDeletion.InUse(2L), vm.uiState.value.editor?.deletion)

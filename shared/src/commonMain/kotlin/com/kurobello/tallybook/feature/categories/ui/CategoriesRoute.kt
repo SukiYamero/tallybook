@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -19,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
@@ -37,7 +37,8 @@ import com.kurobello.tallybook.feature.categories.viewmodel.CategoriesEffect
 import com.kurobello.tallybook.feature.categories.viewmodel.CategoriesFeedback
 import com.kurobello.tallybook.feature.categories.viewmodel.CategoriesUiState
 import com.kurobello.tallybook.feature.categories.viewmodel.CategoriesViewModel
-import com.kurobello.tallybook.feature.categories.viewmodel.CategoryEditorRequest
+import com.kurobello.tallybook.feature.categories.viewmodel.CategorySheetRequest
+import kotlinx.coroutines.flow.first
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -45,9 +46,7 @@ import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_created
 import tallybook.shared.generated.resources.category_deleted
 import tallybook.shared.generated.resources.category_hidden_feedback
-import tallybook.shared.generated.resources.category_shown_feedback
 import tallybook.shared.generated.resources.category_updated
-import tallybook.shared.generated.resources.category_visibility_error
 import tallybook.shared.generated.resources.movimiento_notification_close
 
 @Composable
@@ -61,7 +60,7 @@ internal fun CategoriesRoute(
   val viewModel: CategoriesViewModel = koinViewModel()
   val state = viewModel.uiState.collectAsStateWithLifecycle()
   val uiState by state
-  val controller = remember(viewModel, state) { CategoriesEditorController(viewModel, state) }
+  val controller = remember(viewModel, state) { CategorySheetController(viewModel, state) }
   DisposableEffect(modals, controller, active) {
     if (active) modals.attach(controller)
     onDispose { modals.detach(controller) }
@@ -69,13 +68,12 @@ internal fun CategoriesRoute(
   val actions =
       remember(viewModel, modals, controller) {
         object : CategoriesActions by viewModel {
-          override fun onOpenEditor(request: CategoryEditorRequest): Boolean {
+          override fun onOpenSheet(request: CategorySheetRequest): Boolean {
             controller.requested = request
             return modals.tryOpenDestinationModal(controller)
           }
         }
       }
-  val listState = rememberLazyListState()
   var snackbar by remember { mutableStateOf<TallybookSnackbarMessage?>(null) }
   var nextSnackbarToken by remember { mutableLongStateOf(0L) }
   val latestShowCategory = rememberUpdatedState(onShowCategory)
@@ -84,13 +82,11 @@ internal fun CategoriesRoute(
     lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
       viewModel.effects.collect { effect ->
         when (effect) {
-          is CategoriesEffect.OpenSearch -> latestShowCategory.value(effect.id)
-          is CategoriesEffect.Reveal -> {
-            val index =
-                viewModel.uiState.value.listItems().indexOfFirst {
-                  it is CategoriesListItem.Row && it.row.categoria.id == effect.id
-                }
-            if (index >= 0) listState.animateScrollToItem(index)
+          is CategoriesEffect.OpenSearch -> {
+            // The shell refuses to navigate while a modal is open, and the collected State can
+            // trail the ViewModel's by a frame.
+            snapshotFlow { state.value.sheet == null }.first { it }
+            latestShowCategory.value(effect.id)
           }
           is CategoriesEffect.Feedback ->
               snackbar = effect.feedback.toSnackbarMessage(++nextSnackbarToken)
@@ -99,10 +95,10 @@ internal fun CategoriesRoute(
     }
   }
   Box(modifier = modifier.fillMaxSize()) {
-    CategoriesScreen(uiState, actions, onBack, listState = listState)
+    CategoriesScreen(uiState, actions, onBack)
     CategoriesSnackbar(
         message = snackbar,
-        isActive = uiState.editor == null,
+        isActive = uiState.sheet == null,
         onDismiss = { token -> if (snackbar?.token == token) snackbar = null },
     )
   }
@@ -145,31 +141,25 @@ private suspend fun CategoriesFeedback.toSnackbarMessage(token: Long): Tallybook
         CategoriesFeedback.Updated -> getString(Res.string.category_updated)
         CategoriesFeedback.Deleted -> getString(Res.string.category_deleted)
         is CategoriesFeedback.Hidden -> getString(Res.string.category_hidden_feedback, nombre)
-        is CategoriesFeedback.Shown -> getString(Res.string.category_shown_feedback, nombre)
-        CategoriesFeedback.VisibilityFailed -> getString(Res.string.category_visibility_error)
       }
   return TallybookSnackbarMessage(
       token = token,
       revision = 0,
       message = text,
-      duration =
-          if (this == CategoriesFeedback.VisibilityFailed) TallybookSnackbarDuration.Long
-          else TallybookSnackbarDuration.Short,
-      status =
-          if (this == CategoriesFeedback.VisibilityFailed) TallybookSnackbarStatus.Error
-          else TallybookSnackbarStatus.Success,
+      duration = TallybookSnackbarDuration.Short,
+      status = TallybookSnackbarStatus.Success,
   )
 }
 
-private class CategoriesEditorController(
+private class CategorySheetController(
     private val viewModel: CategoriesViewModel,
     private val state: State<CategoriesUiState>,
 ) : DestinationModalController {
-  var requested: CategoryEditorRequest = CategoryEditorRequest.New("")
+  var requested: CategorySheetRequest = CategorySheetRequest.New("")
 
-  // Reads the snapshot State so shell navigation recomposes when the editor opens or hides.
+  // Reads the snapshot State so shell navigation recomposes when the sheet opens or hides.
   override val hasActiveSession: Boolean
-    get() = state.value.editor != null
+    get() = state.value.sheet != null
 
-  override fun open(): Boolean = viewModel.onOpenEditor(requested)
+  override fun open(): Boolean = viewModel.onOpenSheet(requested)
 }

@@ -1,13 +1,9 @@
 package com.kurobello.tallybook.feature.movimientos.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,6 +15,8 @@ import com.composables.icons.lucide.ArrowLeft
 import com.composables.icons.lucide.Lucide
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookIconButton
+import com.kurobello.tallybook.core.ui.component.TallybookSheetForm
+import com.kurobello.tallybook.core.ui.component.TallybookSheetFormLayout
 import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -56,33 +54,34 @@ internal fun CategoryPickerCreationPane(
     onBack: () -> Unit,
 ) {
   val title = stringResource(Res.string.category_new_title)
-  Column(
-      modifier =
-          Modifier.fillMaxWidth()
-              .testTag(CATEGORY_PICKER_CREATION_TAG)
-              .padding(horizontal = TallybookTheme.spacing.space22),
-      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16),
+  TallybookSheetForm(
+      header = { CreationPaneHeader(title, onBack) },
+      footer = {
+        TallybookButton(
+            onClick = actions::onSave,
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(bottom = TallybookTheme.spacing.space8)
+                    .testTag(CATEGORY_PICKER_CREATE_TAG),
+            enabled = draft.canSave,
+        ) {
+          TallybookText(stringResource(Res.string.category_create_action))
+        }
+      },
+      modifier = Modifier.testTag(CATEGORY_PICKER_CREATION_TAG),
+      // A fixed body close to the results' height keeps the sheet from jumping between panes and
+      // leaves room above the keyboard, since the sheet itself never moves for it.
+      layout =
+          TallybookSheetFormLayout(
+              horizontalPadding = TallybookTheme.spacing.space22,
+              minimumBodyHeight = TallybookTheme.dimensions.categorySheetFormMinimumHeight,
+              maximumBodyHeight = TallybookTheme.dimensions.categoryPickerResultsMaximumHeight,
+          ),
   ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-      TallybookIconButton(
-          onClick = onBack,
-          icon = Lucide.ArrowLeft,
-          contentDescription = stringResource(Res.string.back),
-      )
-      TallybookSheetTitle(text = title, modifier = Modifier.weight(1f))
-    }
-    // The expanded icon grid and "More options" can outgrow the sheet, so only the fields scroll.
     CategoryForm(
         state = draft,
         actions = actions,
         mode = CategoryFormMode.COMPACT,
-        modifier =
-            Modifier.heightIn(max = TallybookTheme.dimensions.categoryPickerResultsMaximumHeight)
-                .verticalScroll(rememberScrollState()),
         duplicateAction =
             draft.duplicate?.let { duplicate ->
               CategoryDuplicateAction(
@@ -90,6 +89,7 @@ internal fun CategoryPickerCreationPane(
                   onClick = actions::onUseDuplicate,
               )
             },
+        revealFocusedInput = { revealWhenFocused() },
     )
     if (saveFailed) {
       TallybookText(
@@ -99,15 +99,21 @@ internal fun CategoryPickerCreationPane(
           style = TallybookTheme.typography.body,
       )
     }
-    TallybookButton(
-        onClick = actions::onSave,
-        modifier =
-            Modifier.fillMaxWidth()
-                .padding(bottom = TallybookTheme.spacing.space8)
-                .testTag(CATEGORY_PICKER_CREATE_TAG),
-        enabled = draft.canSave,
-    ) {
-      TallybookText(stringResource(Res.string.category_create_action))
-    }
+  }
+}
+
+@Composable
+private fun CreationPaneHeader(title: String, onBack: () -> Unit) {
+  Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
+      verticalAlignment = Alignment.CenterVertically,
+  ) {
+    TallybookIconButton(
+        onClick = onBack,
+        icon = Lucide.ArrowLeft,
+        contentDescription = stringResource(Res.string.back),
+    )
+    TallybookSheetTitle(text = title, modifier = Modifier.weight(1f))
   }
 }

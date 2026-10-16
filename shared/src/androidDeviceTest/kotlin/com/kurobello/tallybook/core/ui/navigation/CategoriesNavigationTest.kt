@@ -19,12 +19,15 @@ import com.kurobello.tallybook.core.ui.component.TallybookViewportOverlayHost
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.getPluralString
 import org.jetbrains.compose.resources.getString
 import org.junit.Rule
 import org.junit.Test
 import org.koin.compose.KoinIsolatedContext
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.back
+import tallybook.shared.generated.resources.category_hide_named
+import tallybook.shared.generated.resources.category_view_movimientos_count
 import tallybook.shared.generated.resources.navigation_home
 import tallybook.shared.generated.resources.navigation_profile
 import tallybook.shared.generated.resources.navigation_search
@@ -52,11 +55,21 @@ internal class CategoriesNavigationTest {
   }
 
   @Test
-  fun tappingACategoryShowsItsMovimientosInSearchAndBackGoesHome() {
+  fun aCategorySheetShowsItsMovimientosInSearchAndBackGoesHome() {
     withShell {
       profileTab().performClick()
       categoriesEntry().performClick()
       composeRule.onNodeWithText("Food").performClick()
+      composeRule
+          .onNodeWithContentDescription(
+              runBlocking { getString(Res.string.category_hide_named, "Food") }
+          )
+          .assertIsDisplayed()
+      composeRule
+          .onNodeWithText(
+              runBlocking { getPluralString(Res.plurals.category_view_movimientos_count, 60, 60) }
+          )
+          .performClick()
       searchTab().assertIsSelected()
       composeRule
           .onNodeWithContentDescription(

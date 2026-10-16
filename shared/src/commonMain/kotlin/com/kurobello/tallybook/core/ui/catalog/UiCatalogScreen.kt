@@ -62,6 +62,8 @@ internal enum class CatalogThemeMode {
   Dark,
 }
 
+private const val CATALOG_CHIP_COUNT = 12
+
 @Composable
 internal fun UiCatalogRoute() {
   var themeMode by remember { mutableStateOf(CatalogThemeMode.System) }
@@ -214,6 +216,18 @@ private fun LazyListScope.catalogDataDisplay(title: String, fixtures: UiCatalogF
     CatalogSurface {
       CategoryAvatar(categoria = fixtures.categoria)
       CategoryChip(categoria = fixtures.categoria, selected = true, onClick = {})
+      CategoryChip(
+          categoria = fixtures.categoria,
+          selected = false,
+          onClick = {},
+          trailingContent = {
+            TallybookText(
+                text = CATALOG_CHIP_COUNT.toString(),
+                color = TallybookTheme.colors.foreground.tertiary,
+                style = TallybookTheme.typography.controlValue,
+            )
+          },
+      )
       BalanceCard(summary = fixtures.summary, modifier = Modifier.fillMaxWidth())
       MovimientoRow(
           movimiento = fixtures.movimiento,

@@ -1,4 +1,4 @@
-package com.kurobello.tallybook.feature.movimientos.ui
+package com.kurobello.tallybook.core.ui.category
 
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon

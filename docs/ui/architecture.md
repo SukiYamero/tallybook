@@ -444,8 +444,9 @@ Tabs select existing entries; History root Back selects Home, Home root delegate
 Search and Profile root Back select Home. One `secondary` slot shows a secondary destination over the
 selected primary with the bottom bar hidden: the UI catalog over any primary, Categories only over
 Profile. Back closes the secondary first, and selecting any primary clears it. Home search opens Search
-with a one-time focus intent; a category tapped in Categories selects Search with a one-shot
-`SearchCategoryRequest` that the retained Search ViewModel applies once.
+with a one-time focus intent; "View N movements" in a Categories sheet selects Search, once that
+sheet has hidden, with a one-shot `SearchCategoryRequest` that the retained Search ViewModel applies
+once.
 
 Home/History repository observations use five-second subscription sharing. Feature routes revalidate
 before lifecycle collection. `RetainedLoadState<Content, Failure>` is the shared snapshot contract:

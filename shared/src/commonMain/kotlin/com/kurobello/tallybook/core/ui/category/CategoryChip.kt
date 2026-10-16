@@ -43,6 +43,10 @@ import tallybook.shared.generated.resources.category_comida
 
 private const val DISABLED_ALPHA = 0.4f
 
+/**
+ * [trailingContent] follows the name, for supporting data such as a count. The chip merges it into
+ * its own semantics, so a caller that needs other wording sets it through the chip [modifier].
+ */
 @Composable
 @Suppress("LongParameterList")
 fun CategoryChip(
@@ -53,6 +57,7 @@ fun CategoryChip(
     enabled: Boolean = true,
     pending: Boolean = false,
     trailingCheck: Boolean = false,
+    trailingContent: (@Composable () -> Unit)? = null,
 ) {
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
@@ -108,6 +113,7 @@ fun CategoryChip(
         color = if (selected) colors.content else MaterialTheme.colorScheme.onSurface,
         style = TallybookTheme.typography.controlValue,
     )
+    trailingContent?.invoke()
     if (trailingCheck) CategoryChipCheck(selected, colors.content)
   }
 }

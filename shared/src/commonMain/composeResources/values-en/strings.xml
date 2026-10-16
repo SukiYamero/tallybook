@@ -416,15 +416,15 @@
         <item quantity="other">%1$d movements</item>
     </plurals>
     <string name="category_hidden_marker">Hidden</string>
-    <string name="category_hide">Hide</string>
-    <string name="category_show">Show</string>
+    <string name="category_chip_hidden_state">%1$s, hidden</string>
+    <plurals name="category_view_movimientos_count">
+        <item quantity="one">View %1$d movement</item>
+        <item quantity="other">View %1$d movements</item>
+    </plurals>
     <string name="category_hide_named">Hide %1$s</string>
     <string name="category_show_named">Show %1$s</string>
-    <string name="category_edit_named">Edit %1$s</string>
     <string name="category_open">Open %1$s</string>
-    <string name="category_view_movimientos">See movements in %1$s</string>
     <string name="category_hidden_feedback">%1$s no longer appears when you choose categories</string>
-    <string name="category_shown_feedback">%1$s appears again when you choose categories</string>
     <string name="category_visibility_error">We couldn’t change whether the category is shown. Your data is still saved; try again.</string>
     <string name="category_updated">Category updated</string>
     <string name="category_delete">Delete</string>
