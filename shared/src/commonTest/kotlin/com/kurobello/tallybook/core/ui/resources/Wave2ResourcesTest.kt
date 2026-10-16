@@ -79,9 +79,6 @@ class Wave2ResourcesTest {
             Res.string.close,
             Res.string.confirm,
             Res.string.back,
-            Res.string.more_fields,
-            Res.string.expanded,
-            Res.string.collapsed,
             Res.string.search_categories,
             Res.string.no_categories_found,
             Res.string.unknown_category,
@@ -156,6 +153,6 @@ class Wave2ResourcesTest {
             Res.string.category_reembolso,
         )
 
-    assertEquals(144, resources.distinct().size)
+    assertEquals(141, resources.distinct().size)
   }
 }

@@ -1,12 +1,9 @@
 package com.kurobello.tallybook.feature.movimientos.ui
 
 import androidx.compose.runtime.Composable
-import kotlin.time.Clock
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
 import kotlinx.datetime.daysUntil
-import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
@@ -60,6 +57,3 @@ private fun calendarDayLabel(day: RelativeDay.Calendar): String {
     stringResource(Res.string.date_chip_value, day.date.day, month)
   }
 }
-
-internal fun deviceToday(): LocalDate =
-    Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date

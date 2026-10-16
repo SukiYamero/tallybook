@@ -11,5 +11,6 @@ val appModules =
         databaseDriverModule,
         databaseModule,
         repositoryModule,
+        entryModule,
         viewModelModule,
     )

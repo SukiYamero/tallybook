@@ -1,44 +1,20 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
-import com.kurobello.tallybook.core.data.AppPreferencesRepository
-import com.kurobello.tallybook.core.data.CategoriaRepository
-import com.kurobello.tallybook.core.data.CategoryHistoryRow
-import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
-import com.kurobello.tallybook.core.data.TimeZoneProvider
-import com.kurobello.tallybook.core.model.AppLocale
-import com.kurobello.tallybook.core.model.AppPreferences
-import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
-import com.kurobello.tallybook.core.model.CategoryIcon
-import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
-import com.kurobello.tallybook.core.model.MovimientoChanges
-import com.kurobello.tallybook.core.model.MovimientoDateRange
-import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
-import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
-import com.kurobello.tallybook.core.model.MovimientoSummary
-import com.kurobello.tallybook.core.model.MovimientoUpdateResult
-import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.time.Clock
-import kotlin.time.Instant
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
@@ -52,9 +28,9 @@ class AddMovimientoViewModelTest {
 
   @Test
   fun defaultsTheDateInTheInjectedLocalTimeZoneInsteadOfUtc() = runTest {
-    val clock = FixedClock(Instant.parse("2026-09-15T02:30:00Z"))
+    val clock = AddFixedClock(ADD_TEST_NOW)
     val viewModel =
-        createViewModel(
+        createAddViewModel(
             clock = clock,
             timeZone = TimeZone.of("America/Bogota"),
             scope = backgroundScope,
@@ -67,9 +43,9 @@ class AddMovimientoViewModelTest {
 
   @Test
   fun loadsThePreferredMonedaAndCategoriasAndOnlySelectsLoadedCategoriaIds() = runTest {
-    val category = testCategoria("food")
-    val categories = FakeCategoriaRepository(DataOutcome.Success(listOf(category)))
-    val viewModel = createViewModel(categoriaRepository = categories, scope = backgroundScope)
+    val category = addTestCategoria("food")
+    val categories = AddFakeCategorias(DataOutcome.Success(listOf(category)))
+    val viewModel = createAddViewModel(categoriaRepository = categories, scope = backgroundScope)
 
     runCurrent()
     viewModel.onCategoriaSelected("missing")
@@ -86,10 +62,10 @@ class AddMovimientoViewModelTest {
 
   @Test
   fun canSubmitRequiresASelectedCategoriaFromTheLoadedList() = runTest {
-    val category = testCategoria("food")
+    val category = addTestCategoria("food")
     val viewModel =
-        createViewModel(
-            categoriaRepository = FakeCategoriaRepository(DataOutcome.Success(listOf(category))),
+        createAddViewModel(
+            categoriaRepository = AddFakeCategorias(DataOutcome.Success(listOf(category))),
             scope = backgroundScope,
         )
 
@@ -105,7 +81,7 @@ class AddMovimientoViewModelTest {
 
   @Test
   fun changingADraftFieldMarksTheFormAsHavingUnsavedChanges() = runTest {
-    val viewModel = createViewModel(scope = backgroundScope)
+    val viewModel = createAddViewModel(scope = backgroundScope)
     runCurrent()
 
     viewModel.onAmountChanged("12.34")
@@ -115,7 +91,7 @@ class AddMovimientoViewModelTest {
 
   @Test
   fun discardingChangesRestoresTheOpeningDraft() = runTest {
-    val viewModel = createViewModel(scope = backgroundScope)
+    val viewModel = createAddViewModel(scope = backgroundScope)
     runCurrent()
     viewModel.onAmountChanged("12.34")
     viewModel.onDescripcionChanged("Lunch")
@@ -129,11 +105,11 @@ class AddMovimientoViewModelTest {
 
   @Test
   fun validationFailuresNeverInsertAMovimiento() = runTest {
-    val repository = FakeMovimientoRepository()
-    val category = testCategoria("food")
-    val categories = FakeCategoriaRepository(DataOutcome.Success(listOf(category)))
+    val repository = AddFakeMovimientos()
+    val category = addTestCategoria("food")
+    val categories = AddFakeCategorias(DataOutcome.Success(listOf(category)))
     val viewModel =
-        createViewModel(
+        createAddViewModel(
             movimientoRepository = repository,
             categoriaRepository = categories,
             scope = backgroundScope,
@@ -166,13 +142,13 @@ class AddMovimientoViewModelTest {
 
   @Test
   fun normalizesDescriptionAndBuildsTheExactMovimiento() = runTest {
-    val repository = FakeMovimientoRepository()
-    val category = testCategoria("food")
-    val clock = FixedClock(Instant.parse("2026-09-15T02:30:00Z"))
+    val repository = AddFakeMovimientos()
+    val category = addTestCategoria("food")
+    val clock = AddFixedClock(ADD_TEST_NOW)
     val viewModel =
-        createViewModel(
+        createAddViewModel(
             movimientoRepository = repository,
-            categoriaRepository = FakeCategoriaRepository(DataOutcome.Success(listOf(category))),
+            categoriaRepository = AddFakeCategorias(DataOutcome.Success(listOf(category))),
             clock = clock,
             timeZone = TimeZone.of("America/Bogota"),
             scope = backgroundScope,
@@ -194,7 +170,7 @@ class AddMovimientoViewModelTest {
             fecha = LocalDate(2026, 9, 14),
             categoriaId = category.id,
             descripcion = "Salary September",
-            createdAt = Instant.parse("2026-09-15T02:30:00Z"),
+            createdAt = ADD_TEST_NOW,
         ),
         repository.inserted.single(),
     )
@@ -202,8 +178,8 @@ class AddMovimientoViewModelTest {
 
   @Test
   fun capsDescriptionInputAndNormalizesBlankDescriptionToNull() = runTest {
-    val repository = FakeMovimientoRepository()
-    val category = testCategoria("food")
+    val repository = AddFakeMovimientos()
+    val category = addTestCategoria("food")
     val viewModel = createValidViewModel(repository, category, backgroundScope)
 
     runCurrent()
@@ -220,8 +196,8 @@ class AddMovimientoViewModelTest {
 
   @Test
   fun ignoresASecondSubmitWhileTheFirstInsertIsSuspended() = runTest {
-    val repository = SuspendedMovimientoRepository()
-    val category = testCategoria("food")
+    val repository = AddSuspendedMovimientos()
+    val category = addTestCategoria("food")
     val viewModel = createValidViewModel(repository, category, backgroundScope)
 
     runCurrent()
@@ -239,8 +215,8 @@ class AddMovimientoViewModelTest {
 
   @Test
   fun completedSaveCannotInsertAgainBeforeItsSavedEffectIsConsumed() = runTest {
-    val repository = FakeMovimientoRepository()
-    val category = testCategoria("food")
+    val repository = AddFakeMovimientos()
+    val category = addTestCategoria("food")
     val viewModel = createValidViewModel(repository, category, backgroundScope)
 
     runCurrent()
@@ -258,8 +234,8 @@ class AddMovimientoViewModelTest {
   @Test
   fun saveFailurePreservesFieldsAndClearsAfterAnotherEdit() = runTest {
     val repository =
-        FakeMovimientoRepository(DataOutcome.Failure(DataError.Local(IllegalStateException())))
-    val category = testCategoria("food")
+        AddFakeMovimientos(DataOutcome.Failure(DataError.Local(IllegalStateException())))
+    val category = addTestCategoria("food")
     val viewModel = createValidViewModel(repository, category, backgroundScope)
 
     runCurrent()
@@ -283,8 +259,8 @@ class AddMovimientoViewModelTest {
   @Test
   fun retryAfterSaveFailureUsesTheUnchangedDraft() = runTest {
     val repository =
-        FakeMovimientoRepository(DataOutcome.Failure(DataError.Local(IllegalStateException())))
-    val category = testCategoria("food")
+        AddFakeMovimientos(DataOutcome.Failure(DataError.Local(IllegalStateException())))
+    val category = addTestCategoria("food")
     val viewModel = createValidViewModel(repository, category, backgroundScope)
     runCurrent()
     populateValidFields(viewModel, category)
@@ -305,8 +281,8 @@ class AddMovimientoViewModelTest {
 
   @Test
   fun categoryLoadFailureIsDurableUntilTheRepositoryEmitsCategoriasAgain() = runTest {
-    val categories = FakeCategoriaRepository(DataOutcome.Success(emptyList()))
-    val viewModel = createViewModel(categoriaRepository = categories, scope = backgroundScope)
+    val categories = AddFakeCategorias(DataOutcome.Success(emptyList()))
+    val viewModel = createAddViewModel(categoriaRepository = categories, scope = backgroundScope)
 
     runCurrent()
     categories.emit(DataOutcome.Failure(DataError.Local(IllegalStateException())))
@@ -314,7 +290,7 @@ class AddMovimientoViewModelTest {
 
     assertEquals(MovimientoFormError.CATEGORIES_UNAVAILABLE, viewModel.uiState.value.error)
 
-    categories.emit(DataOutcome.Success(listOf(testCategoria("food"))))
+    categories.emit(DataOutcome.Success(listOf(addTestCategoria("food"))))
     runCurrent()
 
     assertNull(viewModel.uiState.value.error)
@@ -323,11 +299,9 @@ class AddMovimientoViewModelTest {
   @Test
   fun preferenceLoadFailureIsDurableAndPreventsSubmittingWithTheFallbackMoneda() = runTest {
     val viewModel =
-        createViewModel(
+        createAddViewModel(
             preferencesRepository =
-                FakePreferencesRepository(
-                    DataOutcome.Failure(DataError.Local(IllegalStateException()))
-                ),
+                AddFakePreferences(DataOutcome.Failure(DataError.Local(IllegalStateException()))),
             scope = backgroundScope,
         )
 
@@ -339,8 +313,8 @@ class AddMovimientoViewModelTest {
 
   @Test
   fun cancelledInsertDoesNotBecomeSaveFailureOrEmitSaved() = runTest {
-    val repository = SuspendedMovimientoRepository()
-    val category = testCategoria("food")
+    val repository = AddSuspendedMovimientos()
+    val category = addTestCategoria("food")
     val formScope = CoroutineScope(StandardTestDispatcher(testScheduler))
     val viewModel = createValidViewModel(repository, category, formScope)
 
@@ -362,190 +336,14 @@ class AddMovimientoViewModelTest {
       category: Categoria,
       scope: CoroutineScope,
   ): AddMovimientoViewModel =
-      createViewModel(
+      createAddViewModel(
           movimientoRepository = movimientoRepository,
-          categoriaRepository = FakeCategoriaRepository(DataOutcome.Success(listOf(category))),
+          categoriaRepository = AddFakeCategorias(DataOutcome.Success(listOf(category))),
           scope = scope,
       )
 
   private fun populateValidFields(viewModel: AddMovimientoViewModel, category: Categoria) {
     viewModel.onAmountChanged("12.34")
     viewModel.onCategoriaSelected(category.id)
-  }
-
-  private fun createViewModel(
-      movimientoRepository: MovimientoRepository = FakeMovimientoRepository(),
-      categoriaRepository: CategoriaRepository =
-          FakeCategoriaRepository(DataOutcome.Success(emptyList())),
-      preferencesRepository: AppPreferencesRepository = FakePreferencesRepository(),
-      clock: Clock = FixedClock(Instant.parse("2026-09-15T02:30:00Z")),
-      timeZone: TimeZone = TimeZone.UTC,
-      scope: CoroutineScope,
-  ): AddMovimientoViewModel =
-      AddMovimientoViewModel(
-          repositories =
-              AddMovimientoRepositories(
-                  preferences = preferencesRepository,
-                  categorias = categoriaRepository,
-              ),
-          movimientoRepository = movimientoRepository,
-          idGenerator = IdGenerator { "movement-id" },
-          clock = clock,
-          timeZoneProvider = TimeZoneProvider { timeZone },
-          scope = scope,
-      )
-
-  private class FakePreferencesRepository(
-      initial: DataOutcome<AppPreferencesState> =
-          DataOutcome.Success(AppPreferencesState.Ready(AppPreferences(Moneda.USD)))
-  ) : AppPreferencesRepository {
-    override val preferences = MutableStateFlow<DataOutcome<AppPreferencesState>>(initial)
-
-    override suspend fun initialize(monedaPrincipal: Moneda): DataOutcome<Unit> =
-        DataOutcome.Success(Unit)
-
-    override suspend fun setThemeMode(themeMode: ThemeMode): DataOutcome<Unit> =
-        DataOutcome.Success(Unit)
-
-    override suspend fun setAppLocale(appLocale: AppLocale?): DataOutcome<Unit> =
-        DataOutcome.Success(Unit)
-
-    override suspend fun setMonedaPrincipal(moneda: Moneda): DataOutcome<Unit> =
-        DataOutcome.Success(Unit)
-  }
-
-  private class FakeCategoriaRepository(initial: DataOutcome<List<Categoria>>) :
-      CategoriaRepository {
-    private val values = MutableStateFlow(initial)
-
-    override fun observeAll(): Flow<DataOutcome<List<Categoria>>> = values
-
-    override suspend fun getAll(): DataOutcome<List<Categoria>> = values.value
-
-    override suspend fun localizeSeeded(categorias: List<Categoria>): DataOutcome<Unit> =
-        DataOutcome.Success(Unit)
-
-    override suspend fun ensureSeeded(categorias: List<Categoria>): DataOutcome<Unit> =
-        DataOutcome.Success(Unit)
-
-    fun emit(value: DataOutcome<List<Categoria>>) {
-      values.value = value
-    }
-  }
-
-  private open class FakeMovimientoRepository(
-      var insertResult: DataOutcome<Unit> = DataOutcome.Success(Unit),
-  ) : MovimientoRepository {
-    val inserted = mutableListOf<Movimiento>()
-
-    override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
-        error("Scoped recent reads are not expected in this fixture")
-
-    override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = emptyFlow()
-
-    override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> = emptyFlow()
-
-    override fun observeFiltered(
-        criteria: MovimientoReadCriteria
-    ): Flow<DataOutcome<MovimientoSearchSnapshot>> =
-        error("Search reads are not expected in this fixture")
-
-    override fun observeRange(
-        moneda: Moneda,
-        range: MovimientoDateRange,
-    ): Flow<DataOutcome<List<Movimiento>>> =
-        error("History range reads are not expected in this fixture")
-
-    override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> =
-        error("History year reads are not expected in this fixture")
-
-    override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
-        emptyFlow()
-
-    override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> {
-      inserted += movimiento
-      return insertResult
-    }
-
-    override suspend fun getAll(): DataOutcome<List<Movimiento>> = DataOutcome.Success(inserted)
-
-    override suspend fun getById(id: String): DataOutcome<Movimiento?> =
-        DataOutcome.Success(inserted.firstOrNull { it.id == id })
-
-    override suspend fun update(
-        id: String,
-        changes: MovimientoChanges,
-    ): DataOutcome<MovimientoUpdateResult> {
-      val current =
-          inserted.firstOrNull { it.id == id }
-              ?: return DataOutcome.Success(MovimientoUpdateResult.NotFound)
-      if (current.monto.moneda != changes.monto.moneda)
-          return DataOutcome.Failure(DataError.InvalidInput("Currency cannot change"))
-      val updated =
-          current.copy(
-              tipo = changes.tipo,
-              monto = changes.monto,
-              fecha = changes.fecha,
-              categoriaId = changes.categoriaId,
-              descripcion = changes.descripcion,
-          )
-      val values = inserted.map { if (it.id == id) updated else it }
-      inserted.clear()
-      inserted.addAll(values)
-      return DataOutcome.Success(MovimientoUpdateResult.Updated)
-    }
-
-    override suspend fun deleteAndCapture(id: String): DataOutcome<Movimiento?> {
-      val captured = inserted.firstOrNull { it.id == id }
-      val values = inserted.filter { it.id != id }
-      inserted.clear()
-      inserted.addAll(values)
-      return DataOutcome.Success(captured)
-    }
-
-    override suspend fun restoreDeleted(
-        movimiento: Movimiento
-    ): DataOutcome<MovimientoRestoreResult> {
-      val current = inserted.firstOrNull { it.id == movimiento.id }
-      if (current != null)
-          return DataOutcome.Success(
-              if (current == movimiento) MovimientoRestoreResult.AlreadyPresent
-              else MovimientoRestoreResult.Conflict
-          )
-      val values = inserted + movimiento
-      inserted.clear()
-      inserted.addAll(values)
-      return DataOutcome.Success(MovimientoRestoreResult.Restored)
-    }
-
-    override suspend fun delete(id: String): DataOutcome<Unit> = DataOutcome.Success(Unit)
-  }
-
-  private class SuspendedMovimientoRepository : FakeMovimientoRepository() {
-    val started = CompletableDeferred<Unit>()
-    val result = CompletableDeferred<DataOutcome<Unit>>()
-    var insertCalls = 0
-      private set
-
-    override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> {
-      insertCalls++
-      started.complete(Unit)
-      return result.await()
-    }
-  }
-
-  private class FixedClock(private val instant: Instant) : Clock {
-    override fun now(): Instant = instant
-  }
-
-  private companion object {
-    fun testCategoria(id: String): Categoria =
-        Categoria(
-            id = id,
-            nombre = "Food",
-            padreId = null,
-            icono = CategoryIcon.UTENSILS,
-            color = CategoryTint.AMBER,
-        )
   }
 }

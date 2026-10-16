@@ -64,8 +64,8 @@ internal fun MovimientoSummaryStep(
     onSelectSuggestion: (Categoria) -> Unit,
     onEdit: () -> Unit,
     onSave: () -> Unit,
+    today: LocalDate,
     modifier: Modifier = Modifier,
-    today: LocalDate = deviceToday(),
 ) {
   Column(
       modifier = modifier.fillMaxWidth(),
@@ -203,7 +203,6 @@ private fun SummaryCategories(
         categoria = summary.categoria,
         selected = true,
         onClick = {},
-        enabled = false,
         pending = summary.categoriaIsPending,
     )
     if (summary.categoriaIsPending) {

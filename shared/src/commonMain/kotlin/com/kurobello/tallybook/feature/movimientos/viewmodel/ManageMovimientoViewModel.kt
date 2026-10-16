@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Money
@@ -80,7 +81,7 @@ internal class ManageMovimientoViewModel(
 
   override fun onCategoriaSelected(id: String) {
     val session = uiState.value.session ?: return
-    if (session.categorias.none { it.id == id && it.padreId == null }) return
+    if (id == CATEGORIA_OTROS_ID || session.categorias.none { it.id == id }) return
     updateDraft { copy(selectedCategoriaId = id) }
   }
 

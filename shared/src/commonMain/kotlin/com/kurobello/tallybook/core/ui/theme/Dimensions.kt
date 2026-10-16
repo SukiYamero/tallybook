@@ -3,8 +3,6 @@ package com.kurobello.tallybook.core.ui.theme
 import androidx.compose.ui.unit.dp
 
 internal object TallybookDimensions {
-  private const val MOVIMIENTO_DETAILS_VISIBLE_FIELDS = 3
-
   val borderThin = 1.dp
   val minimumTouchTarget = TallybookSpacing.space48
   val screenHorizontal = TallybookSpacing.space20
@@ -35,7 +33,6 @@ internal object TallybookDimensions {
   val iconButtonContainerSize = minimumTouchTarget
   val iconButtonIconSize = iconMedium
   val fieldMinimumHeight = minimumTouchTarget
-  val movimientoDetailsMaximumHeight = fieldMinimumHeight * MOVIMIENTO_DETAILS_VISIBLE_FIELDS
   val movimientoFormMaximumHeight = 600.dp
   val fieldHorizontalPadding = TallybookSpacing.space12
   val fieldVerticalPadding = TallybookSpacing.space12

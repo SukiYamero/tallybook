@@ -20,6 +20,7 @@ import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.ui.MovimientoEntrySamples
 import com.kurobello.tallybook.feature.movimientos.ui.MovimientoPhraseStep
 import com.kurobello.tallybook.feature.movimientos.ui.MovimientoSummaryStep
+import com.kurobello.tallybook.feature.movimientos.ui.rememberMovimientoEntrySamples
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSummaryUi
 import com.kurobello.tallybook.feature.movimientos.viewmodel.PhrasePreviewUi
 import org.jetbrains.compose.resources.stringResource
@@ -71,7 +72,7 @@ internal fun LazyListScope.catalogEntryComponents(fixtures: UiCatalogFixtures) {
 
 @Composable
 private fun CatalogSuggestionChipMatrix() {
-  val category = MovimientoEntrySamples.cinema
+  val category = rememberMovimientoEntrySamples().cinema
   CatalogSurface {
     CatalogSample(label = stringResource(Res.string.ui_catalog_state_suggested)) {
       CategorySuggestionChip(category, selected = false, onClick = {})
@@ -87,7 +88,7 @@ private fun CatalogSuggestionChipMatrix() {
 
 @Composable
 private fun CatalogPendingMatrix(fixtures: UiCatalogFixtures) {
-  val pendingCategory = MovimientoEntrySamples.other
+  val pendingCategory = rememberMovimientoEntrySamples().other
   CatalogSurface {
     CatalogSample(label = stringResource(Res.string.ui_catalog_pending_avatar)) {
       Row(horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12)) {
@@ -108,16 +109,17 @@ private fun CatalogPendingMatrix(fixtures: UiCatalogFixtures) {
 
 @Composable
 private fun CatalogPhraseStepMatrix() {
+  val samples = rememberMovimientoEntrySamples()
   val sentence = stringResource(Res.string.ui_catalog_entry_sentence)
   Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space24)) {
     CatalogSample(label = stringResource(Res.string.ui_catalog_state_empty)) {
-      CatalogPhraseStep(initialText = "", preview = MovimientoEntrySamples.emptyPreview)
+      CatalogPhraseStep(initialText = "", preview = samples.emptyPreview)
     }
     CatalogSample(label = stringResource(Res.string.ui_catalog_state_partial)) {
-      CatalogPhraseStep(initialText = sentence, preview = MovimientoEntrySamples.partialPreview)
+      CatalogPhraseStep(initialText = sentence, preview = samples.partialPreview)
     }
     CatalogSample(label = stringResource(Res.string.ui_catalog_state_complete)) {
-      CatalogPhraseStep(initialText = sentence, preview = MovimientoEntrySamples.completePreview)
+      CatalogPhraseStep(initialText = sentence, preview = samples.completePreview)
     }
   }
 }
@@ -140,26 +142,27 @@ private fun CatalogPhraseStep(initialText: String, preview: PhrasePreviewUi) {
 
 @Composable
 private fun CatalogSummaryStepMatrix() {
+  val samples = rememberMovimientoEntrySamples()
   Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space24)) {
     CatalogSummarySample(
         stringResource(Res.string.ui_catalog_state_complete),
-        MovimientoEntrySamples.completeSummary,
+        samples.completeSummary,
     )
     CatalogSummarySample(
         stringResource(Res.string.ui_catalog_state_missing_amount),
-        MovimientoEntrySamples.missingAmountSummary,
+        samples.missingAmountSummary,
     )
     CatalogSummarySample(
         stringResource(Res.string.ui_catalog_state_ambiguous_amount),
-        MovimientoEntrySamples.ambiguousAmountSummary,
+        samples.ambiguousAmountSummary,
     )
     CatalogSummarySample(
         stringResource(Res.string.ui_catalog_state_pending_category),
-        MovimientoEntrySamples.pendingSummary,
+        samples.pendingSummary,
     )
     CatalogSummarySample(
         stringResource(Res.string.ui_catalog_state_submitting),
-        MovimientoEntrySamples.submittingSummary,
+        samples.submittingSummary,
     )
   }
 }

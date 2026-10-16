@@ -2,21 +2,28 @@ package com.kurobello.tallybook.feature.movimientos.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -45,6 +52,12 @@ import tallybook.shared.generated.resources.movimiento_phrase_fill_manually
 import tallybook.shared.generated.resources.movimiento_phrase_label
 import tallybook.shared.generated.resources.movimiento_phrase_placeholder
 
+internal const val PHRASE_INPUT_TAG = "movimiento_phrase_input"
+
+// The sheet caps its content at the height measured while idle, so the field and the preview row
+// keep a constant size and any overflow scrolls inside the body instead of pushing Continue away.
+private const val PHRASE_VISIBLE_LINES = 3
+
 @Suppress("LongParameterList")
 @Composable
 internal fun MovimientoPhraseStep(
@@ -55,39 +68,56 @@ internal fun MovimientoPhraseStep(
     onContinue: () -> Unit,
     onFillManually: () -> Unit,
     focusRequester: FocusRequester,
+    today: LocalDate,
     modifier: Modifier = Modifier,
-    today: LocalDate = deviceToday(),
     enabled: Boolean = true,
+    actionsEnabled: Boolean = true,
     requestFocusOnStart: Boolean = true,
 ) {
   if (requestFocusOnStart) {
-    LaunchedEffect(focusRequester) { focusRequester.requestFocus() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    LaunchedEffect(focusRequester) {
+      // The modal window is still attaching on first composition; focusing a frame later lets the
+      // keyboard open with it.
+      withFrameNanos {}
+      focusRequester.requestFocus()
+      keyboard?.show()
+    }
   }
-  val canContinue = enabled && text.isNotBlank()
+  val canContinue = enabled && actionsEnabled && text.isNotBlank()
   Column(
       modifier = modifier.fillMaxWidth(),
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16),
   ) {
-    TallybookTextField(
-        value = text,
-        onValueChange = { onTextChange(it.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH)) },
-        modifier = Modifier.fillMaxWidth(),
-        label = stringResource(Res.string.movimiento_phrase_label),
-        placeholder =
-            stringResource(Res.string.movimiento_phrase_placeholder, phraseSampleAmount(moneda)),
-        message =
-            TallybookFieldMessage.Supporting("${text.length}/$MOVIMIENTO_DESCRIPTION_MAX_LENGTH"),
-        enabled = enabled,
-        singleLine = false,
-        keyboardOptions =
-            KeyboardOptions(
-                capitalization = KeyboardCapitalization.Sentences,
-                imeAction = ImeAction.Done,
-            ),
-        keyboardActions = KeyboardActions(onDone = { if (canContinue) onContinue() }),
-        inputModifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-    )
-    MovimientoPhrasePreview(preview = preview, today = today)
+    Column(
+        modifier =
+            Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16),
+    ) {
+      TallybookTextField(
+          value = text,
+          onValueChange = { onTextChange(it.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH)) },
+          modifier = Modifier.fillMaxWidth(),
+          label = stringResource(Res.string.movimiento_phrase_label),
+          placeholder =
+              stringResource(Res.string.movimiento_phrase_placeholder, phraseSampleAmount(moneda)),
+          message =
+              TallybookFieldMessage.Supporting("${text.length}/$MOVIMIENTO_DESCRIPTION_MAX_LENGTH"),
+          enabled = enabled,
+          singleLine = false,
+          minLines = PHRASE_VISIBLE_LINES,
+          maxLines = PHRASE_VISIBLE_LINES,
+          keyboardOptions =
+              KeyboardOptions(
+                  capitalization = KeyboardCapitalization.Sentences,
+                  imeAction = ImeAction.Done,
+              ),
+          keyboardActions = KeyboardActions(onDone = { if (canContinue) onContinue() }),
+          inputModifier =
+              Modifier.fillMaxWidth().focusRequester(focusRequester).testTag(PHRASE_INPUT_TAG),
+      )
+      MovimientoPhrasePreview(preview = preview, today = today)
+    }
     TallybookButton(
         onClick = onContinue,
         modifier = Modifier.fillMaxWidth(),
@@ -98,7 +128,7 @@ internal fun MovimientoPhraseStep(
     TallybookTextButton(
         onClick = onFillManually,
         modifier = Modifier.align(Alignment.CenterHorizontally),
-        enabled = enabled,
+        enabled = enabled && actionsEnabled,
     ) {
       TallybookText(stringResource(Res.string.movimiento_phrase_fill_manually))
     }
@@ -110,7 +140,21 @@ private fun MovimientoPhrasePreview(preview: PhrasePreviewUi, today: LocalDate) 
   val monto = preview.monto
   val fecha = preview.fecha
   val categoria = preview.categoria
-  if (monto == null && fecha == null && categoria == null) return
+  Box(
+      modifier = Modifier.fillMaxWidth().heightIn(min = TallybookTheme.spacing.space40),
+      contentAlignment = Alignment.CenterStart,
+  ) {
+    if (monto != null || fecha != null || categoria != null) {
+      PhrasePreviewRow(preview, today)
+    }
+  }
+}
+
+@Composable
+private fun PhrasePreviewRow(preview: PhrasePreviewUi, today: LocalDate) {
+  val monto = preview.monto
+  val fecha = preview.fecha
+  val categoria = preview.categoria
   FlowRow(
       modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
       horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),

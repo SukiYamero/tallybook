@@ -1,5 +1,6 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -10,6 +11,9 @@ internal enum class MovimientoFormError {
   CATEGORIES_UNAVAILABLE,
   SAVE_FAILED,
 }
+
+private val STEP_BACK_TARGETS: Map<AddMovimientoStep, AddMovimientoStep> =
+    mapOf(AddMovimientoStep.SUMMARY to AddMovimientoStep.PHRASE)
 
 internal data class AddMovimientoUiState(
     override val tipo: TipoMovimiento,
@@ -24,6 +28,14 @@ internal data class AddMovimientoUiState(
     override val submitAttempted: Boolean,
     override val error: MovimientoFormError?,
     val hasUnsavedChanges: Boolean = false,
+    val step: AddMovimientoStep = AddMovimientoStep.PHRASE,
+    val phrase: String = "",
+    val preview: PhrasePreviewUi? = null,
+    val suggestions: List<Categoria> = emptyList(),
+    val dismissedSuggestionIds: Set<String> = emptySet(),
+    val amountNeedsReview: Boolean = false,
+    val today: LocalDate = fecha,
+    val formOpenedFromSummary: Boolean = false,
 ) : MovimientoFormState {
   private val amountResult by lazy { parseAmountInput(amountInput, moneda) }
 
@@ -31,18 +43,51 @@ internal data class AddMovimientoUiState(
     get() = (amountResult as? AmountInputResult.Invalid)?.reason?.takeIf { submitAttempted }
 
   override val isCategoriaMissing: Boolean
-    get() = submitAttempted && !hasSelectedCategoria
+    get() = submitAttempted && effectiveCategoriaId == null
+
+  /** The selection, or the pending fallback when nothing valid is selected. */
+  val effectiveCategoriaId: String?
+    get() = selectedCategoriaId?.takeIf(::isLoaded) ?: CATEGORIA_OTROS_ID.takeIf(::isLoaded)
 
   val canSubmit: Boolean
     get() =
         amountResult is AmountInputResult.Valid &&
-            hasSelectedCategoria &&
+            effectiveCategoriaId != null &&
             !isLoading &&
             !isSubmitting &&
             error == null
 
-  private val hasSelectedCategoria: Boolean
-    get() = categorias.any { it.id == selectedCategoriaId }
+  /** Load failures block entry; a failed save keeps the draft and leaves Save available. */
+  val loadError: MovimientoFormError?
+    get() = error?.takeUnless { it == MovimientoFormError.SAVE_FAILED }
+
+  val canContinuePhrase: Boolean
+    get() = phrase.isNotBlank() && !isSubmitting && !isLoading && loadError == null
+
+  val stepBackTarget: AddMovimientoStep?
+    get() =
+        STEP_BACK_TARGETS[step]
+            ?: AddMovimientoStep.SUMMARY.takeIf {
+              step == AddMovimientoStep.FORM && formOpenedFromSummary
+            }
+
+  val summary: MovimientoSummaryUi?
+    get() {
+      val categoria = categorias.firstOrNull { it.id == effectiveCategoriaId } ?: return null
+      return MovimientoSummaryUi(
+          tipo = tipo,
+          fecha = fecha,
+          monto = (amountResult as? AmountInputResult.Valid)?.money,
+          amountNeedsReview = amountNeedsReview,
+          descripcion = descripcion,
+          categoria = categoria,
+          categoriaIsPending = categoria.id == CATEGORIA_OTROS_ID,
+          suggestions = suggestions,
+          isSubmitting = isSubmitting,
+      )
+    }
+
+  private fun isLoaded(id: String): Boolean = categorias.any { it.id == id }
 }
 
 internal data class MovimientoDraft(

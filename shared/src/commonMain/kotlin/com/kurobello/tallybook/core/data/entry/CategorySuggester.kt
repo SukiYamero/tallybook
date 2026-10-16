@@ -150,7 +150,7 @@ private fun recencyWeight(createdAt: Instant, now: Instant): Double {
 
 private const val INCOME_PARENT_ID = "cat_ingresos"
 
-private val incomeCategoryIds: Set<String> =
+internal val incomeCategoryIds: Set<String> =
     CategorySeedCatalog.categories
         .filter { it.id == INCOME_PARENT_ID || it.padreId == INCOME_PARENT_ID }
         .map { it.id }

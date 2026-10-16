@@ -16,7 +16,11 @@ internal data class PhrasePreviewUi(
     val monto: Money?,
     val fecha: LocalDate?,
     val categoria: Categoria?,
-)
+) {
+  companion object {
+    val Empty = PhrasePreviewUi(tipo = null, monto = null, fecha = null, categoria = null)
+  }
+}
 
 internal data class MovimientoSummaryUi(
     val tipo: TipoMovimiento,

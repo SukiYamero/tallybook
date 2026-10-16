@@ -42,6 +42,7 @@ import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.di.DispatcherQualifier
+import com.kurobello.tallybook.di.entryModule
 import com.kurobello.tallybook.di.viewModelModule
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryFailure
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryProjection
@@ -394,7 +395,13 @@ class HistoryIntegrationTest {
       context = koinApplication {
         modules(
             viewModelModule,
+            entryModule,
             module {
+              single<DeviceLocaleProvider> {
+                object : DeviceLocaleProvider {
+                  override fun currentLanguageTag() = "es-CO"
+                }
+              }
               single<AppPreferencesRepository> { preferences }
               single<MovimientoRepository> { movimientos }
               single<CategoriaRepository> { categorias }

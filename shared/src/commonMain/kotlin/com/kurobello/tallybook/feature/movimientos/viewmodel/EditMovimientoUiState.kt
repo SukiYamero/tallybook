@@ -42,7 +42,7 @@ internal data class EditMovimientoUiState(
   val hasValidCategoria: Boolean
     get() =
         selectedCategoriaId == original.categoriaId ||
-            categorias.any { it.id == selectedCategoriaId && it.padreId == null }
+            categorias.any { it.id == selectedCategoriaId }
 
   override val isCategoriaMissing
     get() = submitAttempted && !hasValidCategoria

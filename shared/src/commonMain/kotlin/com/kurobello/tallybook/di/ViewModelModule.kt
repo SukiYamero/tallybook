@@ -46,11 +46,12 @@ internal val viewModelModule = module {
   }
   viewModel {
     AddMovimientoViewModel(
-        repositories = AddMovimientoRepositories(preferences = get(), categorias = get()),
-        movimientoRepository = get(),
+        repositories =
+            AddMovimientoRepositories(preferences = get(), categorias = get(), movimientos = get()),
         idGenerator = get(),
         clock = get(),
         timeZoneProvider = get(),
+        entryEngine = get(),
     )
   }
   viewModel {

@@ -44,6 +44,8 @@ internal fun TallybookTextField(
     enabled: Boolean = true,
     readOnly: Boolean = false,
     singleLine: Boolean = true,
+    minLines: Int = 1,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     textStyle: TextStyle = TallybookTheme.typography.body,
@@ -94,6 +96,8 @@ internal fun TallybookTextField(
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
         singleLine = singleLine,
+        minLines = minLines,
+        maxLines = maxLines,
         interactionSource = interactionSource,
         decorationBox = { innerTextField ->
           TallybookTextFieldDecoration(

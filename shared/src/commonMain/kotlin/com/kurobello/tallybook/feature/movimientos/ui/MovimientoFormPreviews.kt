@@ -60,6 +60,7 @@ private fun previewUiState(
         error = error,
     )
 
+@Suppress("TooManyFunctions")
 private object PreviewAddMovimientoActions : AddMovimientoActions {
   override fun onTipoChanged(tipo: TipoMovimiento) = Unit
 
@@ -72,6 +73,18 @@ private object PreviewAddMovimientoActions : AddMovimientoActions {
   override fun onDescripcionChanged(value: String) = Unit
 
   override fun onDiscardChanges() = Unit
+
+  override fun onPhraseChanged(value: String) = Unit
+
+  override fun onPhraseContinue() = Unit
+
+  override fun onFillManually() = Unit
+
+  override fun onEditMovimiento() = Unit
+
+  override fun onSuggestionSelected(id: String) = Unit
+
+  override fun onStepBack() = Unit
 
   override fun onRetryLoad() = Unit
 

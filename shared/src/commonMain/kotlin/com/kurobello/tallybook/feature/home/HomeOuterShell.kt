@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Search
 import com.composables.icons.lucide.Wallet
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookSkeletonLine
 import com.kurobello.tallybook.core.ui.component.TallybookSurface
@@ -285,6 +286,7 @@ internal fun LazyListScope.homePopulated(
         categoria = uiState.categoriasById[movimiento.categoriaId],
         onClick = onOpenMovimiento?.let { open -> { open(movimiento.id) } },
         modifier = Modifier.fillMaxWidth().padding(bottom = TallybookTheme.spacing.space10),
+        pending = movimiento.categoriaId == CATEGORIA_OTROS_ID,
     )
   }
 }

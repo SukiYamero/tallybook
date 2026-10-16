@@ -39,7 +39,7 @@ import tallybook.shared.generated.resources.movimiento_relative_yesterday
 class MovimientoPhraseStepTest {
   @get:Rule val composeRule = createComposeRule()
 
-  private val samples = MovimientoEntrySamples
+  private val samples = testEntrySamples()
   private var continues = 0
   private var manualFills = 0
 
@@ -115,12 +115,12 @@ class MovimientoPhraseStepTest {
         MovimientoPhraseStep(
             text = text,
             preview = preview,
-            moneda = samples.moneda,
+            moneda = MovimientoEntrySamples.moneda,
             onTextChange = { text = it },
             onContinue = { continues++ },
             onFillManually = { manualFills++ },
             focusRequester = remember { FocusRequester() },
-            today = samples.today,
+            today = MovimientoEntrySamples.today,
             requestFocusOnStart = requestFocusOnStart,
         )
       }

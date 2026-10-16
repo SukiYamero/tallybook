@@ -1,11 +1,5 @@
 package com.kurobello.tallybook.feature.movimientos.ui
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -74,11 +67,7 @@ internal data class MovimientoFormPresentation(
 internal fun MovimientoForm(
     uiState: MovimientoFormState,
     actions: MovimientoFormActions,
-    detailsExpanded: Boolean = false,
-    onDetailsExpandedChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
-    startWithCategory: Boolean = false,
-    onCategoryLayerReady: () -> Unit = {},
     presentation: MovimientoFormPresentation? = null,
     headerAction: (@Composable () -> Unit)? = null,
     supportingContent: (@Composable () -> Unit)? = null,
@@ -86,25 +75,12 @@ internal fun MovimientoForm(
     interactionEnabled: Boolean = true,
 ) {
   val fieldFocus = remember { MovimientoFieldFocus() }
-  val categoryEntry =
-      rememberMovimientoCategoryEntry(
-          uiState,
-          actions,
-          fieldFocus.amount,
-          policy =
-              MovimientoCategoryEntryPolicy(
-                  startWithCategory,
-                  presentation == null,
-                  interactionEnabled,
-              ),
-      )
+  val categoryPicker = rememberMovimientoCategoryPicker(actions, interactionEnabled)
   NavigationBackHandler(
       state = rememberNavigationEventState(NavigationEventInfo.None),
-      isBackEnabled =
-          presentation != null && categoryEntry.blocksValidationFocus && interactionEnabled,
-      onBackCompleted = categoryEntry.onDismiss,
+      isBackEnabled = categoryPicker.isVisible && interactionEnabled,
+      onBackCompleted = categoryPicker.onDismiss,
   )
-  val detailsScrollState = rememberScrollState()
   val formScrollState = rememberScrollState()
   val formViewport = rememberScrollableInputViewport()
   val density = LocalDensity.current
@@ -116,7 +92,7 @@ internal fun MovimientoForm(
   val formMaximumHeight = formMaximumHeight(isImeVisible, restingFormHeight.value)
   val formItemSpacing = TallybookTheme.spacing.space16
   val title = presentation?.title ?: stringResource(Res.string.add_movimiento_pane_title)
-  MovimientoValidationFocus(uiState, categoryEntry, fieldFocus)
+  MovimientoValidationFocus(uiState, fieldFocus)
 
   Column(
       modifier =
@@ -144,57 +120,18 @@ internal fun MovimientoForm(
             uiState = uiState,
             interactionEnabled = interactionEnabled,
             actions = actions,
-            categoryEntry = categoryEntry,
+            onOpenCategory = categoryPicker.onOpen,
             fieldFocus =
                 fieldFocus.copy(
                     amountModifier = Modifier.centerFocusedInputIn(formScrollState, formViewport)
                 ),
         )
-        Spacer(modifier = Modifier.height(TallybookTheme.spacing.space8))
-        MovimientoDetailsToggle(detailsExpanded, interactionEnabled && !uiState.isSubmitting) {
-          onDetailsExpandedChange(!detailsExpanded)
-        }
-        AnimatedVisibility(
-            visible = detailsExpanded,
-            enter =
-                fadeIn(animationSpec = tween(durationMillis = TallybookTheme.motion.fadeMillis)) +
-                    slideInVertically(
-                        animationSpec = tween(durationMillis = TallybookTheme.motion.fadeMillis),
-                        initialOffsetY = { height -> height / 8 },
-                    ),
-            exit =
-                fadeOut(
-                    animationSpec = tween(durationMillis = TallybookTheme.motion.sheetDownMillis)
-                ) +
-                    slideOutVertically(
-                        animationSpec =
-                            tween(durationMillis = TallybookTheme.motion.sheetDownMillis),
-                        targetOffsetY = { height -> height / 8 },
-                    ),
-        ) {
-          Column(
-              modifier =
-                  Modifier.fillMaxWidth()
-                      .then(
-                          if (isImeVisible) {
-                            Modifier
-                          } else {
-                            Modifier.heightIn(
-                                    max = TallybookTheme.dimensions.movimientoDetailsMaximumHeight
-                                )
-                                .verticalScroll(detailsScrollState)
-                          }
-                      )
-                      .testTag("movimiento_details"),
-          ) {
-            MovimientoDescriptionField(
-                uiState,
-                actions::onDescripcionChanged,
-                Modifier.centerFocusedInputIn(formScrollState, formViewport),
-                interactionEnabled && !uiState.isSubmitting,
-            )
-          }
-        }
+        MovimientoDescriptionField(
+            uiState,
+            actions::onDescripcionChanged,
+            Modifier.centerFocusedInputIn(formScrollState, formViewport),
+            interactionEnabled && !uiState.isSubmitting,
+        )
         supportingContent?.invoke()
         MovimientoFormErrorMessage(
             error = uiState.error,
@@ -228,21 +165,13 @@ internal fun MovimientoForm(
     }
   }
   CategoryPickerSheet(
-      visible = interactionEnabled && categoryEntry.isPickerVisible,
+      visible = interactionEnabled && categoryPicker.isVisible,
       categorias = uiState.categorias,
       selectedId = uiState.selectedCategoriaId,
-      onSelect = {
-        onCategoryLayerReady()
-        categoryEntry.onSelect(it)
-      },
-      onDismiss = {
-        onCategoryLayerReady()
-        categoryEntry.onDismiss()
-      },
-      onShown = onCategoryLayerReady,
-      onHidden = categoryEntry.onHidden,
-      onBack = categoryEntry.onDismiss.takeIf { presentation != null },
-      allowSubcategories = false,
+      onSelect = categoryPicker.onSelect,
+      onDismiss = categoryPicker.onDismiss,
+      onBack = categoryPicker.onDismiss,
+      excludedIds = PICKER_EXCLUDED_CATEGORY_IDS,
       headerContent = {
         Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space20)) {
           TallybookSheetTitle(
@@ -263,12 +192,10 @@ internal fun MovimientoForm(
 @Composable
 private fun MovimientoValidationFocus(
     uiState: MovimientoFormState,
-    categoryEntry: MovimientoCategoryEntry,
     fieldFocus: MovimientoFieldFocus,
 ) {
   LaunchedEffect(uiState.submitAttempted) {
     when {
-      categoryEntry.blocksValidationFocus -> Unit
       uiState.isCategoriaMissing -> {
         fieldFocus.category.requestFocus()
       }
@@ -318,7 +245,7 @@ internal fun AmountInputError.message(): String =
     }
 
 @Composable
-private fun MovimientoFormErrorMessage(
+internal fun MovimientoFormErrorMessage(
     error: MovimientoFormError?,
     onRetry: () -> Unit,
     interactionEnabled: Boolean,

@@ -10,48 +10,51 @@ import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSummaryUi
 @Preview
 @Composable
 private fun SummaryStepCompleteLightPreview() =
-    SummaryStepPreview(MovimientoEntrySamples.completeSummary, darkTheme = false)
+    SummaryStepPreview(MovimientoEntrySamples::completeSummary, darkTheme = false)
 
 @Preview
 @Composable
 private fun SummaryStepCompleteDarkPreview() =
-    SummaryStepPreview(MovimientoEntrySamples.completeSummary, darkTheme = true)
+    SummaryStepPreview(MovimientoEntrySamples::completeSummary, darkTheme = true)
 
 @Preview
 @Composable
 private fun SummaryStepMissingAmountPreview() =
-    SummaryStepPreview(MovimientoEntrySamples.missingAmountSummary, darkTheme = false)
+    SummaryStepPreview(MovimientoEntrySamples::missingAmountSummary, darkTheme = false)
 
 @Preview
 @Composable
 private fun SummaryStepAmbiguousAmountPreview() =
-    SummaryStepPreview(MovimientoEntrySamples.ambiguousAmountSummary, darkTheme = false)
+    SummaryStepPreview(MovimientoEntrySamples::ambiguousAmountSummary, darkTheme = false)
 
 @Preview
 @Composable
 private fun SummaryStepPendingLightPreview() =
-    SummaryStepPreview(MovimientoEntrySamples.pendingSummary, darkTheme = false)
+    SummaryStepPreview(MovimientoEntrySamples::pendingSummary, darkTheme = false)
 
 @Preview
 @Composable
 private fun SummaryStepPendingDarkPreview() =
-    SummaryStepPreview(MovimientoEntrySamples.pendingSummary, darkTheme = true)
+    SummaryStepPreview(MovimientoEntrySamples::pendingSummary, darkTheme = true)
 
 @Preview
 @Composable
 private fun SummaryStepSubmittingPreview() =
-    SummaryStepPreview(MovimientoEntrySamples.submittingSummary, darkTheme = false)
+    SummaryStepPreview(MovimientoEntrySamples::submittingSummary, darkTheme = false)
 
 @Preview
 @Composable
 private fun SummaryStepIncomePreview() =
-    SummaryStepPreview(MovimientoEntrySamples.incomeSummary, darkTheme = false)
+    SummaryStepPreview(MovimientoEntrySamples::incomeSummary, darkTheme = false)
 
 @Composable
-private fun SummaryStepPreview(summary: MovimientoSummaryUi, darkTheme: Boolean) {
+private fun SummaryStepPreview(
+    summary: (MovimientoEntrySamples) -> MovimientoSummaryUi,
+    darkTheme: Boolean,
+) {
   TallybookTheme(darkTheme = darkTheme) {
     MovimientoSummaryStep(
-        summary = summary,
+        summary = summary(rememberMovimientoEntrySamples()),
         onSelectSuggestion = {},
         onEdit = {},
         onSave = {},

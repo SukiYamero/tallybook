@@ -15,6 +15,7 @@ import androidx.savedstate.savedState
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
+import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
@@ -39,6 +40,7 @@ import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.di.DispatcherQualifier
+import com.kurobello.tallybook.di.entryModule
 import com.kurobello.tallybook.di.viewModelModule
 import java.io.Serializable as JavaSerializable
 import java.util.concurrent.atomic.AtomicInteger
@@ -68,7 +70,13 @@ internal class PrimaryDeviceShell {
   val context = koinApplication {
     modules(
         viewModelModule,
+        entryModule,
         module {
+          single<DeviceLocaleProvider> {
+            object : DeviceLocaleProvider {
+              override fun currentLanguageTag() = "es-CO"
+            }
+          }
           single<AppPreferencesRepository> { NavigationPreferences() }
           single<MovimientoRepository> { movimientos }
           single<CategoriaRepository> { NavigationCategories() }

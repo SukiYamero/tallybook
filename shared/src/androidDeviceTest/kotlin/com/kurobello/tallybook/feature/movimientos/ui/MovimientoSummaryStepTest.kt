@@ -37,7 +37,7 @@ import tallybook.shared.generated.resources.movimiento_summary_save
 class MovimientoSummaryStepTest {
   @get:Rule val composeRule = createComposeRule()
 
-  private val samples = MovimientoEntrySamples
+  private val samples = testEntrySamples()
   private val selected = mutableListOf<Categoria>()
   private var edits = 0
   private var saves = 0
@@ -146,7 +146,7 @@ class MovimientoSummaryStepTest {
             onSelectSuggestion = { selected += it },
             onEdit = { edits++ },
             onSave = { saves++ },
-            today = samples.today,
+            today = MovimientoEntrySamples.today,
         )
       }
     }

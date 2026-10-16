@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookSkeletonLine
 import com.kurobello.tallybook.core.ui.component.TallybookText
@@ -106,6 +107,7 @@ internal fun HistoryRow(
       MovimientoRowText(row.title, historyDateSubtitle(row.fecha), row.categoryLabel),
       modifier = modifier.fillMaxWidth(),
       onClick = onClick,
+      pending = row.movimiento.categoriaId == CATEGORIA_OTROS_ID,
   )
 }
 

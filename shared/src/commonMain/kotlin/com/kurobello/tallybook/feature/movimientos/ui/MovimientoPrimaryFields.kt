@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.ui.category.CategoryAvatar
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
 import com.kurobello.tallybook.core.ui.component.TallybookInputLabel
@@ -24,6 +25,7 @@ import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category
 import tallybook.shared.generated.resources.category_required
 import tallybook.shared.generated.resources.movimiento_future_date
+import tallybook.shared.generated.resources.movimiento_pending_label
 import tallybook.shared.generated.resources.unknown_category
 
 internal data class MovimientoFieldFocus(
@@ -37,16 +39,11 @@ internal data class MovimientoFieldFocus(
 internal fun MovimientoPrimaryFields(
     uiState: MovimientoFormState,
     actions: MovimientoFormActions,
-    categoryEntry: MovimientoCategoryEntry,
+    onOpenCategory: () -> Unit,
     fieldFocus: MovimientoFieldFocus,
     interactionEnabled: Boolean = true,
 ) {
   val focusManager = LocalFocusManager.current
-  val selectedCategoria = uiState.categorias.firstOrNull { it.id == uiState.selectedCategoriaId }
-  val categoryMessage =
-      stringResource(Res.string.category_required)
-          .takeIf { uiState.isCategoriaMissing }
-          ?.let(TallybookFieldMessage::Error)
   Column {
     MovimientoTypeSelector(
         selected = uiState.tipo,
@@ -55,28 +52,11 @@ internal fun MovimientoPrimaryFields(
         modifier = Modifier.padding(top = TallybookTheme.spacing.space8),
     )
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
-    TallybookSelectionField(
-        label = stringResource(Res.string.category),
-        value =
-            selectedCategoria?.nombre
-                ?: stringResource(Res.string.unknown_category).takeIf {
-                  uiState.selectedCategoriaId != null
-                },
-        placeholder = stringResource(Res.string.category_required),
-        onClick = categoryEntry.onOpen,
-        modifier = Modifier.focusRequester(fieldFocus.category),
+    MovimientoCategoryField(
+        uiState = uiState,
+        onOpen = onOpenCategory,
+        focusRequester = fieldFocus.category,
         enabled = interactionEnabled && !uiState.isSubmitting && !uiState.isLoading,
-        message = categoryMessage,
-        leadingContent = selectedCategoria?.let { categoria -> { CategoryAvatar(categoria) } },
-        labelContent = {
-          TallybookInputLabel(
-              text = stringResource(Res.string.category),
-              color =
-                  if (categoryMessage is TallybookFieldMessage.Error)
-                      TallybookTheme.colors.status.danger.base
-                  else TallybookTheme.colors.foreground.tertiary,
-          )
-        },
     )
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
     MovimientoDateField(
@@ -119,4 +99,48 @@ internal fun MovimientoPrimaryFields(
         modifier = Modifier.padding(top = TallybookTheme.spacing.space40),
     )
   }
+}
+
+@Composable
+private fun MovimientoCategoryField(
+    uiState: MovimientoFormState,
+    onOpen: () -> Unit,
+    focusRequester: FocusRequester,
+    enabled: Boolean,
+) {
+  val selectedCategoria = uiState.categorias.firstOrNull { it.id == uiState.selectedCategoriaId }
+  val isPending = uiState.selectedCategoriaId == CATEGORIA_OTROS_ID
+  val message =
+      when {
+        uiState.isCategoriaMissing ->
+            TallybookFieldMessage.Error(stringResource(Res.string.category_required))
+        isPending ->
+            TallybookFieldMessage.Supporting(stringResource(Res.string.movimiento_pending_label))
+        else -> null
+      }
+  TallybookSelectionField(
+      label = stringResource(Res.string.category),
+      value =
+          selectedCategoria?.nombre
+              ?: stringResource(Res.string.unknown_category).takeIf {
+                uiState.selectedCategoriaId != null
+              },
+      placeholder = stringResource(Res.string.category_required),
+      onClick = onOpen,
+      modifier = Modifier.focusRequester(focusRequester),
+      enabled = enabled,
+      message = message,
+      leadingContent =
+          selectedCategoria?.let { categoria ->
+            { CategoryAvatar(categoria, pending = isPending) }
+          },
+      labelContent = {
+        TallybookInputLabel(
+            text = stringResource(Res.string.category),
+            color =
+                if (message is TallybookFieldMessage.Error) TallybookTheme.colors.status.danger.base
+                else TallybookTheme.colors.foreground.tertiary,
+        )
+      },
+  )
 }
