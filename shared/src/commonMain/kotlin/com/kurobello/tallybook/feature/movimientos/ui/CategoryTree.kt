@@ -40,11 +40,6 @@ internal fun CategoryTree.without(excludedIds: Set<String>): CategoryTree =
 
 internal fun CategoryTree.shouldOpenChildren(
     categoria: Categoria,
-    allowSubcategories: Boolean,
     isSearching: Boolean,
     parent: Categoria?,
-): Boolean =
-    allowSubcategories &&
-        !isSearching &&
-        parent == null &&
-        childrenByParent[categoria.id].orEmpty().isNotEmpty()
+): Boolean = !isSearching && parent == null && childrenByParent[categoria.id].orEmpty().isNotEmpty()

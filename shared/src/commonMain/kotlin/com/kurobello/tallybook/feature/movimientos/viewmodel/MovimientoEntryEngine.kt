@@ -11,6 +11,7 @@ import com.kurobello.tallybook.core.data.entry.SuggestionConfidence
 import com.kurobello.tallybook.core.data.entry.incomeCategoryIds
 import com.kurobello.tallybook.core.data.resolveDeviceLocale
 import com.kurobello.tallybook.core.model.AppLocale
+import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.ParsedMovimientoPhrase
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -21,8 +22,8 @@ import kotlinx.datetime.LocalDate
 
 internal const val MAX_SUGGESTION_CHIPS = 3
 
-// One extra so removing the selected category still leaves a full list of chips.
-private const val RANKING_LIMIT = MAX_SUGGESTION_CHIPS + 1
+// Selected categories are filtered out of the ranking, so keep enough to still fill the chips.
+private const val RANKING_LIMIT = MAX_SUGGESTION_CHIPS + MAX_CATEGORIAS_POR_MOVIMIENTO
 
 internal data class PhraseContext(val moneda: Moneda, val locale: AppLocale, val today: LocalDate)
 

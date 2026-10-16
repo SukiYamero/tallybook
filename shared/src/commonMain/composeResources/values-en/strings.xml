@@ -193,9 +193,6 @@
     <string name="category_regalo">Gift</string>
     <string name="category_reembolso">Refund</string>
     <string name="category_otros">Other</string>
-    <string name="movimiento_category_expense_prompt">What was the expense for?</string>
-    <string name="movimiento_category_income_prompt">Where did the income come from?</string>
-    <string name="movimiento_category_hint">Choose a category to keep your records organized.</string>
     <string name="movimiento_amount_expense_prompt">How much did you spend?</string>
     <string name="movimiento_amount_income_prompt">How much did you receive?</string>
 
@@ -336,6 +333,10 @@
     <string name="movimiento_summary_description_quote">“%1$s”</string>
     <string name="movimiento_summary_edit">Edit movement</string>
     <string name="movimiento_summary_save">Save</string>
+    <string name="movimiento_summary_title">Review before saving</string>
+    <string name="movimiento_summary_subtitle">This is what we understood. Adjust as needed.</string>
+    <string name="movimiento_summary_description_label">Description</string>
+    <string name="movimiento_detected_label">Detected</string>
     <plurals name="movimiento_row_extra_categories">
         <item quantity="one">%1$d more category</item>
         <item quantity="other">%1$d more categories</item>
@@ -370,7 +371,6 @@
     <string name="ui_catalog_pending_treatment">Pending treatment</string>
     <string name="ui_catalog_pending_avatar">Pending avatar</string>
     <string name="ui_catalog_pending_row">Pending row</string>
-    <string name="ui_catalog_entry_sentence">Spent 20,000 on lunch yesterday</string>
     <string name="ui_catalog_state_empty">Empty</string>
     <string name="ui_catalog_state_partial">Partial</string>
     <string name="ui_catalog_state_complete">Complete</string>

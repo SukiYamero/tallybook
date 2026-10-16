@@ -29,7 +29,6 @@ import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import com.kurobello.tallybook.core.ui.component.TallybookProgressIndicator
-import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
 import com.kurobello.tallybook.core.ui.component.captureScrollableInputViewport
@@ -49,7 +48,6 @@ import tallybook.shared.generated.resources.amount_not_positive
 import tallybook.shared.generated.resources.amount_overflow
 import tallybook.shared.generated.resources.amount_required
 import tallybook.shared.generated.resources.amount_too_many_decimals
-import tallybook.shared.generated.resources.category
 import tallybook.shared.generated.resources.loading
 import tallybook.shared.generated.resources.movimiento_categories_error
 import tallybook.shared.generated.resources.movimiento_preferences_error
@@ -75,7 +73,7 @@ internal fun MovimientoForm(
     interactionEnabled: Boolean = true,
 ) {
   val fieldFocus = remember { MovimientoFieldFocus() }
-  val categoryPicker = rememberMovimientoCategoryPicker(actions, interactionEnabled)
+  val categoryPicker = rememberMovimientoCategoryPicker(interactionEnabled)
   NavigationBackHandler(
       state = rememberNavigationEventState(NavigationEventInfo.None),
       isBackEnabled = categoryPicker.isVisible && interactionEnabled,
@@ -167,25 +165,11 @@ internal fun MovimientoForm(
   CategoryPickerSheet(
       visible = interactionEnabled && categoryPicker.isVisible,
       categorias = uiState.categorias,
-      selectedId = uiState.selectedCategoriaId,
-      onSelect = categoryPicker.onSelect,
+      selectedIds = uiState.categoriaIds.realCategoriaIds(),
+      onSelectionChange = actions::onCategoriasChanged,
       onDismiss = categoryPicker.onDismiss,
       onBack = categoryPicker.onDismiss,
       excludedIds = PICKER_EXCLUDED_CATEGORY_IDS,
-      headerContent = {
-        Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space20)) {
-          TallybookSheetTitle(
-              text = title,
-          )
-          MovimientoTypeSelector(
-              selected = uiState.tipo,
-              enabled = interactionEnabled && !uiState.isSubmitting,
-              onSelected = actions::onTipoChanged,
-          )
-          MovimientoCategoryGuidance(uiState.tipo)
-        }
-      },
-      paneTitle = title,
   )
 }
 
@@ -195,14 +179,7 @@ private fun MovimientoValidationFocus(
     fieldFocus: MovimientoFieldFocus,
 ) {
   LaunchedEffect(uiState.submitAttempted) {
-    when {
-      uiState.isCategoriaMissing -> {
-        fieldFocus.category.requestFocus()
-      }
-      uiState.amountError != null -> {
-        fieldFocus.amount.requestFocus()
-      }
-    }
+    if (uiState.amountError != null) fieldFocus.amount.requestFocus()
   }
 }
 

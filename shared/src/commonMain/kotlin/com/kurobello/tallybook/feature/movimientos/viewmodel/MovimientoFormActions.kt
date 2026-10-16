@@ -12,7 +12,9 @@ internal interface MovimientoFormActions {
 
   fun onFechaChanged(value: LocalDate)
 
-  fun onCategoriaSelected(id: String)
+  fun onCategoriasChanged(ids: List<String>)
+
+  fun onCategoriaRemoved(id: String)
 
   fun onDescripcionChanged(value: String)
 

@@ -9,6 +9,7 @@ import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSentenceUi
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSummaryUi
 import com.kurobello.tallybook.feature.movimientos.viewmodel.PhrasePreviewUi
 import kotlinx.datetime.LocalDate
@@ -16,39 +17,60 @@ import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_cine
 import tallybook.shared.generated.resources.category_comida
+import tallybook.shared.generated.resources.category_hogar
 import tallybook.shared.generated.resources.category_otros
+import tallybook.shared.generated.resources.category_regalo
+import tallybook.shared.generated.resources.category_salud
 import tallybook.shared.generated.resources.category_transporte
 
 /**
  * Deterministic UI models shared by previews, the UI catalog and device tests. Category names are
  * the localized seed names, so samples read like real data in every language.
  */
-@Suppress("MagicNumber")
+@Suppress("MagicNumber", "LongParameterList")
 internal class MovimientoEntrySamples(
     val cinema: Categoria,
     val food: Categoria,
     val transport: Categoria,
     val other: Categoria,
+    val health: Categoria,
+    val home: Categoria,
+    val gifts: Categoria,
 ) {
   private val twentyThousand = Money(2_000_000, moneda)
 
-  val emptyPreview = PhrasePreviewUi.Empty
-  val partialPreview =
-      PhrasePreviewUi(
-          tipo = TipoMovimiento.GASTO,
-          monto = twentyThousand,
-          fecha = null,
-          categoria = null,
+  val all = listOf(cinema, food, transport, other, health, home, gifts)
+
+  val emptySentence =
+      MovimientoSentenceUi(
+          text = "",
+          detected = PhrasePreviewUi(TipoMovimiento.GASTO, monto = null, fecha = today),
+          today = today,
+          moneda = moneda,
+          categorias = listOf(other),
+          categoriasArePending = true,
+          suggestions = emptyList(),
+          isEnabled = true,
+          actionsEnabled = true,
       )
-  val completePreview =
-      PhrasePreviewUi(
-          tipo = TipoMovimiento.GASTO,
-          monto = twentyThousand,
-          fecha = yesterday,
-          categoria = cinema,
+  val partialSentence =
+      emptySentence.copy(
+          text = "Spent 20.000",
+          detected = emptySentence.detected.copy(monto = twentyThousand),
       )
-  val incomePreview =
-      completePreview.copy(tipo = TipoMovimiento.INGRESO, categoria = null, fecha = today)
+  val completeSentence =
+      partialSentence.copy(
+          text = SENTENCE,
+          detected = PhrasePreviewUi(TipoMovimiento.GASTO, twentyThousand, yesterday),
+          categorias = listOf(cinema),
+          categoriasArePending = false,
+          suggestions = listOf(food, transport),
+      )
+  val incomeSentence =
+      completeSentence.copy(
+          text = "Received 20.000",
+          detected = PhrasePreviewUi(TipoMovimiento.INGRESO, twentyThousand, today),
+      )
 
   val completeSummary =
       MovimientoSummaryUi(
@@ -57,8 +79,8 @@ internal class MovimientoEntrySamples(
           monto = twentyThousand,
           amountNeedsReview = false,
           descripcion = SENTENCE,
-          categoria = cinema,
-          categoriaIsPending = false,
+          categorias = listOf(cinema),
+          categoriasArePending = false,
           suggestions = listOf(food, transport),
           isSubmitting = false,
       )
@@ -66,9 +88,14 @@ internal class MovimientoEntrySamples(
   val ambiguousAmountSummary = completeSummary.copy(amountNeedsReview = true)
   val pendingSummary =
       completeSummary.copy(
-          categoria = other,
-          categoriaIsPending = true,
+          categorias = listOf(other),
+          categoriasArePending = true,
           suggestions = listOf(cinema, food, transport),
+      )
+  val fullSummary =
+      completeSummary.copy(
+          categorias = listOf(cinema, food, transport, health, home, gifts),
+          suggestions = emptyList(),
       )
   val submittingSummary = completeSummary.copy(isSubmitting = true)
   val incomeSummary =
@@ -92,7 +119,10 @@ internal fun rememberMovimientoEntrySamples(): MovimientoEntrySamples {
   val food = stringResource(Res.string.category_comida)
   val transport = stringResource(Res.string.category_transporte)
   val other = stringResource(Res.string.category_otros)
-  return remember(cinema, food, transport, other) {
+  val health = stringResource(Res.string.category_salud)
+  val home = stringResource(Res.string.category_hogar)
+  val gifts = stringResource(Res.string.category_regalo)
+  return remember(cinema, food, transport, other, health, home, gifts) {
     MovimientoEntrySamples(
         cinema = Categoria("cat_cine", cinema, null, CategoryIcon.FILM, CategoryTint.INFO),
         food = Categoria("cat_comida", food, null, CategoryIcon.UTENSILS, CategoryTint.AMBER),
@@ -106,6 +136,9 @@ internal fun rememberMovimientoEntrySamples(): MovimientoEntrySamples {
                 CategoryIcon.CIRCLE_DASHED,
                 CategoryTint.NEUTRAL,
             ),
+        health = Categoria("cat_salud", health, null, CategoryIcon.HEART_PULSE, CategoryTint.ROSE),
+        home = Categoria("cat_hogar", home, null, CategoryIcon.HOUSE, CategoryTint.EMERALD),
+        gifts = Categoria("cat_regalo", gifts, null, CategoryIcon.GIFT, CategoryTint.PURPLE),
     )
   }
 }

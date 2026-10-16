@@ -9,10 +9,7 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,9 +29,7 @@ import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
 import com.kurobello.tallybook.core.ui.component.TallybookConfirmationDialog
 import com.kurobello.tallybook.core.ui.component.TallybookConfirmationDialogCopy
 import com.kurobello.tallybook.core.ui.component.TallybookModalBottomSheet
-import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
-import com.kurobello.tallybook.core.ui.component.clearFocusOnUnconsumedTap
-import com.kurobello.tallybook.core.ui.component.needsManualInputReveal
+import com.kurobello.tallybook.core.ui.component.TallybookModalDialog
 import com.kurobello.tallybook.core.ui.component.rememberDismissGuard
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoActions
@@ -42,7 +37,6 @@ import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoEffect
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoStep
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoUiState
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
-import com.kurobello.tallybook.feature.movimientos.viewmodel.PhrasePreviewUi
 import kotlinx.coroutines.flow.Flow
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -53,11 +47,10 @@ import tallybook.shared.generated.resources.discard_changes_confirm
 import tallybook.shared.generated.resources.discard_changes_message
 import tallybook.shared.generated.resources.discard_changes_title
 
-// One detent per step lets the sheet animate between step heights; growth inside a step (keyboard,
-// error message) is tracked by the sheet itself.
-private val STEP_DETENTS: Map<AddMovimientoStep, String> =
+// One detent per sheet step lets the sheet animate between their heights; growth inside a step
+// (keyboard, error message) is tracked by the sheet itself.
+private val SHEET_STEP_DETENTS: Map<AddMovimientoStep, String> =
     mapOf(
-        AddMovimientoStep.PHRASE to "add-movimiento-phrase",
         AddMovimientoStep.SUMMARY to "add-movimiento-summary",
         AddMovimientoStep.FORM to "add-movimiento-form",
     )
@@ -86,7 +79,6 @@ private fun AddMovimientoSheet(
     callbacks: ModalBottomSheetCallbacks,
     modifier: Modifier = Modifier,
 ) {
-  val fadeMillis = TallybookTheme.motion.fadeMillis
   val dismissGuard =
       rememberDismissGuard(
           hasUnsavedChanges = uiState.hasUnsavedChanges,
@@ -94,36 +86,45 @@ private fun AddMovimientoSheet(
           onDiscardChanges = actions::onDiscardChanges,
           onDismiss = callbacks.onDismiss,
       )
-  TallybookModalBottomSheet(
-      visible = visible,
-      paneTitle = stringResource(Res.string.add_movimiento_pane_title),
+  val categoryPicker = rememberMovimientoCategoryPicker(interactionEnabled = !uiState.isSubmitting)
+  val isSentence = uiState.step == AddMovimientoStep.PHRASE
+  // Either surface also hides when the flow moves between them; only a closed session is final.
+  val currentVisible by rememberUpdatedState(visible)
+  val onHidden: () -> Unit = { if (!currentVisible) callbacks.onHidden() }
+  MovimientoSentenceDialog(
+      visible = visible && isSentence,
+      uiState = uiState,
+      actions = actions,
+      onAddCategoria = categoryPicker.onOpen,
+      onDismissRequest = dismissGuard::requestDismiss,
+      onHidden = onHidden,
+  )
+  MovimientoReviewSheet(
+      visible = visible && !isSentence,
+      uiState = uiState,
+      actions = actions,
+      onAddCategoria = categoryPicker.onOpen,
       callbacks =
           callbacks.copy(
               onDismissRequest = dismissGuard::requestDismiss,
+              onHidden = onHidden,
               onBack = {
                 if (uiState.stepBackTarget != null) actions.onStepBack()
                 else dismissGuard.requestDismiss()
               },
           ),
-      layout =
-          ModalBottomSheetLayout(
-              modifier = modifier,
-              contentDetentIdentifiers = STEP_DETENTS.values.toList(),
-              activeContentDetentIdentifier = STEP_DETENTS.getValue(uiState.step),
-          ),
-  ) {
-    AnimatedContent(
-        targetState = uiState.step,
-        transitionSpec = { stepTransition(animated = visible, fadeMillis = fadeMillis) },
-        label = "add movimiento step",
-    ) { step ->
-      when (step) {
-        AddMovimientoStep.PHRASE -> PhraseStepContent(uiState, actions)
-        AddMovimientoStep.SUMMARY -> SummaryStepContent(uiState, actions)
-        AddMovimientoStep.FORM -> MovimientoForm(uiState = uiState, actions = actions)
-      }
-    }
-  }
+      modifier = modifier,
+  )
+  // The form hosts its own picker; this one serves the dialog and the review step.
+  CategoryPickerSheet(
+      visible = categoryPicker.isVisible && uiState.step != AddMovimientoStep.FORM,
+      categorias = uiState.categorias,
+      selectedIds = uiState.categoriaIds.realCategoriaIds(),
+      onSelectionChange = actions::onCategoriasChanged,
+      onDismiss = categoryPicker.onDismiss,
+      onBack = categoryPicker.onDismiss,
+      excludedIds = PICKER_EXCLUDED_CATEGORY_IDS,
+  )
   TallybookConfirmationDialog(
       visible = dismissGuard.isConfirmationVisible,
       copy =
@@ -138,6 +139,104 @@ private fun AddMovimientoSheet(
   )
 }
 
+@Composable
+@Suppress("LongParameterList")
+private fun MovimientoSentenceDialog(
+    visible: Boolean,
+    uiState: AddMovimientoUiState,
+    actions: AddMovimientoActions,
+    onAddCategoria: () -> Unit,
+    onDismissRequest: () -> Boolean,
+    onHidden: () -> Unit,
+) {
+  val focusManager = LocalFocusManager.current
+  val focusRequester = remember { FocusRequester() }
+  val callbacks =
+      MovimientoSentenceCallbacks(
+          onTextChange = actions::onPhraseChanged,
+          onContinue = {
+            focusManager.clearFocus(force = true)
+            actions.onPhraseContinue()
+          },
+          onFillManually = {
+            focusManager.clearFocus(force = true)
+            actions.onFillManually()
+          },
+          onRemoveCategoria = { actions.onCategoriaRemoved(it.id) },
+          onAddCategoria = onAddCategoria,
+          onSuggestion = { actions.onSuggestionSelected(it.id) },
+      )
+  TallybookModalDialog(
+      visible = visible,
+      paneTitle = stringResource(Res.string.add_movimiento_pane_title),
+      onDismissRequest = { onDismissRequest() },
+      onHidden = onHidden,
+  ) {
+    MovimientoSentenceStep(
+        sentence = uiState.sentence,
+        callbacks = callbacks,
+        focusRequester = focusRequester,
+        modifier = Modifier.weight(1f, fill = false),
+    )
+    MovimientoFormErrorMessage(
+        error = uiState.loadError,
+        onRetry = actions::onRetryLoad,
+        interactionEnabled = !uiState.isSubmitting,
+    )
+  }
+}
+
+@Composable
+@Suppress("LongParameterList")
+private fun MovimientoReviewSheet(
+    visible: Boolean,
+    uiState: AddMovimientoUiState,
+    actions: AddMovimientoActions,
+    onAddCategoria: () -> Unit,
+    callbacks: ModalBottomSheetCallbacks,
+    modifier: Modifier = Modifier,
+) {
+  val fadeMillis = TallybookTheme.motion.fadeMillis
+  val step = rememberSheetStep(uiState.step)
+  TallybookModalBottomSheet(
+      visible = visible,
+      paneTitle = stringResource(Res.string.add_movimiento_pane_title),
+      callbacks = callbacks,
+      layout =
+          ModalBottomSheetLayout(
+              modifier = modifier,
+              contentDetentIdentifiers = SHEET_STEP_DETENTS.values.toList(),
+              activeContentDetentIdentifier = SHEET_STEP_DETENTS.getValue(step),
+          ),
+  ) {
+    AnimatedContent(
+        targetState = step,
+        transitionSpec = { stepTransition(animated = visible, fadeMillis = fadeMillis) },
+        label = "add movimiento step",
+    ) { current ->
+      if (current == AddMovimientoStep.FORM) MovimientoForm(uiState = uiState, actions = actions)
+      else SummaryStepContent(uiState, actions, onAddCategoria)
+    }
+  }
+}
+
+// Back from the review hides the sheet while the step already reads PHRASE; keeping the last sheet
+// step lets the exit animation play over the content the user was looking at.
+@Composable
+private fun rememberSheetStep(step: AddMovimientoStep): AddMovimientoStep {
+  val last = remember { LastSheetStep() }
+  return last.resolve(step)
+}
+
+private class LastSheetStep {
+  private var value = AddMovimientoStep.SUMMARY
+
+  fun resolve(step: AddMovimientoStep): AddMovimientoStep {
+    if (step != AddMovimientoStep.PHRASE) value = step
+    return value
+  }
+}
+
 // The size snaps so the sheet's own detent animation is the only height motion: an animated size
 // would still be growing when the detent settles and its capture would cap the content early. A
 // discard resets the step while the sheet leaves, and animating that reset would flash content.
@@ -149,69 +248,35 @@ private fun stepTransition(animated: Boolean, fadeMillis: Int): ContentTransform
     )
 
 @Composable
-private fun PhraseStepContent(uiState: AddMovimientoUiState, actions: AddMovimientoActions) {
-  val focusManager = LocalFocusManager.current
-  val focusRequester = remember { FocusRequester() }
-  StepColumn(modifier = if (needsManualInputReveal) Modifier.imePadding() else Modifier) {
-    MovimientoPhraseStep(
-        text = uiState.phrase,
-        preview = uiState.preview ?: PhrasePreviewUi.Empty,
-        moneda = uiState.moneda,
-        onTextChange = actions::onPhraseChanged,
-        onContinue = {
-          focusManager.clearFocus(force = true)
-          actions.onPhraseContinue()
-        },
-        onFillManually = {
-          focusManager.clearFocus(force = true)
-          actions.onFillManually()
-        },
-        focusRequester = focusRequester,
-        today = uiState.today,
-        enabled = !uiState.isSubmitting,
-        actionsEnabled = !uiState.isLoading && uiState.loadError == null,
-    )
-    MovimientoFormErrorMessage(
-        error = uiState.loadError,
-        onRetry = actions::onRetryLoad,
-        interactionEnabled = !uiState.isSubmitting,
-    )
-  }
-}
-
-@Composable
-private fun SummaryStepContent(uiState: AddMovimientoUiState, actions: AddMovimientoActions) {
+private fun SummaryStepContent(
+    uiState: AddMovimientoUiState,
+    actions: AddMovimientoActions,
+    onAddCategoria: () -> Unit,
+) {
   val summary = uiState.summary ?: return
-  StepColumn {
-    MovimientoSummaryStep(
-        summary = summary,
-        onSelectSuggestion = { actions.onSuggestionSelected(it.id) },
-        onEdit = actions::onEditMovimiento,
-        onSave = actions::onSubmit,
-        today = uiState.today,
-    )
-    MovimientoFormErrorMessage(
-        error = uiState.error,
-        onRetry = actions::onRetryLoad,
-        interactionEnabled = !uiState.isSubmitting,
-    )
-  }
-}
-
-@Composable
-private fun StepColumn(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-  Column(
+  MovimientoSummaryStep(
+      summary = summary,
+      callbacks =
+          MovimientoSummaryCallbacks(
+              onRemoveCategoria = { actions.onCategoriaRemoved(it.id) },
+              onAddCategoria = onAddCategoria,
+              onSuggestion = { actions.onSuggestionSelected(it.id) },
+              onEdit = actions::onEditMovimiento,
+              onSave = actions::onSubmit,
+          ),
+      today = uiState.today,
       modifier =
-          modifier
-              .fillMaxWidth()
+          Modifier.heightIn(min = rememberReviewMinimumHeight())
               .padding(horizontal = TallybookTheme.dimensions.screenHorizontal)
-              .padding(bottom = TallybookTheme.spacing.space8)
-              .clearFocusOnUnconsumedTap(),
-      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16),
-  ) {
-    TallybookSheetTitle(stringResource(Res.string.add_movimiento_pane_title))
-    content()
-  }
+              .padding(bottom = TallybookTheme.spacing.space8),
+      messageContent = {
+        MovimientoFormErrorMessage(
+            error = uiState.error,
+            onRetry = actions::onRetryLoad,
+            interactionEnabled = !uiState.isSubmitting,
+        )
+      },
+  )
 }
 
 @Composable

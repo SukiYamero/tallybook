@@ -19,6 +19,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
@@ -34,16 +37,20 @@ private const val ORIGIN_TOP_Y = 0f
  * A modal card anchored near the top of the screen. The anchor keeps the dialog still when the
  * keyboard opens: only the height available to [content] shrinks, so [content] must tolerate a
  * bounded height. Scrim taps and Back call [onDismissRequest]; the caller decides whether that
- * closes the dialog or asks to discard first.
+ * closes the dialog or asks to discard first. [onHidden] runs once the exit animation has finished
+ * and the content left composition.
  */
 @Composable
+@Suppress("LongParameterList")
 internal fun TallybookModalDialog(
     visible: Boolean,
     paneTitle: String,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
+    onHidden: () -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
+  val currentOnHidden by rememberUpdatedState(onHidden)
   UnstyledDialog(
       visible = visible,
       onDismissRequest = onDismissRequest,
@@ -79,6 +86,7 @@ internal fun TallybookModalDialog(
                   ),
           exit = fadeOut(TallybookOverlayMotion.exitAnimationSpec),
       ) {
+        DisposableEffect(Unit) { onDispose { currentOnHidden() } }
         TallybookModalDialogSurface(content)
       }
     }

@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.ui.theme.TallybookSpacing
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSummaryUi
 import kotlin.test.assertEquals
@@ -27,12 +28,23 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.amount
+import tallybook.shared.generated.resources.category_tag_add_description
+import tallybook.shared.generated.resources.category_tag_field_label
+import tallybook.shared.generated.resources.category_tag_remove
+import tallybook.shared.generated.resources.date
+import tallybook.shared.generated.resources.expense
+import tallybook.shared.generated.resources.movement_type
 import tallybook.shared.generated.resources.movimiento_pending_label
+import tallybook.shared.generated.resources.movimiento_relative_yesterday
 import tallybook.shared.generated.resources.movimiento_summary_amount_missing
 import tallybook.shared.generated.resources.movimiento_summary_amount_review
+import tallybook.shared.generated.resources.movimiento_summary_description_label
 import tallybook.shared.generated.resources.movimiento_summary_description_quote
 import tallybook.shared.generated.resources.movimiento_summary_edit
 import tallybook.shared.generated.resources.movimiento_summary_save
+import tallybook.shared.generated.resources.movimiento_summary_subtitle
+import tallybook.shared.generated.resources.movimiento_summary_title
 
 @OptIn(ExperimentalResourceApi::class)
 class MovimientoSummaryStepTest {
@@ -40,6 +52,8 @@ class MovimientoSummaryStepTest {
 
   private val samples = testEntrySamples()
   private val selected = mutableListOf<Categoria>()
+  private val removed = mutableListOf<Categoria>()
+  private var addRequests = 0
   private var edits = 0
   private var saves = 0
 
@@ -66,12 +80,75 @@ class MovimientoSummaryStepTest {
   }
 
   @Test
-  fun tappingASuggestionSelectsThatCategory() {
+  fun tappingASuggestionAddsThatCategory() {
     show(samples.completeSummary)
 
     composeRule.onNodeWithText(samples.transport.nombre).performClick()
 
     composeRule.runOnIdle { assertEquals(listOf(samples.transport), selected) }
+  }
+
+  @Test
+  fun theReviewHasTitleSubtitleAndLabeledSections() {
+    show(samples.completeSummary)
+
+    composeRule.onNodeWithText(string(Res.string.movimiento_summary_title)).assertIsDisplayed()
+    composeRule.onNodeWithText(string(Res.string.movimiento_summary_subtitle)).assertIsDisplayed()
+    composeRule.onNodeWithText(string(Res.string.movement_type)).assertIsDisplayed()
+    composeRule.onNodeWithText(string(Res.string.date)).assertIsDisplayed()
+    composeRule.onNodeWithText(string(Res.string.amount)).assertIsDisplayed()
+    composeRule
+        .onNodeWithText(string(Res.string.movimiento_summary_description_label))
+        .assertIsDisplayed()
+    composeRule.onNodeWithText(string(Res.string.category_tag_field_label)).assertIsDisplayed()
+  }
+
+  @Test
+  fun typeAndDateSitSideBySideAsLargeBadges() {
+    show(samples.completeSummary)
+
+    val type = bounds(composeRule.onNodeWithText(string(Res.string.expense)))
+    val date = bounds(composeRule.onNodeWithText(string(Res.string.movimiento_relative_yesterday)))
+    assertTrue(type.right <= date.left, "Type must sit to the left of Date")
+    assertEquals(type.center.y, date.center.y, absoluteTolerance = 1f)
+  }
+
+  @Test
+  fun actionsSitAtLeastSpace32BelowTheContent() {
+    show(samples.completeSummary)
+
+    val lastContent = bounds(composeRule.onNodeWithText(samples.transport.nombre))
+    val edit = bounds(composeRule.onNodeWithText(string(Res.string.movimiento_summary_edit)))
+    val minimum = with(composeRule.density) { TallybookSpacing.space32.toPx() }
+    assertTrue(
+        edit.top - lastContent.bottom >= minimum,
+        "Actions start ${edit.top - lastContent.bottom}px below the content, expected $minimum",
+    )
+  }
+
+  @Test
+  fun removingAndAddingTagsReportsTheCallbacks() {
+    show(samples.completeSummary.copy(categorias = listOf(samples.cinema, samples.food)))
+
+    composeRule
+        .onNodeWithContentDescription(string(Res.string.category_tag_remove, samples.food.nombre))
+        .performClick()
+    composeRule
+        .onNodeWithContentDescription(string(Res.string.category_tag_add_description))
+        .performClick()
+    composeRule.runOnIdle {
+      assertEquals(listOf(samples.food), removed)
+      assertEquals(1, addRequests)
+    }
+  }
+
+  @Test
+  fun sixTagsHideAddAndSuggestions() {
+    show(samples.fullSummary)
+
+    composeRule
+        .onNodeWithContentDescription(string(Res.string.category_tag_add_description))
+        .assertDoesNotExist()
   }
 
   @Test
@@ -144,9 +221,14 @@ class MovimientoSummaryStepTest {
       TallybookTheme {
         MovimientoSummaryStep(
             summary = summary,
-            onSelectSuggestion = { selected += it },
-            onEdit = { edits++ },
-            onSave = { saves++ },
+            callbacks =
+                MovimientoSummaryCallbacks(
+                    onRemoveCategoria = { removed += it },
+                    onAddCategoria = { addRequests++ },
+                    onSuggestion = { selected += it },
+                    onEdit = { edits++ },
+                    onSave = { saves++ },
+                ),
             today = MovimientoEntrySamples.today,
         )
       }

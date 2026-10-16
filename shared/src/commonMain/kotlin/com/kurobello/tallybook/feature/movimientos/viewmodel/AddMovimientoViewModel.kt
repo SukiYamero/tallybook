@@ -12,6 +12,7 @@ import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.CategoriaSelection
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Moneda
@@ -64,11 +65,10 @@ internal class AddMovimientoViewModel(
           tipo = TipoMovimiento.GASTO,
           amountInput = "",
           fecha = captureToday(),
-          selectedCategoriaId = null,
+          categoriaIds = emptyList(),
           descripcion = "",
       )
   private var suggestionIndex = entryEngine.dictionaryIndex(clock.now())
-  private var suggestionQuery: SuggestionQuery? = null
   private var previewJob: Job? = null
 
   val uiState: StateFlow<AddMovimientoUiState>
@@ -80,7 +80,7 @@ internal class AddMovimientoViewModel(
                 fecha = initialDraft.fecha,
                 moneda = Moneda.COP,
                 categorias = emptyList(),
-                selectedCategoriaId = initialDraft.selectedCategoriaId,
+                categoriaIds = initialDraft.categoriaIds,
                 descripcion = initialDraft.descripcion,
                 isLoading = true,
                 isSubmitting = false,
@@ -132,10 +132,16 @@ internal class AddMovimientoViewModel(
     updateFields { copy(fecha = value) }
   }
 
-  override fun onCategoriaSelected(id: String) {
+  override fun onCategoriasChanged(ids: List<String>) {
     updateFields {
-      if (categorias.none { it.id == id }) this
-      else copy(selectedCategoriaId = id, dismissedSuggestionIds = dismissedAfterSelecting(id))
+      val updated = CategoriaSelection.reconcile(categoriaIds, ids, categorias)
+      withCategorias(updated, removed = categoriaIds - updated.toSet())
+    }
+  }
+
+  override fun onCategoriaRemoved(id: String) {
+    updateFields {
+      withCategorias(CategoriaSelection.remove(categoriaIds, id), removed = listOf(id))
     }
   }
 
@@ -145,7 +151,7 @@ internal class AddMovimientoViewModel(
 
   override fun onPhraseChanged(value: String) {
     val phrase = value.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH)
-    updateFields { copy(phrase = phrase, preview = preview.takeIf { phrase.isNotBlank() }) }
+    updateFields { if (phrase.isBlank()) withoutInterpretation(phrase) else copy(phrase = phrase) }
     refreshPreview(debounce = true)
   }
 
@@ -154,39 +160,28 @@ internal class AddMovimientoViewModel(
     previewJob?.cancel()
     val today = captureToday()
     val text = uiState.value.phrase.trim()
-    var state = uiState.value
-    var interpretation = interpret(state, text, today)
-    // Dismissals belong to the subject they were made for; a different sentence starts clean.
-    if (
-        state.dismissedSuggestionIds.isNotEmpty() &&
-            interpretation.query.subject != suggestionQuery?.subject
-    ) {
-      state = state.copy(dismissedSuggestionIds = emptySet())
-      interpretation = interpret(state, text, today)
-    }
-    suggestionQuery = interpretation.query
     updateFields {
+      val (base, interpretation) = interpreting(text, today)
       val parsed = interpretation.parsed
-      copy(
-          step = AddMovimientoStep.SUMMARY,
-          dismissedSuggestionIds = state.dismissedSuggestionIds,
-          tipo = interpretation.tipo,
-          amountInput = parsed.monto?.toAmountInput().orEmpty(),
-          fecha = parsed.fecha ?: today,
-          descripcion = text,
-          selectedCategoriaId = interpretation.preselectedCategoriaId,
-          amountNeedsReview =
-              parsed.monto != null && PhraseReviewFlag.AMBIGUOUS_AMOUNT in parsed.reviewFlags,
-          today = today,
-          submitAttempted = false,
-          formOpenedFromSummary = false,
-      )
+      base
+          .withDetection(interpretation, today)
+          .copy(
+              step = AddMovimientoStep.SUMMARY,
+              tipo = interpretation.tipo,
+              amountInput = parsed.monto?.toAmountInput().orEmpty(),
+              fecha = parsed.fecha ?: today,
+              descripcion = text,
+              amountNeedsReview =
+                  parsed.monto != null && PhraseReviewFlag.AMBIGUOUS_AMOUNT in parsed.reviewFlags,
+              today = today,
+              submitAttempted = false,
+              formOpenedFromSummary = false,
+          )
     }
   }
 
   override fun onFillManually() {
     previewJob?.cancel()
-    suggestionQuery = null
     updateFields { withInitialEntry().copy(step = AddMovimientoStep.FORM) }
   }
 
@@ -195,7 +190,10 @@ internal class AddMovimientoViewModel(
   }
 
   override fun onSuggestionSelected(id: String) {
-    updateFields { if (suggestions.any { it.id == id }) copy(selectedCategoriaId = id) else this }
+    updateFields {
+      if (suggestions.none { it.id == id }) this
+      else withCategorias(CategoriaSelection.add(categoriaIds, id, categorias))
+    }
   }
 
   override fun onStepBack() {
@@ -215,7 +213,6 @@ internal class AddMovimientoViewModel(
   override fun onDiscardChanges() {
     if (uiState.value.isSubmitting) return
     previewJob?.cancel()
-    suggestionQuery = null
     uiState.update { current ->
       current
           .withInitialEntry()
@@ -290,25 +287,33 @@ internal class AddMovimientoViewModel(
           tipo = initialDraft.tipo,
           amountInput = initialDraft.amountInput,
           fecha = initialDraft.fecha,
-          selectedCategoriaId = initialDraft.selectedCategoriaId,
+          categoriaIds = initialDraft.categoriaIds,
           descripcion = initialDraft.descripcion,
           submitAttempted = false,
           phrase = "",
           preview = null,
+          suggestionQuery = null,
           dismissedSuggestionIds = emptySet(),
+          categoriasEdited = false,
           amountNeedsReview = false,
           today = initialDraft.fecha,
           formOpenedFromSummary = false,
       )
 
-  private fun AddMovimientoUiState.withDirtyState(): AddMovimientoUiState =
-      copy(hasUnsavedChanges = phrase.isNotBlank() || toDraft() != initialDraft)
+  // Tags picked in the sentence dialog do not guard it: only a typed sentence is worth confirming.
+  private fun AddMovimientoUiState.withDirtyState(): AddMovimientoUiState {
+    val draft = toDraft()
+    val comparable =
+        if (step == AddMovimientoStep.PHRASE) draft.copy(categoriaIds = initialDraft.categoriaIds)
+        else draft
+    return copy(hasUnsavedChanges = phrase.isNotBlank() || comparable != initialDraft)
+  }
 
   private fun AddMovimientoUiState.withSuggestions(): AddMovimientoUiState =
       copy(
           suggestions =
               rankSuggestions()
-                  .filterNot { it.categoriaId == selectedCategoriaId }
+                  .filterNot { it.categoriaId in categoriaIds }
                   .mapNotNull { suggestion ->
                     categorias.firstOrNull { it.id == suggestion.categoriaId }
                   }
@@ -318,12 +323,55 @@ internal class AddMovimientoViewModel(
   private fun AddMovimientoUiState.rankSuggestions() =
       suggestionQuery?.let { entryEngine.rank(suggestionIndex, it, candidates()) }.orEmpty()
 
-  // A suggestion that was selected and then replaced from the form is dismissed for this draft.
-  private fun AddMovimientoUiState.dismissedAfterSelecting(newId: String): Set<String> {
-    val replaced = selectedCategoriaId?.takeIf { previous ->
-      previous != newId && rankSuggestions().any { it.categoriaId == previous }
-    }
-    return dismissedSuggestionIds + setOfNotNull(replaced)
+  // A removed category that the sentence suggested stays dismissed for the same subject.
+  private fun AddMovimientoUiState.withCategorias(
+      updated: List<String>,
+      removed: Collection<String> = emptyList(),
+  ): AddMovimientoUiState {
+    val suggested = rankSuggestions().mapTo(mutableSetOf()) { it.categoriaId }
+    return copy(
+        categoriaIds = updated,
+        categoriasEdited = true,
+        dismissedSuggestionIds = dismissedSuggestionIds + removed.filter { it in suggested },
+    )
+  }
+
+  private fun AddMovimientoUiState.withoutInterpretation(phrase: String): AddMovimientoUiState =
+      copy(
+          phrase = phrase,
+          preview = null,
+          suggestionQuery = null,
+          categoriaIds = if (categoriasEdited) categoriaIds else emptyList(),
+      )
+
+  private fun AddMovimientoUiState.withDetection(
+      interpretation: PhraseInterpretation,
+      today: LocalDate,
+  ): AddMovimientoUiState =
+      copy(
+          preview =
+              PhrasePreviewUi(
+                  tipo = interpretation.tipo,
+                  monto = interpretation.parsed.monto,
+                  fecha = interpretation.parsed.fecha ?: today,
+              ),
+          suggestionQuery = interpretation.query,
+          categoriaIds =
+              if (categoriasEdited) categoriaIds
+              else listOfNotNull(interpretation.preselectedCategoriaId),
+      )
+
+  // Dismissals belong to the subject they were made for; a different sentence starts clean.
+  private fun AddMovimientoUiState.interpreting(
+      text: String,
+      today: LocalDate,
+      computed: PhraseInterpretation = interpret(this, text, today),
+  ): Interpreted {
+    val keepsDismissals =
+        dismissedSuggestionIds.isEmpty() || computed.query.subject == suggestionQuery?.subject
+    if (keepsDismissals) return Interpreted(this, computed)
+    val clean = copy(dismissedSuggestionIds = emptySet())
+    return Interpreted(clean, interpret(clean, text, today))
   }
 
   private fun AddMovimientoUiState.candidates() =
@@ -354,7 +402,8 @@ internal class AddMovimientoViewModel(
           )
       uiState.update { current ->
         if (current.step == AddMovimientoStep.PHRASE && current.phrase.trim() == text) {
-          current.copy(preview = interpretation.toPreview(current.categorias))
+          val (base, interpreted) = current.interpreting(text, current.today, interpretation)
+          base.withDetection(interpreted, current.today).withSuggestions()
         } else {
           current
         }
@@ -390,6 +439,11 @@ internal class AddMovimientoViewModel(
   }
 }
 
+private data class Interpreted(
+    val state: AddMovimientoUiState,
+    val interpretation: PhraseInterpretation,
+)
+
 private class HistoryInputs(
     val history: List<CategoryHistoryRow>,
     val moneda: Moneda,
@@ -402,21 +456,9 @@ internal data class AddMovimientoRepositories(
     val movimientos: MovimientoRepository,
 )
 
-private fun PhraseInterpretation.toPreview(categorias: List<Categoria>): PhrasePreviewUi? {
-  val categoria = preselectedCategoriaId?.let { id -> categorias.firstOrNull { it.id == id } }
-  val preview =
-      PhrasePreviewUi(
-          tipo = parsed.tipo ?: tipo.takeIf { it == TipoMovimiento.INGRESO },
-          monto = parsed.monto,
-          fecha = parsed.fecha,
-          categoria = categoria,
-      )
-  return preview.takeUnless { it.monto == null && it.fecha == null && it.categoria == null }
-}
-
 private data class MovimientoCandidate(
     val amount: Money?,
-    val categoriaId: String?,
+    val categoriaIds: List<String>,
     val isFechaValid: Boolean,
     val isReadyToSave: Boolean,
 ) {
@@ -427,14 +469,14 @@ private data class MovimientoCandidate(
       descripcion: String?,
       createdAt: kotlin.time.Instant,
   ): Movimiento? =
-      takeIf { amount != null && categoriaId != null && isFechaValid && isReadyToSave }
+      takeIf { amount != null && categoriaIds.isNotEmpty() && isFechaValid && isReadyToSave }
           ?.let {
             Movimiento(
                 id = idGenerator.next(),
                 tipo = tipo,
                 monto = requireNotNull(amount),
                 fecha = fecha,
-                categoriaIds = listOf(requireNotNull(categoriaId)),
+                categoriaIds = categoriaIds,
                 descripcion = descripcion,
                 createdAt = createdAt,
             )
@@ -448,7 +490,7 @@ private fun AddMovimientoUiState.toMovimientoOrNull(
 ): Movimiento? =
     MovimientoCandidate(
             amount = (parseAmountInput(amountInput, moneda) as? AmountInputResult.Valid)?.money,
-            categoriaId = effectiveCategoriaId,
+            categoriaIds = effectiveCategoriaIds,
             isFechaValid = fecha <= createdAt.toLocalDateTime(timeZone).date,
             isReadyToSave = !isLoading && error == null,
         )

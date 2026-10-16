@@ -19,7 +19,7 @@ import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.movimiento.signedMovimientoAmountText
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
-import com.kurobello.tallybook.feature.movimientos.viewmodel.PhrasePreviewUi
+import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSentenceUi
 import kotlin.test.assertEquals
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -30,18 +30,28 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.category_tag_add_description
+import tallybook.shared.generated.resources.category_tag_remove
+import tallybook.shared.generated.resources.expense
+import tallybook.shared.generated.resources.movimiento_detected_label
 import tallybook.shared.generated.resources.movimiento_phrase_continue
 import tallybook.shared.generated.resources.movimiento_phrase_fill_manually
 import tallybook.shared.generated.resources.movimiento_phrase_label
+import tallybook.shared.generated.resources.movimiento_relative_today
 import tallybook.shared.generated.resources.movimiento_relative_yesterday
+import tallybook.shared.generated.resources.movimiento_voice_coming_soon
+import tallybook.shared.generated.resources.movimiento_voice_title
 
 @OptIn(ExperimentalResourceApi::class)
-class MovimientoPhraseStepTest {
+class MovimientoSentenceStepTest {
   @get:Rule val composeRule = createComposeRule()
 
   private val samples = testEntrySamples()
   private var continues = 0
   private var manualFills = 0
+  private val removed = mutableListOf<String>()
+  private val suggested = mutableListOf<String>()
+  private var addRequests = 0
 
   @Before
   fun setUp() {
@@ -50,7 +60,7 @@ class MovimientoPhraseStepTest {
 
   @Test
   fun continueIsDisabledForBlankTextAndEnabledOnceTheUserTypes() {
-    show(preview = samples.emptyPreview)
+    show(samples.emptySentence)
     val continueLabel = string(Res.string.movimiento_phrase_continue)
 
     composeRule.onNodeWithText(continueLabel).assertIsNotEnabled()
@@ -61,7 +71,7 @@ class MovimientoPhraseStepTest {
 
   @Test
   fun fillManuallyIsAlwaysAvailable() {
-    show(preview = samples.emptyPreview)
+    show(samples.emptySentence)
 
     composeRule.onNodeWithText(string(Res.string.movimiento_phrase_fill_manually)).performClick()
     composeRule.runOnIdle { assertEquals(1, manualFills) }
@@ -69,18 +79,33 @@ class MovimientoPhraseStepTest {
 
   @Test
   fun inputTakesFocusOnFirstComposition() {
-    show(preview = samples.emptyPreview, requestFocusOnStart = true)
+    show(samples.emptySentence, requestFocusOnStart = true)
 
     composeRule.onNodeWithContentDescription(inputLabel()).assertIsFocused()
   }
 
   @Test
-  fun previewShowsOnlyTheDetectedValues() {
-    show(preview = samples.partialPreview)
+  fun detectedAreaShowsTheDefaultsBeforeAnythingIsDetected() {
+    show(samples.emptySentence)
+
+    composeRule.onNodeWithText(string(Res.string.movimiento_detected_label)).assertIsDisplayed()
+    composeRule.onNodeWithText(string(Res.string.expense)).assertIsDisplayed()
+    composeRule.onNodeWithText(string(Res.string.movimiento_relative_today)).assertIsDisplayed()
+    composeRule
+        .onNodeWithContentDescription(string(Res.string.category_tag_add_description))
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun detectedAreaShowsTheAmountOnlyWhenFound() {
+    show(samples.partialSentence)
 
     composeRule
         .onNodeWithText(
-            signedMovimientoAmountText(samples.partialPreview.monto!!, TipoMovimiento.GASTO)
+            signedMovimientoAmountText(
+                samples.partialSentence.detected.monto!!,
+                TipoMovimiento.GASTO,
+            )
         )
         .assertIsDisplayed()
     composeRule
@@ -89,16 +114,49 @@ class MovimientoPhraseStepTest {
   }
 
   @Test
-  fun completePreviewAddsTheCategoryAndRelativeDate() {
-    show(preview = samples.completePreview)
+  fun completeSentenceShowsTheDateTheTagAndItsSuggestions() {
+    show(samples.completeSentence)
 
-    composeRule.onNodeWithText(samples.cinema.nombre).assertIsDisplayed()
     composeRule.onNodeWithText(string(Res.string.movimiento_relative_yesterday)).assertIsDisplayed()
+    composeRule.onNodeWithText(samples.cinema.nombre).assertIsDisplayed()
+    composeRule.onNodeWithText(samples.food.nombre).performClick()
+    composeRule.runOnIdle { assertEquals(listOf(samples.food.id), suggested) }
+  }
+
+  @Test
+  fun theOnlyTagOffersNoRemovalAndAddOpensThePicker() {
+    show(samples.completeSentence)
+
+    composeRule
+        .onNodeWithContentDescription(string(Res.string.category_tag_remove, samples.cinema.nombre))
+        .assertDoesNotExist()
+    composeRule
+        .onNodeWithContentDescription(string(Res.string.category_tag_add_description))
+        .performClick()
+    composeRule.runOnIdle { assertEquals(1, addRequests) }
+  }
+
+  @Test
+  fun aSecondTagCanBeRemoved() {
+    show(samples.completeSentence.copy(categorias = listOf(samples.cinema, samples.food)))
+
+    composeRule
+        .onNodeWithContentDescription(string(Res.string.category_tag_remove, samples.food.nombre))
+        .performClick()
+    composeRule.runOnIdle { assertEquals(listOf(samples.food.id), removed) }
+  }
+
+  @Test
+  fun voiceDictationIsAnAnnouncedPlaceholder() {
+    show(samples.emptySentence)
+
+    composeRule.onNodeWithText(string(Res.string.movimiento_voice_title)).assertIsDisplayed()
+    composeRule.onNodeWithText(string(Res.string.movimiento_voice_coming_soon)).assertIsDisplayed()
   }
 
   @Test
   fun typedTextIsCappedAtTheDescriptionLimit() {
-    show(preview = samples.emptyPreview)
+    show(samples.emptySentence)
 
     composeRule
         .onNodeWithContentDescription(inputLabel())
@@ -108,19 +166,22 @@ class MovimientoPhraseStepTest {
         .assertIsDisplayed()
   }
 
-  private fun show(preview: PhrasePreviewUi, requestFocusOnStart: Boolean = false) {
+  private fun show(sentence: MovimientoSentenceUi, requestFocusOnStart: Boolean = false) {
     composeRule.setContent {
       TallybookTheme {
-        var text by remember { mutableStateOf("") }
-        MovimientoPhraseStep(
-            text = text,
-            preview = preview,
-            moneda = MovimientoEntrySamples.moneda,
-            onTextChange = { text = it },
-            onContinue = { continues++ },
-            onFillManually = { manualFills++ },
+        var text by remember { mutableStateOf(sentence.text) }
+        MovimientoSentenceStep(
+            sentence = sentence.copy(text = text),
+            callbacks =
+                MovimientoSentenceCallbacks(
+                    onTextChange = { text = it },
+                    onContinue = { continues++ },
+                    onFillManually = { manualFills++ },
+                    onRemoveCategoria = { removed += it.id },
+                    onAddCategoria = { addRequests++ },
+                    onSuggestion = { suggested += it.id },
+                ),
             focusRequester = remember { FocusRequester() },
-            today = MovimientoEntrySamples.today,
             requestFocusOnStart = requestFocusOnStart,
         )
       }
@@ -129,5 +190,7 @@ class MovimientoPhraseStepTest {
 
   private fun inputLabel(): String = string(Res.string.movimiento_phrase_label)
 
-  private fun string(resource: StringResource): String = runBlocking { getString(resource) }
+  private fun string(resource: StringResource, vararg args: Any): String = runBlocking {
+    getString(resource, *args)
+  }
 }

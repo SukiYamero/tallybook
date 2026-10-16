@@ -9,28 +9,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
-import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
-import com.kurobello.tallybook.core.ui.category.CategoryAvatar
-import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
-import com.kurobello.tallybook.core.ui.component.TallybookInputLabel
-import com.kurobello.tallybook.core.ui.component.TallybookSelectionField
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormState
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.category
-import tallybook.shared.generated.resources.category_required
 import tallybook.shared.generated.resources.movimiento_future_date
-import tallybook.shared.generated.resources.movimiento_pending_label
-import tallybook.shared.generated.resources.unknown_category
 
 internal data class MovimientoFieldFocus(
     val amount: FocusRequester = FocusRequester(),
-    val category: FocusRequester = FocusRequester(),
     val amountModifier: Modifier = Modifier,
 )
 
@@ -52,10 +41,10 @@ internal fun MovimientoPrimaryFields(
         modifier = Modifier.padding(top = TallybookTheme.spacing.space8),
     )
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
-    MovimientoCategoryField(
+    MovimientoCategoriesField(
         uiState = uiState,
+        actions = actions,
         onOpen = onOpenCategory,
-        focusRequester = fieldFocus.category,
         enabled = interactionEnabled && !uiState.isSubmitting && !uiState.isLoading,
     )
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
@@ -99,47 +88,4 @@ internal fun MovimientoPrimaryFields(
         modifier = Modifier.padding(top = TallybookTheme.spacing.space40),
     )
   }
-}
-
-@Composable
-private fun MovimientoCategoryField(
-    uiState: MovimientoFormState,
-    onOpen: () -> Unit,
-    focusRequester: FocusRequester,
-    enabled: Boolean,
-) {
-  val displayedId = uiState.displayedCategoriaId
-  val selectedCategoria = uiState.categorias.firstOrNull { it.id == displayedId }
-  val isPending = displayedId == CATEGORIA_OTROS_ID
-  val message =
-      when {
-        uiState.isCategoriaMissing ->
-            TallybookFieldMessage.Error(stringResource(Res.string.category_required))
-        isPending ->
-            TallybookFieldMessage.Supporting(stringResource(Res.string.movimiento_pending_label))
-        else -> null
-      }
-  TallybookSelectionField(
-      label = stringResource(Res.string.category),
-      value =
-          selectedCategoria?.nombre
-              ?: stringResource(Res.string.unknown_category).takeIf { displayedId != null },
-      placeholder = stringResource(Res.string.category_required),
-      onClick = onOpen,
-      modifier = Modifier.focusRequester(focusRequester),
-      enabled = enabled,
-      message = message,
-      leadingContent =
-          selectedCategoria?.let { categoria ->
-            { CategoryAvatar(categoria, pending = isPending) }
-          },
-      labelContent = {
-        TallybookInputLabel(
-            text = stringResource(Res.string.category),
-            color =
-                if (message is TallybookFieldMessage.Error) TallybookTheme.colors.status.danger.base
-                else TallybookTheme.colors.foreground.tertiary,
-        )
-      },
-  )
 }

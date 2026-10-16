@@ -13,45 +13,23 @@ class CategoryPickerNavigationTest {
 
   @Test
   fun aRootWithChildrenOpensItsChildrenInsteadOfBeingChosen() {
-    assertTrue(
-        tree.shouldOpenChildren(comida, allowSubcategories = true, isSearching = false, null)
-    )
+    assertTrue(tree.shouldOpenChildren(comida, isSearching = false, parent = null))
   }
 
   @Test
   fun aRootWithoutChildrenIsChosenDirectly() {
-    assertFalse(
-        tree.shouldOpenChildren(transporte, allowSubcategories = true, isSearching = false, null)
-    )
+    assertFalse(tree.shouldOpenChildren(transporte, isSearching = false, parent = null))
   }
 
   @Test
   fun theParentRowInsideItsChildrenListIsChosenDirectly() {
-    assertFalse(
-        tree.shouldOpenChildren(comida, allowSubcategories = true, isSearching = false, comida)
-    )
-    assertFalse(
-        tree.shouldOpenChildren(
-            supermercado,
-            allowSubcategories = true,
-            isSearching = false,
-            comida,
-        )
-    )
+    assertFalse(tree.shouldOpenChildren(comida, isSearching = false, parent = comida))
+    assertFalse(tree.shouldOpenChildren(supermercado, isSearching = false, parent = comida))
   }
 
   @Test
   fun searchResultsAreChosenDirectly() {
-    assertFalse(
-        tree.shouldOpenChildren(comida, allowSubcategories = true, isSearching = true, null)
-    )
-  }
-
-  @Test
-  fun aParentOnlyPickerNeverOpensChildren() {
-    assertFalse(
-        tree.shouldOpenChildren(comida, allowSubcategories = false, isSearching = false, null)
-    )
+    assertFalse(tree.shouldOpenChildren(comida, isSearching = true, parent = null))
   }
 
   private companion object {

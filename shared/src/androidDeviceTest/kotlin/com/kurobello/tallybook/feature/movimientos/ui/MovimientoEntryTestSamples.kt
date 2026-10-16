@@ -19,4 +19,8 @@ internal fun testEntrySamples() =
                 CategoryIcon.CIRCLE_DASHED,
                 CategoryTint.NEUTRAL,
             ),
+        health =
+            Categoria("cat_salud", "Health", null, CategoryIcon.HEART_PULSE, CategoryTint.ROSE),
+        home = Categoria("cat_hogar", "Home", null, CategoryIcon.HOUSE, CategoryTint.EMERALD),
+        gifts = Categoria("cat_regalo", "Gifts", null, CategoryIcon.GIFT, CategoryTint.PURPLE),
     )

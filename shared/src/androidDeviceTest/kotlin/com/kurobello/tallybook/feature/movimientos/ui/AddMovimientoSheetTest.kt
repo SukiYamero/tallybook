@@ -16,6 +16,8 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -48,6 +50,7 @@ import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.add_movimiento_pane_title
 import tallybook.shared.generated.resources.amount_required
 import tallybook.shared.generated.resources.date
+import tallybook.shared.generated.resources.discard_changes_title
 import tallybook.shared.generated.resources.movimiento_amount_expense_prompt
 import tallybook.shared.generated.resources.movimiento_phrase_continue
 import tallybook.shared.generated.resources.movimiento_phrase_fill_manually
@@ -189,6 +192,91 @@ class AddMovimientoSheetTest {
     composeRule.runOnIdle {
       assertEquals(0, actions.stepBackCount)
       assertEquals(1, dismissCount)
+    }
+  }
+
+  @Test
+  fun backOnATypedSentenceAsksBeforeDiscarding() {
+    val actions = SheetRecordingActions()
+    var dismissCount = 0
+    composeRule.setContent {
+      TallybookTheme {
+        AddMovimientoSheet(
+            visible = true,
+            uiState = state(step = AddMovimientoStep.PHRASE, phrase = "Gasté 20.000"),
+            actions = actions,
+            onDismiss = { dismissCount += 1 },
+        )
+      }
+    }
+    composeRule
+        .onNodeWithText(resourceString(Res.string.movimiento_phrase_continue))
+        .assertIsDisplayed()
+
+    InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+    composeRule.waitForIdle()
+
+    composeRule.onNodeWithText(resourceString(Res.string.discard_changes_title)).assertIsDisplayed()
+    composeRule.runOnIdle { assertEquals(0, dismissCount) }
+  }
+
+  @Test
+  fun theSentenceDialogAndTheReviewSheetNeverShowTogether() {
+    var step by mutableStateOf(AddMovimientoStep.PHRASE)
+    composeRule.setContent {
+      TallybookTheme {
+        AddMovimientoSheet(
+            visible = true,
+            uiState = state(step = step),
+            actions = SheetRecordingActions(),
+            onDismiss = {},
+        )
+      }
+    }
+    val continueLabel = resourceString(Res.string.movimiento_phrase_continue)
+    val saveLabel = resourceString(Res.string.movimiento_summary_save)
+    composeRule.onNodeWithText(continueLabel).assertIsDisplayed()
+    composeRule.onNodeWithContentDescription(saveLabel).assertDoesNotExist()
+
+    composeRule.runOnIdle { step = AddMovimientoStep.SUMMARY }
+    composeRule.waitUntil(5_000) {
+      composeRule.onAllNodesWithContentDescription(saveLabel).fetchSemanticsNodes().isNotEmpty()
+    }
+
+    composeRule.waitUntil(5_000) {
+      composeRule.onAllNodesWithText(continueLabel).fetchSemanticsNodes().isEmpty()
+    }
+  }
+
+  @Test
+  fun reviewSheetOpensTallInsteadOfHuggingItsContent() {
+    composeRule.setContent {
+      TallybookTheme {
+        AddMovimientoSheet(
+            visible = true,
+            uiState = state(step = AddMovimientoStep.SUMMARY),
+            actions = SheetRecordingActions(),
+            onDismiss = {},
+        )
+      }
+    }
+
+    val sheetNode =
+        composeRule
+            .onNode(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.PaneTitle,
+                    resourceString(Res.string.add_movimiento_pane_title),
+                )
+            )
+            .fetchSemanticsNode()
+    val rootHeight = sheetNode.layoutInfo.coordinates.findRootCoordinates().size.height.toFloat()
+
+    composeRule.runOnIdle {
+      assertTrue(
+          sheetNode.boundsInRoot.height >= rootHeight * REVIEW_MINIMUM_FRACTION,
+          "Expected the review sheet to be tall: ${sheetNode.boundsInRoot.height} of $rootHeight",
+      )
     }
   }
 
@@ -439,6 +527,10 @@ class AddMovimientoSheetTest {
     }
   }
 
+  private companion object {
+    const val REVIEW_MINIMUM_FRACTION = 0.6f
+  }
+
   private fun assertSaveFullyReachable(navigationBarBottom: Int) {
     val cta = composeRule.onNodeWithContentDescription(resourceString(Res.string.save_expense))
     cta.assertIsDisplayed()
@@ -460,7 +552,7 @@ class AddMovimientoSheetTest {
           fecha = LocalDate(2026, 9, 15),
           moneda = Moneda.COP,
           categorias = listOf(category, otros),
-          selectedCategoriaId = category.id,
+          categoriaIds = listOf(category.id),
           descripcion = "Gasté 1 en comida",
           isLoading = false,
           isSubmitting = isSubmitting,
@@ -468,6 +560,7 @@ class AddMovimientoSheetTest {
           error = null,
           step = step,
           phrase = phrase,
+          hasUnsavedChanges = phrase.isNotBlank(),
           formOpenedFromSummary = step == AddMovimientoStep.FORM,
       )
 
@@ -507,7 +600,9 @@ class AddMovimientoSheetTest {
 
     override fun onFechaChanged(value: LocalDate) = Unit
 
-    override fun onCategoriaSelected(id: String) = Unit
+    override fun onCategoriasChanged(ids: List<String>) = Unit
+
+    override fun onCategoriaRemoved(id: String) = Unit
 
     override fun onDescripcionChanged(value: String) = Unit
 

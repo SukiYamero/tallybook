@@ -32,7 +32,6 @@ import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.ZERO
@@ -112,7 +111,7 @@ class FirstMovimientoIntegrationTest {
           testScheduler.advanceUntilIdle()
           expenseForm.apply {
             onAmountChanged("10,50")
-            onCategoriaSelected("cat_comida")
+            onCategoriasChanged(listOf("cat_comida"))
             onSubmit()
           }
           testScheduler.advanceUntilIdle()
@@ -131,7 +130,7 @@ class FirstMovimientoIntegrationTest {
           incomeForm.apply {
             onTipoChanged(TipoMovimiento.INGRESO)
             onAmountChanged("20,00")
-            onCategoriaSelected("cat_ingresos")
+            onCategoriasChanged(listOf("cat_ingresos"))
             onSubmit()
           }
           testScheduler.advanceUntilIdle()
@@ -233,7 +232,7 @@ class FirstMovimientoIntegrationTest {
           testScheduler.advanceUntilIdle()
           first.onPhraseChanged("Aceite 30 mil")
           first.onPhraseContinue()
-          assertNull(first.uiState.value.selectedCategoriaId)
+          assertTrue(first.uiState.value.categoriaIds.isEmpty())
           first.onSuggestionSelected("cat_supermercado")
           first.onSubmit()
           testScheduler.advanceUntilIdle()
@@ -256,7 +255,7 @@ class FirstMovimientoIntegrationTest {
           second.onPhraseChanged("Aceite 15 mil")
           second.onPhraseContinue()
 
-          assertEquals("cat_supermercado", second.uiState.value.selectedCategoriaId)
+          assertEquals(listOf("cat_supermercado"), second.uiState.value.categoriaIds)
           assertEquals(Money(1_500_000, Moneda.COP), second.uiState.value.summary?.monto)
 
           second.onDiscardChanges()

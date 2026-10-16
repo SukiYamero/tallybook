@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlinx.datetime.LocalDate
@@ -11,15 +12,26 @@ internal enum class AddMovimientoStep {
   FORM,
 }
 
+/** What the sentence says so far; [tipo] and [fecha] fall back to expense and today. */
 internal data class PhrasePreviewUi(
-    val tipo: TipoMovimiento?,
+    val tipo: TipoMovimiento,
     val monto: Money?,
-    val fecha: LocalDate?,
-    val categoria: Categoria?,
+    val fecha: LocalDate,
+)
+
+internal data class MovimientoSentenceUi(
+    val text: String,
+    val detected: PhrasePreviewUi,
+    val today: LocalDate,
+    val moneda: Moneda,
+    val categorias: List<Categoria>,
+    val categoriasArePending: Boolean,
+    val suggestions: List<Categoria>,
+    val isEnabled: Boolean,
+    val actionsEnabled: Boolean,
 ) {
-  companion object {
-    val Empty = PhrasePreviewUi(tipo = null, monto = null, fecha = null, categoria = null)
-  }
+  val canContinue: Boolean
+    get() = isEnabled && actionsEnabled && text.isNotBlank()
 }
 
 internal data class MovimientoSummaryUi(
@@ -28,8 +40,8 @@ internal data class MovimientoSummaryUi(
     val monto: Money?,
     val amountNeedsReview: Boolean,
     val descripcion: String,
-    val categoria: Categoria,
-    val categoriaIsPending: Boolean,
+    val categorias: List<Categoria>,
+    val categoriasArePending: Boolean,
     val suggestions: List<Categoria>,
     val isSubmitting: Boolean,
 )

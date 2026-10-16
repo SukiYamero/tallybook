@@ -52,7 +52,7 @@ private fun previewUiState(
         fecha = LocalDate.parse("2026-09-15"),
         moneda = Moneda.COP,
         categorias = emptyList(),
-        selectedCategoriaId = null,
+        categoriaIds = emptyList(),
         descripcion = "",
         isLoading = isLoading,
         isSubmitting = isSubmitting,
@@ -68,7 +68,9 @@ private object PreviewAddMovimientoActions : AddMovimientoActions {
 
   override fun onFechaChanged(value: LocalDate) = Unit
 
-  override fun onCategoriaSelected(id: String) = Unit
+  override fun onCategoriasChanged(ids: List<String>) = Unit
+
+  override fun onCategoriaRemoved(id: String) = Unit
 
   override fun onDescripcionChanged(value: String) = Unit
 

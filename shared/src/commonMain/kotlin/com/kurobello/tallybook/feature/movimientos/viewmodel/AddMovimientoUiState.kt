@@ -21,7 +21,7 @@ internal data class AddMovimientoUiState(
     override val fecha: LocalDate,
     override val moneda: Moneda,
     override val categorias: List<Categoria>,
-    override val selectedCategoriaId: String?,
+    override val categoriaIds: List<String>,
     override val descripcion: String,
     override val isLoading: Boolean,
     override val isSubmitting: Boolean,
@@ -31,8 +31,11 @@ internal data class AddMovimientoUiState(
     val step: AddMovimientoStep = AddMovimientoStep.PHRASE,
     val phrase: String = "",
     val preview: PhrasePreviewUi? = null,
+    val suggestionQuery: SuggestionQuery? = null,
     val suggestions: List<Categoria> = emptyList(),
     val dismissedSuggestionIds: Set<String> = emptySet(),
+    // While false the sentence owns the categories; the first manual change takes them over.
+    val categoriasEdited: Boolean = false,
     val amountNeedsReview: Boolean = false,
     val today: LocalDate = fecha,
     val formOpenedFromSummary: Boolean = false,
@@ -43,19 +46,28 @@ internal data class AddMovimientoUiState(
     get() = (amountResult as? AmountInputResult.Invalid)?.reason?.takeIf { submitAttempted }
 
   override val isCategoriaMissing: Boolean
-    get() = submitAttempted && effectiveCategoriaId == null
+    get() = submitAttempted && effectiveCategoriaIds.isEmpty()
 
-  /** The selection, or the pending fallback when nothing valid is selected. */
-  val effectiveCategoriaId: String?
-    get() = selectedCategoriaId?.takeIf(::isLoaded) ?: CATEGORIA_OTROS_ID.takeIf(::isLoaded)
+  /** The loaded selection, or the pending fallback when nothing valid is selected. */
+  val effectiveCategoriaIds: List<String>
+    get() =
+        categoriaIds.filter(::isLoaded).ifEmpty {
+          listOfNotNull(CATEGORIA_OTROS_ID.takeIf(::isLoaded))
+        }
 
-  override val displayedCategoriaId: String?
-    get() = effectiveCategoriaId
+  override val displayedCategoriaIds: List<String>
+    get() = effectiveCategoriaIds
+
+  val effectiveCategorias: List<Categoria>
+    get() = effectiveCategoriaIds.mapNotNull { id -> categorias.firstOrNull { it.id == id } }
+
+  val categoriasArePending: Boolean
+    get() = CATEGORIA_OTROS_ID in effectiveCategoriaIds
 
   val canSubmit: Boolean
     get() =
         amountResult is AmountInputResult.Valid &&
-            effectiveCategoriaId != null &&
+            effectiveCategoriaIds.isNotEmpty() &&
             !isLoading &&
             !isSubmitting &&
             error == null
@@ -74,17 +86,35 @@ internal data class AddMovimientoUiState(
               step == AddMovimientoStep.FORM && formOpenedFromSummary
             }
 
+  /** What the sentence dialog shows as detected, with the defaults until the text says more. */
+  val detected: PhrasePreviewUi
+    get() = preview ?: PhrasePreviewUi(TipoMovimiento.GASTO, monto = null, fecha = today)
+
+  val sentence: MovimientoSentenceUi
+    get() =
+        MovimientoSentenceUi(
+            text = phrase,
+            detected = detected,
+            today = today,
+            moneda = moneda,
+            categorias = effectiveCategorias,
+            categoriasArePending = categoriasArePending,
+            suggestions = suggestions,
+            isEnabled = !isSubmitting,
+            actionsEnabled = !isLoading && loadError == null,
+        )
+
   val summary: MovimientoSummaryUi?
     get() {
-      val categoria = categorias.firstOrNull { it.id == effectiveCategoriaId } ?: return null
+      val selected = effectiveCategorias.takeIf { it.isNotEmpty() } ?: return null
       return MovimientoSummaryUi(
           tipo = tipo,
           fecha = fecha,
           monto = (amountResult as? AmountInputResult.Valid)?.money,
           amountNeedsReview = amountNeedsReview,
           descripcion = descripcion,
-          categoria = categoria,
-          categoriaIsPending = categoria.id == CATEGORIA_OTROS_ID,
+          categorias = selected,
+          categoriasArePending = categoriasArePending,
           suggestions = suggestions,
           isSubmitting = isSubmitting,
       )
@@ -97,7 +127,7 @@ internal data class MovimientoDraft(
     val tipo: TipoMovimiento,
     val amountInput: String,
     val fecha: LocalDate,
-    val selectedCategoriaId: String?,
+    val categoriaIds: List<String>,
     val descripcion: String,
 )
 
@@ -106,6 +136,6 @@ internal fun AddMovimientoUiState.toDraft(): MovimientoDraft =
         tipo = tipo,
         amountInput = amountInput,
         fecha = fecha,
-        selectedCategoriaId = selectedCategoriaId,
+        categoriaIds = categoriaIds,
         descripcion = descripcion,
     )

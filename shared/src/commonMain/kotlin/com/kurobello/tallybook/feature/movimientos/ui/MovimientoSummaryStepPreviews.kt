@@ -2,7 +2,9 @@
 
 package com.kurobello.tallybook.feature.movimientos.ui
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSummaryUi
@@ -39,6 +41,11 @@ private fun SummaryStepPendingDarkPreview() =
 
 @Preview
 @Composable
+private fun SummaryStepFullLightPreview() =
+    SummaryStepPreview(MovimientoEntrySamples::fullSummary, darkTheme = false)
+
+@Preview
+@Composable
 private fun SummaryStepSubmittingPreview() =
     SummaryStepPreview(MovimientoEntrySamples::submittingSummary, darkTheme = false)
 
@@ -55,10 +62,16 @@ private fun SummaryStepPreview(
   TallybookTheme(darkTheme = darkTheme) {
     MovimientoSummaryStep(
         summary = summary(rememberMovimientoEntrySamples()),
-        onSelectSuggestion = {},
-        onEdit = {},
-        onSave = {},
+        callbacks =
+            MovimientoSummaryCallbacks(
+                onRemoveCategoria = {},
+                onAddCategoria = {},
+                onSuggestion = {},
+                onEdit = {},
+                onSave = {},
+            ),
         today = MovimientoEntrySamples.today,
+        modifier = Modifier.padding(TallybookTheme.spacing.space16),
     )
   }
 }

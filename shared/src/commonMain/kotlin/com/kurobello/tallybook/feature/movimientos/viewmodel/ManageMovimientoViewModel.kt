@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
-import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
+import com.kurobello.tallybook.core.model.CategoriaSelection
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Money
@@ -79,10 +79,13 @@ internal class ManageMovimientoViewModel(
     copy(descripcion = value.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH))
   }
 
-  override fun onCategoriaSelected(id: String) {
-    val session = uiState.value.session ?: return
-    if (id == CATEGORIA_OTROS_ID || session.categorias.none { it.id == id }) return
-    updateDraft { copy(selectedCategoriaId = id) }
+  override fun onCategoriasChanged(ids: List<String>) {
+    val catalog = uiState.value.session?.categorias ?: return
+    updateDraft { copy(categoriaIds = CategoriaSelection.reconcile(categoriaIds, ids, catalog)) }
+  }
+
+  override fun onCategoriaRemoved(id: String) = updateDraft {
+    copy(categoriaIds = CategoriaSelection.remove(categoriaIds, id))
   }
 
   override fun onCancelEdit() {
@@ -436,16 +439,10 @@ internal fun Money.toAmountInput(): String {
 }
 
 internal fun Movimiento.toDraft() =
-    MovimientoDraft(tipo, monto.toAmountInput(), fecha, categoriaIds.first(), descripcion.orEmpty())
+    MovimientoDraft(tipo, monto.toAmountInput(), fecha, categoriaIds, descripcion.orEmpty())
 
 private fun Movimiento.toChanges() =
     MovimientoChanges(tipo, monto, fecha, categoriaIds, descripcion.normalizeDescriptionOrNull())
-
-// The single-category form cannot represent extra categories, so an untouched selection keeps them.
-private fun String?.toCategoriaIds(original: Movimiento): List<String> {
-  val selected = requireNotNull(this)
-  return if (selected == original.categoriaIds.first()) original.categoriaIds else listOf(selected)
-}
 
 private fun String?.normalizeDescriptionOrNull(): String? = this?.normalizeDescription()
 
@@ -460,7 +457,7 @@ private fun EditMovimientoUiState.toChangesOrNull(): MovimientoChanges? {
             tipo,
             it,
             fecha,
-            selectedCategoriaId.toCategoriaIds(original),
+            categoriaIds,
             descripcion.normalizeDescription(),
         )
       }

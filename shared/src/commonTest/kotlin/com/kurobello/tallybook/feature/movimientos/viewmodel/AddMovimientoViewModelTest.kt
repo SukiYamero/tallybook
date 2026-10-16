@@ -48,16 +48,16 @@ class AddMovimientoViewModelTest {
     val viewModel = createAddViewModel(categoriaRepository = categories, scope = backgroundScope)
 
     runCurrent()
-    viewModel.onCategoriaSelected("missing")
+    viewModel.onCategoriasChanged(listOf("missing"))
 
-    assertNull(viewModel.uiState.value.selectedCategoriaId)
+    assertTrue(viewModel.uiState.value.categoriaIds.isEmpty())
     assertEquals(Moneda.USD, viewModel.uiState.value.moneda)
     assertEquals(listOf(category), viewModel.uiState.value.categorias)
     assertFalse(viewModel.uiState.value.isLoading)
 
-    viewModel.onCategoriaSelected(category.id)
+    viewModel.onCategoriasChanged(listOf(category.id))
 
-    assertEquals(category.id, viewModel.uiState.value.selectedCategoriaId)
+    assertEquals(listOf(category.id), viewModel.uiState.value.categoriaIds)
   }
 
   @Test
@@ -74,7 +74,7 @@ class AddMovimientoViewModelTest {
 
     assertFalse(viewModel.uiState.value.canSubmit)
 
-    viewModel.onCategoriaSelected(category.id)
+    viewModel.onCategoriasChanged(listOf(category.id))
 
     assertTrue(viewModel.uiState.value.canSubmit)
   }
@@ -121,7 +121,7 @@ class AddMovimientoViewModelTest {
     assertEquals(AmountInputError.EMPTY, viewModel.uiState.value.amountError)
     assertTrue(viewModel.uiState.value.isCategoriaMissing)
     viewModel.onAmountChanged("0")
-    viewModel.onCategoriaSelected(category.id)
+    viewModel.onCategoriasChanged(listOf(category.id))
     viewModel.onSubmit()
     assertTrue(repository.inserted.isEmpty())
     assertEquals(AmountInputError.NOT_POSITIVE, viewModel.uiState.value.amountError)
@@ -157,7 +157,7 @@ class AddMovimientoViewModelTest {
     runCurrent()
     viewModel.onTipoChanged(TipoMovimiento.INGRESO)
     viewModel.onAmountChanged("12.34")
-    viewModel.onCategoriaSelected(category.id)
+    viewModel.onCategoriasChanged(listOf(category.id))
     viewModel.onDescripcionChanged("  Salary\n\t  September  ")
     viewModel.onSubmit()
     runCurrent()
@@ -246,7 +246,7 @@ class AddMovimientoViewModelTest {
 
     assertEquals(MovimientoFormError.SAVE_FAILED, viewModel.uiState.value.error)
     assertEquals("12.34", viewModel.uiState.value.amountInput)
-    assertEquals(category.id, viewModel.uiState.value.selectedCategoriaId)
+    assertEquals(listOf(category.id), viewModel.uiState.value.categoriaIds)
     assertEquals("Keep this", viewModel.uiState.value.descripcion)
     assertTrue(viewModel.uiState.value.submitAttempted)
 
@@ -344,6 +344,6 @@ class AddMovimientoViewModelTest {
 
   private fun populateValidFields(viewModel: AddMovimientoViewModel, category: Categoria) {
     viewModel.onAmountChanged("12.34")
-    viewModel.onCategoriaSelected(category.id)
+    viewModel.onCategoriasChanged(listOf(category.id))
   }
 }

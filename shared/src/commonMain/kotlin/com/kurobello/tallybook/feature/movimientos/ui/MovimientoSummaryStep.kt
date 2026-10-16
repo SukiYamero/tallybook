@@ -1,219 +1,167 @@
 package com.kurobello.tallybook.feature.movimientos.ui
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.error
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
-import com.composables.icons.lucide.Lucide
-import com.composables.icons.lucide.TriangleAlert
+import androidx.compose.ui.unit.Dp
 import com.kurobello.tallybook.core.model.Categoria
-import com.kurobello.tallybook.core.model.Money
-import com.kurobello.tallybook.core.model.TipoMovimiento
-import com.kurobello.tallybook.core.ui.category.CategorySuggestionTag
-import com.kurobello.tallybook.core.ui.category.CategoryTag
+import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
+import com.kurobello.tallybook.core.ui.category.CategoryTagField
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookButtonDefaults
 import com.kurobello.tallybook.core.ui.component.TallybookProgressIndicator
-import com.kurobello.tallybook.core.ui.component.TallybookSurface
-import com.kurobello.tallybook.core.ui.component.TallybookSurfaceDefaults
+import com.kurobello.tallybook.core.ui.component.TallybookSectionHeading
+import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
 import com.kurobello.tallybook.core.ui.component.TallybookText
-import com.kurobello.tallybook.core.ui.movimiento.signedMovimientoAmountText
+import com.kurobello.tallybook.core.ui.movimiento.MovimientoBadgeSize
+import com.kurobello.tallybook.core.ui.movimiento.MovimientoTypeBadge
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
-import com.kurobello.tallybook.core.ui.theme.TallybookTypeScale
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSummaryUi
 import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.expense
-import tallybook.shared.generated.resources.income
+import tallybook.shared.generated.resources.amount
+import tallybook.shared.generated.resources.date
 import tallybook.shared.generated.resources.loading
-import tallybook.shared.generated.resources.movimiento_pending_label
-import tallybook.shared.generated.resources.movimiento_summary_amount_missing
-import tallybook.shared.generated.resources.movimiento_summary_amount_review
+import tallybook.shared.generated.resources.movement_type
+import tallybook.shared.generated.resources.movimiento_summary_description_label
 import tallybook.shared.generated.resources.movimiento_summary_description_quote
 import tallybook.shared.generated.resources.movimiento_summary_edit
 import tallybook.shared.generated.resources.movimiento_summary_save
+import tallybook.shared.generated.resources.movimiento_summary_subtitle
+import tallybook.shared.generated.resources.movimiento_summary_title
 
-private const val HEADER_SEPARATOR = " · "
+// The review sheet opens tall instead of hugging its content, so it reads as a confirmation step.
+private const val REVIEW_HEIGHT_FRACTION = 0.72f
 
-@Suppress("LongParameterList")
+internal data class MovimientoSummaryCallbacks(
+    val onRemoveCategoria: (Categoria) -> Unit,
+    val onAddCategoria: () -> Unit,
+    val onSuggestion: (Categoria) -> Unit,
+    val onEdit: () -> Unit,
+    val onSave: () -> Unit,
+)
+
+@Composable
+internal fun rememberReviewMinimumHeight(): Dp {
+  val windowHeight = LocalWindowInfo.current.containerSize.height
+  return with(LocalDensity.current) { windowHeight.toDp() } * REVIEW_HEIGHT_FRACTION
+}
+
+/**
+ * Review content: the labeled sections scroll if the screen is short while the two actions stay
+ * anchored at the bottom, at least `space32` below the content. Callers give it a minimum height to
+ * make the sheet tall.
+ */
 @Composable
 internal fun MovimientoSummaryStep(
     summary: MovimientoSummaryUi,
-    onSelectSuggestion: (Categoria) -> Unit,
-    onEdit: () -> Unit,
-    onSave: () -> Unit,
+    callbacks: MovimientoSummaryCallbacks,
     today: LocalDate,
     modifier: Modifier = Modifier,
+    messageContent: @Composable () -> Unit = {},
 ) {
   Column(
       modifier = modifier.fillMaxWidth(),
-      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16),
+      verticalArrangement = Arrangement.SpaceBetween,
   ) {
-    TallybookSurface(
-        modifier = Modifier.fillMaxWidth(),
-        style =
-            TallybookSurfaceDefaults.cardStyle()
-                .copy(
-                    border =
-                        BorderStroke(
-                            TallybookTheme.dimensions.borderThin,
-                            TallybookTheme.colors.border.subtle,
-                        )
-                ),
-    ) {
-      SummaryCardContent(summary, today, onSelectSuggestion)
-    }
-    SummaryFooter(isSubmitting = summary.isSubmitting, onEdit = onEdit, onSave = onSave)
-  }
-}
-
-@Composable
-private fun SummaryCardContent(
-    summary: MovimientoSummaryUi,
-    today: LocalDate,
-    onSelectSuggestion: (Categoria) -> Unit,
-) {
-  Column(
-      modifier = Modifier.fillMaxWidth().padding(TallybookTheme.spacing.space16),
-      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
-  ) {
-    TallybookText(
-        text = summaryHeader(summary, today),
-        color = TallybookTheme.colors.foreground.tertiary,
-        style = TallybookTheme.typography.label,
-    )
-    SummaryAmount(summary)
-    if (summary.descripcion.isNotBlank()) {
-      TallybookText(
-          text =
-              stringResource(Res.string.movimiento_summary_description_quote, summary.descripcion),
-          color = TallybookTheme.colors.foreground.secondary,
-          style = TallybookTheme.typography.body,
-      )
-    }
-    SummaryCategories(summary, onSelectSuggestion)
-  }
-}
-
-@Composable
-private fun summaryHeader(summary: MovimientoSummaryUi, today: LocalDate): String {
-  val tipo =
-      stringResource(
-          if (summary.tipo == TipoMovimiento.INGRESO) Res.string.income else Res.string.expense
-      )
-  return tipo + HEADER_SEPARATOR + relativeDateLabel(summary.fecha, today)
-}
-
-@Composable
-private fun SummaryAmount(summary: MovimientoSummaryUi) {
-  Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4)) {
-    val monto = summary.monto
-    if (monto == null) MissingAmountMessage() else SummaryAmountText(monto, summary.tipo)
-    if (monto != null && summary.amountNeedsReview) AmountReviewHint()
-  }
-}
-
-@Composable
-private fun SummaryAmountText(monto: Money, tipo: TipoMovimiento) {
-  TallybookText(
-      text = signedMovimientoAmountText(monto, tipo),
-      color =
-          if (tipo == TipoMovimiento.INGRESO) TallybookTheme.colors.status.success.base
-          else TallybookTheme.colors.foreground.primary,
-      style = summaryAmountStyle(),
-  )
-}
-
-@Composable
-private fun MissingAmountMessage() {
-  val message = stringResource(Res.string.movimiento_summary_amount_missing)
-  TallybookText(
-      text = message,
-      modifier =
-          Modifier.semantics {
-            error(message)
-            liveRegion = LiveRegionMode.Polite
-          },
-      color = TallybookTheme.colors.status.danger.base,
-      style = TallybookTheme.typography.title,
-  )
-}
-
-@Composable
-private fun AmountReviewHint() {
-  val hint = stringResource(Res.string.movimiento_summary_amount_review)
-  Row(
-      modifier =
-          Modifier.semantics(mergeDescendants = true) {
-            contentDescription = hint
-            liveRegion = LiveRegionMode.Polite
-          },
-      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space6),
-      verticalAlignment = Alignment.Top,
-  ) {
-    Image(
-        imageVector = Lucide.TriangleAlert,
-        contentDescription = null,
+    Column(
         modifier =
-            Modifier.padding(top = TallybookTheme.spacing.space2)
-                .size(TallybookTheme.dimensions.iconSmall),
-        colorFilter = ColorFilter.tint(TallybookTheme.colors.status.warning),
-    )
-    TallybookText(
-        text = hint,
-        color = TallybookTheme.colors.foreground.tertiary,
-        style = TallybookTheme.typography.caption,
-    )
-  }
-}
-
-@Composable
-private fun SummaryCategories(
-    summary: MovimientoSummaryUi,
-    onSelectSuggestion: (Categoria) -> Unit,
-) {
-  FlowRow(
-      modifier = Modifier.fillMaxWidth(),
-      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
-      itemVerticalAlignment = Alignment.CenterVertically,
-  ) {
-    CategoryTag(categoria = summary.categoria, pending = summary.categoriaIsPending)
-    if (summary.categoriaIsPending) {
-      TallybookText(
-          text = stringResource(Res.string.movimiento_pending_label),
-          color = TallybookTheme.colors.foreground.tertiary,
-          style = TallybookTheme.typography.bodySmall,
-      )
-    }
-    summary.suggestions.forEach { suggestion ->
-      CategorySuggestionTag(
-          categoria = suggestion,
-          onClick = { onSelectSuggestion(suggestion) },
+            Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space20),
+    ) {
+      SummaryHeader()
+      SummaryTipoAndDate(summary, today)
+      SummarySection(stringResource(Res.string.amount)) { SummaryAmount(summary) }
+      if (summary.descripcion.isNotBlank()) {
+        SummarySection(stringResource(Res.string.movimiento_summary_description_label)) {
+          TallybookText(
+              text =
+                  stringResource(
+                      Res.string.movimiento_summary_description_quote,
+                      summary.descripcion,
+                  ),
+              color = TallybookTheme.colors.foreground.secondary,
+              style = TallybookTheme.typography.body,
+          )
+        }
+      }
+      CategoryTagField(
+          categorias = summary.categorias,
+          max = MAX_CATEGORIAS_POR_MOVIMIENTO,
+          onRemove = callbacks.onRemoveCategoria,
+          onAdd = callbacks.onAddCategoria,
+          pending = summary.categoriasArePending,
+          suggestions = summary.suggestions,
+          onSuggestion = callbacks.onSuggestion,
           enabled = !summary.isSubmitting,
       )
+      messageContent()
+      Spacer(Modifier.height(TallybookTheme.spacing.space32))
     }
+    SummaryFooter(
+        isSubmitting = summary.isSubmitting,
+        onEdit = callbacks.onEdit,
+        onSave = callbacks.onSave,
+    )
+  }
+}
+
+@Composable
+private fun SummaryHeader() {
+  Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4)) {
+    TallybookSheetTitle(stringResource(Res.string.movimiento_summary_title))
+    TallybookText(
+        text = stringResource(Res.string.movimiento_summary_subtitle),
+        color = TallybookTheme.colors.foreground.secondary,
+        style = TallybookTheme.typography.bodySmall,
+    )
+  }
+}
+
+@Composable
+private fun SummaryTipoAndDate(summary: MovimientoSummaryUi, today: LocalDate) {
+  Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space20),
+  ) {
+    SummarySection(stringResource(Res.string.movement_type), Modifier.weight(1f)) {
+      MovimientoTypeBadge(summary.tipo, size = MovimientoBadgeSize.Large)
+    }
+    SummarySection(stringResource(Res.string.date), Modifier.weight(1f)) {
+      MovimientoDateBadge(summary.fecha, today, size = MovimientoBadgeSize.Large)
+    }
+  }
+}
+
+@Composable
+private fun SummarySection(
+    label: String,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+  Column(
+      modifier = modifier,
+      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+  ) {
+    TallybookSectionHeading(label)
+    content()
   }
 }
 
@@ -259,11 +207,3 @@ private fun SummaryFooter(isSubmitting: Boolean, onEdit: () -> Unit, onSave: () 
     }
   }
 }
-
-@Composable
-@ReadOnlyComposable
-private fun summaryAmountStyle(): TextStyle =
-    TallybookTheme.typography.headline.copy(
-        fontSize = TallybookTypeScale.size28,
-        lineHeight = TallybookTypeScale.size30,
-    )

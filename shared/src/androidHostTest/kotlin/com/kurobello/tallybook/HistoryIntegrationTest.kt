@@ -279,7 +279,7 @@ class HistoryIntegrationTest {
           graph.start()
           val form = graph.form("retry")
           form.viewModel.onAmountChanged("10,50")
-          form.viewModel.onCategoriaSelected("cat_comida")
+          form.viewModel.onCategoriasChanged(listOf("cat_comida"))
           form.viewModel.onDescripcionChanged("Lunch")
           graph.driver.failWrites = true
           form.viewModel.onSubmit()
@@ -287,7 +287,7 @@ class HistoryIntegrationTest {
           assertEquals(MovimientoFormError.SAVE_FAILED, form.viewModel.uiState.value.error)
           assertEquals("10,50", form.viewModel.uiState.value.amountInput)
           assertEquals(TODAY, form.viewModel.uiState.value.fecha)
-          assertEquals("cat_comida", form.viewModel.uiState.value.selectedCategoriaId)
+          assertEquals(listOf("cat_comida"), form.viewModel.uiState.value.categoriaIds)
           assertEquals("Lunch", form.viewModel.uiState.value.descripcion)
           assertEquals(emptyList(), form.effects)
           assertEquals(0, graph.period.movementCount)
@@ -466,7 +466,9 @@ class HistoryIntegrationTest {
       form.viewModel.apply {
         onTipoChanged(type)
         onAmountChanged(input)
-        onCategoriaSelected(if (type == TipoMovimiento.INGRESO) "cat_ingresos" else "cat_comida")
+        onCategoriasChanged(
+            listOf(if (type == TipoMovimiento.INGRESO) "cat_ingresos" else "cat_comida")
+        )
         onFechaChanged(date)
         onDescripcionChanged("Description $id")
         onSubmit()
