@@ -77,7 +77,7 @@ private fun CatalogPendingMatrix(fixtures: UiCatalogFixtures) {
     }
     CatalogSample(label = stringResource(Res.string.ui_catalog_pending_row)) {
       MovimientoRow(
-          movimiento = fixtures.movimiento.copy(categoriaIds = listOf(pendingCategory.id)),
+          movimiento = fixtures.movimiento.copy(categoriaId = pendingCategory.id),
           categoria = pendingCategory,
           modifier = Modifier.fillMaxWidth(),
           pending = true,

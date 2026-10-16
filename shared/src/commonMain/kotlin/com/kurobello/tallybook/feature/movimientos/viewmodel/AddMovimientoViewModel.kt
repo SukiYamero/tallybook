@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
+import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
@@ -12,7 +13,6 @@ import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
-import com.kurobello.tallybook.core.model.CategoriaSelection
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
@@ -66,7 +66,8 @@ internal class AddMovimientoViewModel(
           tipo = TipoMovimiento.GASTO,
           amountInput = "",
           fecha = captureToday(),
-          categoriaIds = emptyList(),
+          categoriaId = null,
+          etiquetaIds = emptyList(),
           titulo = "",
           descripcion = "",
       )
@@ -82,7 +83,7 @@ internal class AddMovimientoViewModel(
                 fecha = initialDraft.fecha,
                 moneda = Moneda.COP,
                 categorias = emptyList(),
-                categoriaIds = initialDraft.categoriaIds,
+                categoriaId = initialDraft.categoriaId,
                 titulo = initialDraft.titulo,
                 descripcion = initialDraft.descripcion,
                 isLoading = true,
@@ -137,15 +138,13 @@ internal class AddMovimientoViewModel(
 
   override fun onCategoriasChanged(ids: List<String>) {
     updateFields {
-      val updated = CategoriaSelection.reconcile(categoriaIds, ids, categorias)
-      withCategorias(updated, removed = categoriaIds - updated.toSet())
+      val chosen = chosenCategoriaId(categoriaId, ids, categorias)
+      withCategoria(chosen, removed = categoriaId.takeIf { chosen == null })
     }
   }
 
   override fun onCategoriaRemoved(id: String) {
-    updateFields {
-      withCategorias(CategoriaSelection.remove(categoriaIds, id), removed = listOf(id))
-    }
+    updateFields { if (id == categoriaId) withCategoria(null, removed = id) else this }
   }
 
   override fun onTituloChanged(value: String) {
@@ -193,7 +192,7 @@ internal class AddMovimientoViewModel(
       withInitialEntry()
           .copy(
               step = AddMovimientoStep.FORM,
-              categoriaIds = manualCategoriaIds,
+              categoriaId = manualCategoriaId,
               categoriasEdited = categoriasEdited,
           )
     }
@@ -204,10 +203,7 @@ internal class AddMovimientoViewModel(
   }
 
   override fun onSuggestionSelected(id: String) {
-    updateFields {
-      if (suggestions.none { it.id == id }) this
-      else withCategorias(CategoriaSelection.add(categoriaIds, id, categorias))
-    }
+    updateFields { if (suggestions.none { it.id == id }) this else withCategoria(id) }
   }
 
   override fun onStepBack() {
@@ -301,7 +297,8 @@ internal class AddMovimientoViewModel(
           tipo = initialDraft.tipo,
           amountInput = initialDraft.amountInput,
           fecha = initialDraft.fecha,
-          categoriaIds = initialDraft.categoriaIds,
+          categoriaId = initialDraft.categoriaId,
+          etiquetaIds = initialDraft.etiquetaIds,
           titulo = initialDraft.titulo,
           descripcion = initialDraft.descripcion,
           submitAttempted = false,
@@ -315,11 +312,12 @@ internal class AddMovimientoViewModel(
           formOpenedFromSummary = false,
       )
 
-  // Tags picked in the sentence dialog do not guard it: only a typed sentence is worth confirming.
+  // A category picked in the sentence dialog does not guard it: only a typed sentence is worth
+  // confirming.
   private fun AddMovimientoUiState.withDirtyState(): AddMovimientoUiState {
     val draft = toDraft()
     val comparable =
-        if (step == AddMovimientoStep.PHRASE) draft.copy(categoriaIds = initialDraft.categoriaIds)
+        if (step == AddMovimientoStep.PHRASE) draft.copy(categoriaId = initialDraft.categoriaId)
         else draft
     return copy(hasUnsavedChanges = phrase.isNotBlank() || comparable != initialDraft)
   }
@@ -328,7 +326,7 @@ internal class AddMovimientoViewModel(
       copy(
           suggestions =
               rankSuggestions()
-                  .filterNot { it.categoriaId in categoriaIds }
+                  .filterNot { it.categoriaId == categoriaId }
                   .mapNotNull { suggestion ->
                     categorias.firstOrNull { it.id == suggestion.categoriaId }
                   }
@@ -339,19 +337,19 @@ internal class AddMovimientoViewModel(
       suggestionQuery?.let { entryEngine.rank(suggestionIndex, it, candidates()) }.orEmpty()
 
   // A removed category that the sentence suggested stays dismissed for the same subject.
-  private fun AddMovimientoUiState.withCategorias(
-      updated: List<String>,
-      removed: Collection<String> = emptyList(),
+  private fun AddMovimientoUiState.withCategoria(
+      updated: String?,
+      removed: String? = null,
   ): AddMovimientoUiState {
-    val suggested = rankSuggestions().mapTo(mutableSetOf()) { it.categoriaId }
+    val dismissed = removed?.takeIf { id -> rankSuggestions().any { it.categoriaId == id } }
     return copy(
-        categoriaIds = updated,
+        categoriaId = updated,
         categoriasEdited = true,
-        dismissedSuggestionIds = dismissedSuggestionIds + removed.filter { it in suggested },
+        dismissedSuggestionIds = dismissedSuggestionIds + listOfNotNull(dismissed),
     )
   }
 
-  // Tags picked by hand are the only draft value a blank sentence leaves behind.
+  // A category picked by hand is the only draft value a blank sentence leaves behind.
   private fun AddMovimientoUiState.withoutInterpretation(phrase: String): AddMovimientoUiState =
       copy(
           phrase = phrase,
@@ -363,11 +361,11 @@ internal class AddMovimientoViewModel(
           titulo = initialDraft.titulo,
           descripcion = initialDraft.descripcion,
           amountNeedsReview = false,
-          categoriaIds = manualCategoriaIds,
+          categoriaId = manualCategoriaId,
       )
 
-  private val AddMovimientoUiState.manualCategoriaIds: List<String>
-    get() = if (categoriasEdited) categoriaIds else initialDraft.categoriaIds
+  private val AddMovimientoUiState.manualCategoriaId: String?
+    get() = if (categoriasEdited) categoriaId else initialDraft.categoriaId
 
   private fun AddMovimientoUiState.withDetection(
       interpretation: PhraseInterpretation,
@@ -381,8 +379,8 @@ internal class AddMovimientoViewModel(
                   fecha = interpretation.parsed.fecha ?: today,
               ),
           suggestionQuery = interpretation.query,
-          categoriaIds =
-              if (categoriasEdited) categoriaIds else interpretation.preselectedCategoriaIds,
+          categoriaId =
+              if (categoriasEdited) categoriaId else interpretation.preselectedCategoriaId,
       )
 
   // Dismissals belong to the subject they were made for; a different sentence starts clean.
@@ -480,6 +478,7 @@ internal data class AddMovimientoRepositories(
     val preferences: AppPreferencesRepository,
     val categorias: CategoriaRepository,
     val movimientos: MovimientoRepository,
+    val etiquetas: EtiquetaRepository,
 )
 
 private fun AddMovimientoUiState.toMovimientoOrNull(
@@ -488,23 +487,20 @@ private fun AddMovimientoUiState.toMovimientoOrNull(
     timeZone: kotlinx.datetime.TimeZone,
 ): Movimiento? {
   val amount = (parseAmountInput(amountInput, moneda) as? AmountInputResult.Valid)?.money
-  val categoriaIds = effectiveCategoriaIds
-  val isValid =
-      categoriaIds.isNotEmpty() &&
-          fecha <= createdAt.toLocalDateTime(timeZone).date &&
-          !isLoading &&
-          error == null
-  return if (amount == null || !isValid) null
+  val categoriaId = effectiveCategoriaId
+  val isValid = fecha <= createdAt.toLocalDateTime(timeZone).date && !isLoading && error == null
+  return if (amount == null || categoriaId == null || !isValid) null
   else
       Movimiento(
           id = idGenerator.next(),
           tipo = tipo,
           monto = amount,
           fecha = fecha,
-          categoriaIds = categoriaIds,
+          categoriaId = categoriaId,
           titulo = titulo.normalizeOptionalText(),
           descripcion = descripcion.normalizeOptionalText(),
           createdAt = createdAt,
+          etiquetaIds = etiquetaIds,
       )
 }
 

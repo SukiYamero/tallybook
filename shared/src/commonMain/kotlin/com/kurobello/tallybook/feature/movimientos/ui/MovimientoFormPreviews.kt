@@ -52,7 +52,7 @@ private fun previewUiState(
         fecha = LocalDate.parse("2026-09-15"),
         moneda = Moneda.COP,
         categorias = emptyList(),
-        categoriaIds = emptyList(),
+        categoriaId = null,
         titulo = "",
         descripcion = "",
         isLoading = isLoading,

@@ -552,7 +552,7 @@ class AddMovimientoSheetTest {
           fecha = LocalDate(2026, 9, 15),
           moneda = Moneda.COP,
           categorias = listOf(category, otros),
-          categoriaIds = listOf(category.id),
+          categoriaId = category.id,
           titulo = "Gasté 1 en comida",
           descripcion = "",
           isLoading = false,

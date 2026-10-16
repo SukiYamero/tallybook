@@ -123,7 +123,7 @@ class ManageMovimientoViewModelTest {
   @Test
   fun originalCategoryIsPreservedWhenTheCatalogNoLongerHasIt() = runTest {
     val f = ManageMovimientoFixture(backgroundScope)
-    f.repository.current = managementMovimiento().copy(categoriaIds = listOf("child"))
+    f.repository.current = managementMovimiento().copy(categoriaId = "child")
     f.categorias.values.value =
         DataOutcome.Success(listOf(managementCategoria(), managementCategoria("child", "food")))
     f.viewModel.open("movement")
@@ -133,7 +133,7 @@ class ManageMovimientoViewModelTest {
     f.viewModel.onAmountChanged("20.00")
     f.viewModel.onSubmit()
     runCurrent()
-    assertEquals(listOf("child"), f.repository.changes?.categoriaIds)
+    assertEquals("child", f.repository.changes?.categoriaId)
     assertEquals(1, f.repository.updates)
   }
 
@@ -152,11 +152,11 @@ class ManageMovimientoViewModelTest {
     runCurrent()
     f.viewModel.onCategoriasChanged(listOf("child"))
     f.viewModel.onCategoriasChanged(listOf("child", CATEGORIA_OTROS_ID))
-    assertEquals(listOf("child"), f.viewModel.uiState.value.session?.form?.categoriaIds)
+    assertEquals("child", f.viewModel.uiState.value.session?.form?.categoriaId)
     f.viewModel.onAmountChanged("20.00")
     f.viewModel.onSubmit()
     runCurrent()
-    assertEquals(listOf("child"), f.repository.changes?.categoriaIds)
+    assertEquals("child", f.repository.changes?.categoriaId)
   }
 
   @Test

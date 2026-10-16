@@ -26,6 +26,7 @@ import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
@@ -240,21 +241,20 @@ class SearchVolumeDeviceTest {
               row.titulo,
               row.descripcion,
               row.createdAt.toString(),
+              row.categoriaId,
           )
-          for (row in fixtureRows) row.categoriaIds.forEachIndexed { posicion, categoriaId ->
-            database.movimientoQueries.insertMovimientoCategoria(
-                row.id,
-                categoriaId,
-                posicion.toLong(),
-            )
-          }
         }
       }
       val fallback = getString(Res.string.unknown_category)
       InstrumentationRegistry.getInstrumentation().runOnMainSync {
         viewModel =
             SearchViewModel(
-                SearchRepositories(preferences, subscriptions, categorias),
+                SearchRepositories(
+                    preferences,
+                    subscriptions,
+                    categorias,
+                    FakeEtiquetaRepository(),
+                ),
                 SavedStateHandle(),
                 fallback,
                 SearchDateProvider(
@@ -365,8 +365,7 @@ class SearchVolumeDeviceTest {
               row.monto.moneda == Moneda.COP &&
                   (filters.preset == SearchDatePreset.All || row.fecha.year == today.year) &&
                   (filters.tipo == null || row.tipo == filters.tipo) &&
-                  (filters.categoryIds.isEmpty() ||
-                      row.categoriaIds.any { id -> id in filters.categoryIds }) &&
+                  (filters.categoryIds.isEmpty() || row.categoriaId in filters.categoryIds) &&
                   (query.isEmpty() || requireNotNull(row.titulo).contains("Needle"))
             }
             .sortedWith(
@@ -426,7 +425,7 @@ class SearchVolumeDeviceTest {
           if (index % 2 == 0) TipoMovimiento.GASTO else TipoMovimiento.INGRESO,
           Money(100, if (index % 4 == 0) Moneda.USD else Moneda.COP),
           LocalDate(if (index % 5 == 0) 2024 else 2026, 9, index % 30 + 1),
-          listOf(if (index % 7 == 0) "cat_comida" else "cat_transporte"),
+          if (index % 7 == 0) "cat_comida" else "cat_transporte",
           if (index % 3 == 0) "Needle volume $id" else "Volume $id",
           null,
           Instant.parse(if (index % 2 == 0) "2026-09-15T12:00:00Z" else "2026-09-15T11:00:00Z"),

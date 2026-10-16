@@ -75,7 +75,7 @@ internal fun MovimientoCategoryPickerSheet(
     picker: MovimientoCategoryPickerState,
     creation: CategoryPickerCreation?,
 ) {
-  val selectedIds = uiState.categoriaIds.realCategoriaIds()
+  val selectedIds = listOfNotNull(uiState.categoriaId).realCategoriaIds()
   CategoryPickerSheet(
       visible = visible,
       categorias = uiState.categorias,

@@ -53,25 +53,23 @@ DELETE FROM categoria
 WHERE id = :id AND origen = 'usuario';
 
 -- Any currency: a custom categoria can be deleted only while no movimiento references it at all.
--- The join table's primary key already makes every row a distinct movimiento.
 countMovimientosForCategoria:
 SELECT COUNT(*)
-FROM movimiento_categoria
+FROM movimiento
 WHERE categoria_id = ?;
 
--- The set selectFilteredMovimientosByCategory returns for one categoria: its own links plus every
--- link to one of its children, so a parent counts a movimiento once even with two children on it.
+-- The set selectFilteredMovimientosByCategory returns for one categoria: its own movimientos plus
+-- those of its children. A movimiento has one categoria, so it lands in at most one bucket per level.
 countMovimientosPorCategoria:
-SELECT bucket.categoria_id, COUNT(DISTINCT movimiento.id) AS movimiento_count
+SELECT bucket.categoria_id, COUNT(*) AS movimiento_count
 FROM (
-    SELECT movimiento_id, categoria_id
-    FROM movimiento_categoria
+    SELECT movimiento.categoria_id
+    FROM movimiento
+    WHERE movimiento.monto_moneda = :moneda
     UNION ALL
-    SELECT movimiento_categoria.movimiento_id, categoria.padre_id AS categoria_id
-    FROM movimiento_categoria
-    JOIN categoria ON categoria.id = movimiento_categoria.categoria_id
-    WHERE categoria.padre_id IS NOT NULL
+    SELECT categoria.padre_id AS categoria_id
+    FROM movimiento
+    JOIN categoria ON categoria.id = movimiento.categoria_id
+    WHERE movimiento.monto_moneda = :moneda AND categoria.padre_id IS NOT NULL
 ) AS bucket
-JOIN movimiento ON movimiento.id = bucket.movimiento_id
-WHERE movimiento.monto_moneda = ?
 GROUP BY bucket.categoria_id;

@@ -28,7 +28,7 @@ internal fun MovimientoCategoriesField(
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
-  val ids = uiState.displayedCategoriaIds
+  val ids = listOfNotNull(uiState.displayedCategoriaId)
   val unknownName = stringResource(Res.string.unknown_category)
   val categorias =
       remember(ids, uiState.categorias, unknownName) {

@@ -28,7 +28,7 @@ internal fun ManageMovimientoRoute(
             effects = quickCategory.effects,
             selection =
                 CategoryPickerSelection(
-                    selectedIds = session.form?.categoriaIds.orEmpty().realCategoriaIds(),
+                    selectedIds = listOfNotNull(session.form?.categoriaId).realCategoriaIds(),
                     max = MAX_CATEGORIAS_POR_MOVIMIENTO,
                     onSelectionChange = actions::onCategoriasChanged,
                 ),

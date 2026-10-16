@@ -9,52 +9,55 @@ CREATE TABLE movimiento (
     fecha TEXT NOT NULL,
     descripcion TEXT,
     created_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00Z',
-    titulo TEXT
+    titulo TEXT,
+    categoria_id TEXT NOT NULL
 );
 
 -- The stable recent order matches this index so SQLite can scan it without a temporary sort; date-range
 -- aggregate queries still benefit from fecha as the leading key.
 CREATE INDEX movimiento_recent ON movimiento(fecha DESC, created_at DESC, id DESC);
 
+-- Not movimiento_categoria: indexes share the table namespace, and schema 5 had a table with that name.
+CREATE INDEX movimiento_by_categoria ON movimiento(categoria_id);
+
 -- The repository owns integrity because SQLite foreign keys are not enabled: both tables are always
--- written in one transaction. posicion only orders the display; every category is equal.
-CREATE TABLE movimiento_categoria (
+-- written in one transaction. posicion only keeps the user's display order.
+CREATE TABLE movimiento_etiqueta (
     movimiento_id TEXT NOT NULL,
-    categoria_id TEXT NOT NULL,
+    etiqueta_id TEXT NOT NULL,
     posicion INTEGER NOT NULL,
-    PRIMARY KEY (movimiento_id, categoria_id)
+    PRIMARY KEY (movimiento_id, etiqueta_id)
 );
 
-CREATE INDEX movimiento_categoria_categoria ON movimiento_categoria(categoria_id);
+CREATE INDEX movimiento_etiqueta_etiqueta ON movimiento_etiqueta(etiqueta_id);
 
--- Every read goes through this view so a row and its categories come from one statement, hence one
+-- Every read goes through this view so a row and its etiquetas come from one statement, hence one
 -- snapshot, and observers invalidate on both tables. group_concat order is unspecified on SQLite 3.32,
 -- so each id carries its posicion (unit separator) and the mapper sorts; groups use the record separator.
--- COALESCE keeps the column non-null for a row without categories, which the mapper rejects explicitly.
-CREATE VIEW movimiento_con_categorias AS
+CREATE VIEW movimiento_con_etiquetas AS
 SELECT
     movimiento.*,
     COALESCE(
         (
-            SELECT group_concat(movimiento_categoria.posicion || char(31) || movimiento_categoria.categoria_id, char(30))
-            FROM movimiento_categoria
-            WHERE movimiento_categoria.movimiento_id = movimiento.id
+            SELECT group_concat(movimiento_etiqueta.posicion || char(31) || movimiento_etiqueta.etiqueta_id, char(30))
+            FROM movimiento_etiqueta
+            WHERE movimiento_etiqueta.movimiento_id = movimiento.id
         ),
         ''
-    ) AS categoria_ids
+    ) AS etiqueta_ids
 FROM movimiento;
 
 insertMovimiento:
-INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, titulo, descripcion, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, titulo, descripcion, created_at, categoria_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 
-insertMovimientoCategoria:
-INSERT INTO movimiento_categoria(movimiento_id, categoria_id, posicion)
+insertMovimientoEtiqueta:
+INSERT INTO movimiento_etiqueta(movimiento_id, etiqueta_id, posicion)
 VALUES (?, ?, ?);
 
 selectAllMovimientos:
 SELECT *
-FROM movimiento_con_categorias
+FROM movimiento_con_etiquetas
 ORDER BY fecha DESC, created_at DESC, id DESC;
 
 -- SQLite date functions have a narrower year domain than the canonical LocalDate text we persist.
@@ -66,45 +69,40 @@ ORDER BY CAST(movimiento_year AS INTEGER) DESC;
 
 selectRecentMovimientos:
 SELECT *
-FROM movimiento_con_categorias
+FROM movimiento_con_etiquetas
 ORDER BY fecha DESC, created_at DESC, id DESC
 LIMIT ?;
 
 selectRecentMovimientosByMoneda:
 SELECT *
-FROM movimiento_con_categorias
+FROM movimiento_con_etiquetas
 WHERE monto_moneda = ?
 ORDER BY fecha DESC, created_at DESC, id DESC
 LIMIT ?;
 
--- The limit counts movimientos, not (movimiento, categoria) rows, so a multi-category movimiento
--- cannot push older history out of the window.
 selectCategoryHistory:
-SELECT recent.id AS movimiento_id, recent.titulo, movimiento_categoria.categoria_id, recent.created_at
-FROM (
-    SELECT id, titulo, created_at
-    FROM movimiento
-    WHERE titulo IS NOT NULL AND trim(titulo) <> ''
-    ORDER BY created_at DESC, id DESC
-    LIMIT ?
-) AS recent
-JOIN movimiento_categoria ON movimiento_categoria.movimiento_id = recent.id
-ORDER BY recent.created_at DESC, recent.id DESC, movimiento_categoria.posicion;
+SELECT id AS movimiento_id, titulo, categoria_id, created_at
+FROM movimiento
+WHERE titulo IS NOT NULL AND trim(titulo) <> ''
+ORDER BY created_at DESC, id DESC
+LIMIT ?;
 
 selectMovimientoById:
 SELECT *
-FROM movimiento_con_categorias
+FROM movimiento_con_etiquetas
 WHERE id = ?;
 
 selectMovimientosInRange:
 SELECT *
-FROM movimiento_con_categorias
+FROM movimiento_con_etiquetas
 WHERE monto_moneda = ? AND fecha >= ? AND fecha <= ?
 ORDER BY fecha DESC, created_at DESC, id DESC;
 
+-- Filtering lives in SQL so rows, years and listeners share one snapshot; the repository picks one
+-- query per combination of the optional category and etiqueta sets.
 selectFilteredMovimientos:
 SELECT *
-FROM movimiento_con_categorias
+FROM movimiento_con_etiquetas
 WHERE monto_moneda = :moneda
   AND (:start_date IS NULL OR fecha >= :start_date)
   AND (:end_date IS NULL OR fecha <= :end_date)
@@ -112,35 +110,63 @@ WHERE monto_moneda = :moneda
 ORDER BY fecha DESC, created_at DESC, id DESC;
 
 -- A selected parent also matches its children; the roll-up never goes upward, so a selected child
--- matches only itself. A movimiento matches through any of its categories. It lives in the query so
--- rows, years and listeners share one snapshot.
+-- matches only itself. The unary + keeps SQLite scanning movimiento_recent: picking
+-- movimiento_by_categoria instead would sort every match in a temporary B-tree.
 selectFilteredMovimientosByCategory:
 SELECT *
-FROM movimiento_con_categorias
+FROM movimiento_con_etiquetas
+WHERE monto_moneda = :moneda
+  AND (:start_date IS NULL OR fecha >= :start_date)
+  AND (:end_date IS NULL OR fecha <= :end_date)
+  AND (:movement_type IS NULL OR tipo = :movement_type)
+  AND (
+      +categoria_id IN :category_ids
+      OR +categoria_id IN (SELECT id FROM categoria WHERE padre_id IN :category_ids)
+  )
+ORDER BY fecha DESC, created_at DESC, id DESC;
+
+-- A movimiento matches through any of its etiquetas.
+selectFilteredMovimientosByEtiqueta:
+SELECT *
+FROM movimiento_con_etiquetas
 WHERE monto_moneda = :moneda
   AND (:start_date IS NULL OR fecha >= :start_date)
   AND (:end_date IS NULL OR fecha <= :end_date)
   AND (:movement_type IS NULL OR tipo = :movement_type)
   AND EXISTS (
       SELECT 1
-      FROM movimiento_categoria
-      WHERE movimiento_categoria.movimiento_id = movimiento_con_categorias.id
-        AND (
-            movimiento_categoria.categoria_id IN :category_ids
-            OR movimiento_categoria.categoria_id IN (
-                SELECT id FROM categoria WHERE padre_id IN :category_ids
-            )
-        )
+      FROM movimiento_etiqueta
+      WHERE movimiento_etiqueta.movimiento_id = movimiento_con_etiquetas.id
+        AND movimiento_etiqueta.etiqueta_id IN :etiqueta_ids
+  )
+ORDER BY fecha DESC, created_at DESC, id DESC;
+
+selectFilteredMovimientosByCategoryAndEtiqueta:
+SELECT *
+FROM movimiento_con_etiquetas
+WHERE monto_moneda = :moneda
+  AND (:start_date IS NULL OR fecha >= :start_date)
+  AND (:end_date IS NULL OR fecha <= :end_date)
+  AND (:movement_type IS NULL OR tipo = :movement_type)
+  AND (
+      +categoria_id IN :category_ids
+      OR +categoria_id IN (SELECT id FROM categoria WHERE padre_id IN :category_ids)
+  )
+  AND EXISTS (
+      SELECT 1
+      FROM movimiento_etiqueta
+      WHERE movimiento_etiqueta.movimiento_id = movimiento_con_etiquetas.id
+        AND movimiento_etiqueta.etiqueta_id IN :etiqueta_ids
   )
 ORDER BY fecha DESC, created_at DESC, id DESC;
 
 updateMovimiento:
 UPDATE movimiento
-SET tipo = ?, monto_minor = ?, fecha = ?, titulo = ?, descripcion = ?
+SET tipo = ?, monto_minor = ?, fecha = ?, titulo = ?, descripcion = ?, categoria_id = ?
 WHERE id = ?;
 
-deleteMovimientoCategorias:
-DELETE FROM movimiento_categoria
+deleteMovimientoEtiquetas:
+DELETE FROM movimiento_etiqueta
 WHERE movimiento_id = ?;
 
 deleteMovimiento:
@@ -155,11 +181,9 @@ GROUP BY tipo;
 
 -- Grouped by tipo as well as categoria_id so gastos and ingresos in the same categoria never net
 -- each other out. Filtered by moneda because minor units of different currencies are different units
--- and adding them is meaningless. A movimiento counts its full amount in every one of its categorias,
--- so these totals do not add up to sumMovimientosByTipo.
+-- and adding them is meaningless.
 sumMovimientosPorCategoria:
-SELECT movimiento_categoria.categoria_id, movimiento.tipo, SUM(movimiento.monto_minor) AS total_minor
+SELECT categoria_id, tipo, SUM(monto_minor) AS total_minor
 FROM movimiento
-JOIN movimiento_categoria ON movimiento_categoria.movimiento_id = movimiento.id
-WHERE movimiento.monto_moneda = ? AND movimiento.fecha BETWEEN ? AND ?
-GROUP BY movimiento_categoria.categoria_id, movimiento.tipo;
+WHERE monto_moneda = ? AND fecha BETWEEN ? AND ?
+GROUP BY categoria_id, tipo;

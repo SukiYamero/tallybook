@@ -1,0 +1,50 @@
+CREATE TABLE etiqueta (
+    id TEXT NOT NULL PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+selectAllEtiquetas:
+SELECT *
+FROM etiqueta;
+
+selectEtiquetaById:
+SELECT *
+FROM etiqueta
+WHERE id = ?;
+
+selectExistingEtiquetaIds:
+SELECT id
+FROM etiqueta
+WHERE id IN ?;
+
+insertEtiqueta:
+INSERT INTO etiqueta(id, nombre, created_at)
+VALUES (?, ?, ?);
+
+updateEtiquetaNombre:
+UPDATE etiqueta
+SET nombre = :nombre
+WHERE id = :id;
+
+deleteEtiqueta:
+DELETE FROM etiqueta
+WHERE id = ?;
+
+deleteLinksForEtiqueta:
+DELETE FROM movimiento_etiqueta
+WHERE etiqueta_id = ?;
+
+-- Any currency, like the count a categoria delete refuses on; the primary key makes every link a
+-- distinct movimiento.
+countMovimientosForEtiqueta:
+SELECT COUNT(*)
+FROM movimiento_etiqueta
+WHERE etiqueta_id = ?;
+
+countMovimientosPorEtiqueta:
+SELECT movimiento_etiqueta.etiqueta_id, COUNT(*) AS movimiento_count
+FROM movimiento_etiqueta
+JOIN movimiento ON movimiento.id = movimiento_etiqueta.movimiento_id
+WHERE movimiento.monto_moneda = ?
+GROUP BY movimiento_etiqueta.etiqueta_id;

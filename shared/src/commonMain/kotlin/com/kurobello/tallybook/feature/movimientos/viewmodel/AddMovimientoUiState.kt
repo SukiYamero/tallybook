@@ -21,13 +21,14 @@ internal data class AddMovimientoUiState(
     override val fecha: LocalDate,
     override val moneda: Moneda,
     override val categorias: List<Categoria>,
-    override val categoriaIds: List<String>,
+    override val categoriaId: String?,
     override val titulo: String,
     override val descripcion: String,
     override val isLoading: Boolean,
     override val isSubmitting: Boolean,
     override val submitAttempted: Boolean,
     override val error: MovimientoFormError?,
+    override val etiquetaIds: List<String> = emptyList(),
     val hasUnsavedChanges: Boolean = false,
     val step: AddMovimientoStep = AddMovimientoStep.PHRASE,
     val phrase: String = "",
@@ -35,7 +36,7 @@ internal data class AddMovimientoUiState(
     val suggestionQuery: SuggestionQuery? = null,
     val suggestions: List<Categoria> = emptyList(),
     val dismissedSuggestionIds: Set<String> = emptySet(),
-    // While false the sentence owns the categories; the first manual change takes them over.
+    // While false the sentence owns the category; the first manual change takes it over.
     val categoriasEdited: Boolean = false,
     val amountNeedsReview: Boolean = false,
     val today: LocalDate = fecha,
@@ -47,28 +48,25 @@ internal data class AddMovimientoUiState(
     get() = (amountResult as? AmountInputResult.Invalid)?.reason?.takeIf { submitAttempted }
 
   override val isCategoriaMissing: Boolean
-    get() = submitAttempted && effectiveCategoriaIds.isEmpty()
+    get() = submitAttempted && effectiveCategoriaId == null
 
   /** The loaded selection, or the pending fallback when nothing valid is selected. */
-  val effectiveCategoriaIds: List<String>
-    get() =
-        categoriaIds.filter(::isLoaded).ifEmpty {
-          listOfNotNull(CATEGORIA_OTROS_ID.takeIf(::isLoaded))
-        }
+  val effectiveCategoriaId: String?
+    get() = categoriaId?.takeIf(::isLoaded) ?: CATEGORIA_OTROS_ID.takeIf(::isLoaded)
 
-  override val displayedCategoriaIds: List<String>
-    get() = effectiveCategoriaIds
+  override val displayedCategoriaId: String?
+    get() = effectiveCategoriaId
 
   val effectiveCategorias: List<Categoria>
-    get() = effectiveCategoriaIds.mapNotNull { id -> categorias.firstOrNull { it.id == id } }
+    get() = listOfNotNull(categorias.firstOrNull { it.id == effectiveCategoriaId })
 
   val categoriasArePending: Boolean
-    get() = CATEGORIA_OTROS_ID in effectiveCategoriaIds
+    get() = effectiveCategoriaId == CATEGORIA_OTROS_ID
 
   val canSubmit: Boolean
     get() =
         amountResult is AmountInputResult.Valid &&
-            effectiveCategoriaIds.isNotEmpty() &&
+            effectiveCategoriaId != null &&
             !isLoading &&
             !isSubmitting &&
             error == null
@@ -105,7 +103,7 @@ internal data class AddMovimientoUiState(
             actionsEnabled = !isLoading && loadError == null,
         )
 
-  // Without the Otros fallback in the catalog the categories are empty, and the review still shows
+  // Without the Otros fallback in the catalog the category is empty, and the review still shows
   // its actions so the user can add one or edit instead of facing an empty sheet.
   val summary: MovimientoSummaryUi
     get() =
@@ -129,7 +127,8 @@ internal data class MovimientoDraft(
     val tipo: TipoMovimiento,
     val amountInput: String,
     val fecha: LocalDate,
-    val categoriaIds: List<String>,
+    val categoriaId: String?,
+    val etiquetaIds: List<String>,
     val titulo: String,
     val descripcion: String,
 )
@@ -139,7 +138,8 @@ internal fun AddMovimientoUiState.toDraft(): MovimientoDraft =
         tipo = tipo,
         amountInput = amountInput,
         fecha = fecha,
-        categoriaIds = categoriaIds,
+        categoriaId = categoriaId,
+        etiquetaIds = etiquetaIds,
         titulo = titulo,
         descripcion = descripcion,
     )

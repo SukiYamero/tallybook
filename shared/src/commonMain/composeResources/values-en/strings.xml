@@ -319,6 +319,7 @@
     <string name="csv_header_type">Type</string>
     <string name="csv_header_category">Category</string>
     <string name="csv_header_parent_category">Parent category</string>
+    <string name="csv_header_tags">Tags</string>
     <string name="csv_header_title">Title</string>
     <string name="csv_header_description">Description</string>
     <string name="csv_header_amount">Amount</string>

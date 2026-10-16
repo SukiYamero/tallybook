@@ -3,10 +3,11 @@ package com.kurobello.tallybook.feature.movimientos.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
-import com.kurobello.tallybook.core.model.CategoriaSelection
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Money
@@ -32,6 +33,7 @@ import kotlinx.datetime.todayIn
 internal class ManageMovimientoViewModel(
     private val movimientoRepository: MovimientoRepository,
     private val categoriaRepository: CategoriaRepository,
+    private val etiquetaRepository: EtiquetaRepository,
     private val clock: Clock,
     private val timeZoneProvider: TimeZoneProvider,
     scope: CoroutineScope? = null,
@@ -86,12 +88,11 @@ internal class ManageMovimientoViewModel(
 
   override fun onCategoriasChanged(ids: List<String>) {
     val catalog = uiState.value.session?.categorias ?: return
-    updateDraft { copy(categoriaIds = CategoriaSelection.reconcile(categoriaIds, ids, catalog)) }
+    updateDraft { copy(categoriaId = chosenCategoriaId(categoriaId, ids, catalog) ?: categoriaId) }
   }
 
-  override fun onCategoriaRemoved(id: String) = updateDraft {
-    copy(categoriaIds = CategoriaSelection.remove(categoriaIds, id))
-  }
+  // The editor always keeps one category: it changes only by choosing another one.
+  override fun onCategoriaRemoved(id: String) = Unit
 
   override fun onCancelEdit() {
     val session = uiState.value.session ?: return
@@ -160,7 +161,8 @@ internal class ManageMovimientoViewModel(
 
   private fun submitUpdate(session: MovimientoManagementSession, changes: MovimientoChanges) {
     coroutineScope.launch {
-      when (val outcome = movimientoRepository.update(session.movimientoId, changes)) {
+      val update = changes.withoutDeletedEtiquetas()
+      when (val outcome = movimientoRepository.update(session.movimientoId, update)) {
         is DataOutcome.Failure ->
             updateSession(session.token) {
               copy(isSubmitting = false, edit = edit?.copy(error = MovimientoFormError.SAVE_FAILED))
@@ -176,6 +178,17 @@ internal class ManageMovimientoViewModel(
             }
       }
     }
+  }
+
+  // A tag deleted while the editor is open would make the repository refuse the whole save; it
+  // simply leaves the movimiento instead. An unreadable catalog defers to the repository's check.
+  private suspend fun MovimientoChanges.withoutDeletedEtiquetas(): MovimientoChanges {
+    if (etiquetaIds.isEmpty()) return this
+    val existing =
+        (etiquetaRepository.getAll() as? DataOutcome.Success)
+            ?.data
+            ?.mapTo(mutableSetOf(), Etiqueta::id)
+    return if (existing == null) this else copy(etiquetaIds = etiquetaIds.filter { it in existing })
   }
 
   override fun onRequestDelete() {
@@ -448,7 +461,8 @@ internal fun Movimiento.toDraft() =
         tipo,
         monto.toAmountInput(),
         fecha,
-        categoriaIds,
+        categoriaId,
+        etiquetaIds,
         titulo.orEmpty(),
         descripcion.orEmpty(),
     )
@@ -458,7 +472,8 @@ private fun Movimiento.toChanges() =
         tipo,
         monto,
         fecha,
-        categoriaIds,
+        categoriaId,
+        etiquetaIds,
         titulo.normalizeOptionalTextOrNull(),
         descripcion.normalizeOptionalTextOrNull(),
     )
@@ -467,18 +482,17 @@ private fun String?.normalizeOptionalTextOrNull(): String? = this?.normalizeOpti
 
 private fun EditMovimientoUiState.toChangesOrNull(): MovimientoChanges? {
   val amount = (parseAmountInput(amountInput, moneda) as? AmountInputResult.Valid)?.money
-  val isReady = !isLoading && error == null
-  val fieldsValid = hasValidCategoria && !isFechaInvalid
-  return amount
-      ?.takeIf { isReady && fieldsValid }
-      ?.let {
-        MovimientoChanges(
-            tipo,
-            it,
-            fecha,
-            categoriaIds,
-            titulo.normalizeOptionalText(),
-            descripcion.normalizeOptionalText(),
-        )
-      }
+  val categoria = categoriaId
+  val isReady = !isLoading && error == null && hasValidCategoria && !isFechaInvalid
+  return if (amount == null || categoria == null || !isReady) null
+  else
+      MovimientoChanges(
+          tipo,
+          amount,
+          fecha,
+          categoria,
+          etiquetaIds,
+          titulo.normalizeOptionalText(),
+          descripcion.normalizeOptionalText(),
+      )
 }

@@ -4,6 +4,9 @@ import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.data.toDomain
+import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.Money
+import com.kurobello.tallybook.core.model.TipoMovimiento
 import java.io.File
 import java.sql.SQLException
 import kotlin.test.Test
@@ -44,10 +47,72 @@ class DatabaseSchemaTest {
         assertEquals(1_050L, row.monto_minor)
         assertEquals("USD", row.monto_moneda)
         assertEquals("2026-09-03", row.fecha)
-        assertEquals(listOf("cat_comida"), row.toDomain().categoriaIds)
+        assertEquals("cat_comida", row.toDomain().categoriaId)
         assertEquals("almuerzo", row.titulo)
         assertNull(row.descripcion)
         assertEquals(Instant.parse("2026-09-03T00:00:00Z").toString(), row.created_at)
+      }
+
+  @Test
+  fun `migration from schema 5 keeps the first categoria and starts without etiquetas`() =
+      withSnapshot(version = 5) { driver ->
+        listOf(
+                "('none', 'GASTO', 100, 'COP', '2026-10-03', 'sin categoria', NULL, " +
+                    "'2026-10-03T12:00:00Z')",
+                "('one', 'INGRESO', 200, 'COP', '2026-10-02', NULL, 'detalle', " +
+                    "'2026-10-02T12:00:00Z')",
+                "('three', 'GASTO', 300, 'USD', '2026-10-01', 'cena', NULL, " +
+                    "'2026-10-01T12:00:00Z')",
+            )
+            .forEach { values ->
+              driver.execute(
+                  null,
+                  "INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, titulo, " +
+                      "descripcion, created_at) VALUES $values",
+                  0,
+              )
+            }
+        listOf(
+                "('one', 'cat_sueldo', 0)",
+                "('three', 'cat_social', 2)",
+                "('three', 'cat_restaurantes', 0)",
+                "('three', 'cat_comida', 1)",
+            )
+            .forEach { values ->
+              driver.execute(
+                  null,
+                  "INSERT INTO movimiento_categoria(movimiento_id, categoria_id, posicion) " +
+                      "VALUES $values",
+                  0,
+              )
+            }
+
+        TallybookDatabase.Schema.migrate(
+            driver,
+            oldVersion = 5,
+            newVersion = TallybookDatabase.Schema.version,
+        )
+
+        val migrated =
+            TallybookDatabase(driver).movimientoQueries.selectAllMovimientos().executeAsList()
+        assertEquals(
+            mapOf("none" to "cat_otros", "one" to "cat_sueldo", "three" to "cat_restaurantes"),
+            migrated.associate { it.id to it.categoria_id },
+        )
+        assertEquals(listOf("", "", ""), migrated.map { it.etiqueta_ids })
+        val one = migrated.single { it.id == "one" }.toDomain()
+        assertEquals(TipoMovimiento.INGRESO, one.tipo)
+        assertEquals(Money(200, Moneda.COP), one.monto)
+        assertNull(one.titulo)
+        assertEquals("detalle", one.descripcion)
+        assertEquals(emptyList(), one.etiquetaIds)
+        assertEquals(Instant.parse("2026-10-02T12:00:00Z"), one.createdAt)
+        assertEquals(emptyList(), driver.queryStrings("SELECT id FROM etiqueta"))
+        assertEquals(
+            emptyList(),
+            driver.queryStrings("SELECT movimiento_id FROM movimiento_etiqueta"),
+        )
+        assertEquals(freshSchema(), driver.schemaObjects())
       }
 
   @Test
@@ -80,7 +145,11 @@ class DatabaseSchemaTest {
               )
             }
 
-        TallybookDatabase.Schema.migrate(driver, oldVersion = 4, newVersion = 5)
+        TallybookDatabase.Schema.migrate(
+            driver,
+            oldVersion = 4,
+            newVersion = TallybookDatabase.Schema.version,
+        )
 
         val migrated =
             TallybookDatabase(driver).movimientoQueries.selectAllMovimientos().executeAsList().map {
@@ -89,7 +158,7 @@ class DatabaseSchemaTest {
         assertEquals(listOf("phrase", "manual"), migrated.map { it.id })
         assertEquals(listOf("Gasté 25 en cine", null), migrated.map { it.titulo })
         assertEquals(listOf(null, null), migrated.map { it.descripcion })
-        assertEquals(listOf("cat_cine", "cat_otros"), migrated.first().categoriaIds)
+        assertEquals(listOf("cat_cine", "cat_sueldo"), migrated.map { it.categoriaId })
         assertEquals(Instant.parse("2026-10-02T12:00:00Z"), migrated.first().createdAt)
         assertEquals(freshSchema(), driver.schemaObjects())
       }
@@ -156,9 +225,9 @@ class DatabaseSchemaTest {
             database.categoriaQueries.selectAllCategorias().executeAsList(),
         )
         assertEquals(
-            mapOf("multi" to listOf("cat_cafe", "cat_otros"), "usd" to listOf("cat_comida")),
+            mapOf("multi" to "cat_cafe", "usd" to "cat_comida"),
             database.movimientoQueries.selectAllMovimientos().executeAsList().associate {
-              it.id to it.toDomain().categoriaIds
+              it.id to it.toDomain().categoriaId
             },
         )
         assertEquals(freshSchema(), driver.schemaObjects())
@@ -176,7 +245,7 @@ class DatabaseSchemaTest {
       }
 
   @Test
-  fun `migration from schema 2 moves every categoria into the join table and rebuilds movimiento`() =
+  fun `migration from schema 2 keeps each categoria and rebuilds movimiento`() =
       withSnapshot(version = 2) { driver ->
         val v2Rows =
             listOf(
@@ -211,24 +280,18 @@ class DatabaseSchemaTest {
         )
         assertEquals(
             mapOf(
-                "cafe" to listOf("cat_comida"),
-                "sueldo" to listOf("cat_sueldo"),
-                "orphan" to listOf("category-that-was-never-seeded"),
-                "tied" to listOf("cat_comida"),
+                "cafe" to "cat_comida",
+                "sueldo" to "cat_sueldo",
+                "orphan" to "category-that-was-never-seeded",
+                "tied" to "cat_comida",
             ),
-            migrated.associate { it.id to it.categoriaIds },
+            migrated.associate { it.id to it.categoriaId },
         )
         val cafe = migrated.single { it.id == "cafe" }
         assertEquals("almuerzo", cafe.titulo)
         assertNull(cafe.descripcion)
         assertEquals(1_000L, cafe.monto.minorUnits)
         assertEquals(Instant.parse("2026-09-03T12:00:00Z"), cafe.createdAt)
-        assertEquals(
-            listOf("cafe:0", "orphan:0", "sueldo:0", "tied:0"),
-            driver.queryStrings(
-                "SELECT movimiento_id || ':' || posicion FROM movimiento_categoria ORDER BY 1"
-            ),
-        )
         assertEquals(
             listOf(
                 "id",
@@ -239,31 +302,30 @@ class DatabaseSchemaTest {
                 "descripcion",
                 "created_at",
                 "titulo",
+                "categoria_id",
             ),
             driver.queryStrings("SELECT name FROM pragma_table_info('movimiento')"),
         )
         assertEquals(
-            listOf("movimiento_categoria_categoria", "movimiento_recent"),
+            listOf("movimiento_by_categoria", "movimiento_etiqueta_etiqueta", "movimiento_recent"),
             driver.queryStrings(
                 "SELECT name FROM sqlite_master WHERE type = 'index' AND name NOT LIKE 'sqlite_%' ORDER BY name"
             ),
         )
         assertEquals(
             listOf("categoria_id"),
-            driver.queryStrings(
-                "SELECT name FROM pragma_index_info('movimiento_categoria_categoria')"
-            ),
+            driver.queryStrings("SELECT name FROM pragma_index_info('movimiento_by_categoria')"),
         )
         assertEquals(
             listOf("fecha", "created_at", "id"),
             driver.queryStrings("SELECT name FROM pragma_index_info('movimiento_recent')"),
         )
         assertEquals(
-            listOf("movimiento_con_categorias"),
+            listOf("movimiento_con_etiquetas"),
             driver.queryStrings("SELECT name FROM sqlite_master WHERE type = 'view'"),
         )
         assertEquals(
-            listOf("categoria", "movimiento", "movimiento_categoria"),
+            listOf("categoria", "etiqueta", "movimiento", "movimiento_etiqueta"),
             driver.queryStrings(
                 "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
             ),
@@ -328,7 +390,8 @@ class DatabaseSchemaTest {
       montoMinor: Long,
       moneda: String = "COP",
       fecha: String = "2026-09-03",
-      categoriaIds: List<String> = listOf("cat1"),
+      categoriaId: String = "cat1",
+      etiquetaIds: List<String> = emptyList(),
       titulo: String? = null,
       descripcion: String? = null,
       createdAt: String = "2026-09-03T12:00:00Z",
@@ -343,9 +406,10 @@ class DatabaseSchemaTest {
           titulo = titulo,
           descripcion = descripcion,
           created_at = createdAt,
+          categoria_id = categoriaId,
       )
-      categoriaIds.forEachIndexed { posicion, categoriaId ->
-        movimientoQueries.insertMovimientoCategoria(id, categoriaId, posicion.toLong())
+      etiquetaIds.forEachIndexed { posicion, etiquetaId ->
+        movimientoQueries.insertMovimientoEtiqueta(id, etiquetaId, posicion.toLong())
       }
     }
   }
@@ -360,7 +424,8 @@ class DatabaseSchemaTest {
         montoMinor = 1050,
         moneda = "USD",
         fecha = "2026-09-03",
-        categoriaIds = listOf("cat_comida"),
+        categoriaId = "cat_comida",
+        etiquetaIds = listOf("tag_b", "tag_a"),
         titulo = "almuerzo",
         descripcion = "con Ana",
     )
@@ -370,7 +435,8 @@ class DatabaseSchemaTest {
     assertEquals(1050L, row.monto_minor)
     assertEquals("USD", row.monto_moneda)
     assertEquals("2026-09-03", row.fecha)
-    assertEquals(listOf("cat_comida"), row.toDomain().categoriaIds)
+    assertEquals("cat_comida", row.toDomain().categoriaId)
+    assertEquals(listOf("tag_b", "tag_a"), row.toDomain().etiquetaIds)
     assertEquals("almuerzo", row.titulo)
     assertEquals("con Ana", row.descripcion)
     assertEquals("2026-09-03T12:00:00Z", row.created_at)
@@ -384,7 +450,7 @@ class DatabaseSchemaTest {
         id = "mov1",
         tipo = "INGRESO",
         montoMinor = 120_000,
-        categoriaIds = listOf("cat_sueldo"),
+        categoriaId = "cat_sueldo",
     )
 
     val row = db.movimientoQueries.selectMovimientoById("mov1").executeAsOne()
@@ -479,57 +545,57 @@ class DatabaseSchemaTest {
     db.insert(
         id = "in1",
         montoMinor = 1_500,
-        categoriaIds = listOf("cat_comida"),
+        categoriaId = "cat_comida",
         fecha = "2026-09-05",
     )
     db.insert(
         id = "in2",
         montoMinor = 2_500,
-        categoriaIds = listOf("cat_comida"),
+        categoriaId = "cat_comida",
         fecha = "2026-09-20",
     )
     db.insert(
         id = "in3",
         tipo = "INGRESO",
         montoMinor = 700,
-        categoriaIds = listOf("cat_comida"),
+        categoriaId = "cat_comida",
         fecha = "2026-09-10",
     )
     db.insert(
         id = "in4",
         montoMinor = -300,
-        categoriaIds = listOf("cat_transporte"),
+        categoriaId = "cat_transporte",
         fecha = "2026-09-11",
     )
     db.insert(
         id = "edge1",
         montoMinor = 1_000,
-        categoriaIds = listOf("cat_transporte"),
+        categoriaId = "cat_transporte",
         fecha = "2026-09-01",
     )
     db.insert(
         id = "edge2",
         montoMinor = 2_000,
-        categoriaIds = listOf("cat_transporte"),
+        categoriaId = "cat_transporte",
         fecha = "2026-09-30",
     )
     db.insert(
         id = "before",
         montoMinor = 9_999,
-        categoriaIds = listOf("cat_comida"),
+        categoriaId = "cat_comida",
         fecha = "2026-08-31",
     )
     db.insert(
         id = "after",
         montoMinor = 8_888,
-        categoriaIds = listOf("cat_comida"),
+        categoriaId = "cat_comida",
         fecha = "2026-10-01",
     )
     db.insert(
         id = "otherMoneda",
         montoMinor = 7_777,
         moneda = "USD",
-        categoriaIds = listOf("cat_comida"),
+        categoriaId = "cat_comida",
         fecha = "2026-09-15",
     )
 
@@ -550,10 +616,10 @@ class DatabaseSchemaTest {
   }
 
   @Test
-  fun `sumMovimientosPorCategoria counts the full amount in every categoria of a movimiento`() {
+  fun `sumMovimientosPorCategoria totals add up to the totals per tipo`() {
     val db = inMemoryDatabase()
-    db.insert(id = "both", montoMinor = 1_000, categoriaIds = listOf("cat_comida", "cat_social"))
-    db.insert(id = "one", montoMinor = 500, categoriaIds = listOf("cat_comida"))
+    db.insert(id = "comida", montoMinor = 1_000, categoriaId = "cat_comida")
+    db.insert(id = "social", montoMinor = 500, categoriaId = "cat_social")
 
     val perCategoria =
         db.movimientoQueries
@@ -562,7 +628,7 @@ class DatabaseSchemaTest {
             .associate { (it.categoria_id to it.tipo) to it.total_minor }
 
     assertEquals(
-        mapOf(("cat_comida" to "GASTO") to 1_500L, ("cat_social" to "GASTO") to 1_000L),
+        mapOf(("cat_comida" to "GASTO") to 1_000L, ("cat_social" to "GASTO") to 500L),
         perCategoria,
     )
     assertEquals(

@@ -5,6 +5,7 @@ import com.kurobello.tallybook.AppStartupViewModel
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategorySeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
+import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.PREFERENCES_FILE_NAME
@@ -16,6 +17,7 @@ import com.kurobello.tallybook.core.database.DatabaseDriverFactory
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.feature.home.HomeViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
+import com.kurobello.tallybook.feature.movimientos.viewmodel.ManageMovimientoViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoEntryEngine
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
@@ -46,6 +48,7 @@ class RepositoryModulesTest {
     try {
       assertNotNull(application.koin.get<MovimientoRepository>())
       assertNotNull(application.koin.get<CategoriaRepository>())
+      assertNotNull(application.koin.get<EtiquetaRepository>())
       assertNotNull(application.koin.get<CategorySeedProvider>())
       assertNotNull(application.koin.get<LocalDataBootstrapper>())
       assertNotNull(application.koin.get<AppStartupViewModel>())
@@ -54,6 +57,7 @@ class RepositoryModulesTest {
       assertNotNull(application.koin.get<CategorySuggester>())
       assertNotNull(application.koin.get<MovimientoEntryEngine>())
       assertNotNull(application.koin.get<AddMovimientoViewModel>())
+      assertNotNull(application.koin.get<ManageMovimientoViewModel>())
     } finally {
       application.koin.get<PreferencesDataStoreFactory>().close()
       application.close()

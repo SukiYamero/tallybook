@@ -39,7 +39,7 @@ class HistoryRepositoryTest {
   fun `range includes both endpoints excludes adjacent dates and currency and keeps stable ties`() =
       runTest {
         JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-          TallybookDatabase.Schema.create(driver)
+          createSchemaWithReferences(driver, listOf("food"))
           val repository =
               MovimientoRepositoryImpl(
                   TallybookDatabase(driver),
@@ -73,7 +73,7 @@ class HistoryRepositoryTest {
   @Test
   fun `one day and empty ranges preserve their exact boundaries`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-      TallybookDatabase.Schema.create(driver)
+      createSchemaWithReferences(driver, listOf("food"))
       val repository =
           MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
       val row = movimiento("selected", "2026-09-15")
@@ -99,7 +99,7 @@ class HistoryRepositoryTest {
   @Test
   fun `cross year exotic intervals fail as invalid input before storage access`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-      TallybookDatabase.Schema.create(driver)
+      createSchemaWithReferences(driver, listOf("food"))
       val real = TallybookDatabase(driver)
       val database =
           object : TallybookDatabase by real {
@@ -126,7 +126,7 @@ class HistoryRepositoryTest {
   fun `same year signed and extended periods and ordinary cross year intervals remain supported`() =
       runTest {
         JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-          TallybookDatabase.Schema.create(driver)
+          createSchemaWithReferences(driver, listOf("food"))
           val repository =
               MovimientoRepositoryImpl(
                   TallybookDatabase(driver),
@@ -162,7 +162,7 @@ class HistoryRepositoryTest {
   @Test
   fun `years are persisted distinct numeric descending and currency specific`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-      TallybookDatabase.Schema.create(driver)
+      createSchemaWithReferences(driver, listOf("food"))
       val repository =
           MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
       assertEquals(DataOutcome.Success(emptyList()), repository.observeYears(Moneda.COP).first())
@@ -198,7 +198,7 @@ class HistoryRepositoryTest {
         val actualDriver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
         val driver = TrackingDriver(actualDriver)
         try {
-          TallybookDatabase.Schema.create(driver)
+          createSchemaWithReferences(driver, listOf("food"))
           val repository =
               MovimientoRepositoryImpl(
                   TallybookDatabase(driver),
@@ -275,7 +275,7 @@ class HistoryRepositoryTest {
   fun `construction errors become local outcomes and the same cold flow can be resubscribed`() =
       runTest {
         JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-          TallybookDatabase.Schema.create(driver)
+          createSchemaWithReferences(driver, listOf("food"))
           val real = TallybookDatabase(driver)
           var unavailable = true
           val database =
@@ -298,7 +298,7 @@ class HistoryRepositoryTest {
   @Test
   fun `construction cancellation is rethrown rather than mapped to local failure`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-      TallybookDatabase.Schema.create(driver)
+      createSchemaWithReferences(driver, listOf("food"))
       val real = TallybookDatabase(driver)
       val database =
           object : TallybookDatabase by real {
@@ -316,7 +316,7 @@ class HistoryRepositoryTest {
   @Test
   fun `closed storage emits local failure for both history reads`() = runTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    TallybookDatabase.Schema.create(driver)
+    createSchemaWithReferences(driver, listOf("food"))
     val repository =
         MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
     driver.close()
@@ -340,7 +340,7 @@ class HistoryRepositoryTest {
         )
     for ((amount, tipo, date) in corruptRows) {
       JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-        TallybookDatabase.Schema.create(driver)
+        createSchemaWithReferences(driver, listOf("food"))
         val database = TallybookDatabase(driver)
         val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
         repository.insert(movimiento("valid", "2026-09-01"))
@@ -353,8 +353,8 @@ class HistoryRepositoryTest {
             null,
             null,
             "2026-09-15T12:00:00Z",
+            "food",
         )
-        database.movimientoQueries.insertMovimientoCategoria("invalid", "food", 0)
         val wholeYear = MovimientoDateRange(LocalDate(2026, 1, 1), LocalDate(2026, 12, 31))
         val failure =
             assertIs<DataOutcome.Failure>(repository.observeRange(Moneda.COP, wholeYear).first())
@@ -371,7 +371,7 @@ class HistoryRepositoryTest {
         for (date in
             listOf("not-a-date", "2026x-09-15", "2026", "02026-09-15", "+1000000000-01-01")) {
           JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-            TallybookDatabase.Schema.create(driver)
+            createSchemaWithReferences(driver, listOf("food"))
             val database = TallybookDatabase(driver)
             val repository =
                 MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
@@ -385,8 +385,8 @@ class HistoryRepositoryTest {
                 null,
                 null,
                 "2026-09-15T12:00:00Z",
+                "food",
             )
-            database.movimientoQueries.insertMovimientoCategoria("invalid", "food", 0)
 
             assertIs<DataError.Local>(
                 assertIs<DataOutcome.Failure>(repository.observeYears(Moneda.COP).first()).error
@@ -403,7 +403,7 @@ class HistoryRepositoryTest {
   fun `year metadata validates only the canonical year and does not deserialize movimiento fields`() =
       runTest {
         JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-          TallybookDatabase.Schema.create(driver)
+          createSchemaWithReferences(driver, listOf("food"))
           val database = TallybookDatabase(driver)
           database.movimientoQueries.insertMovimiento(
               "invalid-row",
@@ -414,8 +414,8 @@ class HistoryRepositoryTest {
               null,
               null,
               "not-an-instant",
+              "food",
           )
-          database.movimientoQueries.insertMovimientoCategoria("invalid-row", "food", 0)
           val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
 
           assertEquals(
@@ -432,7 +432,7 @@ class HistoryRepositoryTest {
         val actualDriver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
         val driver = TrackingDriver(actualDriver)
         try {
-          TallybookDatabase.Schema.create(driver)
+          createSchemaWithReferences(driver, listOf("food"))
           val database = TallybookDatabase(driver)
           val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
           val flow = repository.observeRange(Moneda.COP, september)
@@ -450,8 +450,8 @@ class HistoryRepositoryTest {
               null,
               null,
               "2026-09-15T12:00:00Z",
+              "food",
           )
-          database.movimientoQueries.insertMovimientoCategoria("invalid", "food", 0)
           runCurrent()
           assertEquals(2, emissions.size)
           assertEquals(DataOutcome.Success(emptyList()), emissions.first())
@@ -474,7 +474,7 @@ class HistoryRepositoryTest {
         val actualDriver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
         val driver = TrackingDriver(actualDriver)
         try {
-          TallybookDatabase.Schema.create(driver)
+          createSchemaWithReferences(driver, listOf("food"))
           val database = TallybookDatabase(driver)
           database.transaction {
             repeat(10000) { index ->
@@ -488,11 +488,7 @@ class HistoryRepositoryTest {
                   "Lunch",
                   null,
                   "2026-09-15T12:00:00Z",
-              )
-              database.movimientoQueries.insertMovimientoCategoria(
-                  "cop-${index.toString().padStart(5, '0')}",
                   "food",
-                  0,
               )
             }
             repeat(4000) { index ->
@@ -505,8 +501,8 @@ class HistoryRepositoryTest {
                   null,
                   null,
                   "2026-09-15T12:00:00Z",
+                  "food",
               )
-              database.movimientoQueries.insertMovimientoCategoria("usd-$index", "food", 0)
               database.movimientoQueries.insertMovimiento(
                   "outside-$index",
                   "GASTO",
@@ -516,8 +512,8 @@ class HistoryRepositoryTest {
                   null,
                   null,
                   "2026-09-15T12:00:00Z",
+                  "food",
               )
-              database.movimientoQueries.insertMovimientoCategoria("outside-$index", "food", 0)
             }
           }
           val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
@@ -661,7 +657,7 @@ class HistoryRepositoryTest {
           tipo = TipoMovimiento.GASTO,
           monto = Money(100, moneda),
           fecha = LocalDate.parse(fecha),
-          categoriaIds = listOf("food"),
+          categoriaId = "food",
           titulo = "Lunch",
           descripcion = null,
           createdAt = Instant.parse(createdAt),

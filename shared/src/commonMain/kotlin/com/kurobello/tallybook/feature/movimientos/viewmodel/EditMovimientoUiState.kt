@@ -27,8 +27,11 @@ internal data class EditMovimientoUiState(
   override val moneda
     get() = original.monto.moneda
 
-  override val categoriaIds
-    get() = draft.categoriaIds
+  override val categoriaId
+    get() = draft.categoriaId
+
+  override val etiquetaIds
+    get() = draft.etiquetaIds
 
   override val titulo
     get() = draft.titulo
@@ -43,9 +46,9 @@ internal data class EditMovimientoUiState(
         }
 
   val hasValidCategoria: Boolean
-    get() =
-        categoriaIds.isNotEmpty() &&
-            categoriaIds.all { id -> id in original.categoriaIds || categorias.any { it.id == id } }
+    get() = categoriaId.let { id ->
+      id != null && (id == original.categoriaId || categorias.any { it.id == id })
+    }
 
   override val isCategoriaMissing
     get() = submitAttempted && !hasValidCategoria

@@ -26,7 +26,7 @@ internal val searchTestMovement =
         TipoMovimiento.GASTO,
         Money(450, Moneda.USD),
         searchTestToday,
-        listOf("food"),
+        "food",
         "Morning coffee",
         null,
         Instant.parse("2026-10-06T12:00:00Z"),

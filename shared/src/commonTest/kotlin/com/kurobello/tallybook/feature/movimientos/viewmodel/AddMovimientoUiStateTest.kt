@@ -22,7 +22,7 @@ class AddMovimientoUiStateTest {
             fecha = LocalDate(2026, 10, 16),
             moneda = Moneda.COP,
             categorias = listOf(cine),
-            categoriaIds = emptyList(),
+            categoriaId = null,
             titulo = "Gasté 20000",
             descripcion = "",
             isLoading = false,

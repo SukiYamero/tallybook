@@ -589,7 +589,7 @@ class HomeViewModelTest {
             tipo = TipoMovimiento.GASTO,
             monto = Money(100, moneda),
             fecha = LocalDate(2026, 9, 15),
-            categoriaIds = listOf(categoriaId),
+            categoriaId = categoriaId,
             titulo = null,
             descripcion = null,
             createdAt = Instant.parse("2026-09-15T00:00:00Z"),

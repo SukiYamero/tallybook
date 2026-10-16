@@ -137,7 +137,7 @@ class HomePresentationTest {
             TipoMovimiento.INGRESO,
             Money(100, Moneda.USD),
             LocalDate(2026, 10, 6),
-            listOf("salary"),
+            "salary",
             null,
             null,
             Instant.parse("2026-10-06T12:00:00Z"),

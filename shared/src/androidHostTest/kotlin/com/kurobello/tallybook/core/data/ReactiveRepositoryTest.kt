@@ -39,7 +39,7 @@ class ReactiveRepositoryTest {
   @Test
   fun `observe recent emits an initial list and another list after insert`() = runTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    TallybookDatabase.Schema.create(driver)
+    createSchemaWithReferences(driver, listOf("other"))
     val repository =
         MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
     val emissions = Channel<DataOutcome<List<Movimiento>>>(Channel.UNLIMITED)
@@ -61,7 +61,7 @@ class ReactiveRepositoryTest {
   fun `scoped recent bounds currency before limit mapping and reacts to inserts and deletes`() =
       runTest {
         JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-          TallybookDatabase.Schema.create(driver)
+          createSchemaWithReferences(driver, listOf("other"))
           val database = TallybookDatabase(driver)
           val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
           val flow = repository.observeRecent(Moneda.COP, 2)
@@ -88,8 +88,8 @@ class ReactiveRepositoryTest {
               null,
               null,
               "invalid-instant",
+              "cat_comida",
           )
-          database.movimientoQueries.insertMovimientoCategoria("foreign-corrupt", "cat_comida", 0)
           testScheduler.runCurrent()
           assertEquals(DataOutcome.Success(listOf(third, second)), emissions.last())
           assertIs<DataOutcome.Failure>(repository.observeRecent(10).first())
@@ -105,8 +105,8 @@ class ReactiveRepositoryTest {
               null,
               null,
               first.createdAt.toString(),
+              "cat_comida",
           )
-          database.movimientoQueries.insertMovimientoCategoria("selected-corrupt", "cat_comida", 0)
           testScheduler.runCurrent()
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(emissions.last()).error)
           assertTrue(collector.isCompleted)
@@ -118,7 +118,7 @@ class ReactiveRepositoryTest {
   @Test
   fun `scoped recent rejects invalid limits before reading and wraps closed storage`() = runTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    TallybookDatabase.Schema.create(driver)
+    createSchemaWithReferences(driver, listOf("other"))
     val repository =
         MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
     driver.close()
@@ -160,7 +160,7 @@ class ReactiveRepositoryTest {
   @Test
   fun `observe recent rejects a nonpositive limit without starting a query`() = runTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    TallybookDatabase.Schema.create(driver)
+    createSchemaWithReferences(driver, listOf("other"))
     val repository =
         MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
 
@@ -173,7 +173,7 @@ class ReactiveRepositoryTest {
   @Test
   fun `observe summary returns zeroes for a moneda without movimientos`() = runTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    TallybookDatabase.Schema.create(driver)
+    createSchemaWithReferences(driver, listOf("other"))
     val repository =
         MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
 
@@ -189,7 +189,7 @@ class ReactiveRepositoryTest {
   @Test
   fun `observe summary separates gastos and ingresos in the requested moneda`() = runTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    TallybookDatabase.Schema.create(driver)
+    createSchemaWithReferences(driver, listOf("other"))
     val repository =
         MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
     repository.insert(movimiento("gasto", TipoMovimiento.GASTO, Money(500, Moneda.COP)))
@@ -208,7 +208,7 @@ class ReactiveRepositoryTest {
   @Test
   fun `observe recent maps a closed storage driver to a local error`() = runTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    TallybookDatabase.Schema.create(driver)
+    createSchemaWithReferences(driver, listOf("other"))
     val repository =
         MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
     driver.close()
@@ -221,7 +221,7 @@ class ReactiveRepositoryTest {
   @Test
   fun `cancelling an active recent collector does not emit a local failure`() = runTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    TallybookDatabase.Schema.create(driver)
+    createSchemaWithReferences(driver, listOf("other"))
     val repository =
         MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
     val emissions = Channel<DataOutcome<List<Movimiento>>>(Channel.UNLIMITED)
@@ -238,7 +238,7 @@ class ReactiveRepositoryTest {
   @Test
   fun `update capture and restore invalidate home history and search observations`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-      TallybookDatabase.Schema.create(driver)
+      createSchemaWithReferences(driver, listOf("other"))
       val repository =
           MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
       val rows =
@@ -294,7 +294,7 @@ class ReactiveRepositoryTest {
                     tipo = TipoMovimiento.INGRESO,
                     monto = Money(1_000, Moneda.COP),
                     fecha = LocalDate(2025, 12, 31),
-                    categoriaIds = listOf("other"),
+                    categoriaId = "other",
                     titulo = "changed",
                     descripcion = "changed details",
                 )
@@ -306,7 +306,8 @@ class ReactiveRepositoryTest {
                     changed.tipo,
                     changed.monto,
                     changed.fecha,
-                    changed.categoriaIds,
+                    changed.categoriaId,
+                    changed.etiquetaIds,
                     changed.titulo,
                     changed.descripcion,
                 ),
@@ -378,7 +379,7 @@ class ReactiveRepositoryTest {
           tipo = tipo,
           monto = monto,
           fecha = LocalDate(2026, 9, 3),
-          categoriaIds = listOf("cat_comida"),
+          categoriaId = "cat_comida",
           titulo = "almuerzo",
           descripcion = null,
           createdAt = Instant.parse("2026-09-03T12:00:00Z"),

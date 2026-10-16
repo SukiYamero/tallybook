@@ -23,19 +23,12 @@ internal suspend fun buildSearchCandidates(
   val categoriesById = categorias.associateBy { it.id }
   return movimientos.map { movimiento ->
     context.ensureActive()
-    val categories = movimiento.categoriaIds.map { categoriesById[it] }
-    val categoryLabels = categories.map { searchCategoryLabel(it, unknownCategoryLabel) }
-    val firstLabel = categoryLabels.first()
+    val categoria = categoriesById[movimiento.categoriaId]
+    val categoryLabel = searchCategoryLabel(categoria, unknownCategoryLabel)
     SearchCandidate(
-        SearchResultRowUi(
-            movimiento,
-            categories.first(),
-            movimiento.rowTitle(firstLabel),
-            firstLabel,
-        ),
-        (listOfNotNull(movimiento.rowTitulo, movimiento.rowDescription) + categoryLabels).map(
-            ::normalizeSearchText
-        ),
+        SearchResultRowUi(movimiento, categoria, movimiento.rowTitle(categoryLabel), categoryLabel),
+        listOfNotNull(movimiento.rowTitulo, movimiento.rowDescription, categoryLabel)
+            .map(::normalizeSearchText),
     )
   }
 }

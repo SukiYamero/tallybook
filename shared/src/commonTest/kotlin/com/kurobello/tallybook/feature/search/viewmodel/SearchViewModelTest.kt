@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelStore
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
+import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
@@ -482,7 +483,7 @@ private class SearchFixture(private val scope: TestScope) {
 
   fun create(dispatcher: CoroutineDispatcher = StandardTestDispatcher(scope.testScheduler)) =
       SearchViewModel(
-          SearchRepositories(preferences, movimientos, categorias),
+          SearchRepositories(preferences, movimientos, categorias, FakeEtiquetaRepository()),
           SavedStateHandle(),
           "Unknown",
           SearchDateProvider(clock, TimeZoneProvider { TimeZone.UTC }),
@@ -536,7 +537,7 @@ private class SearchMovimientos : MovimientoRepository {
             TipoMovimiento.GASTO,
             Money(100, Moneda.USD),
             TODAY,
-            listOf("food"),
+            "food",
             text,
             null,
             Instant.parse("2026-10-06T12:00:00Z"),
@@ -569,7 +570,7 @@ private class SearchMovimientos : MovimientoRepository {
                             } != false) &&
                             (criteria.tipo == null || it.tipo == criteria.tipo) &&
                             (criteria.categoryIds.isEmpty() ||
-                                it.categoriaIds.any { id -> id in criteria.categoryIds })
+                                it.categoriaId in criteria.categoryIds)
                       }
               )
             }
@@ -620,7 +621,8 @@ private class SearchMovimientos : MovimientoRepository {
             tipo = changes.tipo,
             monto = changes.monto,
             fecha = changes.fecha,
-            categoriaIds = changes.categoriaIds,
+            categoriaId = changes.categoriaId,
+            etiquetaIds = changes.etiquetaIds,
             titulo = changes.titulo,
             descripcion = changes.descripcion,
         )

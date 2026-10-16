@@ -303,7 +303,7 @@ internal fun AddMovimientoSheetRoute(
       effects = quickCategoryViewModel.effects,
       selection =
           CategoryPickerSelection(
-              selectedIds = uiState.categoriaIds.realCategoriaIds(),
+              selectedIds = listOfNotNull(uiState.categoriaId).realCategoriaIds(),
               max = MAX_CATEGORIAS_POR_MOVIMIENTO,
               onSelectionChange = viewModel::onCategoriasChanged,
           ),

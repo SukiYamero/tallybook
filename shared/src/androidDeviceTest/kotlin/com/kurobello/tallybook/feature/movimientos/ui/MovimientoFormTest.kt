@@ -74,9 +74,7 @@ class MovimientoFormTest {
     val saveIncomeLabel = localizedString(Res.string.save_income)
 
     composeRule.setContent {
-      TallybookTheme {
-        MovimientoForm(state(tipo = tipo, categoriaIds = listOf(category.id)), actions)
-      }
+      TallybookTheme { MovimientoForm(state(tipo = tipo, categoriaId = category.id), actions) }
     }
 
     composeRule.onNodeWithText(incomeLabel).performClick()
@@ -98,7 +96,7 @@ class MovimientoFormTest {
     composeRule.setContent {
       TallybookTheme {
         MovimientoForm(
-            state(submitAttempted = true, categoriaIds = listOf(category.id)),
+            state(submitAttempted = true, categoriaId = category.id),
             RecordingActions(),
         )
       }
@@ -120,9 +118,7 @@ class MovimientoFormTest {
     val addLabel = localizedString(Res.string.category_tag_add_description)
 
     composeRule.setContent {
-      TallybookTheme {
-        MovimientoForm(state(categoriaIds = listOf(category.id)), RecordingActions())
-      }
+      TallybookTheme { MovimientoForm(state(categoriaId = category.id), RecordingActions()) }
     }
 
     composeRule
@@ -182,7 +178,7 @@ class MovimientoFormTest {
     composeRule.setContent {
       TallybookTheme {
         MovimientoForm(
-            uiState = state(categoriaIds = listOf(category.id), submitAttempted = true),
+            uiState = state(categoriaId = category.id, submitAttempted = true),
             actions = RecordingActions(),
         )
       }
@@ -244,49 +240,26 @@ class MovimientoFormTest {
   }
 
   @Test
-  fun everySelectedCategoryIsATagAndAllButTheLastCanBeRemoved() {
-    val removed = mutableListOf<String>()
-    val actions =
-        object : AddMovimientoActions by RecordingActions() {
-          override fun onCategoriaRemoved(id: String) {
-            removed += id
-          }
-        }
+  fun theSelectedCategoryCannotBeRemovedButCanBeSwitchedFromTheAddTag() {
     composeRule.setContent {
-      TallybookTheme {
-        MovimientoForm(state(categoriaIds = listOf(category.id, other.id)), actions)
-      }
+      TallybookTheme { MovimientoForm(state(categoriaId = category.id), RecordingActions()) }
     }
-
-    composeRule
-        .onNodeWithContentDescription(localizedString(Res.string.category_tag_remove, other.nombre))
-        .performClick()
 
     composeRule.onNodeWithText(category.nombre).assertIsDisplayed()
-    composeRule.runOnIdle { assertEquals(listOf(other.id), removed) }
-  }
-
-  @Test
-  fun sixCategoriesHideTheAddTag() {
-    val six = (1..6).map { category.copy(id = "c$it", nombre = "Tag $it") }
-    composeRule.setContent {
-      TallybookTheme {
-        MovimientoForm(
-            state(categoriaIds = six.map { it.id }, categorias = six),
-            RecordingActions(),
+    composeRule
+        .onNodeWithContentDescription(
+            localizedString(Res.string.category_tag_remove, category.nombre)
         )
-      }
-    }
-
+        .assertDoesNotExist()
     composeRule
         .onNodeWithContentDescription(localizedString(Res.string.category_tag_add_description))
-        .assertDoesNotExist()
+        .assertIsDisplayed()
   }
 
   @Test
   fun otrosSelectionShowsThePendingLabelOnTheCategoryField() {
     composeRule.setContent {
-      TallybookTheme { MovimientoForm(state(categoriaIds = listOf(otros.id)), RecordingActions()) }
+      TallybookTheme { MovimientoForm(state(categoriaId = otros.id), RecordingActions()) }
     }
 
     composeRule
@@ -367,7 +340,7 @@ class MovimientoFormTest {
         MovimientoForm(
             state(
                 amountInput = "10",
-                categoriaIds = listOf(category.id),
+                categoriaId = category.id,
                 error = error,
             ),
             actions,
@@ -428,7 +401,7 @@ class MovimientoFormTest {
     fun state(
         tipo: TipoMovimiento = TipoMovimiento.GASTO,
         amountInput: String = "",
-        categoriaIds: List<String> = emptyList(),
+        categoriaId: String? = null,
         categorias: List<Categoria> = listOf(category, child, other, otros),
         titulo: String = "",
         descripcion: String = "",
@@ -441,7 +414,7 @@ class MovimientoFormTest {
             fecha = LocalDate(2026, 9, 15),
             moneda = Moneda.COP,
             categorias = categorias,
-            categoriaIds = categoriaIds,
+            categoriaId = categoriaId,
             titulo = titulo,
             descripcion = descripcion,
             isLoading = false,

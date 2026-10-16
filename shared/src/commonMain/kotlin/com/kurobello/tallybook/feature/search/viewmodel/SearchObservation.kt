@@ -2,6 +2,7 @@ package com.kurobello.tallybook.feature.search.viewmodel
 
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
@@ -32,6 +33,7 @@ internal data class SearchRepositories(
     val preferences: AppPreferencesRepository,
     val movimientos: MovimientoRepository,
     val categorias: CategoriaRepository,
+    val etiquetas: EtiquetaRepository,
 )
 
 internal data class SearchInputs(

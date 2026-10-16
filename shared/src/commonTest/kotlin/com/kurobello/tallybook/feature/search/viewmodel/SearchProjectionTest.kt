@@ -53,17 +53,17 @@ class SearchProjectionTest {
   }
 
   @Test
-  fun matchesAnyCategoryNameWhileTheRowShowsTheFirstOne() = runTest {
+  fun matchesTheCategoryNameShownByTheRow() = runTest {
     val food = Categoria("food", "Comida", null, CategoryIcon.WALLET, CategoryTint.BLUE)
     val gift = Categoria("gift", "Regalo", null, CategoryIcon.WALLET, CategoryTint.BLUE)
-    val rows = listOf(row("multi", "Cena", listOf("food", "gift")), row("single", "Cine"))
+    val rows = listOf(row("dinner", "Cena", "gift"), row("single", "Cine"))
     val candidates = buildSearchCandidates(rows, listOf(food, gift), "Unknown")
 
     val byGift = matchSearchCandidates(candidates, "regalo")
-    assertEquals(listOf("multi"), byGift.map { it.id })
-    assertEquals("Comida", byGift.single().categoryLabel)
-    assertSame(food, byGift.single().categoria)
-    assertEquals(listOf("multi"), matchSearchCandidates(candidates, "comida").map { it.id })
+    assertEquals(listOf("dinner"), byGift.map { it.id })
+    assertEquals("Regalo", byGift.single().categoryLabel)
+    assertSame(gift, byGift.single().categoria)
+    assertEquals(emptyList(), matchSearchCandidates(candidates, "comida"))
     assertEquals(emptyList(), matchSearchCandidates(candidates, "gift"))
   }
 
@@ -106,7 +106,7 @@ class SearchProjectionTest {
   private fun row(
       id: String,
       titulo: String?,
-      categoriaIds: List<String> = listOf("missing"),
+      categoriaId: String = "missing",
       descripcion: String? = null,
       fecha: LocalDate = LocalDate(2026, 10, 6),
   ) =
@@ -115,7 +115,7 @@ class SearchProjectionTest {
           TipoMovimiento.GASTO,
           Money(Long.MAX_VALUE, Moneda.USD),
           fecha,
-          categoriaIds,
+          categoriaId,
           titulo,
           descripcion,
           Instant.parse("2026-10-06T12:00:00Z"),

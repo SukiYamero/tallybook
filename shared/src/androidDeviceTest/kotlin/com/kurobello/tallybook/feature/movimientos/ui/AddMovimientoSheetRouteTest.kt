@@ -11,6 +11,7 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.CategorySeedCatalog
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
+import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
@@ -138,6 +139,7 @@ class AddMovimientoSheetRouteTest {
                   preferences = FakePreferencesRepository(),
                   categorias = FakeCategoriaRepository(),
                   movimientos = movementRepository,
+                  etiquetas = FakeEtiquetaRepository(),
               ),
           idGenerator = IdGenerator { "movement-id" },
           clock = FixedClock,
@@ -249,7 +251,8 @@ class AddMovimientoSheetRouteTest {
               tipo = changes.tipo,
               monto = changes.monto,
               fecha = changes.fecha,
-              categoriaIds = changes.categoriaIds,
+              categoriaId = changes.categoriaId,
+              etiquetaIds = changes.etiquetaIds,
               titulo = changes.titulo,
               descripcion = changes.descripcion,
           )

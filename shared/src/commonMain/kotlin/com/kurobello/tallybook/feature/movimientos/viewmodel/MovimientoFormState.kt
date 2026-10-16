@@ -1,5 +1,6 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -11,7 +12,8 @@ internal interface MovimientoFormState {
   val fecha: LocalDate
   val moneda: Moneda
   val categorias: List<Categoria>
-  val categoriaIds: List<String>
+  val categoriaId: String?
+  val etiquetaIds: List<String>
   val titulo: String
   val descripcion: String
   val isLoading: Boolean
@@ -21,13 +23,27 @@ internal interface MovimientoFormState {
   val amountError: AmountInputError?
   val isCategoriaMissing: Boolean
 
-  /** The categories the form presents, which are the Otros fallback for an empty selection. */
-  val displayedCategoriaIds: List<String>
-    get() = categoriaIds
+  /** The category the form presents, which is the Otros fallback while none is chosen. */
+  val displayedCategoriaId: String?
+    get() = categoriaId
 
   val maxSelectableDate: LocalDate?
     get() = null
 
   val isFechaInvalid: Boolean
     get() = false
+}
+
+/**
+ * The one categoria a picker report means while pickers still report whole lists: the newest real
+ * pick replaces the current one, and null means the report dropped the current one.
+ */
+internal fun chosenCategoriaId(
+    current: String?,
+    reported: List<String>,
+    catalog: List<Categoria>,
+): String? {
+  val selectable = catalog.mapTo(mutableSetOf(), Categoria::id) - CATEGORIA_OTROS_ID
+  return reported.lastOrNull { it != current && it in selectable }
+      ?: current?.takeIf { it in reported }
 }

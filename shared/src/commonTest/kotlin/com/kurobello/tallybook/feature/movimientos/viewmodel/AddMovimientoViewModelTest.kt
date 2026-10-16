@@ -50,14 +50,14 @@ class AddMovimientoViewModelTest {
     runCurrent()
     viewModel.onCategoriasChanged(listOf("missing"))
 
-    assertTrue(viewModel.uiState.value.categoriaIds.isEmpty())
+    assertEquals(null, viewModel.uiState.value.categoriaId)
     assertEquals(Moneda.USD, viewModel.uiState.value.moneda)
     assertEquals(listOf(category), viewModel.uiState.value.categorias)
     assertFalse(viewModel.uiState.value.isLoading)
 
     viewModel.onCategoriasChanged(listOf(category.id))
 
-    assertEquals(listOf(category.id), viewModel.uiState.value.categoriaIds)
+    assertEquals(category.id, viewModel.uiState.value.categoriaId)
   }
 
   @Test
@@ -168,7 +168,7 @@ class AddMovimientoViewModelTest {
             tipo = TipoMovimiento.INGRESO,
             monto = com.kurobello.tallybook.core.model.Money(1234, Moneda.USD),
             fecha = LocalDate(2026, 9, 14),
-            categoriaIds = listOf(category.id),
+            categoriaId = category.id,
             titulo = null,
             descripcion = "Salary September",
             createdAt = ADD_TEST_NOW,
@@ -247,7 +247,7 @@ class AddMovimientoViewModelTest {
 
     assertEquals(MovimientoFormError.SAVE_FAILED, viewModel.uiState.value.error)
     assertEquals("12.34", viewModel.uiState.value.amountInput)
-    assertEquals(listOf(category.id), viewModel.uiState.value.categoriaIds)
+    assertEquals(category.id, viewModel.uiState.value.categoriaId)
     assertEquals("Keep this", viewModel.uiState.value.descripcion)
     assertTrue(viewModel.uiState.value.submitAttempted)
 
@@ -348,7 +348,7 @@ class AddMovimientoViewModelTest {
     viewModel.onPhraseContinue()
 
     val state = viewModel.uiState.value
-    assertFalse("cat_cine" in state.categoriaIds)
+    assertFalse(state.categoriaId == "cat_cine")
     assertTrue(state.suggestions.none { it.id == "cat_cine" })
   }
 
