@@ -71,13 +71,17 @@ internal fun MovimientoForm(
     supportingContent: (@Composable () -> Unit)? = null,
     footerContent: (@Composable () -> Unit)? = null,
     interactionEnabled: Boolean = true,
+    categoryCreation: CategoryPickerCreation? = null,
 ) {
   val fieldFocus = remember { MovimientoFieldFocus() }
   val categoryPicker = rememberMovimientoCategoryPicker(interactionEnabled)
   NavigationBackHandler(
       state = rememberNavigationEventState(NavigationEventInfo.None),
       isBackEnabled = categoryPicker.isVisible && interactionEnabled,
-      onBackCompleted = categoryPicker.onDismiss,
+      onBackCompleted = {
+        if (categoryCreation?.state?.draft != null) categoryCreation.actions.onClose()
+        else categoryPicker.onDismiss()
+      },
   )
   val formScrollState = rememberScrollState()
   val formViewport = rememberScrollableInputViewport()
@@ -162,14 +166,12 @@ internal fun MovimientoForm(
       } else footerContent()
     }
   }
-  CategoryPickerSheet(
+  MovimientoCategoryPickerSheet(
       visible = interactionEnabled && categoryPicker.isVisible,
-      categorias = uiState.categorias,
-      selectedIds = uiState.categoriaIds.realCategoriaIds(),
+      uiState = uiState,
       onSelectionChange = actions::onCategoriasChanged,
-      onDismiss = categoryPicker.onDismiss,
-      onBack = categoryPicker.onDismiss,
-      excludedIds = PICKER_EXCLUDED_CATEGORY_IDS,
+      picker = categoryPicker,
+      creation = categoryCreation,
   )
 }
 

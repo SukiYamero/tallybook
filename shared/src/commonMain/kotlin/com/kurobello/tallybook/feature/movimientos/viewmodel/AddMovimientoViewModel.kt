@@ -392,7 +392,9 @@ internal class AddMovimientoViewModel(
 
   private fun AddMovimientoUiState.candidates() =
       SuggestionCandidates(
-          availableIds = categorias.mapTo(mutableSetOf()) { it.id } - CATEGORIA_OTROS_ID,
+          availableIds =
+              categorias.filterNot(Categoria::oculta).mapTo(mutableSetOf(), Categoria::id) -
+                  CATEGORIA_OTROS_ID,
           excludedIds = dismissedSuggestionIds,
       )
 

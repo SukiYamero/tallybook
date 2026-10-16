@@ -331,6 +331,26 @@ class AddMovimientoViewModelTest {
     assertNull(withTimeoutOrNull(1) { viewModel.effects.first() })
   }
 
+  @Test
+  fun hiddenCategoriesAreNeverSuggestedOrPreselected() = runTest {
+    val categorias =
+        addSeedCategorias().map { if (it.id == "cat_cine") it.copy(oculta = true) else it }
+    val viewModel =
+        createAddViewModel(
+            categoriaRepository = AddFakeCategorias(DataOutcome.Success(categorias)),
+            preferencesRepository = addPreferences(Moneda.COP),
+            scope = backgroundScope,
+        )
+    runCurrent()
+
+    viewModel.onPhraseChanged("Gasté 20.000 en cine")
+    viewModel.onPhraseContinue()
+
+    val state = viewModel.uiState.value
+    assertFalse("cat_cine" in state.categoriaIds)
+    assertTrue(state.suggestions.none { it.id == "cat_cine" })
+  }
+
   private fun createValidViewModel(
       movimientoRepository: MovimientoRepository,
       category: Categoria,
