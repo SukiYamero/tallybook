@@ -219,12 +219,10 @@ private data class CategoryPickerContentState(
   val isSearching: Boolean
     get() = query.isNotBlank()
 
-  // Only a row that would change nothing (at the limit, not a replacement) is disabled: rows that
-  // drill into children and rows already selected stay enabled.
+  // A row whose tap would change nothing (at the limit without a replacement, or the last selected
+  // category) is disabled; rows that drill into children stay enabled.
   fun isEnabled(categoria: Categoria): Boolean =
-      opensChildren(categoria) ||
-          categoria.id in selection.selectedIds ||
-          selection.toggled(categoria.id, catalog) != selection.selectedIds
+      opensChildren(categoria) || selection.toggled(categoria.id, catalog) != selection.selectedIds
 }
 
 private data class CategoryPickerContentCallbacks(

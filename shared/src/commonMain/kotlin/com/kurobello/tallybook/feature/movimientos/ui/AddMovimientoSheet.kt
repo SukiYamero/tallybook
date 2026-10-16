@@ -24,6 +24,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.kurobello.tallybook.core.ui.component.LastWhileVisible
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
 import com.kurobello.tallybook.core.ui.component.TallybookConfirmationDialog
@@ -197,7 +198,10 @@ private fun MovimientoReviewSheet(
     modifier: Modifier = Modifier,
 ) {
   val fadeMillis = TallybookTheme.motion.fadeMillis
-  val step = rememberSheetStep(uiState.step)
+  // Back and Discard reset the draft while the sheet is already leaving; it keeps the content the
+  // user was looking at for the exit animation.
+  val shown = remember { LastWhileVisible(uiState) }.resolve(visible, uiState)
+  val step = rememberSheetStep(shown.step)
   TallybookModalBottomSheet(
       visible = visible,
       paneTitle = stringResource(Res.string.add_movimiento_pane_title),
@@ -214,14 +218,14 @@ private fun MovimientoReviewSheet(
         transitionSpec = { stepTransition(animated = visible, fadeMillis = fadeMillis) },
         label = "add movimiento step",
     ) { current ->
-      if (current == AddMovimientoStep.FORM) MovimientoForm(uiState = uiState, actions = actions)
-      else SummaryStepContent(uiState, actions, onAddCategoria)
+      if (current == AddMovimientoStep.FORM) MovimientoForm(uiState = shown, actions = actions)
+      else SummaryStepContent(shown, actions, onAddCategoria)
     }
   }
 }
 
-// Back from the review hides the sheet while the step already reads PHRASE; keeping the last sheet
-// step lets the exit animation play over the content the user was looking at.
+// The sheet composes before the review is ever shown, while the step still reads PHRASE, which has
+// no detent; the review step is the stand-in until a real one arrives.
 @Composable
 private fun rememberSheetStep(step: AddMovimientoStep): AddMovimientoStep {
   val last = remember { LastSheetStep() }

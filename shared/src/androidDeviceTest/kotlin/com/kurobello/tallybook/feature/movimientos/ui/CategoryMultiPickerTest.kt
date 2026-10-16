@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
@@ -27,6 +28,7 @@ import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_picker_done
+import tallybook.shared.generated.resources.category_picker_keep_one
 import tallybook.shared.generated.resources.category_picker_limit_reached
 
 @OptIn(ExperimentalResourceApi::class)
@@ -55,12 +57,23 @@ class CategoryMultiPickerTest {
   }
 
   @Test
-  fun lastSelectedCategoryCannotBeUnchecked() {
+  fun lastSelectedCategoryIsDisabledAndTheReasonIsShown() {
     show(initial = listOf(leisure.id))
+
+    composeRule.onCategoryOption(leisure.nombre).assertIsNotEnabled().assertIsSelected()
+    composeRule.onNodeWithText(string(Res.string.category_picker_keep_one)).assertExists()
 
     composeRule.onCategoryOption(leisure.nombre).performClick()
 
     composeRule.runOnIdle { assertEquals(listOf(leisure.id), selection) }
+  }
+
+  @Test
+  fun selectedRowsAreEnabledAgainOnceAnotherCategoryIsSelected() {
+    show(initial = listOf(leisure.id, health.id))
+
+    composeRule.onCategoryOption(leisure.nombre).assertIsEnabled()
+    composeRule.onNodeWithText(string(Res.string.category_picker_keep_one)).assertDoesNotExist()
   }
 
   @Test

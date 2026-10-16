@@ -349,6 +349,7 @@
     <string name="category_tag_remove">Remove %1$s</string>
     <string name="category_picker_done">Done (%1$d)</string>
     <string name="category_picker_limit_reached">You reached the limit of %1$d categories</string>
+    <string name="category_picker_keep_one">At least one category has to stay selected</string>
     <string name="movimiento_voice_or">or</string>
     <string name="movimiento_voice_title">Dictate with voice</string>
     <string name="movimiento_voice_coming_soon">Coming soon</string>

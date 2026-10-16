@@ -6,9 +6,11 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasNoClickAction
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -20,6 +22,7 @@ import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.StringResource
@@ -33,6 +36,7 @@ import tallybook.shared.generated.resources.category_tag_add_description
 import tallybook.shared.generated.resources.category_tag_field_counter_description
 import tallybook.shared.generated.resources.category_tag_field_suggestions
 import tallybook.shared.generated.resources.category_tag_remove
+import tallybook.shared.generated.resources.movimiento_pending_label
 
 @OptIn(ExperimentalResourceApi::class)
 class CategoryTagTest {
@@ -208,6 +212,26 @@ class CategoryTagTest {
     composeRule.onNodeWithText(string(Res.string.category_tag_field_suggestions)).assertExists()
     composeRule.onNodeWithText("Food").performClick()
     composeRule.runOnIdle { assertEquals(food, chosen) }
+  }
+
+  @Test
+  fun pendingLabelSitsOnTheHeaderRowAboveTheTags() {
+    composeRule.setContent {
+      TallybookTheme {
+        CategoryTagField(
+            categorias = listOf(cinema),
+            max = LIMIT,
+            onRemove = {},
+            onAdd = {},
+            pending = true,
+        )
+      }
+    }
+
+    val label = composeRule.onNodeWithText(string(Res.string.movimiento_pending_label))
+    val tag = composeRule.onNodeWithText("Cinema")
+    label.assertIsDisplayed()
+    assertTrue(label.getBoundsInRoot().bottom <= tag.getBoundsInRoot().top)
   }
 
   private fun string(resource: StringResource, vararg args: Any): String = runBlocking {

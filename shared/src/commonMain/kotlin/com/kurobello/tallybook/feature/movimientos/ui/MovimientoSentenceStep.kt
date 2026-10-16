@@ -65,8 +65,9 @@ internal data class MovimientoSentenceCallbacks(
 )
 
 /**
- * Content of the sentence dialog. The title stays put and everything below it scrolls, because the
- * dialog keeps its anchor when the keyboard opens and only the height available to it shrinks.
+ * Content of the sentence dialog. The title and the Continue footer stay put and the middle
+ * scrolls, because the dialog keeps its anchor when the keyboard opens and only the height
+ * available to it shrinks.
  */
 @Composable
 internal fun MovimientoSentenceStep(
@@ -98,13 +99,6 @@ internal fun MovimientoSentenceStep(
     ) {
       SentenceInput(sentence, callbacks, focusRequester)
       DetectedArea(sentence, callbacks)
-      TallybookButton(
-          onClick = callbacks.onContinue,
-          modifier = Modifier.fillMaxWidth(),
-          enabled = sentence.canContinue,
-      ) {
-        TallybookText(stringResource(Res.string.movimiento_phrase_continue))
-      }
       VoiceDictationPlaceholder()
       TallybookTextButton(
           onClick = callbacks.onFillManually,
@@ -113,6 +107,13 @@ internal fun MovimientoSentenceStep(
       ) {
         TallybookText(stringResource(Res.string.movimiento_phrase_fill_manually))
       }
+    }
+    TallybookButton(
+        onClick = callbacks.onContinue,
+        modifier = Modifier.fillMaxWidth(),
+        enabled = sentence.canContinue,
+    ) {
+      TallybookText(stringResource(Res.string.movimiento_phrase_continue))
     }
   }
 }

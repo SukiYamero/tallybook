@@ -1,9 +1,11 @@
 package com.kurobello.tallybook.feature.movimientos.ui
 
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -14,6 +16,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -41,6 +45,8 @@ import tallybook.shared.generated.resources.movimiento_relative_today
 import tallybook.shared.generated.resources.movimiento_relative_yesterday
 import tallybook.shared.generated.resources.movimiento_voice_coming_soon
 import tallybook.shared.generated.resources.movimiento_voice_title
+
+private val SHORT_DIALOG_HEIGHT = 300.dp
 
 @OptIn(ExperimentalResourceApi::class)
 class MovimientoSentenceStepTest {
@@ -166,7 +172,18 @@ class MovimientoSentenceStepTest {
         .assertIsDisplayed()
   }
 
-  private fun show(sentence: MovimientoSentenceUi, requestFocusOnStart: Boolean = false) {
+  @Test
+  fun continueStaysOnScreenWhenTheDialogIsTooShortForItsContent() {
+    show(samples.completeSentence, maxHeight = SHORT_DIALOG_HEIGHT)
+
+    composeRule.onNodeWithText(string(Res.string.movimiento_phrase_continue)).assertIsDisplayed()
+  }
+
+  private fun show(
+      sentence: MovimientoSentenceUi,
+      requestFocusOnStart: Boolean = false,
+      maxHeight: Dp = Dp.Unspecified,
+  ) {
     composeRule.setContent {
       TallybookTheme {
         var text by remember { mutableStateOf(sentence.text) }
@@ -182,6 +199,7 @@ class MovimientoSentenceStepTest {
                     onSuggestion = { suggested += it.id },
                 ),
             focusRequester = remember { FocusRequester() },
+            modifier = Modifier.heightIn(max = maxHeight),
             requestFocusOnStart = requestFocusOnStart,
         )
       }

@@ -30,8 +30,8 @@ import tallybook.shared.generated.resources.movimiento_pending_label
  * The single category surface of the entry flow: a labeled list of [categorias] as tags with an
  * `n/max` counter. Each tag can be removed except when it is the only one, and the Add tag
  * disappears once [max] is reached. [pending] marks the Otros fallback, shown as a neutral dashed
- * tag without removal. [suggestions] already selected are skipped and hidden while the field is
- * full.
+ * tag without removal and labeled "to complete" beside the field label. [suggestions] already
+ * selected are skipped and hidden while the field is full.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -53,7 +53,7 @@ internal fun CategoryTagField(
       modifier = modifier.fillMaxWidth(),
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
   ) {
-    CategoryTagFieldHeader(count = categorias.size, max = max)
+    CategoryTagFieldHeader(count = categorias.size, max = max, pending = pending)
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
@@ -70,13 +70,6 @@ internal fun CategoryTagField(
         }
       }
       if (!isFull) CategoryAddTag(onClick = onAdd, enabled = enabled)
-      if (pending) {
-        TallybookText(
-            text = stringResource(Res.string.movimiento_pending_label),
-            color = TallybookTheme.colors.foreground.tertiary,
-            style = TallybookTheme.typography.bodySmall,
-        )
-      }
     }
     if (offered.isNotEmpty()) {
       CategoryTagFieldSuggestions(offered, onSuggestion, enabled)
@@ -85,14 +78,26 @@ internal fun CategoryTagField(
 }
 
 @Composable
-private fun CategoryTagFieldHeader(count: Int, max: Int) {
+private fun CategoryTagFieldHeader(count: Int, max: Int, pending: Boolean) {
   val description = stringResource(Res.string.category_tag_field_counter_description, count, max)
   Row(
       modifier = Modifier.fillMaxWidth(),
       horizontalArrangement = Arrangement.SpaceBetween,
       verticalAlignment = Alignment.CenterVertically,
   ) {
-    TallybookSectionHeading(stringResource(Res.string.category_tag_field_label))
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+      TallybookSectionHeading(stringResource(Res.string.category_tag_field_label))
+      if (pending) {
+        TallybookText(
+            text = stringResource(Res.string.movimiento_pending_label),
+            color = TallybookTheme.colors.foreground.tertiary,
+            style = TallybookTheme.typography.caption,
+        )
+      }
+    }
     TallybookText(
         text = "$count/$max",
         modifier = Modifier.semantics { contentDescription = description },

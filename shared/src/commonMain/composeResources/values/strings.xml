@@ -349,6 +349,7 @@
     <string name="category_tag_remove">Quitar %1$s</string>
     <string name="category_picker_done">Listo (%1$d)</string>
     <string name="category_picker_limit_reached">Llegaste al máximo de %1$d categorías</string>
+    <string name="category_picker_keep_one">Tiene que quedar al menos una categoría</string>
     <string name="movimiento_voice_or">o</string>
     <string name="movimiento_voice_title">Dictar por voz</string>
     <string name="movimiento_voice_coming_soon">Próximamente</string>
