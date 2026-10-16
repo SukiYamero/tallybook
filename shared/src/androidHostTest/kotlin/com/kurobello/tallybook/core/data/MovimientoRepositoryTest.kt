@@ -8,6 +8,7 @@ import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
+import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -52,6 +53,7 @@ class MovimientoRepositoryTest {
             valid.copy(categoriaIds = listOf("a", "a")),
             valid.copy(categoriaIds = List(MAX_CATEGORIAS_POR_MOVIMIENTO + 1) { "c$it" }),
             valid.copy(descripcion = "a".repeat(MOVIMIENTO_DESCRIPTION_MAX_LENGTH + 1)),
+            valid.copy(titulo = "a".repeat(MOVIMIENTO_TITLE_MAX_LENGTH + 1)),
         )
 
     invalid.forEach { movimiento ->
@@ -76,7 +78,8 @@ class MovimientoRepositoryTest {
             monto = Money(1_050, Moneda.USD),
             fecha = LocalDate(2026, 9, 3),
             categoriaIds = listOf("cat_comida"),
-            descripcion = "almuerzo",
+            titulo = "almuerzo",
+            descripcion = null,
             createdAt = Instant.parse("2026-09-03T12:00:00Z"),
         )
 
@@ -99,6 +102,7 @@ class MovimientoRepositoryTest {
             monto = Money(25_000, Moneda.COP),
             fecha = LocalDate(2026, 9, 4),
             categoriaIds = listOf("cat_sueldo"),
+            titulo = null,
             descripcion = null,
             createdAt = Instant.parse("2026-09-04T12:00:00Z"),
         )
@@ -124,6 +128,7 @@ class MovimientoRepositoryTest {
             monto = Money(500, Moneda.MXN),
             fecha = LocalDate(2026, 9, 5),
             categoriaIds = listOf("cat_transporte"),
+            titulo = null,
             descripcion = null,
             createdAt = Instant.parse("2026-09-05T12:00:00Z"),
         )
@@ -172,6 +177,7 @@ class MovimientoRepositoryTest {
                   LocalDate(2025, 12, 31),
                   listOf("missing-legacy-category"),
                   "updated",
+                  "updated details",
               )
           assertEquals(
               DataOutcome.Success(MovimientoUpdateResult.Updated),
@@ -183,7 +189,8 @@ class MovimientoRepositoryTest {
                   monto = Money(Long.MAX_VALUE, Moneda.USD),
                   fecha = LocalDate(2025, 12, 31),
                   categoriaIds = listOf("missing-legacy-category"),
-                  descripcion = "updated",
+                  titulo = "updated",
+                  descripcion = "updated details",
               )
           assertEquals(DataOutcome.Success(expected), repository.getById(original.id))
           assertEquals(DataOutcome.Success(listOf(sibling, expected)), repository.getAll())
@@ -194,10 +201,10 @@ class MovimientoRepositoryTest {
           assertEquals(DataOutcome.Success(listOf(sibling, expected)), repository.getAll())
           assertEquals(
               DataOutcome.Success(MovimientoUpdateResult.Updated),
-              repository.update(original.id, changes.copy(descripcion = null)),
+              repository.update(original.id, changes.copy(titulo = null, descripcion = null)),
           )
           assertEquals(
-              DataOutcome.Success(expected.copy(descripcion = null)),
+              DataOutcome.Success(expected.copy(titulo = null, descripcion = null)),
               repository.getById(original.id),
           )
         }
@@ -219,6 +226,7 @@ class MovimientoRepositoryTest {
               valid.copy(monto = Money(100, Moneda.USD)),
               valid.copy(categoriaIds = listOf(" ")),
               valid.copy(descripcion = "a".repeat(MOVIMIENTO_DESCRIPTION_MAX_LENGTH + 1)),
+              valid.copy(titulo = "a".repeat(MOVIMIENTO_TITLE_MAX_LENGTH + 1)),
           )) {
         assertInvalid(repository.update(original.id, changes))
         assertEquals(DataOutcome.Success(original), repository.getById(original.id))
@@ -421,28 +429,28 @@ class MovimientoRepositoryTest {
               movimiento(
                   "oldest",
                   categoriaIds = listOf("cat_cafe"),
-                  descripcion = "cafe",
+                  titulo = "cafe",
                   at = base,
               ),
-              movimiento("blank", descripcion = "   ", at = base + 1.seconds),
-              movimiento("empty", descripcion = "", at = base + 2.seconds),
-              movimiento("none", descripcion = null, at = base + 3.seconds),
+              movimiento("blank", titulo = "   ", at = base + 1.seconds),
+              movimiento("empty", titulo = "", at = base + 2.seconds),
+              movimiento("none", titulo = null, at = base + 3.seconds),
               movimiento(
                   "tie-a",
                   categoriaIds = listOf("cat_cine"),
-                  descripcion = "cine",
+                  titulo = "cine",
                   at = base + 4.seconds,
               ),
               movimiento(
                   "tie-b",
                   categoriaIds = listOf("cat_taxi"),
-                  descripcion = "uber",
+                  titulo = "uber",
                   at = base + 4.seconds,
               ),
               movimiento(
                   "newest",
                   categoriaIds = listOf("cat_gasolina"),
-                  descripcion = "terpel",
+                  titulo = "terpel",
                   at = base + 5.seconds,
               ),
           )
@@ -459,7 +467,7 @@ class MovimientoRepositoryTest {
 
       assertEquals(
           listOf("terpel", "uber", "cine", "cafe"),
-          all.data.map(CategoryHistoryRow::descripcion),
+          all.data.map(CategoryHistoryRow::titulo),
       )
       assertEquals(listOf("cat_gasolina", "cat_taxi"), limited.data.map { it.categoriaId })
       assertEquals(base + 5.seconds, all.data.first().createdAt)
@@ -496,7 +504,7 @@ class MovimientoRepositoryTest {
       testScheduler.runCurrent()
       assertEquals(DataOutcome.Success(emptyList<CategoryHistoryRow>()), emissions.last())
 
-      val row = movimiento("one", categoriaIds = listOf("cat_cafe"), descripcion = "cafe")
+      val row = movimiento("one", categoriaIds = listOf("cat_cafe"), titulo = "cafe")
       assertEquals(DataOutcome.Success(Unit), repository.insert(row))
       testScheduler.runCurrent()
       assertEquals(
@@ -532,6 +540,7 @@ class MovimientoRepositoryTest {
               "COP",
               "2026-01-01",
               "row $index",
+              null,
               (base + index.seconds).toString(),
           )
           database.movimientoQueries.insertMovimientoCategoria("id$index", "cat_comida", 0)
@@ -545,8 +554,8 @@ class MovimientoRepositoryTest {
               .data
 
       assertEquals(CATEGORY_HISTORY_BOUND, rows.size)
-      assertEquals("row ${CATEGORY_HISTORY_BOUND + 199}", rows.first().descripcion)
-      assertEquals("row 200", rows.last().descripcion)
+      assertEquals("row ${CATEGORY_HISTORY_BOUND + 199}", rows.first().titulo)
+      assertEquals("row 200", rows.last().titulo)
     }
   }
 
@@ -696,13 +705,13 @@ class MovimientoRepositoryTest {
           MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
       val base = Instant.parse("2026-09-05T12:00:00Z")
       repository.insert(
-          movimiento("old", categoriaIds = listOf("cat_cafe"), descripcion = "cafe", at = base)
+          movimiento("old", categoriaIds = listOf("cat_cafe"), titulo = "cafe", at = base)
       )
       repository.insert(
           movimiento(
               "new",
               categoriaIds = listOf("cat_comida", "cat_social", "cat_ocio"),
-              descripcion = "cena",
+              titulo = "cena",
               at = base + 1.seconds,
           )
       )
@@ -734,7 +743,7 @@ class MovimientoRepositoryTest {
       TallybookDatabase.Schema.create(driver)
       val database = TallybookDatabase(driver)
       val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
-      val row = movimiento("one", categoriaIds = listOf("a"), descripcion = "cafe")
+      val row = movimiento("one", categoriaIds = listOf("a"), titulo = "cafe")
       repository.insert(row)
       val september = MovimientoDateRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30))
       val recent = mutableListOf<DataOutcome<List<Movimiento>>>()
@@ -794,7 +803,7 @@ class MovimientoRepositoryTest {
   }
 
   private fun Movimiento.changes() =
-      MovimientoChanges(tipo, monto, fecha, categoriaIds, descripcion)
+      MovimientoChanges(tipo, monto, fecha, categoriaIds, titulo, descripcion)
 
   private fun insertUnreadable(database: TallybookDatabase, id: String) {
     database.movimientoQueries.insertMovimiento(
@@ -803,6 +812,7 @@ class MovimientoRepositoryTest {
         500,
         "COP",
         "2026-09-05",
+        null,
         null,
         "invalid-instant",
     )
@@ -816,6 +826,7 @@ class MovimientoRepositoryTest {
         row.monto.minorUnits,
         row.monto.moneda.name,
         row.fecha.toString(),
+        row.titulo,
         row.descripcion,
         row.createdAt.toString(),
     )
@@ -865,6 +876,7 @@ class MovimientoRepositoryTest {
       tipo: TipoMovimiento = TipoMovimiento.GASTO,
       monto: Money = Money(500, Moneda.COP),
       categoriaIds: List<String> = listOf("cat_comida"),
+      titulo: String? = null,
       descripcion: String? = null,
       at: Instant = Instant.parse("2026-09-05T12:00:00Z"),
   ) =
@@ -874,6 +886,7 @@ class MovimientoRepositoryTest {
           monto = monto,
           fecha = LocalDate(2026, 9, 5),
           categoriaIds = categoriaIds,
+          titulo = titulo,
           descripcion = descripcion,
           createdAt = at,
       )

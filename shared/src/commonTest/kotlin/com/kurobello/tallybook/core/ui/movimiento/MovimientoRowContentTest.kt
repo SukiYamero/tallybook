@@ -10,16 +10,16 @@ class MovimientoRowContentTest {
   @Test
   fun sharedAmountPresentationPreservesIncomeExpenseCurrencyAndScale() {
     assertEquals(
-        "$\u00A0+1.234,00",
+        "+$\u00A01.234,00",
         signedMovimientoAmountText(Money(123400, Moneda.COP), TipoMovimiento.INGRESO),
     )
     assertEquals(
-        "$\u00A0-567,00",
+        "-$\u00A0567,00",
         signedMovimientoAmountText(Money(56700, Moneda.COP), TipoMovimiento.GASTO),
     )
-    assertEquals("$-567", signedMovimientoAmountText(Money(567, Moneda.CLP), TipoMovimiento.GASTO))
+    assertEquals("-$567", signedMovimientoAmountText(Money(567, Moneda.CLP), TipoMovimiento.GASTO))
     assertEquals(
-        "$+12.34",
+        "+$12.34",
         signedMovimientoAmountText(Money(1234, Moneda.USD), TipoMovimiento.INGRESO),
     )
   }

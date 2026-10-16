@@ -23,7 +23,8 @@ class MovimientoMapperTest {
             monto = Money(1_050, Moneda.USD),
             fecha = LocalDate(2026, 9, 3),
             categoriaIds = listOf("cat_comida"),
-            descripcion = "almuerzo",
+            titulo = "almuerzo",
+            descripcion = "con Ana",
             createdAt = createdAt,
         ),
         databaseMovimiento(createdAt.toString()).toDomain(),
@@ -72,7 +73,8 @@ class MovimientoMapperTest {
           monto_moneda = "USD",
           fecha = "2026-09-03",
           categoria_ids = "0\u001Fcat_comida",
-          descripcion = "almuerzo",
+          titulo = "almuerzo",
+          descripcion = "con Ana",
           created_at = createdAt,
       )
 }

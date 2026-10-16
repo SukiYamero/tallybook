@@ -266,6 +266,7 @@ private fun SummaryStepContent(
               onRemoveCategoria = { actions.onCategoriaRemoved(it.id) },
               onAddCategoria = onAddCategoria,
               onSuggestion = { actions.onSuggestionSelected(it.id) },
+              onDescripcionChange = actions::onDescripcionChanged,
               onEdit = actions::onEditMovimiento,
               onSave = actions::onSubmit,
           ),

@@ -7,6 +7,7 @@ import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
+import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -194,7 +195,7 @@ internal class MovimientoRepositoryImpl(
                           currentCoroutineContext().ensureActive()
                           CategoryHistoryRow(
                               movimientoId = row.movimiento_id,
-                              descripcion = row.descripcion,
+                              titulo = row.titulo,
                               categoriaId = row.categoria_id,
                               createdAt = Instant.parse(row.created_at),
                           )
@@ -275,6 +276,7 @@ internal class MovimientoRepositoryImpl(
                         tipo = changes.tipo.name,
                         monto_minor = changes.monto.minorUnits,
                         fecha = changes.fecha.toString(),
+                        titulo = changes.titulo,
                         descripcion = changes.descripcion,
                         id = id,
                     )
@@ -350,6 +352,7 @@ internal class MovimientoRepositoryImpl(
                 monto_minor = movimiento.monto.minorUnits,
                 monto_moneda = movimiento.monto.moneda.name,
                 fecha = movimiento.fecha.toString(),
+                titulo = movimiento.titulo,
                 descripcion = movimiento.descripcion,
                 created_at = movimiento.createdAt.toString(),
             )
@@ -376,6 +379,7 @@ internal class MovimientoRepositoryImpl(
                   movimiento.monto,
                   movimiento.fecha,
                   movimiento.categoriaIds,
+                  movimiento.titulo,
                   movimiento.descripcion,
               )
           )
@@ -388,7 +392,9 @@ internal class MovimientoRepositoryImpl(
         changes.monto.minorUnits <= 0 ->
             DataError.InvalidInput("Movimiento amount must be positive")
         else ->
-            validateCategoriaIds(changes.categoriaIds) ?: validateDescription(changes.descripcion)
+            validateCategoriaIds(changes.categoriaIds)
+                ?: validateTitle(changes.titulo)
+                ?: validateDescription(changes.descripcion)
       }
 
   override suspend fun delete(id: String): DataOutcome<Unit> =
@@ -406,9 +412,15 @@ internal class MovimientoRepositoryImpl(
         movimiento.id.isEmpty() -> DataError.InvalidInput("Movimiento id must not be empty")
         else ->
             validateCategoriaIds(movimiento.categoriaIds)
+                ?: validateTitle(movimiento.titulo)
                 ?: validateDescription(movimiento.descripcion)
       }
 }
+
+private fun validateTitle(titulo: String?): DataError.InvalidInput? =
+    if ((titulo?.length ?: 0) > MOVIMIENTO_TITLE_MAX_LENGTH) {
+      DataError.InvalidInput("Movimiento title is too long")
+    } else null
 
 private fun validateDescription(descripcion: String?): DataError.InvalidInput? =
     if ((descripcion?.length ?: 0) > MOVIMIENTO_DESCRIPTION_MAX_LENGTH) {

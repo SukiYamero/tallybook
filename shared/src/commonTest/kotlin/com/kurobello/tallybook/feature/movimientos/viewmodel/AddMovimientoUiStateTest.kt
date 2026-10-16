@@ -23,7 +23,8 @@ class AddMovimientoUiStateTest {
             moneda = Moneda.COP,
             categorias = listOf(cine),
             categoriaIds = emptyList(),
-            descripcion = "Gasté 20000",
+            titulo = "Gasté 20000",
+            descripcion = "",
             isLoading = false,
             isSubmitting = false,
             submitAttempted = false,
@@ -35,6 +36,6 @@ class AddMovimientoUiStateTest {
 
     assertEquals(emptyList(), summary.categorias)
     assertFalse(summary.categoriasArePending)
-    assertEquals("Gasté 20000", summary.descripcion)
+    assertEquals("Gasté 20000", summary.titulo)
   }
 }

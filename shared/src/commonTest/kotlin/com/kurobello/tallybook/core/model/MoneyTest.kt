@@ -104,9 +104,9 @@ class MoneyTest {
   }
 
   @Test
-  fun negativeSignGoesBetweenTheSymbolAndTheDigits() {
-    assertEquals("$\u00A0-1.234.567,89", Money.parse("-1234567.89", Moneda.COP).format())
-    assertEquals("$-1,234,567.89", usd("-1234567.89").format())
+  fun negativeSignLeadsTheSymbol() {
+    assertEquals("-$\u00A01.234.567,89", Money.parse("-1234567.89", Moneda.COP).format())
+    assertEquals("-$1,234,567.89", usd("-1234567.89").format())
   }
 
   @Test

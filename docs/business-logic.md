@@ -15,8 +15,16 @@ sincroniza cuentas bancarias reales.
 Un **movimiento** registra un gasto o un ingreso.
 
 - **Obligatorios**: tipo (gasto / ingreso), monto, fecha, moneda y de una a seis categorías.
-- **Opcionales**: descripción (por ahora el único campo opcional). `createdAt` es metadata técnica para
-  ordenar de forma estable, no un campo solicitado al usuario.
+- **Opcionales**: título y descripción, de hasta 180 caracteres cada uno. El título nombra el
+  movimiento (en la creación por frase es la frase escrita); la descripción agrega contexto extra si
+  el usuario quiere. `createdAt` es metadata técnica para ordenar de forma estable, no un campo
+  solicitado al usuario.
+- **Tarjetas**: toda tarjeta de movimiento (Inicio, Historial, Buscar) muestra el título, o el nombre
+  de la categoría si no hay título, en hasta dos líneas, debajo la descripción en una línea con un
+  tamaño menor (sin descripción esa línea no aparece) y al final el monto. La tarjeta no muestra la fecha (Historial
+  y Buscar ya agrupan por día). El texto completo se ve al abrir la tarjeta.
+- **Signo del monto**: el signo va antes del símbolo de la moneda (`-$ 25,00`, `+$ 5.000,00`), el orden
+  de CLDR que siguen las apps bancarias y de finanzas.
 - La categoría es obligatoria en el dato, no en la interacción: si el usuario guarda una creación sin
   elegir ninguna, el movimiento queda en la categoría de sistema **Otros** y se marca como pendiente
   de completar (ver [Categorías](#categorías)).
@@ -29,7 +37,7 @@ app derives the draft from it and the user confirms or refines it; the manual fo
 - The entry is a centered modal dialog anchored near the top, so the keyboard never moves it. It
   opens without focus or keyboard: the user sees the input, whose placeholder is a localized example
   with an amount formatted for the primary currency, and taps it to type. The sentence respects the
-  description length limit.
+  title length limit.
 - Below the input, a "Detected" area appears once the sentence has text and goes away if it is
   cleared. It shows tipo and fecha (their defaults, gasto and today, until the sentence says
   otherwise), the amount when found (otherwise a note that it was not detected), and the categories
@@ -43,12 +51,13 @@ app derives the draft from it and the user confirms or refines it; the manual fo
   "fill manually" action that opens the empty form. Fill manually drops everything the sentence
   derived but keeps the categories the user picked by hand in the dialog.
 - Line breaks typed or pasted into the sentence become single spaces. Clearing the sentence also
-  clears what it derived (tipo, amount, fecha, descripción and the sentence-owned categories), so the
-  dialog counts as clean again even after a Continue and Back; categories picked by hand remain.
+  clears what it derived (tipo, amount, fecha, título, descripción and the sentence-owned categories),
+  so the dialog counts as clean again even after a Continue and Back; categories picked by hand remain.
 - Tapping outside or the Back gesture closes the dialog directly while the sentence is blank;
   otherwise it asks to discard first. Continue parses the sentence once, writes tipo, monto, fecha,
-  categorías (unless the user took them over) and descripción into the draft (replacing earlier
-  derived values), closes the dialog and opens the summary.
+  categorías (unless the user took them over) and título into the draft (replacing earlier
+  derived values), closes the dialog and opens the summary. A description typed in the summary is
+  kept.
 - **Tipo**: expense and income verbs in every supported language decide it (`gasté`, `pagué`,
   `me cobraron` → gasto; `recibí`, `me pagaron`, `cobré`, `vendí` → ingreso). Without a verb, an
   income category suggestion selects ingreso; otherwise gasto.
@@ -61,12 +70,15 @@ app derives the draft from it and the user confirms or refines it; the manual fo
 - **Fecha**: today, yesterday, the day before yesterday, a weekday (its most recent occurrence, today
   included) and explicit day/month dates (day-first except in English). A day without month resolves
   to its most recent past occurrence. Future expressions are ignored and the date stays today.
-- **Descripción**: the trimmed sentence exactly as typed. Parsing never rewrites what the user wrote.
+- **Título**: the sentence as typed, trimmed and with repeated whitespace collapsed, like every
+  optional text. Parsing never rewrites what the user wrote. The
+  description starts empty; it is optional extra context the user adds in the summary or the form.
 - **Categorías**: the suggestion engine below runs on the sentence without its verb, amount, date
   and stop words. A high-confidence result is preselected; other results appear as tappable
   suggestions that add a category.
 - The summary is a tall bottom sheet titled as a review-and-confirm step. Labeled sections show tipo
-  and fecha (prominent), the amount, the description and the categories with suggestions. Its two
+  and fecha (prominent), the amount, the title, an optional description field and the categories
+  with suggestions. Its two
   equal-level actions, separated from the content by generous space, are Edit movimiento (left),
   which opens the complete form with the same draft, and Save (right). Save with an invalid required
   value opens the form with that field's error and focus instead of persisting. Back returns from
@@ -83,7 +95,7 @@ the training data, so correcting a suggestion teaches the next one.
 
 - Text is compared after the shared search normalization (case and supported accent folding), stop
   word removal and basic plural reduction.
-- Signals, strongest first: an exact match with a previous description's subject; word-to-category
+- Signals, strongest first: an exact match with a previous title's subject; word-to-category
   associations learned from history, weighted by frequency and recency; dictionary phrases; then
   dictionary words and brands. Phrases outweigh their words ("cambio de aceite" → Transporte).
 - Ambiguous words ("aceite", "oil", "óleo", "ticket", "gas") point at several categories and never
@@ -104,10 +116,10 @@ the training data, so correcting a suggestion teaches the next one.
 Home, History and Search open the current persisted movimiento by ID. Missing records cannot be
 edited or deleted; failed reads require Retry before mutation actions become available.
 
-- Editing permits type, positive exact amount, civil date, categories and optional description.
-  Stored currency, ID and `createdAt` remain fixed. Amount input round-trips through the stored
+- Editing permits type, positive exact amount, civil date, categories, optional title and optional
+  description. Stored currency, ID and `createdAt` remain fixed. Amount input round-trips through the stored
   currency's scale and decimal separator without grouping or a currency symbol.
-- Creation's validation and description normalization also apply to editing. Civil today/timezone
+- Creation's validation and title/description normalization also apply to editing. Civil today/timezone
   is captured at editor entry and again on Save; future dates are rejected without silently changing
   the draft when the clock moves backward.
 - The picker selects any existing category, parent or child, except Otros. An existing Otros or
@@ -284,7 +296,7 @@ Search is a separate destination over the primary currency. Its implementation c
 
 - A fresh entry has an empty query, All history, all types and no selected categories. All history
   removes the date predicate; it never imposes a year floor or result limit.
-- Text matches one contiguous substring in description or the displayed category name. Trim and
+- Text matches one contiguous substring in title, description or the displayed category name. Trim and
   lowercase with the existing supported-locale accent folding; preserve `ñ` versus `n`. Blank text
   matches everything. Internal spaces are literal; no token/fuzzy/amount/date/category-ID search.
   Unknown-category display labels are searchable.
@@ -312,9 +324,9 @@ Search is a separate destination over the primary currency. Its implementation c
   valid unchanged filters and zero results; its label/accessibility name contains no quantity.
 - Removing an applied chip commits just that dimension. Draft edits never update results, applied
   chips or count. Closing sheets accept no edits or repeated commits.
-- Rows use `fecha DESC, created_at DESC, id DESC`, description-first titles with category fallback,
-  date/category subtitles and signed exact amounts. A real row opens movimiento management; Search
-  has no global balance.
+- Rows use `fecha DESC, created_at DESC, id DESC`, grouped under one full-date header per day that
+  has results. Rows follow the shared card rule (title with category fallback, then description) and
+  show signed exact amounts. A real row opens movimiento management; Search has no global balance.
 - Count derives from the exact settled result list. Pending/stale/failed work never reports an old
   count as current. No-data means no stored movements in this currency; no-results means currency
   data exists but criteria/text match none. Currency presence metadata and structural rows come from

@@ -8,10 +8,13 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.ui.theme.TallybookSpacing
@@ -33,6 +36,7 @@ import tallybook.shared.generated.resources.category_tag_add_description
 import tallybook.shared.generated.resources.category_tag_field_label
 import tallybook.shared.generated.resources.category_tag_remove
 import tallybook.shared.generated.resources.date
+import tallybook.shared.generated.resources.description_optional
 import tallybook.shared.generated.resources.expense
 import tallybook.shared.generated.resources.movement_type
 import tallybook.shared.generated.resources.movimiento_amount_not_detected
@@ -40,12 +44,12 @@ import tallybook.shared.generated.resources.movimiento_pending_label
 import tallybook.shared.generated.resources.movimiento_relative_yesterday
 import tallybook.shared.generated.resources.movimiento_summary_amount_missing_hint
 import tallybook.shared.generated.resources.movimiento_summary_amount_review
-import tallybook.shared.generated.resources.movimiento_summary_description_label
-import tallybook.shared.generated.resources.movimiento_summary_description_quote
 import tallybook.shared.generated.resources.movimiento_summary_edit
 import tallybook.shared.generated.resources.movimiento_summary_save
 import tallybook.shared.generated.resources.movimiento_summary_subtitle
 import tallybook.shared.generated.resources.movimiento_summary_title
+import tallybook.shared.generated.resources.movimiento_summary_title_label
+import tallybook.shared.generated.resources.movimiento_summary_title_quote
 
 @OptIn(ExperimentalResourceApi::class)
 class MovimientoSummaryStepTest {
@@ -57,6 +61,7 @@ class MovimientoSummaryStepTest {
   private var addRequests = 0
   private var edits = 0
   private var saves = 0
+  private val descriptions = mutableListOf<String>()
 
   @Before
   fun setUp() {
@@ -64,20 +69,30 @@ class MovimientoSummaryStepTest {
   }
 
   @Test
-  fun completeSummaryShowsDescriptionInQuotesAndCategoryStates() {
+  fun completeSummaryShowsTitleInQuotesAndCategoryStates() {
     show(samples.completeSummary)
 
     composeRule
         .onNodeWithText(
             string(
-                Res.string.movimiento_summary_description_quote,
-                samples.completeSummary.descripcion,
+                Res.string.movimiento_summary_title_quote,
+                samples.completeSummary.titulo,
             )
         )
         .assertIsDisplayed()
     composeRule.onNodeWithText(samples.cinema.nombre).assertIsSelected().assertHasNoClickAction()
     composeRule.onNodeWithText(samples.food.nombre).assertHasClickAction().assertIsEnabled()
     composeRule.onNodeWithText(samples.transport.nombre).assertHasClickAction().assertIsEnabled()
+  }
+
+  @Test
+  fun theOptionalDescriptionFieldEmitsWhatTheUserTypes() {
+    show(samples.completeSummary)
+
+    composeRule.onNodeWithText(string(Res.string.description_optional)).assertExists()
+    composeRule.onNode(hasSetTextAction()).performScrollTo().performTextInput("Con Ana")
+
+    composeRule.runOnIdle { assertEquals(listOf("Con Ana"), descriptions) }
   }
 
   @Test
@@ -99,7 +114,7 @@ class MovimientoSummaryStepTest {
     composeRule.onNodeWithText(string(Res.string.date)).assertIsDisplayed()
     composeRule.onNodeWithText(string(Res.string.amount)).assertIsDisplayed()
     composeRule
-        .onNodeWithText(string(Res.string.movimiento_summary_description_label))
+        .onNodeWithText(string(Res.string.movimiento_summary_title_label))
         .assertIsDisplayed()
     composeRule.onNodeWithText(string(Res.string.category_tag_field_label)).assertIsDisplayed()
   }
@@ -230,6 +245,7 @@ class MovimientoSummaryStepTest {
                     onRemoveCategoria = { removed += it },
                     onAddCategoria = { addRequests++ },
                     onSuggestion = { selected += it },
+                    onDescripcionChange = { descriptions += it },
                     onEdit = { edits++ },
                     onSave = { saves++ },
                 ),

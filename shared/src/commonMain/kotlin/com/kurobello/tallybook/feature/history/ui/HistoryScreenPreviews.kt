@@ -101,6 +101,7 @@ private fun historyPreviewState(): HistoryUiState {
           date,
           listOf("food"),
           "Lunch with Ana",
+          null,
           Instant.parse("2026-09-15T12:00:00Z"),
       )
   val summary = MovimientoSummary(Money(200_000, Moneda.COP), movement.monto)
@@ -114,7 +115,7 @@ private fun historyPreviewState(): HistoryUiState {
                       HistoryMovimientoRowUi(
                           movement,
                           null,
-                          checkNotNull(movement.descripcion),
+                          checkNotNull(movement.titulo),
                           "Food",
                       )
                   ),

@@ -615,6 +615,7 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) : Movimient
             monto = changes.monto,
             fecha = changes.fecha,
             categoriaIds = changes.categoriaIds,
+            titulo = changes.titulo,
             descripcion = changes.descripcion,
         )
     val values = rows.map { if (it.id == id) updated else it }
@@ -661,6 +662,7 @@ private fun movimiento(
         Money(amount, moneda),
         fecha,
         listOf("missing"),
+        null,
         null,
         Instant.parse("2026-10-05T00:00:00Z"),
     )

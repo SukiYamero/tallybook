@@ -33,6 +33,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookSegmentedControlStyle
 import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
+import com.kurobello.tallybook.core.ui.date.fullCivilDate
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.search.viewmodel.SearchActions
 import com.kurobello.tallybook.feature.search.viewmodel.SearchDatePreset
@@ -229,8 +230,8 @@ private fun SearchDateFilters(
       Column(
           verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
       ) {
-        val startDate = searchFullDate(filters.customStart)
-        val endDate = searchFullDate(filters.customEnd)
+        val startDate = fullCivilDate(filters.customStart)
+        val endDate = fullCivilDate(filters.customEnd)
         val minimumYear = state.availableYears.minOrNull() ?: state.today.year
         SearchCustomDateRow(stringResource(Res.string.search_start_date)) {
           TallybookDateChipPicker(

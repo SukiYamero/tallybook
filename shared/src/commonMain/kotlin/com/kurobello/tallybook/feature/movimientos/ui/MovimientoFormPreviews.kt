@@ -53,6 +53,7 @@ private fun previewUiState(
         moneda = Moneda.COP,
         categorias = emptyList(),
         categoriaIds = emptyList(),
+        titulo = "",
         descripcion = "",
         isLoading = isLoading,
         isSubmitting = isSubmitting,
@@ -71,6 +72,8 @@ private object PreviewAddMovimientoActions : AddMovimientoActions {
   override fun onCategoriasChanged(ids: List<String>) = Unit
 
   override fun onCategoriaRemoved(id: String) = Unit
+
+  override fun onTituloChanged(value: String) = Unit
 
   override fun onDescripcionChanged(value: String) = Unit
 

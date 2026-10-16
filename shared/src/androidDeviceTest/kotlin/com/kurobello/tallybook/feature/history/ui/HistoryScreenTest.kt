@@ -63,7 +63,6 @@ import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.calendar_date_content_description
-import tallybook.shared.generated.resources.date_chip_value
 import tallybook.shared.generated.resources.date_picker_months
 import tallybook.shared.generated.resources.date_picker_weekday_names
 import tallybook.shared.generated.resources.expense
@@ -345,7 +344,7 @@ class HistoryScreenTest {
     val rows =
         (1..30).map { index ->
           HistoryMovimientoRowUi(
-              movement.copy(id = "row-$index", descripcion = "Item $index"),
+              movement.copy(id = "row-$index", titulo = "Item $index"),
               null,
               "Item $index",
               "Unknown category",
@@ -562,15 +561,13 @@ class HistoryScreenTest {
   }
 
   @Test
-  fun fallbackHistoryRowPreservesCivilDateTypeSignedAmountAndCurrencySemantics() {
+  fun fallbackHistoryRowPreservesTypeSignedAmountAndCurrencySemantics() {
     val fallback = localized(Res.string.unknown_category)
-    val month = runBlocking { getStringArray(Res.array.date_picker_months)[8] }
-    val date = runBlocking { getString(Res.string.date_chip_value, 15, month) }
     val type = localized(Res.string.expense)
-    val row = HistoryMovimientoRowUi(movement.copy(descripcion = null), null, fallback, fallback)
+    val row = HistoryMovimientoRowUi(movement.copy(titulo = null), null, fallback, fallback)
     composeRule.setContent { TallybookTheme { HistoryRow(row) } }
     composeRule
-        .onNodeWithContentDescription("$fallback, $date, $type, $\u00A0-1,00, COP")
+        .onNodeWithContentDescription("$fallback, $type, -$\u00A01,00, COP")
         .assertIsDisplayed()
         .assertHasNoClickAction()
   }
@@ -601,6 +598,7 @@ class HistoryScreenTest {
             today,
             listOf("food"),
             "Lunch with Ana",
+            null,
             Instant.parse("2026-09-15T12:00:00Z"),
         )
     val summary = MovimientoSummary(Money(0, Moneda.COP), Money(100, Moneda.COP))

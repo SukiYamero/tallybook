@@ -7,6 +7,7 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.movimiento.rowTitle
 import com.kurobello.tallybook.feature.history.ui.HistoryDayGroupUi
 import com.kurobello.tallybook.feature.history.ui.HistoryMovimientoRowUi
 
@@ -69,7 +70,7 @@ internal fun projectHistory(
                   HistoryMovimientoRowUi(
                       movimiento = movimiento,
                       categoria = categoria,
-                      title = movimiento.descripcion?.takeUnless { it.isBlank() } ?: categoryLabel,
+                      title = movimiento.rowTitle(categoryLabel),
                       categoryLabel = categoryLabel,
                   )
                 },

@@ -82,8 +82,8 @@ class MovimientoComponentsTest {
       }
     }
 
-    composeRule.onNodeWithText("$\u00A0+1.234,00").assertExists()
-    composeRule.onNodeWithText("$\u00A0-567,00").assertExists()
+    composeRule.onNodeWithText("+$\u00A01.234,00").assertExists()
+    composeRule.onNodeWithText("-$\u00A0567,00").assertExists()
   }
 
   @Test
@@ -117,13 +117,26 @@ class MovimientoComponentsTest {
   }
 
   @Test
-  fun homeRowKeepsCategoryFirstAndFullDescriptionWithoutAnAction() {
+  fun homeRowShowsTitleFirstWithCategoryFallbackAndFullDescriptionWithoutAnAction() {
+    val titulo = "Lunch with Ana"
     val description = "A very long meal description that remains available to accessibility"
     composeRule.setContent {
       TallybookTheme {
-        MovimientoRow(movimiento(TipoMovimiento.GASTO, 100).copy(descripcion = description), comida)
+        MovimientoRow(
+            movimiento(TipoMovimiento.GASTO, 100)
+                .copy(id = "titled", titulo = titulo, descripcion = description),
+            comida,
+        )
+        MovimientoRow(
+            movimiento(TipoMovimiento.GASTO, 100).copy(id = "untitled", descripcion = description),
+            comida,
+        )
       }
     }
+    composeRule.onNodeWithText(titulo).assertExists().assertHasNoClickAction()
+    composeRule
+        .onNodeWithContentDescription("$titulo, $description, Comida", substring = true)
+        .assertHasNoClickAction()
     composeRule.onNodeWithText("Comida").assertExists().assertHasNoClickAction()
     composeRule
         .onNodeWithContentDescription("Comida, $description", substring = true)
@@ -200,6 +213,7 @@ class MovimientoComponentsTest {
           monto = Money(minorUnits, Moneda.COP),
           fecha = LocalDate(2026, 9, 15),
           categoriaIds = listOf("cat_missing"),
+          titulo = null,
           descripcion = null,
           createdAt = Instant.fromEpochMilliseconds(1_757_894_400_000),
       )

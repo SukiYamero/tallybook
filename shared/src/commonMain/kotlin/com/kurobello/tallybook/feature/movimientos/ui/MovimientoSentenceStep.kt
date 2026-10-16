@@ -25,7 +25,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
-import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
+import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.category.CategoryTagField
@@ -125,7 +125,7 @@ private fun SentenceInput(
 ) {
   TallybookTextField(
       value = sentence.text,
-      onValueChange = { callbacks.onTextChange(it.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH)) },
+      onValueChange = { callbacks.onTextChange(it.take(MOVIMIENTO_TITLE_MAX_LENGTH)) },
       modifier = Modifier.fillMaxWidth(),
       label = stringResource(Res.string.movimiento_phrase_label),
       placeholder =
@@ -134,9 +134,7 @@ private fun SentenceInput(
               phraseSampleAmount(sentence.moneda),
           ),
       message =
-          TallybookFieldMessage.Supporting(
-              "${sentence.text.length}/$MOVIMIENTO_DESCRIPTION_MAX_LENGTH"
-          ),
+          TallybookFieldMessage.Supporting("${sentence.text.length}/$MOVIMIENTO_TITLE_MAX_LENGTH"),
       enabled = sentence.isEnabled,
       singleLine = false,
       minLines = PHRASE_VISIBLE_LINES,

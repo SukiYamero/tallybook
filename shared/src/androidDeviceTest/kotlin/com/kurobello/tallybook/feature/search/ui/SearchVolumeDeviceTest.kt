@@ -237,6 +237,7 @@ class SearchVolumeDeviceTest {
               row.monto.minorUnits,
               row.monto.moneda.name,
               row.fecha.toString(),
+              row.titulo,
               row.descripcion,
               row.createdAt.toString(),
           )
@@ -366,7 +367,7 @@ class SearchVolumeDeviceTest {
                   (filters.tipo == null || row.tipo == filters.tipo) &&
                   (filters.categoryIds.isEmpty() ||
                       row.categoriaIds.any { id -> id in filters.categoryIds }) &&
-                  (query.isEmpty() || requireNotNull(row.descripcion).contains("Needle"))
+                  (query.isEmpty() || requireNotNull(row.titulo).contains("Needle"))
             }
             .sortedWith(
                 compareByDescending<Movimiento> { it.fecha }
@@ -427,6 +428,7 @@ class SearchVolumeDeviceTest {
           LocalDate(if (index % 5 == 0) 2024 else 2026, 9, index % 30 + 1),
           listOf(if (index % 7 == 0) "cat_comida" else "cat_transporte"),
           if (index % 3 == 0) "Needle volume $id" else "Volume $id",
+          null,
           Instant.parse(if (index % 2 == 0) "2026-09-15T12:00:00Z" else "2026-09-15T11:00:00Z"),
       )
     }

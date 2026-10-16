@@ -538,6 +538,7 @@ private class SearchMovimientos : MovimientoRepository {
             TODAY,
             listOf("food"),
             text,
+            null,
             Instant.parse("2026-10-06T12:00:00Z"),
         )
       }
@@ -620,6 +621,7 @@ private class SearchMovimientos : MovimientoRepository {
             monto = changes.monto,
             fecha = changes.fecha,
             categoriaIds = changes.categoriaIds,
+            titulo = changes.titulo,
             descripcion = changes.descripcion,
         )
     val values = rows.map { if (it.id == id) updated else it }

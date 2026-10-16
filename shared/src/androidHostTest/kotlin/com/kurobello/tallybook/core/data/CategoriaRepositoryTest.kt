@@ -265,6 +265,7 @@ class CategoriaRepositoryTest {
           moneda.name,
           "2026-10-01",
           null,
+          null,
           "2026-10-01T12:00:00Z",
       )
       categoriaIds.forEachIndexed { posicion, categoriaId ->

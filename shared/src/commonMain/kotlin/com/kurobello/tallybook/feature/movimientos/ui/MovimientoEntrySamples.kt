@@ -78,7 +78,8 @@ internal class MovimientoEntrySamples(
           fecha = yesterday,
           monto = twentyThousand,
           amountNeedsReview = false,
-          descripcion = SENTENCE,
+          titulo = SENTENCE,
+          descripcion = "",
           categorias = listOf(cinema),
           categoriasArePending = false,
           suggestions = listOf(food, transport),
@@ -102,7 +103,7 @@ internal class MovimientoEntrySamples(
       completeSummary.copy(
           tipo = TipoMovimiento.INGRESO,
           fecha = today,
-          descripcion = "Received 20.000",
+          titulo = "Received 20.000",
       )
 
   companion object {

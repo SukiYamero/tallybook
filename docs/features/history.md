@@ -11,7 +11,7 @@ guides composition; its sample data, chart and eye control do not enable additio
   balance label, the period-owned snapshot and signed secondary values. Its typography is owned by
   [UI architecture](../ui/architecture.md#balance-summary-cards).
 - The screen uses Day/Week/Month and year context, with a scrollable selected-period summary and
-  date-grouped, description-first rows that open [movimiento management](manage-movimientos.md).
+  date-grouped rows (title with category fallback, then description, no date) that open [movimiento management](manage-movimientos.md).
   There is no fixed global-balance banner. Home retains its global balance. The History header starts 20dp below the top safe inset.
 - SQLDelight owns persisted movements. Currency/date-bounded repository observations feed one
   History ViewModel selection and a pure rows/count/totals projection. Loading, empty, failures,

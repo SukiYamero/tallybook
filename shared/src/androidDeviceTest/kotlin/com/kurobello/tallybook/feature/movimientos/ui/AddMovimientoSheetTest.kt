@@ -553,7 +553,8 @@ class AddMovimientoSheetTest {
           moneda = Moneda.COP,
           categorias = listOf(category, otros),
           categoriaIds = listOf(category.id),
-          descripcion = "Gasté 1 en comida",
+          titulo = "Gasté 1 en comida",
+          descripcion = "",
           isLoading = false,
           isSubmitting = isSubmitting,
           submitAttempted = false,
@@ -603,6 +604,8 @@ class AddMovimientoSheetTest {
     override fun onCategoriasChanged(ids: List<String>) = Unit
 
     override fun onCategoriaRemoved(id: String) = Unit
+
+    override fun onTituloChanged(value: String) = Unit
 
     override fun onDescripcionChanged(value: String) = Unit
 

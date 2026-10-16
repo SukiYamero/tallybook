@@ -26,6 +26,8 @@ references; their sample data and quantity-bearing Apply button are not requirem
 - Shared `TallybookChoicePill` and `TallybookFilterTag` preserve 48dp interaction targets with smaller
   visuals and no press shading. Shared movement-row amounts and skeletons follow the
   [global card typography](../ui/architecture.md#movement-card-amounts); monetary formatting is unchanged. Reusable APIs live in the [catalog](../ui/components.md).
+- Results are grouped under one full-date header per day with results; rows show title (category
+  fallback) and description, without date.
 - Real result rows open [movimiento management](manage-movimientos.md); its mutations refresh the
   existing repository projection while retaining Search input and criteria.
 - No chart, currency selector, category authoring, sync, FTS, pager or dependency upgrade is included.

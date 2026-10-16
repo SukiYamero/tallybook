@@ -31,7 +31,7 @@ Creation moves through three steps; business rules for each live in
   keyboard closes. Scrim taps and Back dismiss as before.
 - **Review (sheet)**: opens tall rather than hugging its content. A title and one-line subtitle
   lead labeled sections: Type and Date as large badges side by side, Amount (a missing one reads "not detected", with a hint to use Edit movimiento), the quoted
-  Description and the Categories tag field with suggestions, each section `space24` apart. Edit movimiento (left) opens the form with the same
+  Title (the sentence), an optional Description field and the Categories tag field with suggestions, each section `space24` apart. Edit movimiento (left) opens the form with the same
   draft; Save (right) persists; the actions sit at the bottom, at least `space32` below the content.
   A failed save shows the shared save error above the actions and keeps the draft.
 - **Form**: the complete form in the same sheet, with the tag field and the multi-select picker in
@@ -48,7 +48,8 @@ Creation moves through three steps; business rules for each live in
 - Validation focus follows the initial submit attempt, not live error changes, so correcting amount
   cannot redirect typing elsewhere. Date and amount share the `fieldLabelSpacing` token and the date
   uses the medium chip.
-- The save action of the form hides while the keyboard is present; amount and description remain
+- The form has optional Title and Description fields, each capped at 180 characters with a counter.
+- The save action of the form hides while the keyboard is present; amount, title and description remain
   reachable through body scrolling and keyboard dismissal restores the scroll position. Done clears
   focus and does not submit.
 - A non-blank sentence or any changed draft requires confirmation before a scrim tap, drag or Back can

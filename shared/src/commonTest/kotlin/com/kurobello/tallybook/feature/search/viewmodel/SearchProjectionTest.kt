@@ -6,8 +6,12 @@ import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoReadCriteria
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.text.normalizeSearchText
+import com.kurobello.tallybook.feature.search.ui.SearchCurrencyYears
+import com.kurobello.tallybook.feature.search.ui.SearchRequest
+import com.kurobello.tallybook.feature.search.ui.SearchResultsUi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
@@ -31,7 +35,7 @@ class SearchProjectionTest {
   }
 
   @Test
-  fun usesDescriptionFirstAndLocalizedFallbackWhilePreservingDomainObjectsAndOrder() = runTest {
+  fun usesTituloFirstAndLocalizedFallbackWhilePreservingDomainObjectsAndOrder() = runTest {
     val rows = listOf(row("first", "  "), row("second", null), row("third", "Lunch"))
     val candidates = buildSearchCandidates(rows, emptyList(), "Sin categoría")
     val matched = matchSearchCandidates(candidates, "")
@@ -63,18 +67,57 @@ class SearchProjectionTest {
     assertEquals(emptyList(), matchSearchCandidates(candidates, "gift"))
   }
 
+  @Test
+  fun matchesTituloAndDescripcionWhileTheTitleStaysTheTitulo() = runTest {
+    val rows = listOf(row("dinner", "Cena", descripcion = "Cumpleaños de Ana"), row("cine", "Cine"))
+    val candidates = buildSearchCandidates(rows, emptyList(), "Unknown")
+
+    val byDescription = matchSearchCandidates(candidates, normalizeSearchText("CUMPLEAÑOS"))
+    assertEquals(listOf("dinner"), byDescription.map { it.id })
+    assertEquals("Cena", byDescription.single().title)
+    assertEquals(listOf("cine"), matchSearchCandidates(candidates, "cine").map { it.id })
+  }
+
+  @Test
+  fun resultsGroupByDayNewestFirstWithOnlyTheDaysThatHaveResults() = runTest {
+    val october8 = LocalDate(2026, 10, 8)
+    val october6 = LocalDate(2026, 10, 6)
+    val rows =
+        listOf(
+            row("late", "Taxi", fecha = october8),
+            row("early", "Café", fecha = october8),
+            row("older", "Cine", fecha = october6),
+        )
+    val results =
+        SearchResultsUi(
+            SearchRequest(MovimientoReadCriteria(Moneda.USD), ""),
+            matchSearchCandidates(buildSearchCandidates(rows, emptyList(), "Unknown"), ""),
+            SearchCurrencyYears(Moneda.USD, listOf(2026)),
+        )
+
+    assertEquals(listOf(october8, october6), results.groups.map { it.fecha })
+    assertEquals(
+        listOf(listOf("late", "early"), listOf("older")),
+        results.groups.map { group -> group.rows.map { it.id } },
+    )
+    assertEquals(3, results.count)
+  }
+
   private fun row(
       id: String,
-      description: String?,
+      titulo: String?,
       categoriaIds: List<String> = listOf("missing"),
+      descripcion: String? = null,
+      fecha: LocalDate = LocalDate(2026, 10, 6),
   ) =
       Movimiento(
           id,
           TipoMovimiento.GASTO,
           Money(Long.MAX_VALUE, Moneda.USD),
-          LocalDate(2026, 10, 6),
+          fecha,
           categoriaIds,
-          description,
+          titulo,
+          descripcion,
           Instant.parse("2026-10-06T12:00:00Z"),
       )
 }

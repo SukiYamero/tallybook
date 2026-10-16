@@ -131,6 +131,7 @@ class HistoryPresentationTest {
             today,
             listOf("food"),
             null,
+            null,
             Instant.parse("2026-10-06T12:00:00Z"),
         )
     val content =

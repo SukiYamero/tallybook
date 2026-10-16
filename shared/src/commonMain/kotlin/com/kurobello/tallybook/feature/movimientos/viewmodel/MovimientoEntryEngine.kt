@@ -79,7 +79,7 @@ internal class MovimientoEntryEngine(
               CategoryHistoryEntry(
                   subject =
                       parser
-                          .parse(first.descripcion, context.moneda, context.locale, context.today)
+                          .parse(first.titulo, context.moneda, context.locale, context.today)
                           .subject,
                   categoriaIds = rows.map(CategoryHistoryRow::categoriaId),
                   createdAt = first.createdAt,

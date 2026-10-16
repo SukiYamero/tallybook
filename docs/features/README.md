@@ -12,6 +12,7 @@ accepted scope, integration details and verification boundaries.
 | Profile and preferences | DONE | [Profile and preferences](profile.md) |
 | Smart entry and multiple categories | DONE | [Add movimiento](add-movimiento.md) |
 | Custom categories | DONE | [Custom categories](custom-categories.md) |
+| Movimiento title and day-grouped Search | DONE | [Movimiento title](movimiento-title.md) |
 
 ## Status rules
 

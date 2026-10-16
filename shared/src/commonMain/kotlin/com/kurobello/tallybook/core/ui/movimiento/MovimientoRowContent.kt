@@ -7,7 +7,6 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -51,12 +50,6 @@ import tallybook.shared.generated.resources.movimiento_row_extra_categories
 
 private const val PENDING_SUBTITLE_SEPARATOR = " · "
 
-internal data class MovimientoRowText(
-    val primary: String,
-    val secondary: String?,
-    val categoryLabel: String,
-)
-
 @Composable
 @Suppress("LongParameterList")
 internal fun MovimientoRowContent(
@@ -64,8 +57,6 @@ internal fun MovimientoRowContent(
     categoria: Categoria?,
     text: MovimientoRowText,
     modifier: Modifier = Modifier,
-    maxDescriptionLines: Int = 2,
-    maxSubtitleLines: Int = 1,
     onClick: (() -> Unit)? = null,
     pending: Boolean = false,
 ) {
@@ -93,24 +84,18 @@ internal fun MovimientoRowContent(
                       )
               ),
   ) {
-    FlowRow(
-        modifier =
-            Modifier.padding(
-                horizontal = TallybookTheme.spacing.space14,
-                vertical = TallybookTheme.spacing.space12,
-            ),
-        horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
-        verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
-        itemVerticalAlignment = Alignment.CenterVertically,
+    MovimientoRowDescription(
+        categoria,
+        text.copy(secondary = pendingSubtitle(pendingLabel, text.secondary)),
+        RowDescriptionLayout(pending, extraCategories),
+        Modifier.padding(
+            horizontal = TallybookTheme.spacing.space14,
+            vertical = TallybookTheme.spacing.space12,
+        ),
     ) {
-      MovimientoRowDescription(
-          categoria,
-          text.copy(secondary = pendingSubtitle(pendingLabel, text.secondary)),
-          RowDescriptionLayout(maxDescriptionLines, maxSubtitleLines, pending, extraCategories),
-          Modifier.weight(1f),
-      )
       TallybookText(
           amountText,
+          modifier = Modifier.padding(top = TallybookTheme.spacing.space4),
           color =
               if (movimiento.tipo == TipoMovimiento.INGRESO)
                   TallybookTheme.colors.status.success.base
@@ -176,17 +161,17 @@ internal fun movementRowAmountStyle(): TextStyle =
 internal fun signedMovimientoAmountText(monto: Money, tipo: TipoMovimiento): String {
   val formatted = (if (tipo == TipoMovimiento.GASTO) -monto else monto).format()
   if (tipo != TipoMovimiento.INGRESO || monto.minorUnits == 0L) return formatted
-  val prefix = monto.moneda.symbol + monto.moneda.symbolSeparator
-  return prefix + "+" + formatted.removePrefix(prefix)
+  return "+$formatted"
 }
 
 internal fun pendingSubtitle(pendingLabel: String?, secondary: String?): String? =
     if (pendingLabel == null) secondary
     else listOfNotNull(pendingLabel, secondary).joinToString(PENDING_SUBTITLE_SEPARATOR)
 
+private const val ROW_TITLE_MAX_LINES = 2
+private const val ROW_DESCRIPTION_MAX_LINES = 1
+
 private data class RowDescriptionLayout(
-    val maxDescriptionLines: Int,
-    val maxSubtitleLines: Int,
     val pending: Boolean,
     val extraCategories: Int,
 )
@@ -197,6 +182,7 @@ private fun MovimientoRowDescription(
     text: MovimientoRowText,
     layout: RowDescriptionLayout,
     modifier: Modifier,
+    amount: @Composable () -> Unit,
 ) {
   Row(
       modifier = modifier,
@@ -218,19 +204,20 @@ private fun MovimientoRowDescription(
     Column(modifier = Modifier.weight(1f)) {
       TallybookText(
           text.primary,
-          style = TallybookTheme.typography.bodyEmphasis,
-          maxLines = layout.maxDescriptionLines,
+          style = TallybookTheme.typography.cardTitle,
+          maxLines = ROW_TITLE_MAX_LINES,
           overflow = TextOverflow.Ellipsis,
       )
       text.secondary?.let {
         TallybookText(
             it,
             color = TallybookTheme.colors.foreground.tertiary,
-            style = TallybookTheme.typography.bodySmall,
-            maxLines = layout.maxSubtitleLines,
+            style = TallybookTheme.typography.caption,
+            maxLines = ROW_DESCRIPTION_MAX_LINES,
             overflow = TextOverflow.Ellipsis,
         )
       }
+      amount()
     }
   }
 }

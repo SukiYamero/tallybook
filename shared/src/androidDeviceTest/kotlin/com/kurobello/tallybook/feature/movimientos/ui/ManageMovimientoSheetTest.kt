@@ -357,6 +357,8 @@ private class ManagementSheetActions : ManageMovimientoSheetActions {
 
   override fun onCategoriaRemoved(id: String) = Unit
 
+  override fun onTituloChanged(value: String) = Unit
+
   override fun onDescripcionChanged(value: String) = Unit
 
   override fun onRetryLoad() = Unit

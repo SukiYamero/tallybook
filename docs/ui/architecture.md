@@ -258,6 +258,11 @@ All movement cards in Home, History and Search share `movementRowAmountStyle`: t
 `TallybookTypeScale.size14`, retaining bold weight and its line height. The row skeleton consumes the
 same style. Formatting, signs and currency rules remain in the existing money presentation helper.
 
+Their text column is the title (`cardTitle`, 14sp bold, at most two lines) with the category name as fallback,
+then the description (`caption`, one line) only when present, and the signed amount last, below
+them, so long titles and long amounts never compete for the same line. Text ends with an ellipsis and
+no card shows the date.
+
 ### Token organization
 
 The intended files are:
@@ -606,10 +611,10 @@ This is the presentation contract for [Search](../features/search.md).
 [Business logic](../business-logic.md#search-and-filters) owns matching and filter/date/count semantics.
 
 Search follows the supplied composition: header/title and result status, filter icon, text input,
-horizontal removable applied tags using the shared `TallybookFilterTag`, then a flat lazy movement
-list. Use the frame's top/horizontal safe area, `space20` above the header and shell-measured bottom clearance exactly once. Header/field
-scroll with content; no fixed global balance or chart. Rows reuse MovimientoRowContent with description
-first and full civil date/category subtitle; complete date/currency/type semantics remain accessible.
+horizontal removable applied tags using the shared `TallybookFilterTag`, then a lazy movement list
+grouped under one `CivilDayHeader` per day (`dayHeading`, 15sp semibold, shared with History). Use the frame's top/horizontal safe area, `space20` above the header and shell-measured bottom clearance exactly once. Header/field
+scroll with content; no fixed global balance or chart. Rows reuse MovimientoRowContent with the shared
+title/description card text; category/currency/type semantics remain accessible.
 
 The filter sheet occupies 72% of available height, revealing the underlying Search field in portrait.
 It uses compact, vertically centered wrapping date presets, two existing date chips for Custom, Todos/Gastos/Ingresos,
@@ -711,7 +716,7 @@ The editor reuses creation's state-independent controls
 through `MovimientoFormState`/`MovimientoFormActions`: the type selector retains its directional icons
 and status colors, the currency precedes the numeric input, and the categories use the shared tag
 field with the multi-select picker. It opens with no initial category picker and no forced keyboard.
-Existing description opens expanded. Focus, disclosure, keyboard and category-entry phases belong to
+Existing title and description open filled. Focus, disclosure, keyboard and category-entry phases belong to
 composition.
 
 An icon-only Delete action sits at the logical end of the title row with its localized accessible name.

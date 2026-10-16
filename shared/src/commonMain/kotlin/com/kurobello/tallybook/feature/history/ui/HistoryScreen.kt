@@ -27,10 +27,12 @@ import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookSkeletonLine
 import com.kurobello.tallybook.core.ui.component.TallybookText
+import com.kurobello.tallybook.core.ui.date.CivilDayHeader
 import com.kurobello.tallybook.core.ui.layout.TallybookScreenFrame
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoRowContent
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoRowSkeleton
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoRowText
+import com.kurobello.tallybook.core.ui.movimiento.rowDescription
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryActions
@@ -104,7 +106,7 @@ internal fun HistoryRow(
   MovimientoRowContent(
       row.movimiento,
       row.categoria,
-      MovimientoRowText(row.title, historyDateSubtitle(row.fecha), row.categoryLabel),
+      MovimientoRowText(row.title, row.movimiento.rowDescription, row.categoryLabel),
       modifier = modifier.fillMaxWidth(),
       onClick = onClick,
       pending = CATEGORIA_OTROS_ID in row.movimiento.categoriaIds,
@@ -163,13 +165,7 @@ private fun LazyListScope.historyContent(
   }
   if (uiState.isEmpty) item(key = "history-empty") { HistoryEmptyPeriod(onAdd) }
   content?.groups?.forEach { group ->
-    item(key = group.key, contentType = "date") {
-      TallybookText(
-          historyFullDate(group.fecha),
-          modifier = Modifier.semantics { heading() },
-          style = TallybookTheme.typography.label,
-      )
-    }
+    item(key = group.key, contentType = "date") { CivilDayHeader(group.fecha) }
     items(group.rows, key = { it.key }, contentType = { "movimiento" }) { row ->
       HistoryRow(row, onClick = onOpenMovimiento?.let { open -> { open(row.movimiento.id) } })
     }

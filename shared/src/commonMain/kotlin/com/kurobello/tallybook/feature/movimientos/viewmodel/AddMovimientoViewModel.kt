@@ -15,8 +15,8 @@ import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoriaSelection
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
+import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Moneda
-import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.PhraseReviewFlag
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -67,6 +67,7 @@ internal class AddMovimientoViewModel(
           amountInput = "",
           fecha = captureToday(),
           categoriaIds = emptyList(),
+          titulo = "",
           descripcion = "",
       )
   private var suggestionIndex = entryEngine.dictionaryIndex(clock.now())
@@ -82,6 +83,7 @@ internal class AddMovimientoViewModel(
                 moneda = Moneda.COP,
                 categorias = emptyList(),
                 categoriaIds = initialDraft.categoriaIds,
+                titulo = initialDraft.titulo,
                 descripcion = initialDraft.descripcion,
                 isLoading = true,
                 isSubmitting = false,
@@ -146,12 +148,16 @@ internal class AddMovimientoViewModel(
     }
   }
 
+  override fun onTituloChanged(value: String) {
+    updateFields { copy(titulo = value.take(MOVIMIENTO_TITLE_MAX_LENGTH)) }
+  }
+
   override fun onDescripcionChanged(value: String) {
     updateFields { copy(descripcion = value.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH)) }
   }
 
   override fun onPhraseChanged(value: String) {
-    val phrase = value.replace(LINE_BREAKS, " ").take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH)
+    val phrase = value.replace(LINE_BREAKS, " ").take(MOVIMIENTO_TITLE_MAX_LENGTH)
     updateFields { if (phrase.isBlank()) withoutInterpretation(phrase) else copy(phrase = phrase) }
     refreshPreview(debounce = true)
   }
@@ -171,7 +177,7 @@ internal class AddMovimientoViewModel(
               tipo = interpretation.tipo,
               amountInput = parsed.monto?.toAmountInput().orEmpty(),
               fecha = parsed.fecha ?: today,
-              descripcion = text,
+              titulo = text,
               amountNeedsReview =
                   parsed.monto != null && PhraseReviewFlag.AMBIGUOUS_AMOUNT in parsed.reviewFlags,
               today = today,
@@ -296,6 +302,7 @@ internal class AddMovimientoViewModel(
           amountInput = initialDraft.amountInput,
           fecha = initialDraft.fecha,
           categoriaIds = initialDraft.categoriaIds,
+          titulo = initialDraft.titulo,
           descripcion = initialDraft.descripcion,
           submitAttempted = false,
           phrase = "",
@@ -353,6 +360,7 @@ internal class AddMovimientoViewModel(
           tipo = initialDraft.tipo,
           amountInput = initialDraft.amountInput,
           fecha = initialDraft.fecha,
+          titulo = initialDraft.titulo,
           descripcion = initialDraft.descripcion,
           amountNeedsReview = false,
           categoriaIds = manualCategoriaIds,
@@ -474,51 +482,31 @@ internal data class AddMovimientoRepositories(
     val movimientos: MovimientoRepository,
 )
 
-private data class MovimientoCandidate(
-    val amount: Money?,
-    val categoriaIds: List<String>,
-    val isFechaValid: Boolean,
-    val isReadyToSave: Boolean,
-) {
-  fun toMovimientoOrNull(
-      idGenerator: IdGenerator,
-      tipo: TipoMovimiento,
-      fecha: LocalDate,
-      descripcion: String?,
-      createdAt: kotlin.time.Instant,
-  ): Movimiento? =
-      takeIf { amount != null && categoriaIds.isNotEmpty() && isFechaValid && isReadyToSave }
-          ?.let {
-            Movimiento(
-                id = idGenerator.next(),
-                tipo = tipo,
-                monto = requireNotNull(amount),
-                fecha = fecha,
-                categoriaIds = categoriaIds,
-                descripcion = descripcion,
-                createdAt = createdAt,
-            )
-          }
-}
-
 private fun AddMovimientoUiState.toMovimientoOrNull(
     idGenerator: IdGenerator,
     createdAt: kotlin.time.Instant,
     timeZone: kotlinx.datetime.TimeZone,
-): Movimiento? =
-    MovimientoCandidate(
-            amount = (parseAmountInput(amountInput, moneda) as? AmountInputResult.Valid)?.money,
-            categoriaIds = effectiveCategoriaIds,
-            isFechaValid = fecha <= createdAt.toLocalDateTime(timeZone).date,
-            isReadyToSave = !isLoading && error == null,
-        )
-        .toMovimientoOrNull(
-            idGenerator = idGenerator,
-            tipo = tipo,
-            fecha = fecha,
-            descripcion = descripcion.normalizeDescription(),
-            createdAt = createdAt,
-        )
+): Movimiento? {
+  val amount = (parseAmountInput(amountInput, moneda) as? AmountInputResult.Valid)?.money
+  val categoriaIds = effectiveCategoriaIds
+  val isValid =
+      categoriaIds.isNotEmpty() &&
+          fecha <= createdAt.toLocalDateTime(timeZone).date &&
+          !isLoading &&
+          error == null
+  return if (amount == null || !isValid) null
+  else
+      Movimiento(
+          id = idGenerator.next(),
+          tipo = tipo,
+          monto = amount,
+          fecha = fecha,
+          categoriaIds = categoriaIds,
+          titulo = titulo.normalizeOptionalText(),
+          descripcion = descripcion.normalizeOptionalText(),
+          createdAt = createdAt,
+      )
+}
 
 private sealed interface LoadState<out T> {
   data object Loading : LoadState<Nothing>
@@ -583,5 +571,5 @@ private data class LoadSnapshot(
   }
 }
 
-internal fun String.normalizeDescription(): String? =
+internal fun String.normalizeOptionalText(): String? =
     trim().replace(Regex("\\s+"), " ").ifEmpty { null }

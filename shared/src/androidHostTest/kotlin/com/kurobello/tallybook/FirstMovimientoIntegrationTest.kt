@@ -32,6 +32,7 @@ import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.ZERO
@@ -158,6 +159,7 @@ class FirstMovimientoIntegrationTest {
                       monto = Money(9_999, Moneda.USD),
                       fecha = FIXED_DATE,
                       categoriaIds = listOf("cat_ingresos"),
+                      titulo = null,
                       descripcion = null,
                       createdAt = FIXED_INSTANT,
                   )
@@ -253,7 +255,8 @@ class FirstMovimientoIntegrationTest {
 
           val saved = assertSuccess(movimientos.getAll()).single()
           assertEquals("first", saved.id)
-          assertEquals("Aceite 30 mil", saved.descripcion)
+          assertEquals("Aceite 30 mil", saved.titulo)
+          assertNull(saved.descripcion)
           assertEquals(listOf("cat_supermercado"), saved.categoriaIds)
           assertEquals(Money(3_000_000, Moneda.COP), saved.monto)
           assertEquals(FIXED_DATE, saved.fecha)

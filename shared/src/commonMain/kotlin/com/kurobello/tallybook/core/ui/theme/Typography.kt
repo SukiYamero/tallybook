@@ -43,6 +43,13 @@ internal data class TallybookTypography(
           fontSize = TallybookTypeScale.size17,
           lineHeight = TallybookTypeScale.size22,
       )
+  val dayHeading: TextStyle =
+      label.copy(fontSize = TallybookTypeScale.size15, lineHeight = TallybookTypeScale.size20)
+  val cardTitle: TextStyle =
+      bodyEmphasis.copy(
+          fontSize = TallybookTypeScale.size14,
+          lineHeight = TallybookTypeScale.size20,
+      )
   val sheetTitle: TextStyle = headline.copy(fontSize = TallybookTypeScale.size20)
   val sectionHeading: TextStyle =
       title.copy(fontSize = TallybookTypeScale.size16, fontWeight = FontWeight.SemiBold)

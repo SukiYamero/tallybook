@@ -28,13 +28,12 @@ data class Money(val minorUnits: Long, val moneda: Moneda) : Comparable<Money> {
 
   fun format(): String {
     val digits = minorUnits.toString().removePrefix("-").padStart(moneda.scale + 1, '0')
-    // Sign glued to the digits, not before the symbol: the order moneta imposes on Intl's output in
-    // attachSignToNumber (movimientoView.ts).
+    // The sign leads the symbol (-$ 25), the CLDR order that banking and finance apps follow.
     val sign = if (minorUnits < 0) "-" else ""
     val cut = digits.length - moneda.scale
     val integerPart = groupDigits(digits.take(cut), moneda.groupSeparator)
     val decimals = if (moneda.scale == 0) "" else moneda.decimalSeparator + digits.drop(cut)
-    return moneda.symbol + moneda.symbolSeparator + sign + integerPart + decimals
+    return sign + moneda.symbol + moneda.symbolSeparator + integerPart + decimals
   }
 
   private fun requireSameMoneda(other: Money) {

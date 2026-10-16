@@ -316,14 +316,15 @@ class HistoryVolumeDeviceTest {
       )
     }
 
-    private fun insert(id: String, currency: String, date: String, description: String?) {
+    private fun insert(id: String, currency: String, date: String, titulo: String?) {
       database.movimientoQueries.insertMovimiento(
           id,
           "GASTO",
           100,
           currency,
           date,
-          description,
+          titulo,
+          null,
           "2026-09-15T12:00:00Z",
       )
       database.movimientoQueries.insertMovimientoCategoria(id, "cat_comida", 0)

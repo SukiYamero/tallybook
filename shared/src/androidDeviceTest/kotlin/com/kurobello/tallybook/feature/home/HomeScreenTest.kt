@@ -255,7 +255,7 @@ class HomeScreenTest {
 
     composeRule.onNodeWithText("Comida").assertIsDisplayed()
     composeRule.onNodeWithText(recentMovementsLabel).assertIsDisplayed()
-    composeRule.onNodeWithText("$\u00A0-1,00").assertIsDisplayed()
+    composeRule.onNodeWithText("-$\u00A01,00").assertIsDisplayed()
   }
 
   private fun localizedString(resource: StringResource): String = runBlocking {
@@ -278,6 +278,7 @@ class HomeScreenTest {
             monto = Money(100, Moneda.COP),
             fecha = LocalDate(2026, 9, 15),
             categoriaIds = listOf(categoria.id),
+            titulo = null,
             descripcion = null,
             createdAt = Instant.parse("2026-09-15T00:00:00Z"),
         )

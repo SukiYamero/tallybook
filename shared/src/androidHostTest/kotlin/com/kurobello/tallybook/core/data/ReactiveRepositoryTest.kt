@@ -86,6 +86,7 @@ class ReactiveRepositoryTest {
               "USD",
               "2026-09-16",
               null,
+              null,
               "invalid-instant",
           )
           database.movimientoQueries.insertMovimientoCategoria("foreign-corrupt", "cat_comida", 0)
@@ -101,6 +102,7 @@ class ReactiveRepositoryTest {
               0,
               "COP",
               "2026-09-16",
+              null,
               null,
               first.createdAt.toString(),
           )
@@ -293,7 +295,8 @@ class ReactiveRepositoryTest {
                     monto = Money(1_000, Moneda.COP),
                     fecha = LocalDate(2025, 12, 31),
                     categoriaIds = listOf("other"),
-                    descripcion = "changed",
+                    titulo = "changed",
+                    descripcion = "changed details",
                 )
         assertEquals(
             DataOutcome.Success(MovimientoUpdateResult.Updated),
@@ -304,6 +307,7 @@ class ReactiveRepositoryTest {
                     changed.monto,
                     changed.fecha,
                     changed.categoriaIds,
+                    changed.titulo,
                     changed.descripcion,
                 ),
             ),
@@ -375,7 +379,8 @@ class ReactiveRepositoryTest {
           monto = monto,
           fecha = LocalDate(2026, 9, 3),
           categoriaIds = listOf("cat_comida"),
-          descripcion = "almuerzo",
+          titulo = "almuerzo",
+          descripcion = null,
           createdAt = Instant.parse("2026-09-03T12:00:00Z"),
       )
 }

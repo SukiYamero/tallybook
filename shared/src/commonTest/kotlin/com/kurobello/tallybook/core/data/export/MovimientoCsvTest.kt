@@ -15,7 +15,7 @@ import kotlinx.datetime.LocalDate
 
 private const val BOM = "﻿"
 private const val CRLF = "\r\n"
-private const val HEADER = "Fecha,Tipo,Categoría,Categoría padre,Descripción,Monto,Moneda"
+private const val HEADER = "Fecha,Tipo,Categoría,Categoría padre,Título,Descripción,Monto,Moneda"
 
 private val labels =
     MovimientoCsvLabels(
@@ -23,6 +23,7 @@ private val labels =
         typeHeader = "Tipo",
         categoryHeader = "Categoría",
         parentCategoryHeader = "Categoría padre",
+        titleHeader = "Título",
         descriptionHeader = "Descripción",
         amountHeader = "Monto",
         currencyHeader = "Moneda",
@@ -58,12 +59,11 @@ class MovimientoCsvTest {
             movimiento(id = "new", fecha = LocalDate(2026, 3, 1), createdAtSeconds = 0),
         )
 
-    val labelled = movimientos.map { it.copy(descripcion = it.id) }
+    val labelled = movimientos.map { it.copy(titulo = it.id) }
 
-    val descriptions =
-        dataRows(buildMovimientoCsv(labelled, categorias, labels)).map { it.split(",")[4] }
+    val titles = dataRows(buildMovimientoCsv(labelled, categorias, labels)).map { it.split(",")[4] }
 
-    assertEquals(listOf("new", "late", "b", "a", "old"), descriptions)
+    assertEquals(listOf("new", "late", "b", "a", "old"), titles)
   }
 
   @Test
@@ -74,7 +74,8 @@ class MovimientoCsvTest {
                 id = "gasto",
                 fecha = LocalDate(2026, 3, 5),
                 categoriaIds = listOf("super"),
-                descripcion = "Feria",
+                titulo = "Feria",
+                descripcion = "Frutas y verduras",
                 monto = Money(1500, Moneda.CLP),
             ),
             movimiento(
@@ -88,8 +89,8 @@ class MovimientoCsvTest {
 
     assertEquals(
         listOf(
-            "2026-03-05,Gasto,Supermercado,Comida,Feria,1500,CLP",
-            "2026-03-01,Ingreso,Sueldo,Sueldo,,2500000.00,COP",
+            "2026-03-05,Gasto,Supermercado,Comida,Feria,Frutas y verduras,1500,CLP",
+            "2026-03-01,Ingreso,Sueldo,Sueldo,,,2500000.00,COP",
         ),
         dataRows(buildMovimientoCsv(movimientos, categorias, labels)),
     )
@@ -109,7 +110,7 @@ class MovimientoCsvTest {
             .mapIndexed { index, monto -> movimiento(id = "$index", monto = monto) }
 
     val formatted =
-        dataRows(buildMovimientoCsv(amounts, categorias, labels)).map { it.split(",")[5] }
+        dataRows(buildMovimientoCsv(amounts, categorias, labels)).map { it.split(",")[6] }
 
     assertEquals(listOf("0", "1234567", "0.05", "1.00", "1234.56", "42.50"), formatted.reversed())
   }
@@ -134,7 +135,10 @@ class MovimientoCsvTest {
               labels,
           )
 
-      assertTrue(csv.endsWith(",Sueldo,Sueldo,$expected,1000,CLP$CRLF"), "for '$descripcion': $csv")
+      assertTrue(
+          csv.endsWith(",Sueldo,Sueldo,,$expected,1000,CLP$CRLF"),
+          "for '$descripcion': $csv",
+      )
     }
   }
 
@@ -185,8 +189,8 @@ class MovimientoCsvTest {
 
     assertEquals(
         listOf(
-            "2026-01-15,Gasto,Supermercado,Comida,,1000,CLP",
-            "2026-01-15,Gasto,Sueldo · Supermercado · Comida,Sueldo · Comida · Comida,,1000,CLP",
+            "2026-01-15,Gasto,Supermercado,Comida,,,1000,CLP",
+            "2026-01-15,Gasto,Sueldo · Supermercado · Comida,Sueldo · Comida · Comida,,,1000,CLP",
         ),
         dataRows(buildMovimientoCsv(movimientos, categorias, labels)),
     )
@@ -197,12 +201,12 @@ class MovimientoCsvTest {
     val orphan = categoria(id = "orphan", nombre = "Huérfana", padreId = "deleted")
     val movimientos =
         listOf(
-            movimiento(id = "b", categoriaIds = listOf("missing"), descripcion = null),
-            movimiento(id = "a", categoriaIds = listOf("orphan"), descripcion = null),
+            movimiento(id = "b", categoriaIds = listOf("missing")),
+            movimiento(id = "a", categoriaIds = listOf("orphan")),
         )
 
     assertEquals(
-        listOf("2026-01-15,Gasto,,,,1000,CLP", "2026-01-15,Gasto,Huérfana,,,1000,CLP"),
+        listOf("2026-01-15,Gasto,,,,,1000,CLP", "2026-01-15,Gasto,Huérfana,,,,1000,CLP"),
         dataRows(buildMovimientoCsv(movimientos, categorias + orphan, labels)),
     )
   }
@@ -227,6 +231,7 @@ private fun movimiento(
     tipo: TipoMovimiento = TipoMovimiento.GASTO,
     monto: Money = Money(1000, Moneda.CLP),
     categoriaIds: List<String> = listOf("comida"),
+    titulo: String? = null,
     descripcion: String? = null,
 ) =
     Movimiento(
@@ -235,6 +240,7 @@ private fun movimiento(
         monto = monto,
         fecha = fecha,
         categoriaIds = categoriaIds,
+        titulo = titulo,
         descripcion = descripcion,
         createdAt = Instant.fromEpochSeconds(createdAtSeconds),
     )

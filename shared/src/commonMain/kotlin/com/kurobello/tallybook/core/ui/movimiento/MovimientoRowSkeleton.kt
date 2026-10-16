@@ -3,7 +3,6 @@ package com.kurobello.tallybook.core.ui.movimiento
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -31,42 +30,34 @@ internal fun MovimientoRowSkeleton(modifier: Modifier = Modifier) {
                       )
               ),
   ) {
-    FlowRow(
+    Row(
         modifier =
             Modifier.padding(
                 horizontal = TallybookTheme.spacing.space14,
                 vertical = TallybookTheme.spacing.space12,
             ),
         horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
-        verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
-        itemVerticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-      MovimientoRowDescriptionSkeleton(modifier = Modifier.weight(1f))
-      TallybookSkeletonLine(sampleText = "$ 000.000", style = movementRowAmountStyle())
-    }
-  }
-}
-
-@Composable
-private fun MovimientoRowDescriptionSkeleton(modifier: Modifier) {
-  Row(
-      modifier = modifier,
-      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
-      verticalAlignment = Alignment.CenterVertically,
-  ) {
-    TallybookSkeleton(
-        modifier = Modifier.size(TallybookTheme.spacing.space40),
-        shape = CircleShape,
-    )
-    Column(modifier = Modifier.weight(1f)) {
-      TallybookSkeletonLine(
-          sampleText = "Movement",
-          style = TallybookTheme.typography.bodyEmphasis,
+      TallybookSkeleton(
+          modifier = Modifier.size(TallybookTheme.spacing.space40),
+          shape = CircleShape,
       )
-      TallybookSkeletonLine(
-          sampleText = "Movement details",
-          style = TallybookTheme.typography.bodySmall,
-      )
+      Column(modifier = Modifier.weight(1f)) {
+        TallybookSkeletonLine(
+            sampleText = "Movement",
+            style = TallybookTheme.typography.cardTitle,
+        )
+        TallybookSkeletonLine(
+            sampleText = "Movement details",
+            style = TallybookTheme.typography.caption,
+        )
+        TallybookSkeletonLine(
+            sampleText = "$ 000.000",
+            modifier = Modifier.padding(top = TallybookTheme.spacing.space4),
+            style = movementRowAmountStyle(),
+        )
+      }
     }
   }
 }
