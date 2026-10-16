@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.core.data.entry
 
 import com.kurobello.tallybook.core.data.CategorySeedCatalog
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -9,7 +10,9 @@ class CategoryKeywordDictionaryTest {
 
   private val seededIds = CategorySeedCatalog.categories.map { it.id }.toSet()
   private val children = CategorySeedCatalog.categories.filter { it.padreId != null }
-  private val parents = CategorySeedCatalog.categories.filter { it.padreId == null }
+  // Otros is the never-suggested fallback, so it is the one root without keywords.
+  private val parents =
+      CategorySeedCatalog.categories.filter { it.padreId == null && it.id != CATEGORIA_OTROS_ID }
 
   private fun normalizedKey(entry: CategoryKeywordEntry) =
       suggestionTokens(entry.phrase).joinToString(" ")
@@ -17,7 +20,7 @@ class CategoryKeywordDictionaryTest {
   @Test
   fun everyEntryTargetsAnExistingNonOtrosCategory() {
     val unknown = builtInKeywords.filter {
-      it.categoriaId !in seededIds || it.categoriaId == "cat_otros"
+      it.categoriaId !in seededIds || it.categoriaId == CATEGORIA_OTROS_ID
     }
 
     assertEquals(emptyList(), unknown)

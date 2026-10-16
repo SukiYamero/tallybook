@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.core.data.entry
 
 import com.kurobello.tallybook.core.data.CategorySeedCatalog
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.days
@@ -27,7 +28,7 @@ class CategorySuggester(private val dictionary: CategoryKeywordDictionary) {
     history.forEach { entry ->
       val tokens = suggestionTokens(entry.subject)
       // Otros means "not categorized yet", so it carries no signal about what the words mean.
-      if (tokens.isNotEmpty() && entry.categoriaId != OTROS_ID) {
+      if (tokens.isNotEmpty() && entry.categoriaId != CATEGORIA_OTROS_ID) {
         val weight = recencyWeight(entry.createdAt, now)
         exact.getOrPut(subjectKey(tokens)) { CategoryMass() }.add(entry.categoriaId, weight)
         tokens.toSet().forEach { token ->
@@ -58,7 +59,9 @@ internal constructor(
     if (limit <= 0 || tokens.isEmpty()) return emptyList()
     val ranked =
         evidence(tokens)
-            .filter { (id, _) -> id in availableIds && id !in excludedIds && id != OTROS_ID }
+            .filter { (id, _) ->
+              id in availableIds && id !in excludedIds && id != CATEGORIA_OTROS_ID
+            }
             .map { (id, candidate) -> candidate.toRanked(id, tipoFactor(id, tipo)) }
             .filter { it.score >= MIN_SCORE }
             .sortedWith(compareByDescending<Ranked> { it.score }.thenBy { it.categoriaId })
@@ -145,7 +148,6 @@ private fun recencyWeight(createdAt: Instant, now: Instant): Double {
   return 0.5.pow(ageDays / HALF_LIFE_DAYS)
 }
 
-private const val OTROS_ID = "cat_otros"
 private const val INCOME_PARENT_ID = "cat_ingresos"
 
 private val incomeCategoryIds: Set<String> =
