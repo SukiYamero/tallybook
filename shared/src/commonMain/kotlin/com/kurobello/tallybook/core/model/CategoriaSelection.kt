@@ -2,7 +2,6 @@ package com.kurobello.tallybook.core.model
 
 /** Pure rules for the set of categories attached to one movimiento while it is being edited. */
 object CategoriaSelection {
-  const val DEFAULT_LIMIT: Int = 6
 
   /**
    * Appends [id], first removing its parent or its children (they never coexist with it). Ignores
@@ -13,7 +12,7 @@ object CategoriaSelection {
       current: List<String>,
       id: String,
       catalog: List<Categoria>,
-      limit: Int = DEFAULT_LIMIT,
+      limit: Int = MAX_CATEGORIAS_POR_MOVIMIENTO,
   ): List<String> {
     if (id in current) return current
     val parentId = catalog.firstOrNull { it.id == id }?.padreId

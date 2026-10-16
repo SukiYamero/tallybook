@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoriaSelection
+import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.ui.category.CategoryChip
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
@@ -93,7 +94,7 @@ internal fun CategoryPickerSheet(
     onSelectionChange: (List<String>) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    max: Int = CategoriaSelection.DEFAULT_LIMIT,
+    max: Int = MAX_CATEGORIAS_POR_MOVIMIENTO,
     excludedIds: Set<String> = emptySet(),
     onHidden: () -> Unit = {},
     onShown: () -> Unit = {},

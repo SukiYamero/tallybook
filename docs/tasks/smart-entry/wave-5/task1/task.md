@@ -28,8 +28,7 @@ field in the form and the editor, rows with "+N", and documentation.
   dismisses it for the same subject.
 - Rows in Home, History and Search: first category's avatar and name plus a "+N" count when more
   exist; pending treatment when the only category is Otros. Search filter chips are unchanged.
-- Remove the old phrase step from the sheet, `CategorySuggestionChip` leftovers and the single
-  picker API once unused.
+- Remove the old phrase step from the sheet and the single-select picker API once unused.
 
 ## Docs
 
