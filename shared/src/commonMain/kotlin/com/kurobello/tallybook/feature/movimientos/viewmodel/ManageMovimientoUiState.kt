@@ -51,6 +51,7 @@ internal data class MovimientoManagementSession(
           submitAttempted = it.submitAttempted,
           error = if (isCategoriesFailed) MovimientoFormError.CATEGORIES_UNAVAILABLE else it.error,
           validationDate = it.validationDate,
+          failedEtiquetaNombre = it.failedEtiquetaNombre,
       )
     }
 

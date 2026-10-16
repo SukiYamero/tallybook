@@ -8,6 +8,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -127,6 +128,24 @@ class ManageMovimientoCategoryAndTagsTest {
 
     assertEquals(listOf("trip", created.id), f.form().etiquetaIds)
     assertEquals(listOf("trip", created.id), f.form().selectedEtiquetas.map { it.id })
+  }
+
+  @Test
+  fun aFailedTagCreateIsReportedUntilTheNextAttempt() = runTest {
+    val f = fixture(stored = "food", tags = listOf("trip"))
+    f.etiquetas.failure = DataError.Local(IllegalStateException())
+
+    f.viewModel.onCreateEtiqueta("Viaje Chile")
+    runCurrent()
+    assertEquals("Viaje Chile", f.form().failedEtiquetaNombre)
+    assertEquals(listOf("trip"), f.form().etiquetaIds)
+    assertFalse(f.viewModel.uiState.value.session!!.hasUnsavedChanges)
+
+    f.etiquetas.failure = null
+    f.viewModel.onCreateEtiqueta("Viaje Chile")
+    runCurrent()
+    assertNull(f.form().failedEtiquetaNombre)
+    assertEquals(2, f.form().etiquetaIds.size)
   }
 
   @Test

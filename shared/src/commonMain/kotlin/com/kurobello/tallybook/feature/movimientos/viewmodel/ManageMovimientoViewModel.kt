@@ -102,10 +102,15 @@ internal class ManageMovimientoViewModel(
 
   override fun onCreateEtiqueta(nombre: String) {
     val session = uiState.value.session?.takeIf { it.canModifyDraft } ?: return
+    updateSession(session.token) { copy(edit = edit?.copy(failedEtiquetaNombre = null)) }
     coroutineScope.launch {
       val outcome = etiquetaRepository.create(nombre)
-      if (outcome is DataOutcome.Success && uiState.value.session?.token == session.token) {
-        updateDraft { copy(etiquetaIds = etiquetaIds.withCreated(outcome.data)) }
+      if (uiState.value.session?.token != session.token) return@launch
+      when (outcome) {
+        is DataOutcome.Success ->
+            updateDraft { copy(etiquetaIds = etiquetaIds.withCreated(outcome.data)) }
+        is DataOutcome.Failure ->
+            updateSession(session.token) { copy(edit = edit?.copy(failedEtiquetaNombre = nombre)) }
       }
     }
   }

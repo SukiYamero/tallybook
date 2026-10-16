@@ -158,10 +158,12 @@ internal class AddMovimientoViewModel(
   }
 
   override fun onCreateEtiqueta(nombre: String) {
+    uiState.update { it.copy(failedEtiquetaNombre = null) }
     coroutineScope.launch {
-      val outcome = repositories.etiquetas.create(nombre)
-      if (outcome is DataOutcome.Success) {
-        updateFields { withEtiquetas(etiquetaIds.withCreated(outcome.data)) }
+      when (val outcome = repositories.etiquetas.create(nombre)) {
+        is DataOutcome.Success ->
+            updateFields { withEtiquetas(etiquetaIds.withCreated(outcome.data)) }
+        is DataOutcome.Failure -> uiState.update { it.copy(failedEtiquetaNombre = nombre) }
       }
     }
   }

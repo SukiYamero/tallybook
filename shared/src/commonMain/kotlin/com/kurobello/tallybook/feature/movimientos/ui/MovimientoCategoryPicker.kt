@@ -104,6 +104,7 @@ internal fun MovimientoEtiquetaPickerSheet(
       onCreate = actions::onCreateEtiqueta,
       onDismiss = picker.onDismiss,
       onBack = picker.onDismiss,
+      failedCreateNombre = uiState.failedEtiquetaNombre,
   )
 }
 

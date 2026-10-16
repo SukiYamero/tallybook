@@ -19,10 +19,9 @@ import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.TipoMovimiento
-import com.kurobello.tallybook.core.ui.category.CategoryAddTag
+import com.kurobello.tallybook.core.ui.category.CategorySingleField
 import com.kurobello.tallybook.core.ui.category.CategorySuggestionTag
 import com.kurobello.tallybook.core.ui.category.CategoryTag
-import com.kurobello.tallybook.core.ui.category.CategoryTagField
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookModalDialog
 import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
@@ -44,11 +43,10 @@ import tallybook.shared.generated.resources.category_hogar
 import tallybook.shared.generated.resources.category_mascotas
 import tallybook.shared.generated.resources.category_salud
 import tallybook.shared.generated.resources.category_supermercado
-import tallybook.shared.generated.resources.category_tag_add
 import tallybook.shared.generated.resources.category_transporte
 import tallybook.shared.generated.resources.close
+import tallybook.shared.generated.resources.ui_catalog_category_field
 import tallybook.shared.generated.resources.ui_catalog_category_picker
-import tallybook.shared.generated.resources.ui_catalog_category_tag_field
 import tallybook.shared.generated.resources.ui_catalog_category_tags
 import tallybook.shared.generated.resources.ui_catalog_dialog_content
 import tallybook.shared.generated.resources.ui_catalog_modal_dialog
@@ -72,11 +70,12 @@ internal fun LazyListScope.catalogTagComponents() {
     CatalogCategoryTagMatrix()
   }
   catalogControlSection(
-      "category-tag-field",
-      { stringResource(Res.string.ui_catalog_category_tag_field) },
+      "category-single-field",
+      { stringResource(Res.string.ui_catalog_category_field) },
   ) {
-    CatalogCategoryTagFieldMatrix()
+    CatalogCategorySingleFieldMatrix()
   }
+  catalogEtiquetaComponents()
   catalogControlSection(
       "movimiento-badges",
       { stringResource(Res.string.ui_catalog_movimiento_badges) },
@@ -112,15 +111,11 @@ private fun CatalogCategoryTagMatrix() {
       CategorySuggestionTag(samples.cinema, onClick = {})
       CategorySuggestionTag(samples.cinema, onClick = {}, enabled = false)
     }
-    CatalogTagRow(stringResource(Res.string.category_tag_add)) {
-      CategoryAddTag(onClick = {})
-      CategoryAddTag(onClick = {}, enabled = false)
-    }
   }
 }
 
 @Composable
-private fun CatalogTagRow(label: String, content: @Composable () -> Unit) {
+internal fun CatalogTagRow(label: String, content: @Composable () -> Unit) {
   CatalogSample(label = label) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
@@ -132,28 +127,32 @@ private fun CatalogTagRow(label: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun CatalogCategoryTagFieldMatrix() {
+private fun CatalogCategorySingleFieldMatrix() {
   val categories = rememberCatalogCategories()
   val byId = remember(categories) { categories.associateBy(Categoria::id) }
   val other = rememberMovimientoEntrySamples().other
-  var selectedId by remember { mutableStateOf(ID_FOOD) }
+  var selectedId by remember { mutableStateOf<String?>(ID_FOOD) }
   var pickerVisible by remember { mutableStateOf(false) }
   val suggestions = remember(byId) { listOfNotNull(byId[ID_TRANSPORT], byId[ID_HEALTH]) }
+  val selected = selectedId?.let(byId::get)
   CatalogSurface {
     CatalogSample(label = stringResource(Res.string.ui_catalog_state_with_suggestions)) {
-      CategoryTagField(
-          categorias = listOfNotNull(byId[selectedId]),
-          onRemove = {},
-          onAdd = { pickerVisible = true },
-          suggestions = suggestions,
+      CategorySingleField(
+          categoria = selected ?: other,
+          deselectable = true,
+          onChoose = { pickerVisible = true },
           onSuggestion = { selectedId = it.id },
+          onDeselect = { selectedId = null },
+          pending = selected == null,
+          suggestions = suggestions,
       )
     }
     CatalogSample(label = stringResource(Res.string.ui_catalog_state_pending_category)) {
-      CategoryTagField(
-          categorias = listOf(other),
-          onRemove = {},
-          onAdd = {},
+      CategorySingleField(
+          categoria = other,
+          deselectable = false,
+          onChoose = {},
+          onSuggestion = {},
           pending = true,
           suggestions = suggestions,
       )

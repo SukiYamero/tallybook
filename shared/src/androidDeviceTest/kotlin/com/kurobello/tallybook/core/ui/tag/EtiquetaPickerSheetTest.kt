@@ -33,6 +33,7 @@ import tallybook.shared.generated.resources.tag_picker_create
 import tallybook.shared.generated.resources.tag_picker_done
 import tallybook.shared.generated.resources.tag_picker_limit_reached
 import tallybook.shared.generated.resources.tag_picker_title
+import tallybook.shared.generated.resources.tag_save_error
 import tallybook.shared.generated.resources.tags_search_empty
 
 @OptIn(ExperimentalResourceApi::class)
@@ -95,7 +96,23 @@ class EtiquetaPickerSheetTest {
     composeRule.runOnIdle { assertEquals(listOf("Gym"), created) }
   }
 
-  private fun show(initial: List<String> = emptyList(), max: Int = 6) {
+  @Test
+  fun aFailedCreateIsExplainedOnlyWhileTheQueryStillNamesIt() {
+    show(failedCreateNombre = "Gym")
+    val error = string(Res.string.tag_save_error)
+
+    composeRule.onNode(hasSetTextAction()).performTextInput(" Gym")
+    composeRule.onNodeWithText(error).assertExists()
+
+    composeRule.onNode(hasSetTextAction()).performTextInput("nasio")
+    composeRule.onNodeWithText(error).assertDoesNotExist()
+  }
+
+  private fun show(
+      initial: List<String> = emptyList(),
+      max: Int = 6,
+      failedCreateNombre: String? = null,
+  ) {
     selection = initial
     composeRule.setContent {
       TallybookTheme {
@@ -107,6 +124,7 @@ class EtiquetaPickerSheetTest {
             onCreate = { created += it },
             onDismiss = { dismissals++ },
             max = max,
+            failedCreateNombre = failedCreateNombre,
         )
       }
     }

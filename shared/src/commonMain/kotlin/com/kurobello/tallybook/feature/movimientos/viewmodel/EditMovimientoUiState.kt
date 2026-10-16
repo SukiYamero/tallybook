@@ -17,6 +17,7 @@ internal data class EditMovimientoUiState(
     override val submitAttempted: Boolean = false,
     override val error: MovimientoFormError? = null,
     val validationDate: LocalDate = maxSelectableDate,
+    override val failedEtiquetaNombre: String? = null,
 ) : MovimientoFormState {
   override val tipo
     get() = draft.tipo

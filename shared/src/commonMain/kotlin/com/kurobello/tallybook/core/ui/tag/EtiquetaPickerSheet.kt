@@ -14,6 +14,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
@@ -37,6 +40,7 @@ import tallybook.shared.generated.resources.tag_picker_create
 import tallybook.shared.generated.resources.tag_picker_done
 import tallybook.shared.generated.resources.tag_picker_limit_reached
 import tallybook.shared.generated.resources.tag_picker_title
+import tallybook.shared.generated.resources.tag_save_error
 import tallybook.shared.generated.resources.tags_empty
 import tallybook.shared.generated.resources.tags_search_empty
 
@@ -48,7 +52,8 @@ internal const val ETIQUETA_PICKER_OFFER_CREATE_TAG = "etiqueta_picker_offer_cre
  * matching tag as a toggle and a "Done (n)" action that closes. Each toggle reports the whole new
  * selection through [onSelectionChange]; additions stop at [max] and a hint explains why. A search
  * without results offers creating the trimmed query through [onCreate] in one tap, also at [max];
- * the caller creates it and selects it only while the limit allows.
+ * the caller creates it and selects it only while the limit allows. While the query still names
+ * [failedCreateNombre], the offer explains that creating it failed.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -63,6 +68,7 @@ internal fun EtiquetaPickerSheet(
     max: Int = MAX_ETIQUETAS_POR_MOVIMIENTO,
     onHidden: () -> Unit = {},
     onBack: (() -> Unit)? = null,
+    failedCreateNombre: String? = null,
 ) {
   val search = rememberPickerSearchState(visible)
   val results = remember(etiquetas, search.query) { searchEtiquetas(etiquetas, search.query) }
@@ -81,6 +87,7 @@ internal fun EtiquetaPickerSheet(
           selectedIds = selectedIds,
           max = max,
           title = title,
+          failedCreateNombre = failedCreateNombre,
       )
   TallybookModalBottomSheet(
       visible = visible,
@@ -106,6 +113,7 @@ private data class EtiquetaPickerContentState(
     val selectedIds: List<String>,
     val max: Int,
     val title: String,
+    val failedCreateNombre: String? = null,
 ) {
   val isFull: Boolean
     get() = selectedIds.size >= max
@@ -163,7 +171,11 @@ private fun EtiquetaPickerResults(
 ) {
   when {
     state.results.isEmpty() && state.search.isSearching ->
-        EtiquetaPickerNoResults(query = state.search.query, onCreate = onCreate)
+        EtiquetaPickerNoResults(
+            query = state.search.query,
+            failedCreateNombre = state.failedCreateNombre,
+            onCreate = onCreate,
+        )
     state.catalogIsEmpty -> EtiquetaPickerMessage(stringResource(Res.string.tags_empty))
     else ->
         FlowRow(
@@ -190,7 +202,11 @@ private fun EtiquetaPickerResults(
 }
 
 @Composable
-private fun EtiquetaPickerNoResults(query: String, onCreate: (String) -> Unit) {
+private fun EtiquetaPickerNoResults(
+    query: String,
+    failedCreateNombre: String?,
+    onCreate: (String) -> Unit,
+) {
   val nombre = query.trim()
   Column(
       modifier = Modifier.padding(vertical = TallybookTheme.spacing.space24),
@@ -207,6 +223,14 @@ private fun EtiquetaPickerNoResults(query: String, onCreate: (String) -> Unit) {
       ) {
         TallybookText(stringResource(Res.string.tag_picker_create, nombre))
       }
+    }
+    if (nombre.isNotEmpty() && nombre == failedCreateNombre) {
+      TallybookText(
+          text = stringResource(Res.string.tag_save_error),
+          color = TallybookTheme.colors.status.danger.base,
+          modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+          style = TallybookTheme.typography.body,
+      )
     }
   }
 }

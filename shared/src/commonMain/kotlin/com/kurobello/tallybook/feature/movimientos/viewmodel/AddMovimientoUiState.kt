@@ -32,6 +32,7 @@ internal data class AddMovimientoUiState(
     override val etiquetaIds: List<String> = emptyList(),
     override val etiquetas: List<Etiqueta> = emptyList(),
     override val etiquetasLoad: EtiquetasLoad = EtiquetasLoad.LOADING,
+    override val failedEtiquetaNombre: String? = null,
     val hasUnsavedChanges: Boolean = false,
     val step: AddMovimientoStep = AddMovimientoStep.PHRASE,
     val phrase: String = "",

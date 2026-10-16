@@ -363,7 +363,7 @@ class MovimientoRepositoryTest {
   fun `restore falls back to Otros when the custom categoria was deleted after the capture`() =
       runTest {
         JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-          val database = seeded(driver, categoriaIds = listOf("custom"))
+          val database = seeded(driver, extraCategoriaIds = listOf("custom"))
           val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
           val row = movimiento("gone", categoriaId = "custom", etiquetaIds = listOf("tag_a"))
           repository.insert(row)
@@ -812,10 +812,10 @@ class MovimientoRepositoryTest {
 
   private fun seeded(
       driver: SqlDriver,
-      categoriaIds: List<String> = emptyList(),
+      extraCategoriaIds: List<String> = emptyList(),
       etiquetaIds: List<String> = emptyList(),
   ): TallybookDatabase =
-      createSchemaWithReferences(driver, categoriaIds, ETIQUETA_IDS + etiquetaIds)
+      createSchemaWithReferences(driver, extraCategoriaIds, ETIQUETA_IDS + etiquetaIds)
 
   private fun linkRows(driver: SqlDriver): List<String> =
       driver

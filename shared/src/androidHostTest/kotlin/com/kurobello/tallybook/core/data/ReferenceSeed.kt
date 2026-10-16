@@ -8,15 +8,15 @@ import com.kurobello.tallybook.core.model.Movimiento
 
 /**
  * Creates the schema with the rows movimiento writes must reference: the seeded category catalog,
- * [categoriaIds] as extra roots and [etiquetaIds] as tags named after their ids.
+ * [extraCategoriaIds] as extra roots and [etiquetaIds] as tags named after their ids.
  */
 internal fun createSchemaWithReferences(
     driver: SqlDriver,
-    categoriaIds: Collection<String> = emptyList(),
+    extraCategoriaIds: Collection<String> = emptyList(),
     etiquetaIds: Collection<String> = emptyList(),
 ): TallybookDatabase {
   TallybookDatabase.Schema.create(driver)
-  return TallybookDatabase(driver).apply { seedReferences(categoriaIds, etiquetaIds) }
+  return TallybookDatabase(driver).apply { seedReferences(extraCategoriaIds, etiquetaIds) }
 }
 
 /**
@@ -43,7 +43,7 @@ internal fun TallybookDatabase.insertLegacy(movimiento: Movimiento) {
 }
 
 internal fun TallybookDatabase.seedReferences(
-    categoriaIds: Collection<String> = emptyList(),
+    extraCategoriaIds: Collection<String> = emptyList(),
     etiquetaIds: Collection<String> = emptyList(),
 ) {
   transaction {
@@ -56,7 +56,7 @@ internal fun TallybookDatabase.seedReferences(
           seed.color.storageKey,
       )
     }
-    categoriaIds.forEach { id ->
+    extraCategoriaIds.forEach { id ->
       categoriaQueries.insertCategoriaIfAbsent(
           id,
           id,

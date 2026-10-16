@@ -137,6 +137,24 @@ class AddMovimientoEtiquetasTest {
   }
 
   @Test
+  fun aFailedTagCreateIsReportedUntilTheNextAttempt() = runTest {
+    val repository = FakeEtiquetaRepository(listOf(etiqueta("casa")))
+    val viewModel = entryViewModel(repository)
+    repository.failure = DataError.Local(IllegalStateException())
+
+    viewModel.onCreateEtiqueta("Viaje Chile")
+    runCurrent()
+    assertEquals("Viaje Chile", viewModel.uiState.value.failedEtiquetaNombre)
+    assertEquals(emptyList(), viewModel.uiState.value.etiquetaIds)
+
+    repository.failure = null
+    viewModel.onCreateEtiqueta("Viaje Chile")
+    runCurrent()
+    assertNull(viewModel.uiState.value.failedEtiquetaNombre)
+    assertEquals(1, viewModel.uiState.value.etiquetaIds.size)
+  }
+
+  @Test
   fun aTagCreatedAtTheLimitIsNotSelected() = runTest {
     val names = List(MAX_ETIQUETAS_POR_MOVIMIENTO) { "tag$it" }
     val repository = FakeEtiquetaRepository(names.map(::etiqueta))

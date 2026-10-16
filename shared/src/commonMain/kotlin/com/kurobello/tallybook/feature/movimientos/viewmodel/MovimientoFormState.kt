@@ -47,6 +47,10 @@ internal interface MovimientoFormState {
   val selectedEtiquetas: List<Etiqueta>
     get() = etiquetaIds.mapNotNull { id -> etiquetas.firstOrNull { it.id == id } }
 
+  /** The name of the last tag the picker failed to create, until another create starts. */
+  val failedEtiquetaNombre: String?
+    get() = null
+
   val maxSelectableDate: LocalDate?
     get() = null
 

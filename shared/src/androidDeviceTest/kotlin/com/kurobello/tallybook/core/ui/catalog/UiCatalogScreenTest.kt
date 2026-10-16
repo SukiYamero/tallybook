@@ -35,6 +35,7 @@ import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category
 import tallybook.shared.generated.resources.category_comida
 import tallybook.shared.generated.resources.category_required
+import tallybook.shared.generated.resources.category_transporte
 import tallybook.shared.generated.resources.expense
 import tallybook.shared.generated.resources.home_search_placeholder
 import tallybook.shared.generated.resources.income
@@ -44,8 +45,10 @@ import tallybook.shared.generated.resources.navigation_history
 import tallybook.shared.generated.resources.navigation_home
 import tallybook.shared.generated.resources.navigation_profile
 import tallybook.shared.generated.resources.navigation_search
+import tallybook.shared.generated.resources.tag_picker_title
 import tallybook.shared.generated.resources.ui_catalog_actions
 import tallybook.shared.generated.resources.ui_catalog_amount_inputs
+import tallybook.shared.generated.resources.ui_catalog_category_field
 import tallybook.shared.generated.resources.ui_catalog_choice_pills
 import tallybook.shared.generated.resources.ui_catalog_clear_search
 import tallybook.shared.generated.resources.ui_catalog_dark
@@ -56,6 +59,7 @@ import tallybook.shared.generated.resources.ui_catalog_filter_tags
 import tallybook.shared.generated.resources.ui_catalog_foundations
 import tallybook.shared.generated.resources.ui_catalog_icon_buttons
 import tallybook.shared.generated.resources.ui_catalog_loading_states
+import tallybook.shared.generated.resources.ui_catalog_open_picker
 import tallybook.shared.generated.resources.ui_catalog_period_day
 import tallybook.shared.generated.resources.ui_catalog_period_pickers
 import tallybook.shared.generated.resources.ui_catalog_sample_body_emphasis
@@ -66,6 +70,7 @@ import tallybook.shared.generated.resources.ui_catalog_sample_text
 import tallybook.shared.generated.resources.ui_catalog_search_fields
 import tallybook.shared.generated.resources.ui_catalog_segmented_controls
 import tallybook.shared.generated.resources.ui_catalog_selection_fields
+import tallybook.shared.generated.resources.ui_catalog_tag_chips
 import tallybook.shared.generated.resources.ui_catalog_text_field_label
 import tallybook.shared.generated.resources.ui_catalog_text_fields
 
@@ -129,6 +134,43 @@ class UiCatalogScreenTest {
     tags.filter(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected)).assertCountEquals(3)
     tags.filter(isEnabled()).assertCountEquals(2)
     tags.filter(!isEnabled()).assertCountEquals(1)
+  }
+
+  @Test
+  fun catalogCategoryFieldSuggestionSwitchesTheOneSelectedCategory() {
+    composeRule.setContent { UiCatalogRoute() }
+    scrollTo("category-single-field")
+    composeRule
+        .onNodeWithText(localizedString(Res.string.ui_catalog_category_field))
+        .assertIsDisplayed()
+    val transport =
+        composeRule.onAllNodes(
+            hasText(localizedString(Res.string.category_transporte)) and
+                hasAnyAncestor(hasTestTag(catalogSectionAutomationTag("category-single-field")))
+        )
+    val selected = SemanticsMatcher.expectValue(SemanticsProperties.Selected, true)
+    transport.filter(selected).assertCountEquals(0)
+
+    transport[0].performClick()
+
+    transport.filter(selected).assertCountEquals(1)
+  }
+
+  @Test
+  fun catalogTagSectionsShowTheTagFamiliesAndOpenThePicker() {
+    composeRule.setContent { UiCatalogRoute() }
+    scrollTo("etiqueta-tags")
+    composeRule.onNodeWithText(localizedString(Res.string.ui_catalog_tag_chips)).assertIsDisplayed()
+
+    scrollTo("etiqueta-tag-field")
+    composeRule
+        .onNode(
+            hasText(localizedString(Res.string.ui_catalog_open_picker)) and
+                hasAnyAncestor(hasTestTag(catalogSectionAutomationTag("etiqueta-tag-field")))
+        )
+        .performClick()
+
+    composeRule.onNodeWithText(localizedString(Res.string.tag_picker_title)).assertIsDisplayed()
   }
 
   @Test
