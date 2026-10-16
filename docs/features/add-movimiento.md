@@ -12,18 +12,21 @@ Creation runs three steps inside one modal sheet; business rules for each live i
 
 - **Sentence**: the multi-line input takes focus on entry and the keyboard opens with it. Its
   placeholder is a localized example; Continue is disabled for a blank sentence and Done on the
-  keyboard continues. "Fill manually" opens the empty form. While typing, a preview row shows the
+  keyboard continues. "Fill manually" opens the empty form, discarding anything an earlier Continue
+  derived. While typing, a preview row shows the
   detected amount, date and high-confidence category after a 250 ms debounce and clears immediately
   when the input is emptied. Continue and Fill manually wait for the initial data to load; a load
   failure shows the existing retry message instead.
 - **Summary**: a card with tipo and date, the amount, the sentence, the selected category and up to
   three suggestion chips. A chip switches the single selection and the replaced suggestion returns to
-  the list; replacing a suggestion from the form's picker dismisses it for the draft. Edit movimiento
+  the list; replacing a suggestion from the form's picker dismisses it for the draft, and the
+  dismissals reset when Continue runs for a different sentence subject. Edit movimiento
   (left) opens the form with the same draft; Save (right) persists. A failed save shows the shared
   save error under the card and keeps the draft.
 - **Form**: the complete form with description as a regular field. Save without a category persists
-  Otros; the category field shows the pending style and label when Otros is selected. The picker lists
-  parents and children and never offers Otros. Save with an invalid amount from the summary opens the
+  Otros; the category field shows the pending style and label whenever the effective category is
+  Otros, including before any choice. The picker lists parents and children and never offers Otros;
+  tapping a parent with children only drills in, and its row inside the children list selects it. Save with an invalid amount from the summary opens the
   form with the field error and focus on it.
 - Back follows the path taken: form to summary when the form came from the summary, summary to the
   sentence (text kept), and otherwise the dismissal guard. Fill manually has no way back to the sentence.
@@ -45,7 +48,7 @@ Creation runs three steps inside one modal sheet; business rules for each live i
   never reads the clock. `MovimientoEntryEngine` holds the pure parser and suggestion calls; the
   history index is rebuilt per emission on the computation dispatcher and a failed history read falls
   back to dictionary-only suggestions.
-- Composition owns field focus, picker visibility, the keyboard-lift flag and confirmation visibility.
+- Composition owns field focus, picker visibility and confirmation visibility.
   `AddMovimientoSheet` hosts the steps; `MovimientoPhraseStep` and `MovimientoSummaryStep` are stateless.
 - `TallybookDismissGuard` and `TallybookConfirmationDialog` are domain-neutral reusable primitives.
   `TallybookModalBottomSheet` owns detents, motion and bottom safe-area policy.
@@ -54,15 +57,18 @@ Creation runs three steps inside one modal sheet; business rules for each live i
 ## Layout integration
 
 Unstyled can measure content against the entire window while rendering a smaller content detent.
-The modal body uses the positive captured active height only after the underlying sheet has settled;
-entrance and detent transitions remain free to measure their natural content. The form allocates its
+A detent's height cannot be read back from the sheet, which is bounded by that same detent: the
+measurement can only confirm the previous height and never sees growth. Content detents therefore
+record the body's natural height, measured against the window height whatever the current detent,
+and invalidate the sheet's anchors when it changes; the sheet clips what the detent has not reached
+yet. The form allocates its
 scroll body with `weight(1f, fill = false)`, reserving title/footer space before measuring overflow.
 This keeps validation helpers inside the scroll viewport instead of reducing the save action.
 
-The sheet keeps one detent per step and gives content that grows after its step settled a detent of
-its own: the keyboard-lifted sentence step (bottom padding follows the IME where the platform does not
-move the sheet) and the summary with a save error. Step changes cross-fade with a snapped size so the
-sheet's own detent animation is the only height motion. The sentence field and its preview row keep a
+The sheet keeps one detent per step. Growth inside a step moves that detent: the sentence step pads
+its bottom by the IME where the platform does not move the sheet, the form fills its natural height
+when it opens from the summary, and the summary grows for a save error. Step changes cross-fade with
+a snapped size so the sheet's own detent animation is the only height motion. The sentence field and its preview row keep a
 constant size and overflow scrolls inside the step body, so Continue never leaves the sheet.
 
 Version-sensitive contracts:

@@ -11,7 +11,7 @@ creating another one. Visual tokens, interaction rules, and ownership remain def
 | `TallybookTheme` | Providing the shared color, typography, spacing, dimension, radius, and motion tokens | Storing feature state or screen layout decisions |
 | `TallybookScreenFrame` | A top-level screen with safe-area policy, screen insets, and optional bottom chrome | A modal or a nested card |
 | `TallybookSurface` | A tokenized card or the visual foundation of another shared component | A feature-specific layout with business behavior |
-| `TallybookModalBottomSheet` | Modal creation, movimiento detail/edit or category selection | A permanent screen or navigation destination. Optional `onBack` runs in the native modal dispatcher; content modes with different natural heights need distinct detent identifiers. |
+| `TallybookModalBottomSheet` | Modal creation, movimiento detail/edit or category selection | A permanent screen or navigation destination. Optional `onBack` runs in the native modal dispatcher; content modes with different natural heights need distinct detent identifiers, and each tracks its own natural height as the content grows. |
 | `TallybookConfirmationDialog` | Confirming a decision over an existing screen or sheet | Presenting a form or replacing a bottom sheet |
 
 ## Actions and selection
@@ -26,8 +26,8 @@ creating another one. Visual tokens, interaction rules, and ownership remain def
 | `TallybookPeriodPickerRow` | Choosing one bounded day, week, or month period in a horizontally scrollable row | The caller owns the typed period values; optional captions and data indicators are presentational metadata. |
 | `TallybookYearMenu` | Changing the year that scopes a period picker | It is an anchored, accessible popup with the same scrim and motion as the date picker; four year rows are visible before its list scrolls. |
 | `TallybookSelectionField` | Opening a dedicated selection flow from a form | It displays a value or placeholder; it is not a free-text input or inline dropdown. |
-| `CategoryChip` | Selecting a category inside the category picker or showing the selected one in the entry summary | Use it in the selection flow, not as a substitute for the form field. `pending` swaps in the neutral dashed treatment for Otros. |
-| `CategorySuggestionChip` | Offering one category as a tappable suggestion | Outlined with a leading plus; the selected form is filled with a check, so state never relies on color. Category-agnostic so a multi-category field can reuse it. |
+| `CategoryChip` | Selecting a category inside the category picker or showing the selected one in the entry summary | Use it in the selection flow, not as a substitute for the form field. `pending` swaps in the neutral dashed treatment for Otros. A `null` `onClick` renders it as non-interactive content that keeps the selected semantics. |
+| `CategorySuggestionChip` | Offering one category as a tappable suggestion | Outlined with a leading plus and plain button semantics: choosing it moves the category into the selection, where `CategoryChip` shows it as selected. Category-agnostic so a multi-category field can reuse it. |
 
 ## Sheet headings
 
@@ -65,8 +65,8 @@ Existing and future bottom sheets use these shared headings and the standard def
 | `BalanceCard` | The Home or selected-period summary of balance and income/expense context | Full-width stacked income/expense rows with trailing amounts. Caller supplies the localized label, typed secondary-amount formatter and optional feedback footer; reuse its matching skeleton. |
 | `BalanceCardSkeleton` | A pending Home balance summary | Matches the existing card's typography, spacing, surfaces and income/expense mini-cards; placeholder text has no semantics. |
 | `MovimientoRow` | A compact movement item in a list | Optional `onClick` opens the stored row ID through the caller; placeholders remain non-interactive. Shared card amounts and skeletons use the size14 token. Callers pass `pending` for Otros: a dashed avatar and a muted "to complete" label announced with the row. |
-| `MovimientoPhraseStep` | The sentence step of movimiento creation | Stateless: text, preview model, focus requester and the civil today come from the caller. The input is three lines tall and the preview row reserves its height so the sheet's measured detent never has to grow. |
-| `MovimientoSummaryStep` | The compact summary after the sentence | Card with tipo, date, amount, quoted sentence, selected category and suggestion chips, plus the Edit movimiento / Save footer. Amount review and missing-amount messages are announced; the selected chip stays enabled with selected semantics. |
+| `MovimientoPhraseStep` | The sentence step of movimiento creation | Stateless: text, preview model, focus requester and the civil today come from the caller. The input is three lines tall and the preview row reserves its height so typing never resizes the sheet. |
+| `MovimientoSummaryStep` | The compact summary after the sentence | Card with tipo, date, amount, quoted sentence, selected category and suggestion chips, plus the Edit movimiento / Save footer. Amount review and missing-amount messages are announced; the selected category is non-interactive content with selected semantics. |
 | `MovimientoRowSkeleton` | A pending movement row | Shares the current row's avatar size, spacing, surface and responsive amount layout. Placeholder height represents a typical two-line row. |
 | `TallybookBottomNavigation` | Stable primary destinations and the centered Add movimiento action | A `null` selection callback renders a non-interactive bar for catalogs and fixtures. |
 | `TallybookNavHost` | Connecting approved routes to shared navigation UI | It owns route composition, not feature business logic. |
