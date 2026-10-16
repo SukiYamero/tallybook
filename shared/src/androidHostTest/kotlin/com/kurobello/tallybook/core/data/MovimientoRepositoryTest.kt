@@ -581,6 +581,8 @@ class MovimientoRepositoryTest {
               listOf(""),
               listOf("a", " "),
               listOf("a", "b", "a"),
+              listOf("a\u001Eb"),
+              listOf("a", "b\u001Fc"),
               List(MAX_CATEGORIAS_POR_MOVIMIENTO + 1) { "c$it" },
           )
 
@@ -832,6 +834,26 @@ class MovimientoRepositoryTest {
           repository.restoreDeleted(movimiento("occupied")),
       )
       assertEquals(raw, database.movimientoQueries.selectMovimientoById("occupied").executeAsOne())
+    }
+  }
+
+  @Test
+  fun `restore replaces orphaned join rows left by an interrupted delete`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      TallybookDatabase.Schema.create(driver)
+      val database = TallybookDatabase(driver)
+      val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+      val row = movimiento("gone", categoriaIds = listOf("a", "b"))
+      database.movimientoQueries.insertMovimientoCategoria("gone", "a", 0)
+      database.movimientoQueries.insertMovimientoCategoria("gone", "stale", 1)
+
+      assertEquals(
+          DataOutcome.Success(MovimientoRestoreResult.Restored),
+          repository.restoreDeleted(row),
+      )
+
+      assertEquals(DataOutcome.Success(row), repository.getById("gone"))
+      assertEquals(listOf("gone:a:0", "gone:b:1"), joinRows(driver))
     }
   }
 

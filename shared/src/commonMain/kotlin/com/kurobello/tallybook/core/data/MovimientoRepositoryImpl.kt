@@ -321,6 +321,7 @@ internal class MovimientoRepositoryImpl(
         val existing =
             database.movimientoQueries.selectMovimientoById(movimiento.id).executeAsOneOrNull()
         if (existing == null) {
+          database.movimientoQueries.deleteMovimientoCategorias(movimiento.id)
           insertRow(movimiento)
           MovimientoRestoreResult.Restored
         } else {
@@ -420,6 +421,8 @@ private fun validateCategoriaIds(categoriaIds: List<String>): DataError.InvalidI
               "Movimiento needs 1 to $MAX_CATEGORIAS_POR_MOVIMIENTO categorias, got ${categoriaIds.size}"
           )
       categoriaIds.any { it.isBlank() } -> DataError.InvalidInput("Categoria id must not be blank")
+      categoriaIds.any { id -> id.any { it in VIEW_SEPARATORS } } ->
+          DataError.InvalidInput("Categoria id must not contain a control separator")
       categoriaIds.toSet().size != categoriaIds.size ->
           DataError.InvalidInput("Movimiento categorias must be distinct")
       else -> null
@@ -443,3 +446,7 @@ private fun validateRange(range: MovimientoDateRange): DataError.InvalidInput? =
     } else null
 
 private const val MAX_FOUR_DIGIT_YEAR = 9999
+
+// movimiento_con_categorias joins ids with these characters, so an id holding one would corrupt
+// the parsed set.
+private val VIEW_SEPARATORS = charArrayOf('\u001E', '\u001F')
