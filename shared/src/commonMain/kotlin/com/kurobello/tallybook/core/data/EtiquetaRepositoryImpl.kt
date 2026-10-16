@@ -8,9 +8,11 @@ import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CategoriaRules
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.ETIQUETA_DESCRIPCION_MAX
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.EtiquetaWrite
 import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.text.normalizeOptionalText
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.coroutines.CoroutineDispatcher
@@ -48,45 +50,67 @@ internal class EtiquetaRepositoryImpl(
           .map { rows -> rows.associate { it.etiqueta_id to it.movimiento_count } }
           .asLocalDataOutcome()
 
-  override suspend fun create(nombre: String): DataOutcome<EtiquetaWrite> {
+  override suspend fun create(nombre: String, descripcion: String?): DataOutcome<EtiquetaWrite> {
     val clean =
-        when (val normalized = normalizeNombre(nombre)) {
+        when (val normalized = normalize(nombre, descripcion)) {
           is DataOutcome.Failure -> return normalized
           is DataOutcome.Success -> normalized.data
         }
     return runLocalDataOperation(dispatcher) {
       database.transactionWithResult {
-        val duplicate = queries.findDuplicate(clean, excludingId = null)
+        val duplicate = queries.findDuplicate(clean.nombre, excludingId = null)
         if (duplicate != null) {
           EtiquetaWrite.Duplicate(duplicate)
         } else {
-          val etiqueta = Etiqueta(id = idGenerator.next(), nombre = clean, createdAt = clock.now())
-          queries.insertEtiqueta(etiqueta.id, etiqueta.nombre, etiqueta.createdAt.toString())
+          val etiqueta =
+              Etiqueta(
+                  id = idGenerator.next(),
+                  nombre = clean.nombre,
+                  createdAt = clock.now(),
+                  descripcion = clean.descripcion,
+              )
+          queries.insertEtiqueta(
+              etiqueta.id,
+              etiqueta.nombre,
+              etiqueta.descripcion,
+              etiqueta.createdAt.toString(),
+          )
           EtiquetaWrite.Saved(etiqueta)
         }
       }
     }
   }
 
-  override suspend fun rename(id: String, nombre: String): DataOutcome<EtiquetaWrite> {
+  override suspend fun update(
+      id: String,
+      nombre: String,
+      descripcion: String?,
+  ): DataOutcome<EtiquetaWrite> {
     val clean =
-        when (val normalized = normalizeNombre(nombre)) {
+        when (val normalized = normalize(nombre, descripcion)) {
           is DataOutcome.Failure -> return normalized
           is DataOutcome.Success -> normalized.data
         }
     return runLocalDataOperation(dispatcher) {
           database.transactionWithResult {
             val current = queries.selectEtiquetaById(id).executeAsOneOrNull()?.toDomain()
-            val duplicate = current?.let { queries.findDuplicate(clean, excludingId = id) }
+            val duplicate = current?.let { queries.findDuplicate(clean.nombre, excludingId = id) }
             when {
               current == null -> DataOutcome.Failure(unknownEtiqueta(id))
               duplicate != null -> DataOutcome.Success(EtiquetaWrite.Duplicate(duplicate))
               else -> {
-                // Any write notifies every etiqueta observer, so an unchanged name must not write.
-                if (current.nombre != clean) {
-                  check(queries.updateEtiquetaNombre(nombre = clean, id = id).value == 1L)
+                val updated = current.copy(nombre = clean.nombre, descripcion = clean.descripcion)
+                // Any write notifies every etiqueta observer, so unchanged values must not write.
+                if (updated != current) {
+                  val written =
+                      queries.updateEtiqueta(
+                          nombre = updated.nombre,
+                          descripcion = updated.descripcion,
+                          id = id,
+                      )
+                  check(written.value == 1L)
                 }
-                DataOutcome.Success(EtiquetaWrite.Saved(current.copy(nombre = clean)))
+                DataOutcome.Success(EtiquetaWrite.Saved(updated))
               }
             }
           }
@@ -112,12 +136,16 @@ internal class EtiquetaRepositoryImpl(
           .flatten()
 }
 
-private fun normalizeNombre(nombre: String): DataOutcome<String> {
-  val clean = nombre.trim()
+private data class EtiquetaFields(val nombre: String, val descripcion: String?)
+
+private fun normalize(nombre: String, descripcion: String?): DataOutcome<EtiquetaFields> {
+  val clean = EtiquetaFields(nombre.trim(), descripcion?.normalizeOptionalText())
   val invalid =
       when {
-        clean.isEmpty() -> "Etiqueta nombre must not be blank"
-        clean.length > CategoriaRules.NOMBRE_MAX -> "Etiqueta nombre is too long"
+        clean.nombre.isEmpty() -> "Etiqueta nombre must not be blank"
+        clean.nombre.length > CategoriaRules.NOMBRE_MAX -> "Etiqueta nombre is too long"
+        (clean.descripcion?.length ?: 0) > ETIQUETA_DESCRIPCION_MAX ->
+            "Etiqueta descripcion is too long"
         else -> null
       }
   return if (invalid != null) DataOutcome.Failure(DataError.InvalidInput(invalid))
@@ -139,4 +167,9 @@ private fun List<DatabaseEtiqueta>.toSortedDomain(): List<Etiqueta> =
 private fun unknownEtiqueta(id: String) = DataError.InvalidInput("Unknown etiqueta $id")
 
 private fun DatabaseEtiqueta.toDomain(): Etiqueta =
-    Etiqueta(id = id, nombre = nombre, createdAt = Instant.parse(created_at))
+    Etiqueta(
+        id = id,
+        nombre = nombre,
+        createdAt = Instant.parse(created_at),
+        descripcion = descripcion,
+    )

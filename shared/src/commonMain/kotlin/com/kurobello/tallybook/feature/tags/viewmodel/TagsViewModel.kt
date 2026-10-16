@@ -8,6 +8,7 @@ import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.EtiquetaWrite
 import com.kurobello.tallybook.core.model.primaryMoneda
+import com.kurobello.tallybook.core.text.normalizeOptionalText
 import com.kurobello.tallybook.core.ui.tag.searchEtiquetas
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -79,18 +80,24 @@ internal class TagsViewModel(
     if (it.isEditable) it.copy(nombre = value, nombreEdited = true, duplicate = null) else it
   }
 
+  override fun onDescripcionChanged(value: String) = updateSheet {
+    if (it.isEditable) it.copy(descripcion = value) else it
+  }
+
   override fun onSaveSheet() {
     val sheet = uiState.value.sheet?.takeIf { it.canSave } ?: return
     val nombre = sheet.nombre.trim()
+    val descripcion = sheet.descripcion.normalizeOptionalText()
     val editing = sheet.editing
-    if (editing != null && nombre == editing.nombre) {
+    if (editing != null && nombre == editing.nombre && descripcion == editing.descripcion) {
       updateSheet { it.copy(isClosing = true) }
       return
     }
     updateSheet { it.copy(saving = true, error = null) }
     coroutineScope.launch {
       val written =
-          if (editing == null) etiquetas.create(nombre) else etiquetas.rename(editing.id, nombre)
+          if (editing == null) etiquetas.create(nombre, descripcion)
+          else etiquetas.update(editing.id, nombre, descripcion)
       when (written) {
         is DataOutcome.Failure ->
             updateSheet { it.copy(saving = false, error = TagSheetError.SAVE) }

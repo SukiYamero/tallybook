@@ -20,6 +20,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Trash2
 import com.kurobello.tallybook.core.model.CategoriaRules
+import com.kurobello.tallybook.core.model.ETIQUETA_DESCRIPCION_MAX
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.ui.component.LastWhileVisible
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
@@ -51,6 +52,9 @@ import tallybook.shared.generated.resources.tag_delete_error
 import tallybook.shared.generated.resources.tag_delete_message
 import tallybook.shared.generated.resources.tag_delete_message_unused
 import tallybook.shared.generated.resources.tag_delete_title
+import tallybook.shared.generated.resources.tag_description_label
+import tallybook.shared.generated.resources.tag_description_placeholder
+import tallybook.shared.generated.resources.tag_description_too_long
 import tallybook.shared.generated.resources.tag_duplicate_message
 import tallybook.shared.generated.resources.tag_duplicate_open
 import tallybook.shared.generated.resources.tag_edit_title
@@ -109,6 +113,7 @@ private fun TagSheetBody(sheet: TagSheet, title: String, actions: TagsActions) {
         }
       }
     }
+    TagDescripcionField(sheet, enabled, actions, Modifier.revealWhenFocused())
     sheet.error?.let { TagSheetErrorText(it) }
     if (sheet.editing != null && sheet.count > 0) {
       TallybookTextButton(onClick = actions::onViewMovimientos, enabled = enabled) {
@@ -193,6 +198,41 @@ private fun nombreMessage(sheet: TagSheet): TallybookFieldMessage {
 }
 
 @Composable
+private fun TagDescripcionField(
+    sheet: TagSheet,
+    enabled: Boolean,
+    actions: TagsActions,
+    modifier: Modifier,
+) {
+  val focusManager = LocalFocusManager.current
+  TallybookTextField(
+      value = sheet.descripcion,
+      onValueChange = actions::onDescripcionChanged,
+      modifier = modifier.fillMaxWidth(),
+      label = stringResource(Res.string.tag_description_label),
+      placeholder = stringResource(Res.string.tag_description_placeholder),
+      message =
+          if (sheet.descripcionTooLong)
+              TallybookFieldMessage.Error(
+                  stringResource(Res.string.tag_description_too_long, ETIQUETA_DESCRIPCION_MAX)
+              )
+          else
+              TallybookFieldMessage.Supporting(
+                  "${sheet.descripcion.length}/$ETIQUETA_DESCRIPCION_MAX"
+              ),
+      enabled = enabled,
+      singleLine = false,
+      minLines = DESCRIPCION_MIN_LINES,
+      keyboardOptions =
+          KeyboardOptions(
+              capitalization = KeyboardCapitalization.Sentences,
+              imeAction = ImeAction.Done,
+          ),
+      keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+  )
+}
+
+@Composable
 private fun TagSheetFooter(sheet: TagSheet, enabled: Boolean, actions: TagsActions) {
   Row(
       modifier = Modifier.fillMaxWidth(),
@@ -256,6 +296,8 @@ private fun TagDeleteDialog(etiqueta: Etiqueta, deletion: TagDeletion?, actions:
       confirmColors = TallybookButtonDefaults.destructiveColors(),
   )
 }
+
+private const val DESCRIPCION_MIN_LINES = 3
 
 /** Plural selection takes an Int; counts beyond it all read as "other". */
 private fun Long.toPluralQuantity(): Int = coerceAtMost(Int.MAX_VALUE.toLong()).toInt()

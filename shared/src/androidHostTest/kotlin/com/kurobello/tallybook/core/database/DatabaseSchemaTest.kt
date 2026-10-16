@@ -109,6 +109,16 @@ class DatabaseSchemaTest {
         assertEquals(Instant.parse("2026-10-02T12:00:00Z"), one.createdAt)
         assertEquals(emptyList(), driver.queryStrings("SELECT id FROM etiqueta"))
         assertEquals(
+            listOf("id", "nombre", "descripcion", "created_at"),
+            driver.queryStrings("SELECT name FROM pragma_table_info('etiqueta')"),
+        )
+        assertEquals(
+            listOf("descripcion"),
+            driver.queryStrings(
+                "SELECT name FROM pragma_table_info('etiqueta') WHERE \"notnull\" = 0"
+            ),
+        )
+        assertEquals(
             emptyList(),
             driver.queryStrings("SELECT movimiento_id FROM movimiento_etiqueta"),
         )

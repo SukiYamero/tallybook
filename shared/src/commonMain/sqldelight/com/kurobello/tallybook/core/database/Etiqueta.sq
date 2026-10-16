@@ -1,6 +1,7 @@
 CREATE TABLE etiqueta (
     id TEXT NOT NULL PRIMARY KEY,
     nombre TEXT NOT NULL,
+    descripcion TEXT,
     created_at TEXT NOT NULL
 );
 
@@ -19,12 +20,12 @@ FROM etiqueta
 WHERE id IN ?;
 
 insertEtiqueta:
-INSERT INTO etiqueta(id, nombre, created_at)
-VALUES (?, ?, ?);
+INSERT INTO etiqueta(id, nombre, descripcion, created_at)
+VALUES (?, ?, ?, ?);
 
-updateEtiquetaNombre:
+updateEtiqueta:
 UPDATE etiqueta
-SET nombre = :nombre
+SET nombre = :nombre, descripcion = :descripcion
 WHERE id = :id;
 
 deleteEtiqueta:

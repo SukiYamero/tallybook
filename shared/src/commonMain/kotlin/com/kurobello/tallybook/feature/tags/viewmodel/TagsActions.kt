@@ -14,6 +14,8 @@ internal interface TagsActions {
 
   fun onNombreChanged(value: String)
 
+  fun onDescripcionChanged(value: String)
+
   fun onSaveSheet()
 
   fun onViewMovimientos()

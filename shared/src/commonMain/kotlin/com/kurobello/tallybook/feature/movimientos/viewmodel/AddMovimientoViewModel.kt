@@ -21,6 +21,7 @@ import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.PhraseReviewFlag
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.text.normalizeOptionalText
 import kotlin.time.Clock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -631,6 +632,3 @@ private data class LoadSnapshot(
     }
   }
 }
-
-internal fun String.normalizeOptionalText(): String? =
-    trim().replace(Regex("\\s+"), " ").ifEmpty { null }

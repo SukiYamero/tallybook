@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.feature.tags.viewmodel
 
 import com.kurobello.tallybook.core.model.CategoriaRules
+import com.kurobello.tallybook.core.model.ETIQUETA_DESCRIPCION_MAX
 import com.kurobello.tallybook.core.model.Etiqueta
 
 internal data class TagsUiState(
@@ -54,7 +55,7 @@ internal sealed interface TagDeletion {
 }
 
 /**
- * The one open tag sheet: a new etiqueta when [editing] is null, otherwise its rename form. Its
+ * The one open tag sheet: a new etiqueta when [editing] is null, otherwise its edit form. Its
  * [editing] and [count] follow the source while open. A closing sheet keeps the shell modal-owned
  * until it reports it hid; [opensSearch] then shows the etiqueta's movimientos in Search.
  * [duplicate] is the stored etiqueta the last write collided with.
@@ -63,6 +64,7 @@ internal data class TagSheet(
     val editing: Etiqueta?,
     val nombre: String,
     val nombreEdited: Boolean = false,
+    val descripcion: String = "",
     val count: Long = 0L,
     val saving: Boolean = false,
     val duplicate: Etiqueta? = null,
@@ -81,6 +83,9 @@ internal data class TagSheet(
       }
     }
 
+  val descripcionTooLong: Boolean
+    get() = descripcion.trim().length > ETIQUETA_DESCRIPCION_MAX
+
   /** A pristine empty name is not an error yet: the sheet opens without shouting at the user. */
   val visibleNombreError: TagNombreError?
     get() = nombreError?.takeIf { nombreEdited || it != TagNombreError.BLANK }
@@ -93,12 +98,17 @@ internal data class TagSheet(
 
   /** A duplicate blocks saving because the same name would collide again. */
   val canSave: Boolean
-    get() = isEditable && nombreError == null && duplicate == null
+    get() = isEditable && nombreError == null && !descripcionTooLong && duplicate == null
 
   companion object {
     fun forNew(nombre: String): TagSheet = TagSheet(editing = null, nombre = nombre.trim())
 
     fun forEdit(etiqueta: Etiqueta, count: Long): TagSheet =
-        TagSheet(editing = etiqueta, nombre = etiqueta.nombre, count = count)
+        TagSheet(
+            editing = etiqueta,
+            nombre = etiqueta.nombre,
+            descripcion = etiqueta.descripcion.orEmpty(),
+            count = count,
+        )
   }
 }

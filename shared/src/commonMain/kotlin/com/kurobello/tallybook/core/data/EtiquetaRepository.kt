@@ -19,14 +19,15 @@ interface EtiquetaRepository {
   fun observeMovimientoCounts(moneda: Moneda): Flow<DataOutcome<Map<String, Long>>>
 
   /**
-   * Creates an etiqueta with the trimmed [nombre]. A name whose
+   * Creates an etiqueta with the trimmed [nombre] and [descripcion] with its whitespace runs
+   * collapsed, a blank one stored as null. A name whose
    * [com.kurobello.tallybook.core.model.CategoriaRules.nombreKey] matches a stored etiqueta returns
    * [EtiquetaWrite.Duplicate] without writing.
    */
-  suspend fun create(nombre: String): DataOutcome<EtiquetaWrite>
+  suspend fun create(nombre: String, descripcion: String? = null): DataOutcome<EtiquetaWrite>
 
-  /** Same rules as [create], ignoring the etiqueta itself. */
-  suspend fun rename(id: String, nombre: String): DataOutcome<EtiquetaWrite>
+  /** Same rules as [create], ignoring the etiqueta itself; unchanged values do not write. */
+  suspend fun update(id: String, nombre: String, descripcion: String?): DataOutcome<EtiquetaWrite>
 
   /** Movimientos in any moneda that carry [id]. */
   suspend fun countMovimientos(id: String): DataOutcome<Long>

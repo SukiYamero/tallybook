@@ -5,12 +5,14 @@ import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CategoriaRules
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.ETIQUETA_DESCRIPCION_MAX
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.EtiquetaWrite
 import com.kurobello.tallybook.core.model.Moneda
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.coroutines.flow.first
@@ -54,13 +56,13 @@ class EtiquetaRepositoryTest {
       }
 
   @Test
-  fun `create and rename reject a blank or too long name without writing`() = runTest {
+  fun `create and update reject a blank or too long name without writing`() = runTest {
     withRepository { _, repository ->
       val empresa = repository.create("Empresa").saved()
 
       listOf("   ", "x".repeat(CategoriaRules.NOMBRE_MAX + 1)).forEach { nombre ->
         assertInvalid(repository.create(nombre))
-        assertInvalid(repository.rename(empresa.id, nombre))
+        assertInvalid(repository.update(empresa.id, nombre, descripcion = null))
       }
       assertEquals(listOf(empresa), repository.getAll().successData())
       assertIs<EtiquetaWrite.Saved>(
@@ -70,27 +72,79 @@ class EtiquetaRepositoryTest {
   }
 
   @Test
-  fun `rename keeps identity and refuses a name another etiqueta already has`() = runTest {
+  fun `update keeps identity and refuses a name another etiqueta already has`() = runTest {
     withRepository { _, repository ->
       val empresa = repository.create("Empresa").saved()
       val viaje = repository.create("Viaje").saved()
 
-      val renamed = repository.rename(empresa.id, " EMPRESA S.A. ")
+      val renamed = repository.update(empresa.id, " EMPRESA S.A. ", descripcion = null)
       val expected = empresa.copy(nombre = "EMPRESA S.A.")
       assertEquals(DataOutcome.Success(EtiquetaWrite.Saved(expected)), renamed)
       assertEquals(
           DataOutcome.Success(EtiquetaWrite.Saved(expected.copy(nombre = "empresa s.a."))),
-          repository.rename(empresa.id, "empresa s.a."),
+          repository.update(empresa.id, "empresa s.a.", descripcion = null),
       )
       assertEquals(
           DataOutcome.Success(EtiquetaWrite.Duplicate(viaje)),
-          repository.rename(empresa.id, "víaje"),
+          repository.update(empresa.id, "víaje", descripcion = "Otra"),
       )
-      assertInvalid(repository.rename("missing", "Otra"))
+      assertInvalid(repository.update("missing", "Otra", descripcion = null))
       assertEquals(
           listOf("empresa s.a.", "Viaje"),
           repository.getAll().successData().map(Etiqueta::nombre),
       )
+    }
+  }
+
+  @Test
+  fun `create and update store a normalized description and clear a blank one`() = runTest {
+    withRepository { _, repository ->
+      val empresa =
+          repository.create("Empresa", descripcion = "  Gastos   de\n la  oficina ").saved()
+      assertEquals("Gastos de la oficina", empresa.descripcion)
+
+      val updated = repository.update(empresa.id, "Empresa", descripcion = " Reembolsables ")
+      assertEquals(
+          DataOutcome.Success(EtiquetaWrite.Saved(empresa.copy(descripcion = "Reembolsables"))),
+          updated,
+      )
+      assertEquals("Reembolsables", repository.getAll().successData().single().descripcion)
+
+      repository.update(empresa.id, "Empresa", descripcion = "   ")
+      assertNull(repository.getAll().successData().single().descripcion)
+      assertNull(repository.create("Viaje", descripcion = " ").saved().descripcion)
+    }
+  }
+
+  @Test
+  fun `create and update reject a too long description without writing`() = runTest {
+    withRepository { _, repository ->
+      val empresa = repository.create("Empresa", descripcion = "Oficina").saved()
+      val tooLong = "x".repeat(ETIQUETA_DESCRIPCION_MAX + 1)
+
+      assertInvalid(repository.create("Viaje", descripcion = tooLong))
+      assertInvalid(repository.update(empresa.id, "Empresa", descripcion = tooLong))
+      assertEquals(listOf(empresa), repository.getAll().successData())
+      val longest = " ${"x".repeat(ETIQUETA_DESCRIPCION_MAX)} "
+      assertEquals(
+          "x".repeat(ETIQUETA_DESCRIPCION_MAX),
+          repository.update(empresa.id, "Empresa", longest).saved().descripcion,
+      )
+    }
+  }
+
+  @Test
+  fun `an update that changes nothing does not write`() = runTest {
+    withRepository { database, repository ->
+      val empresa = repository.create("Empresa", descripcion = "Oficina").saved()
+      var notifications = 0
+      database.etiquetaQueries.selectAllEtiquetas().addListener { notifications++ }
+
+      assertEquals(
+          DataOutcome.Success(EtiquetaWrite.Saved(empresa)),
+          repository.update(empresa.id, " Empresa ", descripcion = " Oficina "),
+      )
+      assertEquals(0, notifications)
     }
   }
 

@@ -525,6 +525,9 @@
     <string name="tag_name_placeholder">For example, Business</string>
     <string name="tag_name_blank">Enter a name for the tag</string>
     <string name="tag_name_too_long">Use up to %1$d characters</string>
+    <string name="tag_description_label">Description (optional)</string>
+    <string name="tag_description_placeholder">What you use this tag for</string>
+    <string name="tag_description_too_long">Use up to %1$d characters</string>
     <string name="tag_save">Save</string>
     <string name="tag_save_error">We couldn’t save the tag. What you entered is still here so you can try again.</string>
     <string name="tag_created">Tag created</string>

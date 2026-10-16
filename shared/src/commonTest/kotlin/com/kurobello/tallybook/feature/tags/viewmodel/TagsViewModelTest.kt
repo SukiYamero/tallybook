@@ -9,6 +9,7 @@ import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.CategoriaRules
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.ETIQUETA_DESCRIPCION_MAX
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.EtiquetaWrite
 import com.kurobello.tallybook.core.model.Moneda
@@ -211,13 +212,16 @@ class TagsViewModelTest {
     assertFalse(vm.uiState.value.sheet?.canSave == true)
     vm.onSaveSheet()
     runCurrent()
-    assertTrue(fixture.etiquetas.renamed.isEmpty())
+    assertTrue(fixture.etiquetas.updates.isEmpty())
 
     vm.onNombreChanged("viaje chile")
     vm.onSaveSheet()
     runCurrent()
     assertEquals(VIAJE, vm.uiState.value.sheet?.duplicate)
-    assertEquals(listOf(EMPRESA.id to "viaje chile"), fixture.etiquetas.renamed)
+    assertEquals(
+        listOf<Triple<String, String, String?>>(Triple(EMPRESA.id, "viaje chile", null)),
+        fixture.etiquetas.updates,
+    )
     assertEquals(
         "empresa",
         fixture.etiquetas.fake.etiquetas.value.first { it.id == EMPRESA.id }.nombre,
@@ -247,8 +251,65 @@ class TagsViewModelTest {
     runCurrent()
 
     assertEquals(true, vm.uiState.value.sheet?.isClosing)
-    assertTrue(fixture.etiquetas.renamed.isEmpty())
+    assertTrue(fixture.etiquetas.updates.isEmpty())
     assertTrue(effects.isEmpty())
+  }
+
+  @Test
+  fun editingTheDescriptionSavesItNormalizedAndAnUnchangedOneDoesNotWrite() = runTest {
+    val fixture = TagsFixture(this)
+    val vm = fixture.create()
+    val effects = fixture.collectEffects(vm)
+    runCurrent()
+
+    vm.onOpenSheet(TagSheetRequest.Open(VIAJE.id))
+    assertEquals("", vm.uiState.value.sheet?.descripcion)
+    vm.onDescripcionChanged(" Viaje  de trabajo ")
+    vm.onSaveSheet()
+    runCurrent()
+    assertEquals(true, vm.uiState.value.sheet?.isClosing)
+    assertEquals(
+        listOf<Triple<String, String, String?>>(
+            Triple(VIAJE.id, "Viaje Chile", "Viaje de trabajo")
+        ),
+        fixture.etiquetas.updates,
+    )
+    assertEquals(listOf<TagsEffect>(TagsEffect.Feedback(TagsFeedback.UPDATED)), effects)
+    vm.onSheetHidden()
+
+    vm.onOpenSheet(TagSheetRequest.Open(VIAJE.id))
+    assertEquals("Viaje de trabajo", vm.uiState.value.sheet?.descripcion)
+    vm.onDescripcionChanged("Viaje de  trabajo ")
+    vm.onSaveSheet()
+    runCurrent()
+    assertEquals(true, vm.uiState.value.sheet?.isClosing)
+    assertEquals(1, fixture.etiquetas.updates.size)
+    assertEquals(1, effects.size)
+  }
+
+  @Test
+  fun aTooLongDescriptionBlocksSavingUntilShortened() = runTest {
+    val fixture = TagsFixture(this)
+    val vm = fixture.create()
+    runCurrent()
+
+    vm.onOpenSheet(TagSheetRequest.New("Gym"))
+    vm.onDescripcionChanged("x".repeat(ETIQUETA_DESCRIPCION_MAX + 1))
+    assertTrue(vm.uiState.value.sheet?.descripcionTooLong == true)
+    assertFalse(vm.uiState.value.sheet?.canSave == true)
+    vm.onSaveSheet()
+    runCurrent()
+    assertTrue(fixture.etiquetas.created.isEmpty())
+
+    vm.onDescripcionChanged("x".repeat(ETIQUETA_DESCRIPCION_MAX))
+    assertFalse(vm.uiState.value.sheet?.descripcionTooLong == true)
+    vm.onSaveSheet()
+    runCurrent()
+    assertEquals(
+        listOf<Pair<String, String?>>("Gym" to "x".repeat(ETIQUETA_DESCRIPCION_MAX)),
+        fixture.etiquetas.created,
+    )
+    assertEquals(true, vm.uiState.value.sheet?.isClosing)
   }
 
   @Test
@@ -406,7 +467,8 @@ private class TagsFixture(
 /** Per-moneda counts and targeted failures over the shared fake's naming rules. */
 private class RecordingEtiquetas(val fake: FakeEtiquetaRepository) : EtiquetaRepository by fake {
   val counts = MutableStateFlow<Map<Moneda, Map<String, Long>>>(emptyMap())
-  val renamed = mutableListOf<Pair<String, String>>()
+  val created = mutableListOf<Pair<String, String?>>()
+  val updates = mutableListOf<Triple<String, String, String?>>()
   var failWrites = false
   var failCount = false
   var failDelete = false
@@ -416,13 +478,20 @@ private class RecordingEtiquetas(val fake: FakeEtiquetaRepository) : EtiquetaRep
         DataOutcome.Success(it[moneda].orEmpty())
       }
 
-  override suspend fun create(nombre: String): DataOutcome<EtiquetaWrite> =
-      if (failWrites) failure() else fake.create(nombre)
-
-  override suspend fun rename(id: String, nombre: String): DataOutcome<EtiquetaWrite> {
+  override suspend fun create(nombre: String, descripcion: String?): DataOutcome<EtiquetaWrite> {
     if (failWrites) return failure()
-    renamed += id to nombre
-    return fake.rename(id, nombre)
+    created += nombre to descripcion
+    return fake.create(nombre, descripcion)
+  }
+
+  override suspend fun update(
+      id: String,
+      nombre: String,
+      descripcion: String?,
+  ): DataOutcome<EtiquetaWrite> {
+    if (failWrites) return failure()
+    updates += Triple(id, nombre, descripcion)
+    return fake.update(id, nombre, descripcion)
   }
 
   override suspend fun countMovimientos(id: String): DataOutcome<Long> =

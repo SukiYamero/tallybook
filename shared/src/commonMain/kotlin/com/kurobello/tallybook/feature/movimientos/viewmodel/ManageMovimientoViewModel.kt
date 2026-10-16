@@ -16,6 +16,7 @@ import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.text.normalizeOptionalText
 import com.kurobello.tallybook.core.ui.component.DismissalDecision
 import com.kurobello.tallybook.core.ui.component.dismissalDecision
 import kotlin.time.Clock

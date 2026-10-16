@@ -196,6 +196,8 @@ private object PreviewTagsActions : TagsActions {
 
   override fun onNombreChanged(value: String) = Unit
 
+  override fun onDescripcionChanged(value: String) = Unit
+
   override fun onSaveSheet() = Unit
 
   override fun onViewMovimientos() = Unit

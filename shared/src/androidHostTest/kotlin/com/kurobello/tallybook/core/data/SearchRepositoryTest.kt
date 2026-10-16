@@ -674,7 +674,7 @@ class SearchRepositoryTest {
         database.categoriaQueries.insertCategoria(id, nombre, padreId, "icon", "color")
       }
       for (id in listOf("trip", "work", "gift")) {
-        database.etiquetaQueries.insertEtiqueta(id, id, "2026-01-01T00:00:00Z")
+        database.etiquetaQueries.insertEtiqueta(id, id, null, "2026-01-01T00:00:00Z")
       }
       val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
       val rows =

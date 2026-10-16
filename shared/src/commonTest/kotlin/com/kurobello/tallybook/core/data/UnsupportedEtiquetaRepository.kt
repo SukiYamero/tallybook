@@ -19,10 +19,14 @@ internal object UnsupportedEtiquetaRepository : EtiquetaRepository {
   override fun observeMovimientoCounts(moneda: Moneda): Flow<DataOutcome<Map<String, Long>>> =
       unsupported()
 
-  override suspend fun create(nombre: String): DataOutcome<EtiquetaWrite> = unsupported()
-
-  override suspend fun rename(id: String, nombre: String): DataOutcome<EtiquetaWrite> =
+  override suspend fun create(nombre: String, descripcion: String?): DataOutcome<EtiquetaWrite> =
       unsupported()
+
+  override suspend fun update(
+      id: String,
+      nombre: String,
+      descripcion: String?,
+  ): DataOutcome<EtiquetaWrite> = unsupported()
 
   override suspend fun countMovimientos(id: String): DataOutcome<Long> = unsupported()
 

@@ -13,8 +13,10 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextReplacement
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kurobello.tallybook.core.model.CategoriaRules
+import com.kurobello.tallybook.core.model.ETIQUETA_DESCRIPCION_MAX
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.ui.component.TallybookViewportOverlayHost
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -44,6 +46,8 @@ import tallybook.shared.generated.resources.tag_delete
 import tallybook.shared.generated.resources.tag_delete_message
 import tallybook.shared.generated.resources.tag_delete_message_unused
 import tallybook.shared.generated.resources.tag_delete_title
+import tallybook.shared.generated.resources.tag_description_label
+import tallybook.shared.generated.resources.tag_description_too_long
 import tallybook.shared.generated.resources.tag_duplicate_message
 import tallybook.shared.generated.resources.tag_duplicate_open
 import tallybook.shared.generated.resources.tag_edit_title
@@ -242,6 +246,38 @@ class TagsScreenTest {
   }
 
   @Test
+  fun theDescriptionCountsItsLengthAndATooLongOneBlocksSaving() {
+    val actions = RecordingActions()
+    val sheet = mutableStateOf(TagSheet.forEdit(empresa.copy(descripcion = "Oficina"), count = 0L))
+    composeRule.setContent {
+      TallybookTheme {
+        TallybookViewportOverlayHost {
+          TagsScreen(
+              TagsUiState(
+                  content = TagsContent.Browse(listOf(TagRow(empresa, 0L))),
+                  sheet = sheet.value,
+              ),
+              actions,
+              onBack = {},
+          )
+        }
+      }
+    }
+
+    composeRule.onNodeWithText("7/$ETIQUETA_DESCRIPCION_MAX").assertIsDisplayed()
+    composeRule
+        .onNodeWithContentDescription(text(Res.string.tag_description_label))
+        .performTextReplacement("Oficina central")
+    composeRule.runOnIdle { assertEquals(listOf("descripcion:Oficina central"), actions.calls) }
+
+    sheet.value = sheet.value.copy(descripcion = "x".repeat(ETIQUETA_DESCRIPCION_MAX + 1))
+    composeRule
+        .onNodeWithText(text(Res.string.tag_description_too_long, ETIQUETA_DESCRIPCION_MAX))
+        .assertIsDisplayed()
+    composeRule.onNode(hasText(text(Res.string.tag_save)) and hasClickAction()).assertIsNotEnabled()
+  }
+
+  @Test
   fun deletingAUsedTagConfirmsWithItsCount() {
     val actions = RecordingActions()
     show(
@@ -350,6 +386,10 @@ class TagsScreenTest {
     override fun onQueryChanged(query: String) = Unit
 
     override fun onNombreChanged(value: String) = Unit
+
+    override fun onDescripcionChanged(value: String) {
+      calls += "descripcion:$value"
+    }
 
     override fun onCancelDelete() = Unit
 

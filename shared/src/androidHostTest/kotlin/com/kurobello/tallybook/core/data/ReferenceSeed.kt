@@ -65,6 +65,8 @@ internal fun TallybookDatabase.seedReferences(
           CategoryTint.NEUTRAL.storageKey,
       )
     }
-    etiquetaIds.forEach { id -> etiquetaQueries.insertEtiqueta(id, id, "2026-01-01T00:00:00Z") }
+    etiquetaIds.forEach { id ->
+      etiquetaQueries.insertEtiqueta(id, id, null, "2026-01-01T00:00:00Z")
+    }
   }
 }
