@@ -25,7 +25,17 @@ class CategorySuggesterTest {
   ) = suggester.index(history, now).suggest(subject, tipo, available, excluded, limit)
 
   private fun entry(subject: String, categoriaId: String, daysAgo: Int = 1) =
-      CategoryHistoryEntry(subject, categoriaId, now - daysAgo.days)
+      entry(subject, listOf(categoriaId), daysAgo)
+
+  private fun entry(subject: String, categoriaIds: List<String>, daysAgo: Int = 1) =
+      CategoryHistoryEntry(subject, categoriaIds, now - daysAgo.days)
+
+  private fun learnedSet(
+      subject: String,
+      history: List<CategoryHistoryEntry>,
+      available: Set<String> = allIds,
+      excluded: Set<String> = emptySet(),
+  ) = suggester.index(history, now).learnedSet(subject, available, excluded)
 
   private fun ids(suggestions: List<CategorySuggestion>) = suggestions.map { it.categoriaId }
 
@@ -258,5 +268,69 @@ class CategorySuggesterTest {
   fun phrasesBeatAnotherCategorysBrand() {
     assertEquals("cat_domicilios", suggest("Uber Eats").first().categoriaId)
     assertEquals("cat_domicilios", suggest("didi food").first().categoriaId)
+  }
+
+  @Test
+  fun aMovimientoCountsAsOneVoteSplitAcrossItsCategorias() {
+    val history =
+        listOf(
+            entry("zorro", listOf("cat_comida", "cat_ocio", "cat_salud"), daysAgo = 1),
+            entry("zorro", listOf("cat_mascotas"), daysAgo = 1),
+        )
+
+    assertEquals("cat_mascotas", suggest("zorro", history).first().categoriaId)
+  }
+
+  @Test
+  fun aRepeatedCategoriaSetIsLearnedAsAWhole() {
+    val history = List(3) { entry("cine", listOf("cat_cine", "cat_comida"), daysAgo = it + 1) }
+
+    assertEquals(listOf("cat_cine", "cat_comida"), learnedSet("Cine", history))
+  }
+
+  @Test
+  fun theLearnedSetIsTheMajoritySetOfAMixedHistory() {
+    val history =
+        List(3) { entry("cine", listOf("cat_cine", "cat_comida"), daysAgo = it + 1) } +
+            entry("cine", listOf("cat_cine"), daysAgo = 2)
+
+    assertEquals(listOf("cat_cine", "cat_comida"), learnedSet("cine", history))
+  }
+
+  @Test
+  fun noSetIsLearnedWithoutAClearMajority() {
+    val history =
+        List(2) { entry("cine", listOf("cat_cine", "cat_comida"), daysAgo = it + 1) } +
+            List(2) { entry("cine", listOf("cat_cine"), daysAgo = it + 1) }
+
+    assertEquals(emptyList(), learnedSet("cine", history))
+  }
+
+  @Test
+  fun aLearnedSetNeedsAnExactSubjectMatch() {
+    val history = List(3) { entry("cine", listOf("cat_cine", "cat_comida"), daysAgo = it + 1) }
+
+    assertEquals(emptyList(), learnedSet("cine con amigos", history))
+    assertEquals(emptyList(), learnedSet("cine", emptyList()))
+  }
+
+  @Test
+  fun aLearnedSetOmitsUnavailableAndExcludedCategorias() {
+    val history = List(3) { entry("cine", listOf("cat_cine", "cat_comida", "cat_ocio")) }
+
+    assertEquals(
+        listOf("cat_comida"),
+        learnedSet("cine", history, available = allIds - "cat_cine", excluded = setOf("cat_ocio")),
+    )
+  }
+
+  @Test
+  fun aSingleCategoriaHistoryStillMakesTheTopSuggestionHigh() {
+    val history = List(3) { entry("zorro", listOf("cat_mascotas"), daysAgo = it + 1) }
+
+    assertEquals(
+        CategorySuggestion("cat_mascotas", SuggestionConfidence.HIGH),
+        suggest("zorro", history).first(),
+    )
   }
 }

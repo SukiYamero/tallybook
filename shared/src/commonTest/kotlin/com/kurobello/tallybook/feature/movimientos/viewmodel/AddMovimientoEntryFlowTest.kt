@@ -500,7 +500,9 @@ class AddMovimientoEntryFlowTest {
     clock.instant = ADD_TEST_NOW + 1.days
     movimientos.history.value =
         DataOutcome.Success(
-            listOf(CategoryHistoryRow("Gasté 20.000 ayer", "cat_comida", ADD_TEST_NOW - 1.days))
+            listOf(
+                CategoryHistoryRow("m1", "Gasté 20.000 ayer", "cat_comida", ADD_TEST_NOW - 1.days)
+            )
         )
     runCurrent()
     advanceTimeBy(250)
@@ -530,7 +532,9 @@ class AddMovimientoEntryFlowTest {
 
     movimientos.history.value =
         DataOutcome.Success(
-            listOf(CategoryHistoryRow("Aceite 30 mil", "cat_supermercado", ADD_TEST_NOW - 1.days))
+            listOf(
+                CategoryHistoryRow("m1", "Aceite 30 mil", "cat_supermercado", ADD_TEST_NOW - 1.days)
+            )
         )
     runCurrent()
     viewModel.onDiscardChanges()

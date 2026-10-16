@@ -39,10 +39,19 @@ internal data class PhraseInterpretation(
     val tipo: TipoMovimiento,
     val query: SuggestionQuery,
     val ranking: List<CategorySuggestion>,
+    val learnedSet: List<String>,
 ) {
-  val preselectedCategoriaId: String?
+  // A single learned categoria is already the HIGH suggestion, which also weighs the dictionary,
+  // so only a set of several needs its own path.
+  val preselectedCategoriaIds: List<String>
     get() =
-        ranking.firstOrNull()?.takeIf { it.confidence == SuggestionConfidence.HIGH }?.categoriaId
+        learnedSet.takeIf { it.size > 1 }
+            ?: listOfNotNull(
+                ranking
+                    .firstOrNull()
+                    ?.takeIf { it.confidence == SuggestionConfidence.HIGH }
+                    ?.categoriaId
+            )
 }
 
 /** Pure sentence interpretation; only the history indexing and live preview leave the caller. */
@@ -65,14 +74,15 @@ internal class MovimientoEntryEngine(
   ): CategorySuggestionIndex =
       withContext(computationDispatcher) {
         suggester.index(
-            history.map { row ->
+            history.groupBy(CategoryHistoryRow::movimientoId).values.map { rows ->
+              val first = rows.first()
               CategoryHistoryEntry(
                   subject =
                       parser
-                          .parse(row.descripcion, context.moneda, context.locale, context.today)
+                          .parse(first.descripcion, context.moneda, context.locale, context.today)
                           .subject,
-                  categoriaId = row.categoriaId,
-                  createdAt = row.createdAt,
+                  categoriaIds = rows.map(CategoryHistoryRow::categoriaId),
+                  createdAt = first.createdAt,
               )
             },
             now,
@@ -96,7 +106,8 @@ internal class MovimientoEntryEngine(
     val parsed = parser.parse(text, context.moneda, context.locale, context.today)
     val tipo = parsed.tipo ?: impliedTipo(parsed.subject, index, candidates)
     val query = SuggestionQuery(parsed.subject, tipo)
-    return PhraseInterpretation(parsed, tipo, query, rank(index, query, candidates))
+    val learned = index.learnedSet(query.subject, candidates.availableIds, candidates.excludedIds)
+    return PhraseInterpretation(parsed, tipo, query, rank(index, query, candidates), learned)
   }
 
   fun rank(

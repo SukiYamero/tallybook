@@ -79,7 +79,7 @@ LIMIT ?;
 -- The limit counts movimientos, not (movimiento, categoria) rows, so a multi-category movimiento
 -- cannot push older history out of the window.
 selectCategoryHistory:
-SELECT recent.descripcion, movimiento_categoria.categoria_id, recent.created_at
+SELECT recent.id AS movimiento_id, recent.descripcion, movimiento_categoria.categoria_id, recent.created_at
 FROM (
     SELECT id, descripcion, created_at
     FROM movimiento

@@ -357,8 +357,7 @@ internal class AddMovimientoViewModel(
               ),
           suggestionQuery = interpretation.query,
           categoriaIds =
-              if (categoriasEdited) categoriaIds
-              else listOfNotNull(interpretation.preselectedCategoriaId),
+              if (categoriasEdited) categoriaIds else interpretation.preselectedCategoriaIds,
       )
 
   // Dismissals belong to the subject they were made for; a different sentence starts clean.
