@@ -505,7 +505,7 @@
     <string name="category_choose">Elegir</string>
     <string name="category_suggestion_replaces">Reemplaza a %1$s</string>
     <string name="category_picker_single_title">Elegí una categoría</string>
-    <string name="category_picker_current">Actual</string>
+    <string name="category_picker_current">Seleccionada:</string>
     <string name="tag_add">Agregar</string>
     <string name="tag_add_description">Agregar tag</string>
     <string name="tag_remove">Quitar %1$s</string>
@@ -517,7 +517,7 @@
     <string name="search_tags">Buscar tags</string>
     <string name="tags_unavailable">No pudimos cargar tus tags. Lo que escribiste sigue acá. Intentá cargarlos de nuevo.</string>
     <string name="profile_tags_label">Tags</string>
-    <string name="profile_tags_body">Agrupá movimientos de distintas categorías, como “Empresa”.</string>
+    <string name="profile_tags_body">Agrupá movimientos de distintas categorías, como “Gastos cubiertos”.</string>
     <string name="tags_title">Tags</string>
     <string name="tags_empty">Creá tags para agrupar movimientos de distintas categorías a tu manera.</string>
     <string name="tags_search_empty">No hay tags que coincidan con “%1$s”.</string>
@@ -525,11 +525,11 @@
     <string name="tag_new_title">Nuevo tag</string>
     <string name="tag_edit_title">Editar tag</string>
     <string name="tag_name_label">Nombre</string>
-    <string name="tag_name_placeholder">Por ejemplo, Empresa</string>
+    <string name="tag_name_placeholder">Por ejemplo, Gastos cubiertos</string>
     <string name="tag_name_blank">Escribí un nombre para el tag</string>
     <string name="tag_name_too_long">Usá hasta %1$d caracteres</string>
     <string name="tag_description_label">Descripción (opcional)</string>
-    <string name="tag_description_placeholder">Para qué usás este tag</string>
+    <string name="tag_description_placeholder">Por ejemplo, gastos que cubre la empresa</string>
     <string name="tag_description_too_long">Usá hasta %1$d caracteres</string>
     <string name="tag_save">Guardar</string>
     <string name="tag_save_error">No pudimos guardar el tag. Lo que escribiste sigue acá para que lo intentés de nuevo.</string>

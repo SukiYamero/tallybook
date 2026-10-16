@@ -505,7 +505,7 @@
     <string name="category_choose">Choose</string>
     <string name="category_suggestion_replaces">Replaces %1$s</string>
     <string name="category_picker_single_title">Choose a category</string>
-    <string name="category_picker_current">Current</string>
+    <string name="category_picker_current">Selected:</string>
     <string name="tag_add">Add</string>
     <string name="tag_add_description">Add tag</string>
     <string name="tag_remove">Remove %1$s</string>
@@ -517,7 +517,7 @@
     <string name="search_tags">Search tags</string>
     <string name="tags_unavailable">We couldn’t load your tags. What you entered is still here. Try loading them again.</string>
     <string name="profile_tags_label">Tags</string>
-    <string name="profile_tags_body">Group movements across categories, like “Business”.</string>
+    <string name="profile_tags_body">Group movements across categories, like “Covered expenses”.</string>
     <string name="tags_title">Tags</string>
     <string name="tags_empty">Create tags to group movements across categories your way.</string>
     <string name="tags_search_empty">No tags match “%1$s”.</string>
@@ -525,11 +525,11 @@
     <string name="tag_new_title">New tag</string>
     <string name="tag_edit_title">Edit tag</string>
     <string name="tag_name_label">Name</string>
-    <string name="tag_name_placeholder">For example, Business</string>
+    <string name="tag_name_placeholder">For example, Covered expenses</string>
     <string name="tag_name_blank">Enter a name for the tag</string>
     <string name="tag_name_too_long">Use up to %1$d characters</string>
     <string name="tag_description_label">Description (optional)</string>
-    <string name="tag_description_placeholder">What you use this tag for</string>
+    <string name="tag_description_placeholder">For example, expenses the company covers</string>
     <string name="tag_description_too_long">Use up to %1$d characters</string>
     <string name="tag_save">Save</string>
     <string name="tag_save_error">We couldn’t save the tag. What you entered is still here so you can try again.</string>

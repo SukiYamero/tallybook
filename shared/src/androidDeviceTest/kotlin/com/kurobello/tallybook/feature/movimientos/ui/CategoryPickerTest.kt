@@ -145,11 +145,11 @@ class CategoryPickerTest {
     composeRule.onCurrentCategory(supermercado.nombre).assertIsSelected()
     composeRule.onNode(hasSetTextAction()).performTextInput(transporte.nombre)
     composeRule.onCategoryOptionWithText(supermercado.nombre).assertDoesNotExist()
-    composeRule.onCurrentCategory(supermercado.nombre).assertIsSelected().performClick()
+    composeRule.onCurrentCategory(supermercado.nombre).assertIsSelected()
 
     composeRule.runOnIdle {
       assertEquals(emptyList(), selections)
-      assertEquals(1, dismissals)
+      assertEquals(0, dismissals)
     }
   }
 
@@ -332,11 +332,7 @@ class CategoryPickerTest {
       )
 
   private fun SemanticsNodeInteractionsProvider.onCurrentCategory(text: String) =
-      onNode(
-          hasText(text) and
-              hasClickAction() and
-              hasAnyAncestor(hasTestTag(CATEGORY_PICKER_CURRENT_TAG))
-      )
+      onNode(hasText(text) and hasAnyAncestor(hasTestTag(CATEGORY_PICKER_CURRENT_TAG)))
 
   private fun SemanticsNodeInteraction.boundsInRoot() = fetchSemanticsNode().boundsInRoot
 

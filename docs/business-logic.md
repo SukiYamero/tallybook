@@ -229,7 +229,7 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
 - A movimiento has exactly one category: what the money was for. Category totals therefore add up to
   the overall total, and a category breakdown can be read as parts of a whole.
 - A movimiento has zero to six **tags**: user-created labels that group movimientos across
-  categories ("Empresa", "Viaje Chile"). Tags are flat, have a name and an optional description, and
+  categories ("Gastos cubiertos", "Viaje Chile"). Tags are flat, have a name and an optional description, and
   keep the user's order on the movimiento for display. A tag can share its name with a category; they are different concepts.
 - Every creation and editing surface shows a "Category" section followed by a "Tags" section whose
   header carries a barely perceptible "optional" marker. A category shows its icon and tint; a tag is a neutral chip with a tag icon and no icon or

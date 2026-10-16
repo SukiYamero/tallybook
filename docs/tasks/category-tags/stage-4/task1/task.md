@@ -21,8 +21,8 @@ Problem: the category list is long; once scrolled, the user cannot see which cat
 
 - `feature/movimientos/ui/CategoryPickerSheet.kt`: when `selectedId` resolves to a category in the
   catalog (not Otros), show a pinned row between the search field and the `LazyColumn`: a muted
-  caption label ("Actual"/"Current") and the selected `CategoryChip` in its selected state. It stays
-  while searching. Tapping it closes the sheet (keeps the selection).
+  caption label ("Seleccionada:"/"Selected:") and the selected category as a small `CategoryTag`.
+  It stays while searching and is informational only.
 - On open (not while searching), scroll the `LazyColumn` so the group that contains the selected
   category is visible (`LazyListState.scrollToItem` to that group's index).
 - The selected chip in the results keeps its selected state.
@@ -52,7 +52,7 @@ covers the search field and results.
 - Empty states inside the fixed area, vertically centered:
   - No tags at all and no query: tag icon, `tags_empty`-style title and a one-line hint to type a
     name to create the first one (new key `tag_picker_empty_hint`).
-  - Query without results: the "no tags match" text plus a prominent full-width create action
+  - Query without results: the "no tags match" text plus a create action sized to its label
     `tag_picker_create` (not a small text button). Keep the `failedCreateNombre` error under it.
 - Apply the same "Done stays visible" check to nothing else; the category picker closes on tap.
 
@@ -98,7 +98,7 @@ components are described (current state only).
   tested behavior for an unchanged rename.
 - The 420 dp token is renamed to the neutral `pickerResultsHeight` (category picker maximum, tag
   picker fixed height, category quick-create body maximum).
-- New key `category_picker_current` ("Actual" / "Current" / "Actual" / "Atual") labels the pinned row;
+- New key `category_picker_current` ("Seleccionada:" / "Selected:" / "Seleccionada:" / "Selecionada:") labels the pinned row;
   the spec named the copy but not the key.
 - `normalizeOptionalText` moves from `AddMovimientoViewModel.kt` to `core/text/OptionalText.kt` so the
   repository reuses it without depending on a feature package.

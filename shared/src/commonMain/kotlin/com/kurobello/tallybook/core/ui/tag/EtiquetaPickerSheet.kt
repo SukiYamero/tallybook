@@ -289,7 +289,7 @@ private fun EtiquetaPickerNoResults(
     if (nombre.isNotEmpty()) {
       TallybookButton(
           onClick = { onCreate(nombre) },
-          modifier = Modifier.fillMaxWidth().testTag(ETIQUETA_PICKER_OFFER_CREATE_TAG),
+          modifier = Modifier.testTag(ETIQUETA_PICKER_OFFER_CREATE_TAG),
       ) {
         TallybookText(stringResource(Res.string.tag_picker_create, nombre))
       }

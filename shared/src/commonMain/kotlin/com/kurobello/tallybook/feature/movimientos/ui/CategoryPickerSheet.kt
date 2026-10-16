@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.testTag
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.ui.category.CategoryChip
+import com.kurobello.tallybook.core.ui.category.CategoryTag
 import com.kurobello.tallybook.core.ui.category.categoryGroups
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
@@ -260,9 +261,7 @@ private fun CategoryPickerContent(
         query = state.search.query,
         onQueryChange = state.search::onQueryChange,
     )
-    state.current?.let { current ->
-      CategoryPickerCurrent(categoria = current, onClick = { callbacks.onCategoryClick(current) })
-    }
+    state.current?.let { current -> CategoryPickerCurrent(categoria = current) }
     CategoryPickerResults(
         state = state,
         onCategoryClick = callbacks.onCategoryClick,
@@ -284,7 +283,7 @@ private fun CategoryPickerSearchField(query: String, onQueryChange: (String) -> 
 }
 
 @Composable
-private fun CategoryPickerCurrent(categoria: Categoria, onClick: () -> Unit) {
+private fun CategoryPickerCurrent(categoria: Categoria) {
   Row(
       modifier = Modifier.fillMaxWidth().testTag(CATEGORY_PICKER_CURRENT_TAG),
       horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
@@ -295,7 +294,7 @@ private fun CategoryPickerCurrent(categoria: Categoria, onClick: () -> Unit) {
         color = TallybookTheme.colors.foreground.tertiary,
         style = TallybookTheme.typography.caption,
     )
-    CategoryChip(categoria = categoria, selected = true, onClick = onClick)
+    CategoryTag(categoria = categoria)
   }
 }
 
