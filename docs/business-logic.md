@@ -14,8 +14,9 @@ sincroniza cuentas bancarias reales.
 
 Un **movimiento** registra un gasto o un ingreso.
 
-- **Obligatorios**: tipo (gasto / ingreso), monto, fecha, moneda y de una a seis categorías.
-- **Opcionales**: título y descripción, de hasta 180 caracteres cada uno. El título nombra el
+- **Obligatorios**: tipo (gasto / ingreso), monto, fecha, moneda y exactamente una categoría.
+- **Opcionales**: tags (ver [Category and tags](#category-and-tags)), título y descripción, de hasta
+  180 caracteres cada uno. El título nombra el
   movimiento (en la creación por frase es la frase escrita); la descripción agrega contexto extra si
   el usuario quiere. `createdAt` es metadata técnica para ordenar de forma estable, no un campo
   solicitado al usuario.
@@ -40,22 +41,25 @@ app derives the draft from it and the user confirms or refines it; the manual fo
   title length limit.
 - Below the input, a "Detected" area appears once the sentence has text and goes away if it is
   cleared. It shows tipo and fecha (their defaults, gasto and today, until the sentence says
-  otherwise), the amount when found (otherwise a note that it was not detected), and the categories
-  as tags with an "Add" tag. Values update while typing; nothing is persisted until Save. While the user has not
-  touched the categories, the sentence owns them: the high-confidence category shows as a tag and
-  the rest as tappable suggestions. The first manual add or remove hands the categories to the user,
-  and later sentences or Continue no longer replace them.
+  otherwise), the amount when found (otherwise a note that it was not detected), a "Category"
+  section and an optional "Tags" section below it. Values update while typing; nothing is persisted
+  until Save. While the user has not touched the category, the sentence owns it: the high-confidence
+  category shows selected and the other suggestions stay visible but dimmed. Tapping a dimmed
+  suggestion switches to it; tapping the selected one clears it. The first manual choice hands the
+  category to the user, and later sentences or Continue no longer replace it. Tags follow the same
+  ownership: tags the sentence detected stay owned by it until the user adds or removes a tag.
 - The Continue action is pinned in a footer under the scrolling content, so it stays visible with
   the keyboard open. Inside the scrolling area, below the Detected card, an "or" divider introduces
   voice dictation (a non-functional placeholder marked as coming soon), followed by a secondary
   "fill manually" action that opens the empty form. Fill manually drops everything the sentence
-  derived but keeps the categories the user picked by hand in the dialog.
+  derived but keeps the category and tags the user picked by hand in the dialog.
 - Line breaks typed or pasted into the sentence become single spaces. Clearing the sentence also
-  clears what it derived (tipo, amount, fecha, título, descripción and the sentence-owned categories),
-  so the dialog counts as clean again even after a Continue and Back; categories picked by hand remain.
+  clears what it derived (tipo, amount, fecha, título, descripción and the sentence-owned category and
+  tags), so the dialog counts as clean again even after a Continue and Back; a category and tags
+  picked by hand remain.
 - Tapping outside or the Back gesture closes the dialog directly while the sentence is blank;
   otherwise it asks to discard first. Continue parses the sentence once, writes tipo, monto, fecha,
-  categorías (unless the user took them over) and título into the draft (replacing earlier
+  categoría and tags (each unless the user took it over) and título into the draft (replacing earlier
   derived values), closes the dialog and opens the summary. A description typed in the summary is
   kept.
 - **Tipo**: expense and income verbs in every supported language decide it (`gasté`, `pagué`,
@@ -73,12 +77,15 @@ app derives the draft from it and the user confirms or refines it; the manual fo
 - **Título**: the sentence as typed, trimmed and with repeated whitespace collapsed, like every
   optional text. Parsing never rewrites what the user wrote. The
   description starts empty; it is optional extra context the user adds in the summary or the form.
-- **Categorías**: the suggestion engine below runs on the sentence without its verb, amount, date
-  and stop words. A high-confidence result is preselected; other results appear as tappable
-  suggestions that add a category.
+- **Categoría**: the suggestion engine below runs on the sentence without its verb, amount, date
+  and stop words. A high-confidence result is preselected; other results appear as dimmed
+  suggestions that replace the selected category when tapped. Without a selection at Save, the
+  movimiento falls back to Otros.
+- **Tags**: the sentence selects existing tags whose full name appears in it as whole words, compared
+  with the shared search normalization. Detection never creates a tag.
 - The summary is a tall bottom sheet titled as a review-and-confirm step. Labeled sections show tipo
-  and fecha (prominent), the amount, the title, an optional description field and the categories
-  with suggestions. Its two
+  and fecha (prominent), the amount, the title, an optional description field, the category with its
+  suggestions and the optional tags. Its two
   equal-level actions, separated from the content by generous space, are Edit movimiento (left),
   which opens the complete form with the same draft, and Save (right). Save with an invalid required
   value opens the form with that field's error and focus instead of persisting. Back returns from
@@ -101,14 +108,14 @@ the training data, so correcting a suggestion teaches the next one.
 - Ambiguous words ("aceite", "oil", "óleo", "ticket", "gas") point at several categories and never
   produce a high-confidence result on their own; when unsure, the app offers up to three of them as
   suggestions instead of guessing.
-- A movimiento with several categories is one vote split among them. When a clear majority of the
-  past movimientos with exactly the same subject were saved with the same set of categories, the
-  whole set is preselected; a single learned category stays the high-confidence suggestion.
+- Each past movimiento is one full vote for its category. When a clear majority of the past
+  movimientos with exactly the same subject share a category, that category is the high-confidence
+  suggestion.
 - The dictionary covers every seeded category in all supported languages, with regional variants
   and common local brands, and points at the most specific category.
 - High confidence means an exact history match or one strong dictionary match without a competing
-  category. At most three suggestions are shown, never repeating a selected category. Removing a
-  category the sentence suggested dismisses it: it is not offered again for the same subject, and a
+  category. At most three suggestions are shown besides the selected category. Clearing a category
+  the sentence suggested dismisses it: it is not offered again for the same subject, and a
   different subject starts clean. Otros is never suggested.
 
 ### Editing and deletion
@@ -116,15 +123,17 @@ the training data, so correcting a suggestion teaches the next one.
 Home, History and Search open the current persisted movimiento by ID. Missing records cannot be
 edited or deleted; failed reads require Retry before mutation actions become available.
 
-- Editing permits type, positive exact amount, civil date, categories, optional title and optional
-  description. Stored currency, ID and `createdAt` remain fixed. Amount input round-trips through the stored
+- Editing permits type, positive exact amount, civil date, category, tags, optional title and
+  optional description. Stored currency, ID and `createdAt` remain fixed. Amount input round-trips through the stored
   currency's scale and decimal separator without grouping or a currency symbol.
 - Creation's validation and title/description normalization also apply to editing. Civil today/timezone
   is captured at editor entry and again on Save; future dates are rejected without silently changing
   the draft when the clock moves backward.
-- The picker selects any existing category, parent or child, except Otros. An existing Otros or
-  missing category remains visible and valid when untouched; a replacement must exist in the loaded
-  catalog. Category updates cannot overwrite typed input or clear an unretried save failure.
+- The category picker selects exactly one existing category, parent or child, except Otros; choosing
+  one replaces the current category and closes the picker. The editor always keeps one category and
+  offers no way to clear it. An existing Otros or missing category remains visible and valid when
+  untouched; a replacement must exist in the loaded catalog. Category and tag updates cannot
+  overwrite typed input or clear an unretried save failure.
 - Unsaved-change guarding compares input with its opening baseline. A valid normalized no-op performs
   no database update and closes the editor without saved feedback. A changed successful Save closes
   management; failure retains the draft for explicit retry. Saving a missing ID never inserts it.
@@ -171,7 +180,8 @@ El idioma sigue al dispositivo salvo que se fije desde Perfil (`es`, `es-AR`, `e
 nombres de las categorías predefinidas siguen el idioma activo; la moneda inferida no cambia con él.
 
 La exportación CSV desde Perfil incluye todos los movimientos de todas las monedas, con el monto sin
-signo (el tipo indica la dirección) y la moneda de cada fila. Compartir el archivo no modifica datos.
+signo (el tipo indica la dirección), la moneda, la categoría, su categoría principal (una categoría raíz
+repite su propio nombre) y los tags unidos por " · " de cada fila. Compartir el archivo no modifica datos.
 
 Home recent movimientos use the primary currency before applying the six-row limit, ordered by
 `fecha DESC, created_at DESC, id DESC`. Newer foreign-currency rows cannot hide eligible movements.
@@ -211,26 +221,39 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
 - Children keep their parent's tint, so the family stays recognizable; parents and children have
   the same visual weight in chips. The hierarchy is shown as grouped families on a single level in
   the picker and in the Search filters: each family is a block with the parent first and its
-  children after, every tag toggles with one tap and nothing drills in. Searching flattens the
+  children after, every chip responds to one tap and nothing drills in. Searching flattens the
   blocks into one list of matches.
 
-### Multiple categories per movimiento
+### Category and tags
 
-- A movimiento has one to six categories. All are equal: there is no primary category, and the last
-  one cannot be removed. Order is kept only for display; rows show the first one plus a count.
-- A parent and one of its own children never coexist on a movimiento: choosing the child replaces the
-  parent and choosing the parent replaces its children. Siblings may coexist.
-- Totals per category count the full amount in every category of the movimiento, so they do not add
-  up to the overall total; category charts must not present them as parts of a whole.
-- Choosing a real category removes the Otros fallback. Search matches a movimiento through any of its
-  categories, with the same roll-up, and text search matches any of its category names.
-- Every category surface (sentence dialog, summary, form and editor) uses the same tag field:
-  medium tags, a remove action on each except the last, an "Add" tag that opens a multi-select
-  picker, and no counter; the Add tag disappears at six. The picker lists the selection under its
-  search field as removable tags, disables the last selected category without extra copy, because a
-  movimiento keeps at least one, and applies a parent/child replacement as soon as the tag is tapped. CSV exports every category
-  name of a movimiento joined by " · " and, in the parent column, the top-level name at the same
-  position (a root category repeats its own name).
+- A movimiento has exactly one category: what the money was for. Category totals therefore add up to
+  the overall total, and a category breakdown can be read as parts of a whole.
+- A movimiento has zero to six **tags**: user-created labels that group movimientos across
+  categories ("Empresa", "Viaje Chile"). Tags are flat, have only a name and keep the user's order on
+  the movimiento for display. A tag can share its name with a category; they are different concepts.
+- Every creation and editing surface shows a "Category" section followed by a "Tags · optional"
+  section. A category shows its icon and tint; a tag is a neutral chip with a tag icon and no icon or
+  tint of its own.
+- The tags section shows the selected tags, each removable, and an "Add" tag that opens a
+  multi-select tag picker with search; the Add tag disappears at six. A search without results offers
+  to create a tag with the typed name in one tap, and the created tag becomes selected while the limit
+  allows.
+- Choosing a real category resolves the Otros fallback. Movimiento rows show the category only, never
+  tags.
+
+### Tags
+
+- A tag name is trimmed, up to 40 characters and unique among tags ignoring case and supported
+  accents. Creating a name that already exists offers the existing tag instead of a duplicate;
+  renaming to an existing name is rejected with an inline error. Tag names are not translated.
+- Profile links to a Tags screen modeled on Categories: search, a create action, and the tags sorted
+  by name, each with its movimiento count in the primary currency. Tapping a tag opens its sheet with
+  rename, "View movements" (opens Search filtered by that tag) and delete.
+- Tags are never hidden. Deleting a tag asks for confirmation showing how many movimientos use it,
+  then removes it from those movimientos and deletes it; the movimientos themselves stay and no Undo
+  is offered.
+- Undoing a movimiento deletion restores the tags that still exist; if its custom category was
+  deleted meanwhile, the movimiento is restored in Otros.
 
 ### Custom categories
 
@@ -241,7 +264,7 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
 - Creating a name that already exists offers the existing category instead of a duplicate.
 - From the movimiento picker, a search without results offers a non-intrusive action to create a
   category with the typed name; the quick form shows name and icon, with tint and description behind
-  "More options", and the created category becomes selected when the six-category limit allows.
+  "More options", and the created category becomes the movimiento's category.
   Custom categories come first in pickers, sorted by name.
 - Profile links to a dedicated Categories screen that shows chips, like the picker: search, the
   user's categories first, then the predefined ones grouped by parent, each with its movimiento count
@@ -294,9 +317,10 @@ non-date filters belong to Search; charts do not belong to History selection.
 Search is a separate destination over the primary currency. Its implementation contract lives in
 [Search](features/search.md); this section owns agreed product rules, not delivery status.
 
-- A fresh entry has an empty query, All history, all types and no selected categories. All history
-  removes the date predicate; it never imposes a year floor or result limit.
-- Text matches one contiguous substring in title, description or the displayed category name. Trim and
+- A fresh entry has an empty query, All history, all types and no selected categories or tags. All
+  history removes the date predicate; it never imposes a year floor or result limit.
+- Text matches one contiguous substring in title, description, the displayed category name or any tag
+  name. Trim and
   lowercase with the existing supported-locale accent folding; preserve `ñ` versus `n`. Blank text
   matches everything. Internal spaces are literal; no token/fuzzy/amount/date/category-ID search.
   Unknown-category display labels are searchable.
@@ -313,11 +337,13 @@ Search is a separate destination over the primary currency. Its implementation c
   Restored malformed/future Custom input recovers to default filters. If the clock moves backward,
   keep an existing now-future Custom selection visible with an invalid-range error until corrected;
   never silently clamp it or run its invalid query.
-- Date/type/category dimensions compose AND; selected IDs compose OR. No IDs means all categories;
-  selecting a parent matches the parent and its children (see
+- Date/type/category/tag dimensions compose AND; selected IDs within a dimension compose OR. No IDs
+  means no restriction in that dimension; selecting a parent category matches the parent and its
+  children (see
   [Hierarchy and filtering](#hierarchy-and-filtering)). All real categories, including children, remain
-  selectable regardless of type. Missing selected IDs remain visible with a localized fallback and
-  explicit remove action.
+  selectable regardless of type. The tags dimension appears only when the user has tags. Missing
+  selected category IDs remain visible with a localized fallback and explicit remove action; a deleted
+  tag leaves the applied filters.
 - Filter edits form a draft. Apply atomically commits and closes; Back, scrim or drag discards and
   closes. Clear atomically commits default filters and closes, resetting Custom endpoints to current
   today and preserving raw search text. Apply is available for
