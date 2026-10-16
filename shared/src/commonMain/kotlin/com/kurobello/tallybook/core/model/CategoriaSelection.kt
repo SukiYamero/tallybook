@@ -26,6 +26,25 @@ object CategoriaSelection {
   fun remove(current: List<String>, id: String): List<String> =
       if (id in current && current.size > 1) current - id else current
 
+  /**
+   * Moves [current] toward [target] through [add] and then [remove], so every rule above still
+   * applies to a selection reported as a whole list. Ids outside [catalog] and the Otros fallback
+   * are never added.
+   */
+  fun reconcile(
+      current: List<String>,
+      target: List<String>,
+      catalog: List<Categoria>,
+      limit: Int = MAX_CATEGORIAS_POR_MOVIMIENTO,
+  ): List<String> {
+    val known = catalog.mapTo(mutableSetOf(), Categoria::id) - CATEGORIA_OTROS_ID
+    val added =
+        target
+            .filter { it in known && it !in current }
+            .fold(current) { selection, id -> add(selection, id, catalog, limit) }
+    return current.filterNot { it in target }.fold(added) { selection, id -> remove(selection, id) }
+  }
+
   /** Drops the Otros fallback as soon as a real category is present and removes duplicates. */
   fun normalized(current: List<String>): List<String> {
     val distinct = current.distinct()

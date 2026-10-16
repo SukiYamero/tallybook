@@ -141,6 +141,55 @@ class CategoriaSelectionTest {
     assertEquals(emptyList(), CategoriaSelection.normalized(emptyList()))
   }
 
+  @Test
+  fun reconcileAppliesAnAddition() {
+    assertEquals(listOf("food", "health"), reconcile(listOf("food"), listOf("food", "health")))
+  }
+
+  @Test
+  fun reconcileAppliesARemoval() {
+    assertEquals(listOf("food"), reconcile(listOf("food", "health"), listOf("food")))
+  }
+
+  @Test
+  fun reconcileReplacesTheOnlyCategoryInsteadOfKeepingBoth() {
+    assertEquals(listOf("health"), reconcile(listOf("food"), listOf("health")))
+  }
+
+  @Test
+  fun reconcileKeepsTheParentChildRule() {
+    assertEquals(
+        listOf("health", "taxi"),
+        reconcile(listOf("transport", "health"), listOf("taxi", "health")),
+    )
+  }
+
+  @Test
+  fun reconcileNeverEmptiesTheSelection() {
+    assertEquals(listOf("food"), reconcile(listOf("food"), emptyList()))
+  }
+
+  @Test
+  fun reconcileIgnoresUnknownIdsAndTheOtrosFallback() {
+    assertEquals(
+        listOf("food"),
+        reconcile(listOf("food"), listOf("food", "missing", CATEGORIA_OTROS_ID)),
+    )
+  }
+
+  @Test
+  fun reconcileReplacesTheOtrosFallbackWithARealCategory() {
+    assertEquals(listOf("food"), reconcile(listOf(CATEGORIA_OTROS_ID), listOf("food")))
+  }
+
+  @Test
+  fun reconcileRespectsTheLimit() {
+    assertEquals(full, reconcile(full, full + "pets"))
+  }
+
+  private fun reconcile(current: List<String>, target: List<String>): List<String> =
+      CategoriaSelection.reconcile(current, target, catalog)
+
   private fun add(current: List<String>, id: String): List<String> =
       CategoriaSelection.add(current, id, catalog)
 
