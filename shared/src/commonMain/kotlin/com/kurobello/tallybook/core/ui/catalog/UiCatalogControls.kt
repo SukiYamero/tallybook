@@ -109,6 +109,7 @@ import tallybook.shared.generated.resources.ui_catalog_state_default
 import tallybook.shared.generated.resources.ui_catalog_state_disabled
 import tallybook.shared.generated.resources.ui_catalog_state_emphasis
 import tallybook.shared.generated.resources.ui_catalog_state_error
+import tallybook.shared.generated.resources.ui_catalog_state_ghost
 import tallybook.shared.generated.resources.ui_catalog_state_populated
 import tallybook.shared.generated.resources.ui_catalog_state_selected
 import tallybook.shared.generated.resources.ui_catalog_state_supporting
@@ -494,6 +495,14 @@ private val catalogIconButtonMatrix: @Composable () -> Unit = {
                 icon = Lucide.X,
                 contentDescription = stringResource(Res.string.ui_catalog_icon_button),
                 style = TallybookIconButtonStyle.Brand,
+            )
+          }
+          CatalogSample(label = stringResource(Res.string.ui_catalog_state_ghost)) {
+            TallybookIconButton(
+                onClick = {},
+                icon = Lucide.X,
+                contentDescription = stringResource(Res.string.ui_catalog_icon_button),
+                style = TallybookIconButtonStyle.Ghost,
             )
           }
         }

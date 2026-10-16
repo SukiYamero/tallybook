@@ -502,4 +502,5 @@
     <string name="ui_catalog_state_compact">Compact</string>
     <string name="ui_catalog_state_full">Full</string>
     <string name="ui_catalog_state_duplicate">Duplicate</string>
+    <string name="ui_catalog_state_ghost">Ghost</string>
 </resources>

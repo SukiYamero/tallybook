@@ -502,4 +502,5 @@
     <string name="ui_catalog_state_compact">Compacto</string>
     <string name="ui_catalog_state_full">Completo</string>
     <string name="ui_catalog_state_duplicate">Duplicada</string>
+    <string name="ui_catalog_state_ghost">Sin fondo</string>
 </resources>
