@@ -317,10 +317,10 @@ class HistoryVolumeDeviceTest {
           100,
           currency,
           date,
-          "cat_comida",
           description,
           "2026-09-15T12:00:00Z",
       )
+      database.movimientoQueries.insertMovimientoCategoria(id, "cat_comida", 0)
     }
 
     suspend fun measureSnapshot(): Measurement {

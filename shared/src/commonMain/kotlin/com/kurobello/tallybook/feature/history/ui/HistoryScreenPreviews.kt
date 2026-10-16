@@ -99,7 +99,7 @@ private fun historyPreviewState(): HistoryUiState {
           TipoMovimiento.GASTO,
           Money(128_500, Moneda.COP),
           date,
-          "food",
+          listOf("food"),
           "Lunch with Ana",
           Instant.parse("2026-09-15T12:00:00Z"),
       )

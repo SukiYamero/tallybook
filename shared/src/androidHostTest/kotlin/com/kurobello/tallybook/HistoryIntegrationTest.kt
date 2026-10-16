@@ -588,7 +588,7 @@ class HistoryIntegrationTest {
             TipoMovimiento.GASTO,
             Money(100, currency),
             date,
-            category,
+            listOf(category),
             description,
             Instant.parse("2026-09-20T12:00:00Z"),
         )

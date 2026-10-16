@@ -436,10 +436,16 @@ internal fun Money.toAmountInput(): String {
 }
 
 internal fun Movimiento.toDraft() =
-    MovimientoDraft(tipo, monto.toAmountInput(), fecha, categoriaId, descripcion.orEmpty())
+    MovimientoDraft(tipo, monto.toAmountInput(), fecha, categoriaIds.first(), descripcion.orEmpty())
 
 private fun Movimiento.toChanges() =
-    MovimientoChanges(tipo, monto, fecha, categoriaId, descripcion.normalizeDescriptionOrNull())
+    MovimientoChanges(tipo, monto, fecha, categoriaIds, descripcion.normalizeDescriptionOrNull())
+
+// The single-category form cannot represent extra categories, so an untouched selection keeps them.
+private fun String?.toCategoriaIds(original: Movimiento): List<String> {
+  val selected = requireNotNull(this)
+  return if (selected == original.categoriaIds.first()) original.categoriaIds else listOf(selected)
+}
 
 private fun String?.normalizeDescriptionOrNull(): String? = this?.normalizeDescription()
 
@@ -454,7 +460,7 @@ private fun EditMovimientoUiState.toChangesOrNull(): MovimientoChanges? {
             tipo,
             it,
             fecha,
-            requireNotNull(selectedCategoriaId),
+            selectedCategoriaId.toCategoriaIds(original),
             descripcion.normalizeDescription(),
         )
       }

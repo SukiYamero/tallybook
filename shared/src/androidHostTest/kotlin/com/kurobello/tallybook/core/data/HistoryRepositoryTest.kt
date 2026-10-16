@@ -350,10 +350,10 @@ class HistoryRepositoryTest {
             amount,
             "COP",
             date,
-            "food",
             null,
             "2026-09-15T12:00:00Z",
         )
+        database.movimientoQueries.insertMovimientoCategoria("invalid", "food", 0)
         val wholeYear = MovimientoDateRange(LocalDate(2026, 1, 1), LocalDate(2026, 12, 31))
         val failure =
             assertIs<DataOutcome.Failure>(repository.observeRange(Moneda.COP, wholeYear).first())
@@ -381,10 +381,10 @@ class HistoryRepositoryTest {
                 100,
                 "COP",
                 date,
-                "food",
                 null,
                 "2026-09-15T12:00:00Z",
             )
+            database.movimientoQueries.insertMovimientoCategoria("invalid", "food", 0)
 
             assertIs<DataError.Local>(
                 assertIs<DataOutcome.Failure>(repository.observeYears(Moneda.COP).first()).error
@@ -409,10 +409,10 @@ class HistoryRepositoryTest {
               -1,
               "COP",
               "2026-99-99",
-              "food",
               null,
               "not-an-instant",
           )
+          database.movimientoQueries.insertMovimientoCategoria("invalid-row", "food", 0)
           val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
 
           assertEquals(
@@ -444,10 +444,10 @@ class HistoryRepositoryTest {
               0,
               "COP",
               "2026-09-15",
-              "food",
               null,
               "2026-09-15T12:00:00Z",
           )
+          database.movimientoQueries.insertMovimientoCategoria("invalid", "food", 0)
           runCurrent()
           assertEquals(2, emissions.size)
           assertEquals(DataOutcome.Success(emptyList()), emissions.first())
@@ -481,9 +481,13 @@ class HistoryRepositoryTest {
                   100,
                   "COP",
                   "2026-09-$day",
-                  "food",
                   "Lunch",
                   "2026-09-15T12:00:00Z",
+              )
+              database.movimientoQueries.insertMovimientoCategoria(
+                  "cop-${index.toString().padStart(5, '0')}",
+                  "food",
+                  0,
               )
             }
             repeat(4000) { index ->
@@ -493,20 +497,20 @@ class HistoryRepositoryTest {
                   100,
                   "USD",
                   "2026-09-15",
-                  "food",
                   null,
                   "2026-09-15T12:00:00Z",
               )
+              database.movimientoQueries.insertMovimientoCategoria("usd-$index", "food", 0)
               database.movimientoQueries.insertMovimiento(
                   "outside-$index",
                   "GASTO",
                   100,
                   "COP",
                   if (index % 2 == 0) "2026-08-31" else "2026-10-01",
-                  "food",
                   null,
                   "2026-09-15T12:00:00Z",
               )
+              database.movimientoQueries.insertMovimientoCategoria("outside-$index", "food", 0)
             }
           }
           val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
@@ -650,7 +654,7 @@ class HistoryRepositoryTest {
           tipo = TipoMovimiento.GASTO,
           monto = Money(100, moneda),
           fecha = LocalDate.parse(fecha),
-          categoriaId = "food",
+          categoriaIds = listOf("food"),
           descripcion = "Lunch",
           createdAt = Instant.parse(createdAt),
       )

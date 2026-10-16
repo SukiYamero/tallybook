@@ -31,7 +31,7 @@ internal fun SearchResultRow(
       maxDescriptionLines = Int.MAX_VALUE,
       maxSubtitleLines = Int.MAX_VALUE,
       onClick = onClick,
-      pending = row.movimiento.categoriaId == CATEGORIA_OTROS_ID,
+      pending = CATEGORIA_OTROS_ID in row.movimiento.categoriaIds,
   )
 }
 

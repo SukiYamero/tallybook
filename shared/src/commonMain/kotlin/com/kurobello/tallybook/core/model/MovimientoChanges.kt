@@ -6,6 +6,6 @@ data class MovimientoChanges(
     val tipo: TipoMovimiento,
     val monto: Money,
     val fecha: LocalDate,
-    val categoriaId: String,
+    val categoriaIds: List<String>,
     val descripcion: String?,
 )

@@ -185,7 +185,7 @@ internal open class AddFakeMovimientos(
             tipo = changes.tipo,
             monto = changes.monto,
             fecha = changes.fecha,
-            categoriaId = changes.categoriaId,
+            categoriaIds = changes.categoriaIds,
             descripcion = changes.descripcion,
         )
     val values = inserted.map { if (it.id == id) updated else it }

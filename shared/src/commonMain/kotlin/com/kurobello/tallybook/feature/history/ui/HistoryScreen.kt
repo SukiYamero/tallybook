@@ -107,7 +107,7 @@ internal fun HistoryRow(
       MovimientoRowText(row.title, historyDateSubtitle(row.fecha), row.categoryLabel),
       modifier = modifier.fillMaxWidth(),
       onClick = onClick,
-      pending = row.movimiento.categoriaId == CATEGORIA_OTROS_ID,
+      pending = CATEGORIA_OTROS_ID in row.movimiento.categoriaIds,
   )
 }
 

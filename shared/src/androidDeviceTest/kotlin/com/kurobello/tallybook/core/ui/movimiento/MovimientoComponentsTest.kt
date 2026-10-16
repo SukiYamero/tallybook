@@ -162,7 +162,7 @@ class MovimientoComponentsTest {
           tipo = tipo,
           monto = Money(minorUnits, Moneda.COP),
           fecha = LocalDate(2026, 9, 15),
-          categoriaId = "cat_missing",
+          categoriaIds = listOf("cat_missing"),
           descripcion = null,
           createdAt = Instant.fromEpochMilliseconds(1_757_894_400_000),
       )

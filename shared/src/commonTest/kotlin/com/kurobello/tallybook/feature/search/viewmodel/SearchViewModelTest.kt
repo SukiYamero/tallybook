@@ -499,7 +499,7 @@ private class SearchMovimientos : MovimientoRepository {
             TipoMovimiento.GASTO,
             Money(100, Moneda.USD),
             TODAY,
-            "food",
+            listOf("food"),
             text,
             Instant.parse("2026-10-06T12:00:00Z"),
         )
@@ -531,7 +531,7 @@ private class SearchMovimientos : MovimientoRepository {
                             } != false) &&
                             (criteria.tipo == null || it.tipo == criteria.tipo) &&
                             (criteria.categoryIds.isEmpty() ||
-                                it.categoriaId in criteria.categoryIds)
+                                it.categoriaIds.any { id -> id in criteria.categoryIds })
                       }
               )
             }
@@ -582,7 +582,7 @@ private class SearchMovimientos : MovimientoRepository {
             tipo = changes.tipo,
             monto = changes.monto,
             fecha = changes.fecha,
-            categoriaId = changes.categoriaId,
+            categoriaIds = changes.categoriaIds,
             descripcion = changes.descripcion,
         )
     val values = rows.map { if (it.id == id) updated else it }

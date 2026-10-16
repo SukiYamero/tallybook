@@ -283,10 +283,10 @@ internal fun LazyListScope.homePopulated(
   items(items = uiState.recent, key = { it.id }) { movimiento ->
     MovimientoRow(
         movimiento = movimiento,
-        categoria = uiState.categoriasById[movimiento.categoriaId],
+        categoria = uiState.categoriasById[movimiento.categoriaIds.first()],
         onClick = onOpenMovimiento?.let { open -> { open(movimiento.id) } },
         modifier = Modifier.fillMaxWidth().padding(bottom = TallybookTheme.spacing.space10),
-        pending = movimiento.categoriaId == CATEGORIA_OTROS_ID,
+        pending = CATEGORIA_OTROS_ID in movimiento.categoriaIds,
     )
   }
 }

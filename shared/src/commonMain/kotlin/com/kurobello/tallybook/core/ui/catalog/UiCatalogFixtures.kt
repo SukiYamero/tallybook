@@ -33,7 +33,7 @@ internal fun uiCatalogFixtures(categoryName: String): UiCatalogFixtures {
           tipo = TipoMovimiento.GASTO,
           monto = Money(128_500, Moneda.COP),
           fecha = LocalDate(2026, 9, 15),
-          categoriaId = categoria.id,
+          categoriaIds = listOf(categoria.id),
           descripcion = null,
           createdAt = Instant.parse("2026-09-15T00:00:00Z"),
       )

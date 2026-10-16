@@ -169,7 +169,7 @@ internal class NavigationMovimientos : MovimientoRepository {
                 TipoMovimiento.GASTO,
                 Money(125, Moneda.USD),
                 LocalDate(2026, 10, 5),
-                "food",
+                listOf("food"),
                 "Item $index",
                 Instant.parse("2026-10-05T12:00:00Z"),
             )
@@ -194,7 +194,7 @@ internal class NavigationMovimientos : MovimientoRepository {
                             row.fecha in criteria.range.start..criteria.range.end) &&
                             (criteria.tipo == null || row.tipo == criteria.tipo) &&
                             (criteria.categoryIds.isEmpty() ||
-                                row.categoriaId in criteria.categoryIds)
+                                row.categoriaIds.any { id -> id in criteria.categoryIds })
                       }
                       .sortedWith(navigationStorageOrder),
                   currencyRows.map { it.fecha.year }.distinct().sortedDescending(),
@@ -288,7 +288,7 @@ internal class NavigationMovimientos : MovimientoRepository {
             tipo = changes.tipo,
             monto = changes.monto,
             fecha = changes.fecha,
-            categoriaId = changes.categoriaId,
+            categoriaIds = changes.categoriaIds,
             descripcion = changes.descripcion,
         )
     val values = rows.value.map { if (it.id == id) updated else it }
