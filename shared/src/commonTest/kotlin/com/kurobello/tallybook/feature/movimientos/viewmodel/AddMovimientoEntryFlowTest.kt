@@ -38,7 +38,7 @@ class AddMovimientoEntryFlowTest {
     viewModel.onPhraseContinue()
 
     val state = viewModel.uiState.value
-    val summary = assertNotNull(state.summary)
+    val summary = state.summary
     assertEquals(AddMovimientoStep.SUMMARY, state.step)
     assertEquals(TipoMovimiento.GASTO, summary.tipo)
     assertEquals(Money(2_000_000, Moneda.COP), summary.monto)
@@ -89,11 +89,11 @@ class AddMovimientoEntryFlowTest {
     viewModel.onPhraseChanged("Cena con 2 amigos 50000")
     viewModel.onPhraseContinue()
 
-    assertTrue(assertNotNull(viewModel.uiState.value.summary).amountNeedsReview)
+    assertTrue(viewModel.uiState.value.summary.amountNeedsReview)
 
     viewModel.onAmountChanged("50000,00")
 
-    assertFalse(assertNotNull(viewModel.uiState.value.summary).amountNeedsReview)
+    assertFalse(viewModel.uiState.value.summary.amountNeedsReview)
   }
 
   @Test
@@ -104,7 +104,7 @@ class AddMovimientoEntryFlowTest {
     viewModel.onPhraseContinue()
 
     val state = viewModel.uiState.value
-    val summary = assertNotNull(state.summary)
+    val summary = state.summary
     assertTrue(state.categoriaIds.isEmpty())
     assertTrue(summary.categoriasArePending)
     assertEquals(listOf(CATEGORIA_OTROS_ID), summary.categorias.map { it.id })
@@ -239,7 +239,7 @@ class AddMovimientoEntryFlowTest {
     val viewModel = entryViewModel(movimientos = movimientos)
     viewModel.onPhraseChanged("Gasté 5.000 en algo raro")
     viewModel.onPhraseContinue()
-    assertTrue(assertNotNull(viewModel.uiState.value.summary).categoriasArePending)
+    assertTrue(viewModel.uiState.value.summary.categoriasArePending)
 
     viewModel.onSubmit()
     runCurrent()
@@ -256,7 +256,7 @@ class AddMovimientoEntryFlowTest {
     val viewModel = entryViewModel(movimientos = movimientos)
     viewModel.onPhraseChanged("Algo raro")
     viewModel.onPhraseContinue()
-    assertNull(assertNotNull(viewModel.uiState.value.summary).monto)
+    assertNull(viewModel.uiState.value.summary.monto)
 
     viewModel.onSubmit()
     runCurrent()
@@ -279,7 +279,7 @@ class AddMovimientoEntryFlowTest {
 
     viewModel.onStepBack()
     assertEquals(AddMovimientoStep.SUMMARY, viewModel.uiState.value.step)
-    assertEquals(LocalDate(2026, 9, 1), assertNotNull(viewModel.uiState.value.summary).fecha)
+    assertEquals(LocalDate(2026, 9, 1), viewModel.uiState.value.summary.fecha)
 
     viewModel.onStepBack()
     val state = viewModel.uiState.value

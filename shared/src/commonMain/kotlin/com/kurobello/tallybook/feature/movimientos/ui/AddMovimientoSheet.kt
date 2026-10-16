@@ -254,9 +254,8 @@ private fun SummaryStepContent(
     actions: AddMovimientoActions,
     onAddCategoria: () -> Unit,
 ) {
-  val summary = uiState.summary ?: return
   MovimientoSummaryStep(
-      summary = summary,
+      summary = uiState.summary,
       callbacks =
           MovimientoSummaryCallbacks(
               onRemoveCategoria = { actions.onCategoriaRemoved(it.id) },

@@ -104,21 +104,21 @@ internal data class AddMovimientoUiState(
             actionsEnabled = !isLoading && loadError == null,
         )
 
-  val summary: MovimientoSummaryUi?
-    get() {
-      val selected = effectiveCategorias.takeIf { it.isNotEmpty() } ?: return null
-      return MovimientoSummaryUi(
-          tipo = tipo,
-          fecha = fecha,
-          monto = (amountResult as? AmountInputResult.Valid)?.money,
-          amountNeedsReview = amountNeedsReview,
-          descripcion = descripcion,
-          categorias = selected,
-          categoriasArePending = categoriasArePending,
-          suggestions = suggestions,
-          isSubmitting = isSubmitting,
-      )
-    }
+  // Without the Otros fallback in the catalog the categories are empty, and the review still shows
+  // its actions so the user can add one or edit instead of facing an empty sheet.
+  val summary: MovimientoSummaryUi
+    get() =
+        MovimientoSummaryUi(
+            tipo = tipo,
+            fecha = fecha,
+            monto = (amountResult as? AmountInputResult.Valid)?.money,
+            amountNeedsReview = amountNeedsReview,
+            descripcion = descripcion,
+            categorias = effectiveCategorias,
+            categoriasArePending = categoriasArePending,
+            suggestions = suggestions,
+            isSubmitting = isSubmitting,
+        )
 
   private fun isLoaded(id: String): Boolean = categorias.any { it.id == id }
 }

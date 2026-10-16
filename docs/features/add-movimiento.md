@@ -107,13 +107,23 @@ Version-sensitive contracts:
 
 ## Verification boundaries
 
-Host tests cover sentence to review values, the live detected values and the sentence-owned
-categories, suggestion add/remove and dismissal rules, the six-category limit, the parent/child rule,
-the Otros fallback and replacement, dialog dirtiness, invalid save routing, step Back, the debounced
-detection, the learned correction through real repositories, editor multi-category save and Undo, and
-the row count resources. Device tests for the dialog, review, form and editor compile but their
-runner stalls before returning results; automated device execution remains unconfirmed. The
-Xiaomi smoke covered the dialog with and without the keyboard, both dismissal paths, the review
-sheet's height and spacing, adding and removing up to six tags in the dialog, review, form and
-editor, rows with "+N", Search through a secondary category and Undo of a multi-category movimiento.
-A physical iPhone review remains pending even though shared iOS compilation succeeds.
+The final tree passed 640 shared host tests with zero failures, Detekt, ktfmtCheck, the SQLDelight
+migration verification (schema 2 → 3 with real v2 data), the Android debug APK and shared iOS
+compilation. Host tests cover the parser's amount/date/tipo rules across locales, suggestion
+confidence, learned categoria sets and ambiguous words, sentence to review values, sentence-owned
+versus hand-picked categories, the six-category limit and parent/child replacement, the Otros
+fallback, dialog dirtiness, invalid save routing, step Back, debounced detection, the learned
+correction through real repositories, editor multi-category save and Undo, dialog placement, and the
+flat picker grouping. Two independent reviews and a final code review ran; confirmed findings were
+fixed with regression tests.
+
+Manual checks on a physical Xiaomi covered the centered dialog without autofocus, the Detected area
+appearing on typing, keyboard behavior with the pinned Continue, both dismissal paths, the review
+sheet's height and section spacing, the not-detected amount copy, adding and removing up to six tags
+in the dialog, review, form and editor, the flat family picker with its selected section, rows with
+"+N", Search through a secondary category, Undo of a multi-category movimiento and the migration on
+existing data.
+
+Not covered: device test execution (the runner stalls before returning results), a physical iPhone,
+TalkBack and enlarged-text passes, light theme screenshots and native-speaker review of es-AR/pt-BR
+copy. Outstanding work is tracked in the [backlog](../backlog.md).
