@@ -173,7 +173,6 @@ private fun CatalogSummarySample(label: String, summary: MovimientoSummaryUi) {
                         },
                         onRetry = {},
                     ),
-                onDescripcionChange = { current = current.copy(descripcion = it) },
                 onEdit = {},
                 onSave = {},
             ),

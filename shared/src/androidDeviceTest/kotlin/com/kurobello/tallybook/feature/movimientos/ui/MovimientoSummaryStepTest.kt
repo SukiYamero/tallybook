@@ -2,6 +2,7 @@ package com.kurobello.tallybook.feature.movimientos.ui
 
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
@@ -14,7 +15,6 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.Etiqueta
@@ -67,7 +67,6 @@ class MovimientoSummaryStepTest {
   private var tagAddRequests = 0
   private var edits = 0
   private var saves = 0
-  private val descriptions = mutableListOf<String>()
 
   @Before
   fun setUp() {
@@ -92,13 +91,11 @@ class MovimientoSummaryStepTest {
   }
 
   @Test
-  fun theOptionalDescriptionFieldEmitsWhatTheUserTypes() {
+  fun theReviewOffersNoTextInput() {
     show(samples.completeSummary)
 
-    composeRule.onNodeWithText(string(Res.string.description_optional)).assertExists()
-    composeRule.onNode(hasSetTextAction()).performScrollTo().performTextInput("Con Ana")
-
-    composeRule.runOnIdle { assertEquals(listOf("Con Ana"), descriptions) }
+    composeRule.onNodeWithText(string(Res.string.description_optional)).assertDoesNotExist()
+    composeRule.onAllNodes(hasSetTextAction()).assertCountEquals(0)
   }
 
   @Test
@@ -273,7 +270,6 @@ class MovimientoSummaryStepTest {
                             onRemove = { removedTags += it },
                             onRetry = {},
                         ),
-                    onDescripcionChange = { descriptions += it },
                     onEdit = { edits++ },
                     onSave = { saves++ },
                 ),

@@ -31,9 +31,10 @@ Creation moves through three steps; business rules for each live in
   keyboard closes. Scrim taps and Back dismiss as before.
 - **Review (sheet)**: opens tall rather than hugging its content. A title and one-line subtitle
   lead labeled sections: Type and Date as large badges side by side, Amount (a missing one reads "not detected", with a hint to use Edit movimiento), the quoted
-  Title (the sentence), an optional Description field, the Category section with its suggestions and the Tags section, each
+  Title (the sentence), the Category section with its suggestions and the Tags section, each
   section `space24` apart. Edit movimiento (left) opens the form with the same
   draft; Save (right) persists; the actions sit at the bottom, at least `space32` below the content.
+  The review has no text input: the description is edited in the form.
   A failed save shows the shared save error above the actions and keeps the draft.
 - **Form**: the complete form in the same sheet, with the same Category and Tags sections. Save
   without a real category persists Otros; the Category section shows the pending style and, beside

@@ -45,7 +45,7 @@ class AddMovimientoEntryFlowTest {
     assertEquals(Money(2_000_000, Moneda.COP), summary.monto)
     assertEquals(LocalDate(2026, 9, 14), summary.fecha)
     assertEquals("Gasté 20.000 en cine ayer", summary.titulo)
-    assertEquals("", summary.descripcion)
+    assertEquals("", state.descripcion)
     assertEquals("cat_cine", summary.categoria?.id)
     assertFalse(summary.categoriaIsPending)
     assertFalse(summary.amountNeedsReview)

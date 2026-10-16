@@ -92,7 +92,6 @@ internal class MovimientoEntrySamples(
           monto = twentyThousand,
           amountNeedsReview = false,
           titulo = SENTENCE,
-          descripcion = "",
           categoria = cinema,
           categoriaIsPending = false,
           suggestions = listOf(food, transport),
