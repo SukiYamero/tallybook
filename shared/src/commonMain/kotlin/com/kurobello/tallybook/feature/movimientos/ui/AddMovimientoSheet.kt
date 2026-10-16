@@ -287,7 +287,6 @@ private fun SummaryStepContent(
               onChooseCategoria = pickers.onChooseCategoria,
               onSuggestion = { actions.onSuggestionSelected(it.id) },
               etiquetas = actions.etiquetasCallbacks(onAdd = pickers.onAddEtiqueta),
-              onDescripcionChange = actions::onDescripcionChanged,
               onEdit = actions::onEditMovimiento,
               onSave = actions::onSubmit,
           ),

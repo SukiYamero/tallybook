@@ -43,7 +43,6 @@ internal data class MovimientoSummaryUi(
     val monto: Money?,
     val amountNeedsReview: Boolean,
     val titulo: String,
-    val descripcion: String,
     val categoria: Categoria?,
     val categoriaIsPending: Boolean,
     val suggestions: List<Categoria>,

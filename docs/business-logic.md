@@ -60,7 +60,7 @@ app derives the draft from it and the user confirms or refines it; the manual fo
 - Tapping outside or the Back gesture closes the dialog directly while the sentence is blank;
   otherwise it asks to discard first. Continue parses the sentence once, writes tipo, monto, fecha,
   categoría and tags (each unless the user took it over) and título into the draft (replacing earlier
-  derived values), closes the dialog and opens the summary. A description typed in the summary is
+  derived values), closes the dialog and opens the summary. A description typed in the form is
   kept.
 - **Tipo**: expense and income verbs in every supported language decide it (`gasté`, `pagué`,
   `me cobraron` → gasto; `recibí`, `me pagaron`, `cobré`, `vendí` → ingreso). Without a verb, an
@@ -76,16 +76,17 @@ app derives the draft from it and the user confirms or refines it; the manual fo
   to its most recent past occurrence. Future expressions are ignored and the date stays today.
 - **Título**: the sentence as typed, trimmed and with repeated whitespace collapsed, like every
   optional text. Parsing never rewrites what the user wrote. The
-  description starts empty; it is optional extra context the user adds in the summary or the form.
+  description starts empty; it is optional extra context the user adds in the form.
 - **Categoría**: the suggestion engine below runs on the sentence without its verb, amount, date
   and stop words. A high-confidence result is preselected; other results appear as dimmed
   suggestions that replace the selected category when tapped. Without a selection at Save, the
   movimiento falls back to Otros.
 - **Tags**: the sentence selects existing tags whose full name appears in it as whole words, compared
   with the shared search normalization. Detection never creates a tag.
-- The summary is a tall bottom sheet titled as a review-and-confirm step. Labeled sections show tipo
-  and fecha (prominent), the amount, the title, an optional description field, the category with its
-  suggestions and the optional tags. Its two
+- The summary is a tall bottom sheet titled as a review-and-confirm step. It only reviews: labeled
+  sections show tipo and fecha (prominent), the amount and the title, and the only choices it offers
+  are the category with its suggestions and the optional tags. It has no text input; the description
+  lives in the form. Its two
   equal-level actions, separated from the content by generous space, are Edit movimiento (left),
   which opens the complete form with the same draft, and Save (right). Save with an invalid required
   value opens the form with that field's error and focus instead of persisting. Back returns from

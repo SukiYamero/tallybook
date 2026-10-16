@@ -68,7 +68,6 @@ private fun SummaryStepPreview(
                 onChooseCategoria = {},
                 onSuggestion = {},
                 etiquetas = MovimientoEtiquetasCallbacks(onAdd = {}, onRemove = {}, onRetry = {}),
-                onDescripcionChange = {},
                 onEdit = {},
                 onSave = {},
             ),

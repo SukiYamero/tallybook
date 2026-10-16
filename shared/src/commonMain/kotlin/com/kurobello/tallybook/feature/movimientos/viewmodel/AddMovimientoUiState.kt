@@ -120,7 +120,6 @@ internal data class AddMovimientoUiState(
             monto = (amountResult as? AmountInputResult.Valid)?.money,
             amountNeedsReview = amountNeedsReview,
             titulo = titulo,
-            descripcion = descripcion,
             categoria = effectiveCategoria,
             categoriaIsPending = categoriaIsPending,
             suggestions = suggestions,

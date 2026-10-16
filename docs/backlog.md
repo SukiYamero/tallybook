@@ -8,7 +8,7 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
   iPhone runtime validation remains pending and was explicitly deferred for History. Confirm the
   authorized connected iPhone and developer services, then run the app from Xcode using the existing
   shared `TEAM_ID`. Validate Home/History/Search, filters, creation (sentence dialog keyboard
-  placement, review sheet with its description field, the Category section switch and single-select
+  placement, review sheet, the Category section switch and single-select
   picker, the Tags section and tag picker with create), lifecycle and safe areas,
   including management scene teardown, edit/delete/Undo and VoiceOver action-window usability, and
   Profile: theme with status-bar style, the Categories screen (chips, category sheets, keyboard
@@ -31,8 +31,8 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
   Android evidence and precise limits live in [Search](features/search.md#verification-boundaries).
   Smart entry fixtures (sentence dialog, review, form), management sheet fixtures, custom categories
   fixtures (category form, Categories screen and sheets, quick-create, Profile → Categories
-  navigation, sheet-form keyboard scrolling), movimiento title fixtures (summary description field,
-  Search day headings, signed amounts) and single category and tags fixtures (`CategorySingleFieldTest`,
+  navigation, sheet-form keyboard scrolling), movimiento title fixtures (Search day
+  headings, signed amounts) and single category and tags fixtures (`CategorySingleFieldTest`,
   `EtiquetaTagFieldTest`, `EtiquetaPickerSheetTest`, `TagsScreenTest`, `TagsNavigationTest`, the tag
   filter in `SearchFilterSheetTest`, the catalog sections in `UiCatalogScreenTest`) also compile but remain
   unexecuted after a bounded stalled-runner retry; execute them after runner repair, preserving their Back, reread-height and IME assertions.

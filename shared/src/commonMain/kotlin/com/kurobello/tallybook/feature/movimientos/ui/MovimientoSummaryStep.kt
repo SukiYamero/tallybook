@@ -6,11 +6,9 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -23,7 +21,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import com.kurobello.tallybook.core.model.Categoria
-import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.ui.category.CategorySingleField
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookButtonDefaults
@@ -31,9 +28,6 @@ import com.kurobello.tallybook.core.ui.component.TallybookProgressIndicator
 import com.kurobello.tallybook.core.ui.component.TallybookSectionHeading
 import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
 import com.kurobello.tallybook.core.ui.component.TallybookText
-import com.kurobello.tallybook.core.ui.component.captureScrollableInputViewport
-import com.kurobello.tallybook.core.ui.component.centerFocusedInputIn
-import com.kurobello.tallybook.core.ui.component.rememberScrollableInputViewport
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoBadgeSize
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoTypeBadge
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -43,7 +37,6 @@ import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.amount
 import tallybook.shared.generated.resources.date
-import tallybook.shared.generated.resources.description_optional
 import tallybook.shared.generated.resources.loading
 import tallybook.shared.generated.resources.movement_type
 import tallybook.shared.generated.resources.movimiento_summary_edit
@@ -61,7 +54,6 @@ internal data class MovimientoSummaryCallbacks(
     val onChooseCategoria: () -> Unit,
     val onSuggestion: (Categoria) -> Unit,
     val etiquetas: MovimientoEtiquetasCallbacks,
-    val onDescripcionChange: (String) -> Unit,
     val onEdit: () -> Unit,
     val onSave: () -> Unit,
 )
@@ -86,19 +78,12 @@ internal fun MovimientoSummaryStep(
     messageContent: @Composable () -> Unit = {},
 ) {
   val scrollState = rememberScrollState()
-  val viewport = rememberScrollableInputViewport()
-  val density = LocalDensity.current
-  val imeBottom = with(density) { WindowInsets.ime.getBottom(density).toDp() }
   Column(
       modifier = modifier.fillMaxWidth(),
       verticalArrangement = Arrangement.SpaceBetween,
   ) {
     Column(
-        modifier =
-            Modifier.fillMaxWidth()
-                .weight(1f, fill = false)
-                .verticalScroll(scrollState)
-                .captureScrollableInputViewport(viewport),
+        modifier = Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space24),
     ) {
       SummaryHeader()
@@ -113,18 +98,9 @@ internal fun MovimientoSummaryStep(
           )
         }
       }
-      MovimientoOptionalTextField(
-          value = summary.descripcion,
-          label = stringResource(Res.string.description_optional),
-          maxLength = MOVIMIENTO_DESCRIPTION_MAX_LENGTH,
-          onValueChange = callbacks.onDescripcionChange,
-          modifier = Modifier.centerFocusedInputIn(scrollState, viewport),
-          enabled = !summary.isSubmitting,
-      )
       SummarySelection(summary, callbacks)
       messageContent()
-      // The sheet does not move with the keyboard, so the body needs its height as scroll room.
-      Spacer(Modifier.height(TallybookTheme.spacing.space32 + imeBottom))
+      Spacer(Modifier.height(TallybookTheme.spacing.space32))
     }
     SummaryFooter(
         isSubmitting = summary.isSubmitting,
