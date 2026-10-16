@@ -35,6 +35,11 @@ interface MovimientoRepository {
   /** Currency years cover all history and are read in the same transaction as structural rows. */
   fun observeFiltered(criteria: MovimientoReadCriteria): Flow<DataOutcome<MovimientoSearchSnapshot>>
 
+  /**
+   * Newest-first descriptions with their categories, the training data for category suggestions.
+   */
+  fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>>
+
   suspend fun insert(movimiento: Movimiento): DataOutcome<Unit>
 
   suspend fun getAll(): DataOutcome<List<Movimiento>>

@@ -18,6 +18,7 @@ import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.model.fold
+import kotlin.time.Instant
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -169,6 +170,34 @@ internal class MovimientoRepositoryImpl(
                       .asFlow()
                       .mapToList(dispatcher)
                       .map { rows -> rows.map { it.toDomain() } }
+              )
+            }
+            .flowOn(dispatcher)
+            .asLocalDataOutcome()
+      }
+
+  override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
+      if (limit <= 0) {
+        flowOf(
+            DataOutcome.Failure(DataError.InvalidInput("Category history limit must be positive"))
+        )
+      } else {
+        flow {
+              emitAll(
+                  database.movimientoQueries
+                      .selectCategoryHistory(limit.toLong())
+                      .asFlow()
+                      .mapToList(dispatcher)
+                      .map { rows ->
+                        rows.map { row ->
+                          currentCoroutineContext().ensureActive()
+                          CategoryHistoryRow(
+                              descripcion = row.descripcion,
+                              categoriaId = row.categoria_id,
+                              createdAt = Instant.parse(row.created_at),
+                          )
+                        }
+                      }
               )
             }
             .flowOn(dispatcher)

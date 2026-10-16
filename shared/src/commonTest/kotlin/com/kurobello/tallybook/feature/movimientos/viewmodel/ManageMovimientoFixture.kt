@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.model.Categoria
@@ -150,6 +151,9 @@ internal class ManagementRepository : MovimientoRepository {
   override fun observeFiltered(
       criteria: MovimientoReadCriteria
   ): Flow<DataOutcome<MovimientoSearchSnapshot>> = emptyFlow()
+
+  override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
+      emptyFlow()
 
   override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> =
       error("Management cannot insert")

@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.model.AppLocale
@@ -571,6 +572,9 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) : Movimient
   override fun observeRecent(limit: Int) = flow { emit(DataOutcome.Success(rows.take(limit))) }
 
   override suspend fun getAll() = DataOutcome.Success(rows)
+
+  override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
+      error("Category history reads are not expected in this fixture")
 
   override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> {
     rows = rows + movimiento

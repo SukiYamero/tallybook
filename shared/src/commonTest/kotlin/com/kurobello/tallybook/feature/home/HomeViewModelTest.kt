@@ -3,6 +3,7 @@ package com.kurobello.tallybook.feature.home
 import androidx.lifecycle.ViewModelStore
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
@@ -493,6 +494,9 @@ class HomeViewModelTest {
 
     override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> =
         error("History year reads are not expected in this fixture")
+
+    override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
+        error("Category history reads are not expected in this fixture")
 
     override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> {
       insertCalls += 1
