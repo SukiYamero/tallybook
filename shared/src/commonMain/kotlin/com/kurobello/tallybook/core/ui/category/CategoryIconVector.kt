@@ -46,6 +46,7 @@ import com.composables.icons.lucide.ShoppingCart
 import com.composables.icons.lucide.Sofa
 import com.composables.icons.lucide.Sparkles
 import com.composables.icons.lucide.Stethoscope
+import com.composables.icons.lucide.Tag
 import com.composables.icons.lucide.Ticket
 import com.composables.icons.lucide.TrendingUp
 import com.composables.icons.lucide.Tv
@@ -102,6 +103,7 @@ fun CategoryIcon.toImageVector(): ImageVector =
       CategoryIcon.SOFA -> Lucide.Sofa
       CategoryIcon.SPARKLES -> Lucide.Sparkles
       CategoryIcon.STETHOSCOPE -> Lucide.Stethoscope
+      CategoryIcon.TAG -> Lucide.Tag
       CategoryIcon.TICKET -> Lucide.Ticket
       CategoryIcon.TRENDING_UP -> Lucide.TrendingUp
       CategoryIcon.TV -> Lucide.Tv
