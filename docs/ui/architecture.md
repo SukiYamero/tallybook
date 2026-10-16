@@ -705,9 +705,10 @@ Selecting a movement opens a content-sized bottom sheet with the localized Edit 
 including during its initial read. A successful read supplies the original record and prefilled draft.
 The editor reuses creation's state-independent controls
 through `MovimientoFormState`/`MovimientoFormActions`: the type selector retains its directional icons
-and status colors, the currency precedes the numeric input, and the category selector shows its avatar
-beside its name. It opens with no initial category picker and no forced keyboard. Existing description
-opens expanded. Focus, disclosure, keyboard and category-entry phases belong to composition.
+and status colors, the currency precedes the numeric input, and the categories use the shared tag
+field with the multi-select picker. It opens with no initial category picker and no forced keyboard.
+Existing description opens expanded. Focus, disclosure, keyboard and category-entry phases belong to
+composition.
 
 An icon-only Delete action sits at the logical end of the title row with its localized accessible name.
 Its rounded container uses the danger color at 12% opacity, matching snackbar status-icon backgrounds,

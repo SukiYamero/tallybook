@@ -31,13 +31,16 @@ app derives the draft from it and the user confirms or refines it; the manual fo
   formatted for the primary currency. The sentence respects the description length limit.
 - Below the input, a "Detected" area always shows tipo and fecha (their defaults, gasto and today,
   until the sentence says otherwise), the amount when found, and the categories as tags with an
-  "Add" tag. Values update while typing; nothing is persisted until Save.
+  "Add" tag. Values update while typing; nothing is persisted until Save. While the user has not
+  touched the categories, the sentence owns them: the high-confidence category shows as a tag and
+  the rest as tappable suggestions. The first manual add or remove hands the categories to the user,
+  and later sentences or Continue no longer replace them.
 - Under the main action, an "or" divider introduces voice dictation. It is a non-functional
   placeholder marked as coming soon. A secondary "fill manually" action opens the empty form.
 - Tapping outside or the Back gesture closes the dialog directly while the sentence is blank;
   otherwise it asks to discard first. Continue parses the sentence once, writes tipo, monto, fecha,
-  categorías and descripción into the draft (replacing earlier derived values), closes the dialog
-  and opens the summary.
+  categorías (unless the user took them over) and descripción into the draft (replacing earlier
+  derived values), closes the dialog and opens the summary.
 - **Tipo**: expense and income verbs in every supported language decide it (`gasté`, `pagué`,
   `me cobraron` → gasto; `recibí`, `me pagaron`, `cobré`, `vendí` → ingreso). Without a verb, an
   income category suggestion selects ingreso; otherwise gasto.
@@ -78,8 +81,9 @@ the training data, so correcting a suggestion teaches the next one.
 - The dictionary covers every seeded category in all supported languages, with regional variants
   and common local brands, and points at the most specific category.
 - High confidence means an exact history match or one strong dictionary match without a competing
-  category. At most three suggestions are shown. A suggestion the user dismisses is not offered
-  again for the same draft. Otros is never suggested.
+  category. At most three suggestions are shown, never repeating a selected category. Removing a
+  category the sentence suggested dismisses it: it is not offered again for the same subject, and a
+  different subject starts clean. Otros is never suggested.
 
 ### Editing and deletion
 

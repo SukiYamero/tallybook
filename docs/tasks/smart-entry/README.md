@@ -11,11 +11,11 @@ live in [business-logic.md](../../business-logic.md#natural-language-entry); thi
 
 In phase 1:
 
-- Sentence step, live preview, compact summary (Edit movimiento | Save), existing form as the third
-  step. Manual entry remains available.
+- Sentence dialog with a live detected area, tall review sheet (Edit movimiento | Save), existing form
+  as the third step. Manual entry remains available.
 - Local sentence parser (tipo, monto, fecha, subject) for `es`, `es-AR`, `en`, `pt-BR`.
-- Category suggestion engine: learned history associations plus a keyword dictionary. One category
-  per movimiento; suggestions switch the single selection.
+- Category suggestion engine: learned history associations plus a keyword dictionary. Suggestions
+  add to the movimiento's categories (one to six).
 - `cat_otros` fallback with the pending treatment in rows and the editor.
 - Children selectable in creation and editing; Search category filters roll up parent → children.
 
