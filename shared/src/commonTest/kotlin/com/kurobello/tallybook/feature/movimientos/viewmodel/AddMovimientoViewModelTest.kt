@@ -2,6 +2,7 @@ package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
@@ -457,6 +458,9 @@ class AddMovimientoViewModelTest {
 
     override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> =
         error("History year reads are not expected in this fixture")
+
+    override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
+        emptyFlow()
 
     override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> {
       inserted += movimiento

@@ -16,9 +16,13 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
@@ -404,6 +408,140 @@ class MovimientoRepositoryTest {
     }
   }
 
+  @Test
+  fun `category history returns the newest described rows within the limit`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      TallybookDatabase.Schema.create(driver)
+      val repository =
+          MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
+      val base = Instant.parse("2026-09-05T12:00:00Z")
+      val rows =
+          listOf(
+              movimiento("oldest", categoriaId = "cat_cafe", descripcion = "cafe", at = base),
+              movimiento("blank", descripcion = "   ", at = base + 1.seconds),
+              movimiento("empty", descripcion = "", at = base + 2.seconds),
+              movimiento("none", descripcion = null, at = base + 3.seconds),
+              movimiento(
+                  "tie-a",
+                  categoriaId = "cat_cine",
+                  descripcion = "cine",
+                  at = base + 4.seconds,
+              ),
+              movimiento(
+                  "tie-b",
+                  categoriaId = "cat_taxi",
+                  descripcion = "uber",
+                  at = base + 4.seconds,
+              ),
+              movimiento(
+                  "newest",
+                  categoriaId = "cat_gasolina",
+                  descripcion = "terpel",
+                  at = base + 5.seconds,
+              ),
+          )
+      rows.forEach { assertEquals(DataOutcome.Success(Unit), repository.insert(it)) }
+
+      val all =
+          assertIs<DataOutcome.Success<List<CategoryHistoryRow>>>(
+              repository.observeCategoryHistory(10).first()
+          )
+      val limited =
+          assertIs<DataOutcome.Success<List<CategoryHistoryRow>>>(
+              repository.observeCategoryHistory(2).first()
+          )
+
+      assertEquals(
+          listOf("terpel", "uber", "cine", "cafe"),
+          all.data.map(CategoryHistoryRow::descripcion),
+      )
+      assertEquals(listOf("cat_gasolina", "cat_taxi"), limited.data.map { it.categoriaId })
+      assertEquals(base + 5.seconds, all.data.first().createdAt)
+    }
+  }
+
+  @Test
+  fun `category history rejects a non positive limit and wraps unavailable storage`() = runTest {
+    val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+    try {
+      TallybookDatabase.Schema.create(driver)
+      val repository =
+          MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
+
+      assertInvalid(repository.observeCategoryHistory(0).first())
+      assertInvalid(repository.observeCategoryHistory(-1).first())
+      driver.close()
+      assertLocal(repository.observeCategoryHistory(5).first())
+    } finally {
+      driver.close()
+    }
+  }
+
+  @Test
+  fun `category history emits again after an insert and after an edit`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      TallybookDatabase.Schema.create(driver)
+      val repository =
+          MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
+      val emissions = mutableListOf<DataOutcome<List<CategoryHistoryRow>>>()
+      val collector = backgroundScope.launch {
+        repository.observeCategoryHistory(5).collect(emissions::add)
+      }
+      testScheduler.runCurrent()
+      assertEquals(DataOutcome.Success(emptyList<CategoryHistoryRow>()), emissions.last())
+
+      val row = movimiento("one", categoriaId = "cat_cafe", descripcion = "cafe")
+      assertEquals(DataOutcome.Success(Unit), repository.insert(row))
+      testScheduler.runCurrent()
+      assertEquals(
+          DataOutcome.Success(listOf(CategoryHistoryRow("cafe", "cat_cafe", row.createdAt))),
+          emissions.last(),
+      )
+
+      repository.update("one", row.changes().copy(categoriaId = "cat_restaurante"))
+      testScheduler.runCurrent()
+      assertEquals(
+          DataOutcome.Success(listOf(CategoryHistoryRow("cafe", "cat_restaurante", row.createdAt))),
+          emissions.last(),
+      )
+      collector.cancel()
+    }
+  }
+
+  @Test
+  fun `category history keeps the newest rows at the volume bound`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      TallybookDatabase.Schema.create(driver)
+      val database = TallybookDatabase(driver)
+      val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+      val base = Instant.parse("2026-01-01T00:00:00Z")
+      database.transaction {
+        repeat(CATEGORY_HISTORY_BOUND + 200) { index ->
+          database.movimientoQueries.insertMovimiento(
+              "id$index",
+              "GASTO",
+              100,
+              "COP",
+              "2026-01-01",
+              "cat_comida",
+              "row $index",
+              (base + index.seconds).toString(),
+          )
+        }
+      }
+
+      val rows =
+          assertIs<DataOutcome.Success<List<CategoryHistoryRow>>>(
+                  repository.observeCategoryHistory(CATEGORY_HISTORY_BOUND).first()
+              )
+              .data
+
+      assertEquals(CATEGORY_HISTORY_BOUND, rows.size)
+      assertEquals("row ${CATEGORY_HISTORY_BOUND + 199}", rows.first().descripcion)
+      assertEquals("row 200", rows.last().descripcion)
+    }
+  }
+
   private fun assertInvalid(outcome: DataOutcome<*>) {
     assertIs<DataError.InvalidInput>(assertIs<DataOutcome.Failure>(outcome).error)
   }
@@ -449,6 +587,7 @@ class MovimientoRepositoryTest {
       monto: Money = Money(500, Moneda.COP),
       categoriaId: String = "cat_comida",
       descripcion: String? = null,
+      at: Instant = Instant.parse("2026-09-05T12:00:00Z"),
   ) =
       Movimiento(
           id = id,
@@ -457,6 +596,8 @@ class MovimientoRepositoryTest {
           fecha = LocalDate(2026, 9, 5),
           categoriaId = categoriaId,
           descripcion = descripcion,
-          createdAt = Instant.parse("2026-09-05T12:00:00Z"),
+          createdAt = at,
       )
 }
+
+private const val CATEGORY_HISTORY_BOUND = 1_000

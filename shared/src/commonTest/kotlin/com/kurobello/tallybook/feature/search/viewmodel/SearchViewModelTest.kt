@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.model.AppLocale
@@ -556,6 +557,9 @@ private class SearchMovimientos : MovimientoRepository {
   ): Flow<DataOutcome<List<Movimiento>>> = error("Unexpected read")
 
   override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> = error("Unexpected read")
+
+  override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
+      error("Unexpected read")
 
   override suspend fun insert(movimiento: Movimiento) = DataOutcome.Success(Unit)
 

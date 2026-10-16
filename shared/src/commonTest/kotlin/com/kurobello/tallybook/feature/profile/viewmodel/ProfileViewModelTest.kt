@@ -287,6 +287,8 @@ internal class ProfileFakeMovimientos : MovimientoRepository {
 
   override fun observeFiltered(criteria: MovimientoReadCriteria) = unused()
 
+  override fun observeCategoryHistory(limit: Int) = unused()
+
   override suspend fun insert(movimiento: Movimiento) = unused()
 
   override suspend fun getById(id: String) = unused()

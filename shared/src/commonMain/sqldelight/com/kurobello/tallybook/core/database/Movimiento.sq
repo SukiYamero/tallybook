@@ -45,6 +45,13 @@ WHERE monto_moneda = ?
 ORDER BY fecha DESC, created_at DESC, id DESC
 LIMIT ?;
 
+selectCategoryHistory:
+SELECT descripcion, categoria_id, created_at
+FROM movimiento
+WHERE descripcion IS NOT NULL AND trim(descripcion) <> ''
+ORDER BY created_at DESC, id DESC
+LIMIT ?;
+
 selectMovimientoById:
 SELECT *
 FROM movimiento
