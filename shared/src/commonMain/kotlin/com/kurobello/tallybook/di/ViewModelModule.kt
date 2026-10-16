@@ -16,6 +16,7 @@ import com.kurobello.tallybook.feature.profile.viewmodel.ProfileViewModel
 import com.kurobello.tallybook.feature.search.viewmodel.SearchDateProvider
 import com.kurobello.tallybook.feature.search.viewmodel.SearchRepositories
 import com.kurobello.tallybook.feature.search.viewmodel.SearchViewModel
+import com.kurobello.tallybook.feature.tags.viewmodel.TagsViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
@@ -49,7 +50,12 @@ internal val viewModelModule = module {
   viewModel {
     AddMovimientoViewModel(
         repositories =
-            AddMovimientoRepositories(preferences = get(), categorias = get(), movimientos = get()),
+            AddMovimientoRepositories(
+                preferences = get(),
+                categorias = get(),
+                movimientos = get(),
+                etiquetas = get(),
+            ),
         idGenerator = get(),
         clock = get(),
         timeZoneProvider = get(),
@@ -60,6 +66,7 @@ internal val viewModelModule = module {
     ManageMovimientoViewModel(
         movimientoRepository = get(),
         categoriaRepository = get(),
+        etiquetaRepository = get(),
         clock = get(),
         timeZoneProvider = get(),
     )
@@ -67,7 +74,7 @@ internal val viewModelModule = module {
   viewModel { QuickCategoryViewModel(categoriaRepository = get(), suggester = get()) }
   viewModel { parameters ->
     SearchViewModel(
-        repositories = SearchRepositories(get(), get(), get()),
+        repositories = SearchRepositories(get(), get(), get(), get()),
         savedStateHandle = get(),
         unknownCategoryLabel = parameters.get(),
         dateProvider = SearchDateProvider(get(), get()),
@@ -77,10 +84,11 @@ internal val viewModelModule = module {
   viewModel {
     ProfileViewModel(
         preferencesRepository = get(),
-        export = ProfileExportDependencies(get(), get(), get(), get(), get()),
+        export = ProfileExportDependencies(get(), get(), get(), get(), get(), get()),
         appInfo = get(),
         computationDispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.DEFAULT)),
     )
   }
   viewModel { CategoriesViewModel(categorias = get(), preferences = get(), suggester = get()) }
+  viewModel { TagsViewModel(etiquetas = get(), preferences = get()) }
 }

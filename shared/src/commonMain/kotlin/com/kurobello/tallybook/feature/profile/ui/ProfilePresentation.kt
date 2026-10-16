@@ -14,6 +14,7 @@ import tallybook.shared.generated.resources.csv_header_currency
 import tallybook.shared.generated.resources.csv_header_date
 import tallybook.shared.generated.resources.csv_header_description
 import tallybook.shared.generated.resources.csv_header_parent_category
+import tallybook.shared.generated.resources.csv_header_tags
 import tallybook.shared.generated.resources.csv_header_title
 import tallybook.shared.generated.resources.csv_header_type
 import tallybook.shared.generated.resources.currency_name_ars
@@ -85,6 +86,7 @@ internal fun movimientoCsvLabels(): MovimientoCsvLabels =
         typeHeader = stringResource(Res.string.csv_header_type),
         categoryHeader = stringResource(Res.string.csv_header_category),
         parentCategoryHeader = stringResource(Res.string.csv_header_parent_category),
+        tagsHeader = stringResource(Res.string.csv_header_tags),
         titleHeader = stringResource(Res.string.csv_header_title),
         descriptionHeader = stringResource(Res.string.csv_header_description),
         amountHeader = stringResource(Res.string.csv_header_amount),

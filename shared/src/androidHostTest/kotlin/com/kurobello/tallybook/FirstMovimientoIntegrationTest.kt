@@ -5,6 +5,7 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
+import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
@@ -13,6 +14,7 @@ import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
+import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.AppPreferences
@@ -73,6 +75,13 @@ class FirstMovimientoIntegrationTest {
                   IdGenerator { error("Not used by this test") },
               )
           val movimientos = MovimientoRepositoryImpl(database, dispatcher)
+          val etiquetas =
+              EtiquetaRepositoryImpl(
+                  database,
+                  dispatcher,
+                  IdGenerator { error("Not used by this test") },
+                  FixedClock(FIXED_INSTANT),
+              )
           val bootstrapper =
               LocalDataBootstrapper(
                   localeProvider = FixedDeviceLocaleProvider("es-CO"),
@@ -109,7 +118,8 @@ class FirstMovimientoIntegrationTest {
 
           val expenseForm =
               createMovimientoViewModel(
-                  repositories = AddMovimientoRepositories(preferences, categorias, movimientos),
+                  repositories =
+                      AddMovimientoRepositories(preferences, categorias, movimientos, etiquetas),
                   id = "expense",
                   scope = scopes.newScope(dispatcher),
                   dispatcher = dispatcher,
@@ -117,7 +127,7 @@ class FirstMovimientoIntegrationTest {
           testScheduler.advanceUntilIdle()
           expenseForm.apply {
             onAmountChanged("10,50")
-            onCategoriasChanged(listOf("cat_comida"))
+            onCategoriaSelected("cat_comida")
             onSubmit()
           }
           testScheduler.advanceUntilIdle()
@@ -127,7 +137,8 @@ class FirstMovimientoIntegrationTest {
 
           val incomeForm =
               createMovimientoViewModel(
-                  repositories = AddMovimientoRepositories(preferences, categorias, movimientos),
+                  repositories =
+                      AddMovimientoRepositories(preferences, categorias, movimientos, etiquetas),
                   id = "income",
                   scope = scopes.newScope(dispatcher),
                   dispatcher = dispatcher,
@@ -136,7 +147,7 @@ class FirstMovimientoIntegrationTest {
           incomeForm.apply {
             onTipoChanged(TipoMovimiento.INGRESO)
             onAmountChanged("20,00")
-            onCategoriasChanged(listOf("cat_ingresos"))
+            onCategoriaSelected("cat_ingresos")
             onSubmit()
           }
           testScheduler.advanceUntilIdle()
@@ -158,7 +169,7 @@ class FirstMovimientoIntegrationTest {
                       tipo = TipoMovimiento.INGRESO,
                       monto = Money(9_999, Moneda.USD),
                       fecha = FIXED_DATE,
-                      categoriaIds = listOf("cat_ingresos"),
+                      categoriaId = "cat_ingresos",
                       titulo = null,
                       descripcion = null,
                       createdAt = FIXED_INSTANT,
@@ -228,6 +239,13 @@ class FirstMovimientoIntegrationTest {
                   IdGenerator { error("Not used by this test") },
               )
           val movimientos = MovimientoRepositoryImpl(database, dispatcher)
+          val etiquetas =
+              EtiquetaRepositoryImpl(
+                  database,
+                  dispatcher,
+                  IdGenerator { error("Not used by this test") },
+                  FixedClock(FIXED_INSTANT),
+              )
           val bootstrapper =
               LocalDataBootstrapper(
                   localeProvider = FixedDeviceLocaleProvider("es-CO"),
@@ -237,7 +255,8 @@ class FirstMovimientoIntegrationTest {
               )
           assertEquals(DataOutcome.Success(Unit), bootstrapper.initialize())
 
-          val repositories = AddMovimientoRepositories(preferences, categorias, movimientos)
+          val repositories =
+              AddMovimientoRepositories(preferences, categorias, movimientos, etiquetas)
           val first =
               createMovimientoViewModel(
                   repositories,
@@ -248,7 +267,7 @@ class FirstMovimientoIntegrationTest {
           testScheduler.advanceUntilIdle()
           first.onPhraseChanged("Aceite 30 mil")
           first.onPhraseContinue()
-          assertTrue(first.uiState.value.categoriaIds.isEmpty())
+          assertNull(first.uiState.value.categoriaId)
           first.onSuggestionSelected("cat_supermercado")
           first.onSubmit()
           testScheduler.advanceUntilIdle()
@@ -257,7 +276,7 @@ class FirstMovimientoIntegrationTest {
           assertEquals("first", saved.id)
           assertEquals("Aceite 30 mil", saved.titulo)
           assertNull(saved.descripcion)
-          assertEquals(listOf("cat_supermercado"), saved.categoriaIds)
+          assertEquals("cat_supermercado", saved.categoriaId)
           assertEquals(Money(3_000_000, Moneda.COP), saved.monto)
           assertEquals(FIXED_DATE, saved.fecha)
 
@@ -272,8 +291,8 @@ class FirstMovimientoIntegrationTest {
           second.onPhraseChanged("Aceite 15 mil")
           second.onPhraseContinue()
 
-          assertEquals(listOf("cat_supermercado"), second.uiState.value.categoriaIds)
-          assertEquals(Money(1_500_000, Moneda.COP), second.uiState.value.summary?.monto)
+          assertEquals("cat_supermercado", second.uiState.value.categoriaId)
+          assertEquals(Money(1_500_000, Moneda.COP), second.uiState.value.summary.monto)
 
           second.onDiscardChanges()
           second.onPhraseChanged("Gasté 5.000 en algo raro")
@@ -282,8 +301,8 @@ class FirstMovimientoIntegrationTest {
           testScheduler.advanceUntilIdle()
 
           assertEquals(
-              listOf(CATEGORIA_OTROS_ID),
-              assertSuccess(movimientos.getAll()).single { it.id == "second" }.categoriaIds,
+              CATEGORIA_OTROS_ID,
+              assertSuccess(movimientos.getAll()).single { it.id == "second" }.categoriaId,
           )
         } finally {
           scopes.forEach(CoroutineScope::cancel)
@@ -308,6 +327,7 @@ class FirstMovimientoIntegrationTest {
               MovimientoEntryEngine(
                   parser = MovimientoPhraseParser(),
                   suggester = CategorySuggester(CategoryKeywordDictionary.builtIn),
+                  etiquetaMatcher = EtiquetaMatcher(),
                   localeProvider = FixedDeviceLocaleProvider("es-CO"),
                   computationDispatcher = dispatcher,
               ),

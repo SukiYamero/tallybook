@@ -7,6 +7,8 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
+import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
@@ -76,6 +78,7 @@ internal class CategoriesViewModelGraphHostTest {
           entryModule,
           module {
             single<AppPreferencesRepository> { preferences }
+            single<EtiquetaRepository> { FakeEtiquetaRepository() }
             single<CategoriaRepository> { categorias }
           },
       )
@@ -137,7 +140,7 @@ private fun movimiento(id: String, moneda: Moneda) =
         TipoMovimiento.GASTO,
         Money(125, moneda),
         LocalDate(2026, 10, 5),
-        listOf("custom-gym"),
+        "custom-gym",
         null,
         null,
         Instant.parse("2026-10-05T00:00:00Z"),

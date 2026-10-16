@@ -1,0 +1,83 @@
+-- A movimiento keeps one categoria in its own row; the rest of its old categorias are discarded. The
+-- table is rebuilt so the migrated DDL matches a fresh install exactly, and the view goes first
+-- because renaming a table rewrites the views that reference it.
+DROP VIEW movimiento_con_categorias;
+
+ALTER TABLE movimiento RENAME TO movimiento_legacy;
+
+CREATE TABLE movimiento (
+    id TEXT NOT NULL PRIMARY KEY,
+    tipo TEXT NOT NULL,
+    monto_minor INTEGER NOT NULL,
+    monto_moneda TEXT NOT NULL,
+    fecha TEXT NOT NULL,
+    descripcion TEXT,
+    created_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00Z',
+    titulo TEXT,
+    categoria_id TEXT NOT NULL
+);
+
+-- The first category in display order survives; a movimiento that lost every link is pending in
+-- Otros, the same fallback creation uses.
+INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, descripcion, created_at, titulo, categoria_id)
+SELECT
+    id,
+    tipo,
+    monto_minor,
+    monto_moneda,
+    fecha,
+    descripcion,
+    created_at,
+    titulo,
+    COALESCE(
+        (
+            SELECT categoria_id
+            FROM movimiento_categoria
+            WHERE movimiento_categoria.movimiento_id = movimiento_legacy.id
+            ORDER BY posicion, categoria_id
+            LIMIT 1
+        ),
+        'cat_otros'
+    )
+FROM movimiento_legacy;
+
+DROP INDEX movimiento_recent;
+
+DROP TABLE movimiento_legacy;
+
+DROP INDEX movimiento_categoria_categoria;
+
+DROP TABLE movimiento_categoria;
+
+CREATE INDEX movimiento_recent ON movimiento(fecha DESC, created_at DESC, id DESC);
+
+CREATE INDEX movimiento_by_categoria ON movimiento(categoria_id);
+
+CREATE TABLE etiqueta (
+    id TEXT NOT NULL PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    descripcion TEXT,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE movimiento_etiqueta (
+    movimiento_id TEXT NOT NULL,
+    etiqueta_id TEXT NOT NULL,
+    posicion INTEGER NOT NULL,
+    PRIMARY KEY (movimiento_id, etiqueta_id)
+);
+
+CREATE INDEX movimiento_etiqueta_etiqueta ON movimiento_etiqueta(etiqueta_id);
+
+CREATE VIEW movimiento_con_etiquetas AS
+SELECT
+    movimiento.*,
+    COALESCE(
+        (
+            SELECT group_concat(movimiento_etiqueta.posicion || char(31) || movimiento_etiqueta.etiqueta_id, char(30))
+            FROM movimiento_etiqueta
+            WHERE movimiento_etiqueta.movimiento_id = movimiento.id
+        ),
+        ''
+    ) AS etiqueta_ids
+FROM movimiento;

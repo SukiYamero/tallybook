@@ -26,6 +26,7 @@ internal data class SearchSavedInput(
     val customEnd: String,
     val tipo: String?,
     val categoryIds: List<String>,
+    val etiquetaIds: List<String> = emptyList(),
 ) {
   companion object {
     fun restore(input: SearchSavedInput?, today: LocalDate): SearchRestoredInput {
@@ -49,6 +50,7 @@ internal fun SearchFilters.savedInput(rawQuery: String): SearchSavedInput =
         customEnd = customEnd.toString(),
         tipo = tipo?.let(typeTokens::getValue),
         categoryIds = categoryIds.sorted(),
+        etiquetaIds = etiquetaIds.sorted(),
     )
 
 private fun SearchSavedInput.restoreFilters(today: LocalDate): SearchFilters? {
@@ -68,6 +70,7 @@ private fun SearchSavedInput.restoreFilters(today: LocalDate): SearchFilters? {
           end,
           restoredType,
           categoryIds.filterNot { it.isBlank() }.toSet(),
+          etiquetaIds.filterNot { it.isBlank() }.toSet(),
       )
   return when (val resolution = resolveSearchFilters(filters, today)) {
     is SearchFilterResolution.Valid -> resolution.filters

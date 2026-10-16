@@ -10,4 +10,5 @@ internal data class EditMovimientoDraftState(
     val submitAttempted: Boolean = false,
     val error: MovimientoFormError? = null,
     val validationDate: LocalDate = maxSelectableDate,
+    val failedEtiquetaNombre: String? = null,
 )

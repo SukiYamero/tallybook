@@ -1,8 +1,12 @@
 package com.kurobello.tallybook.core.ui.navigation
 
+import androidx.compose.runtime.mutableStateOf
+import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSession
+import com.kurobello.tallybook.feature.search.ui.SearchFilterRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 import kotlinx.serialization.json.Json
 
@@ -118,6 +122,58 @@ internal class PrimaryNavigationTest {
   }
 
   @Test
+  fun tagsOpensOnlyOverProfileAndBackReturnsToProfile() {
+    val home = PrimaryNavigationState()
+    assertSame(home, home.openSecondary(Tags))
+    val search = home.select(Search)
+    assertSame(search, search.openSecondary(Tags))
+
+    val profile = search.select(Profile)
+    val tags = profile.openSecondary(Tags)
+    assertEquals(Tags, tags.secondary)
+    assertEquals(listOf(Home, Search, Profile, Tags), tags.retainedKeys)
+    assertEquals(listOf(Home, Profile, Tags), tags.displayedKeys)
+    assertSame(tags, tags.openSecondary(Categories))
+    assertSame(tags, tags.openSecondary(Tags))
+    assertEquals(profile, tags.back())
+    assertEquals(profile, tags.select(Profile))
+    assertEquals(
+        initialPrimaryNavigation(Tags),
+        initialPrimaryNavigation(Profile).openSecondary(Tags),
+    )
+    assertEquals("secondary-tags", primaryContentKey(Tags))
+  }
+
+  @Test
+  fun viewingATagsMovimientosLeavesTagsForSearchWithAPendingTagFilter() {
+    val navigation = mutableStateOf(PrimaryNavigationState())
+    val modals = PrimaryModalCoordinator(AddMovimientoSheetSession()) { false }
+    val navigator = PrimaryNavigator(navigation, modals, catalogEnabled = false)
+    navigator.select(Profile)
+    navigator.openSecondary(Tags)
+    assertEquals(Tags, navigator.state.secondary)
+
+    navigator.showSearchFilter(etiquetaIds = setOf("t_empresa"))
+
+    assertEquals(Search, navigator.state.selected)
+    assertEquals(null, navigator.state.secondary)
+    val request = assertNotNull(navigator.searchFilterRequest)
+    assertEquals(SearchFilterRequest(request.token, etiquetaIds = setOf("t_empresa")), request)
+    assertEquals(Home, navigator.state.back().selected)
+  }
+
+  @Test
+  fun snapshotWithTagsOpenRestoresTheSecondarySlot() {
+    val original = PrimaryNavigationState().select(Profile).openSecondary(Tags)
+    val restored =
+        Json.decodeFromString<PrimaryNavigationState>(
+            Json.encodeToString(PrimaryNavigationState.serializer(), original)
+        )
+    assertEquals(original, restored)
+    assertEquals(Profile, restored.back().selected)
+  }
+
+  @Test
   fun showingACategoryLeavesCategoriesForSearchWhoseBackSelectsHome() {
     val categories = PrimaryNavigationState().select(Profile).openSecondary(Categories)
     val search = categories.select(Search)
@@ -147,6 +203,7 @@ internal class PrimaryNavigationTest {
     assertFailsWith<IllegalArgumentException> {
       PrimaryNavigationState(Home, secondary = Categories)
     }
+    assertFailsWith<IllegalArgumentException> { PrimaryNavigationState(Home, secondary = Tags) }
     assertFailsWith<IllegalArgumentException> {
       PrimaryNavigationState(Profile, profileVisited = true, secondary = Search)
     }

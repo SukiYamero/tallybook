@@ -6,6 +6,7 @@ import androidx.savedstate.serialization.encodeToSavedState
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.datetime.LocalDate
+import kotlinx.serialization.Serializable
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
@@ -24,6 +25,42 @@ internal class SearchSavedStateTest {
   }
 
   @Test
+  fun `typed checkpoint restores tag filters`() {
+    val today = LocalDate(2026, 10, 6)
+    val filters = SearchFilters.initial(today).copy(etiquetaIds = setOf("t_empresa"))
+    val checkpoint = encodeToSavedState(SearchSavedInput.serializer(), filters.savedInput(""))
+    val restored =
+        restoreSearchInput(SavedStateHandle(mapOf(SEARCH_SAVED_INPUT_KEY to checkpoint)), today)
+    assertEquals(filters, restored.filters)
+  }
+
+  @Test
+  fun `checkpoint saved before tags existed restores its filters without tags`() {
+    val today = LocalDate(2026, 10, 6)
+    val checkpoint =
+        encodeToSavedState(
+            PreTagsSearchSavedInput.serializer(),
+            PreTagsSearchSavedInput(
+                1,
+                "cafe",
+                "this-year",
+                "2026-10-06",
+                "2026-10-06",
+                null,
+                listOf("food"),
+            ),
+        )
+    val restored =
+        restoreSearchInput(SavedStateHandle(mapOf(SEARCH_SAVED_INPUT_KEY to checkpoint)), today)
+    assertEquals("cafe", restored.rawQuery)
+    assertEquals(
+        SearchFilters.initial(today)
+            .copy(preset = SearchDatePreset.ThisYear, categoryIds = setOf("food")),
+        restored.filters,
+    )
+  }
+
+  @Test
   fun `wrong or undecodable containers recover fresh input`() {
     val today = LocalDate(2026, 10, 6)
     for (payload in listOf("invalid", 7, savedState())) {
@@ -34,3 +71,14 @@ internal class SearchSavedStateTest {
     }
   }
 }
+
+@Serializable
+private data class PreTagsSearchSavedInput(
+    val version: Int,
+    val rawQuery: String,
+    val preset: String,
+    val customStart: String,
+    val customEnd: String,
+    val tipo: String?,
+    val categoryIds: List<String>,
+)

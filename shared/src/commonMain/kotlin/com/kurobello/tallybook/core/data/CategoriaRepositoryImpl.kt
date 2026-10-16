@@ -16,7 +16,6 @@ import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
-import com.kurobello.tallybook.core.model.fold
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -241,9 +240,6 @@ private fun CategoriaQueries.findDuplicate(nombre: String, excludingId: String?)
 }
 
 private fun unknownCategoria(id: String) = DataError.InvalidInput("Unknown categoria $id")
-
-private fun <T> DataOutcome<DataOutcome<T>>.flatten(): DataOutcome<T> =
-    fold(onSuccess = { it }, onFailure = { DataOutcome.Failure(it) })
 
 private fun com.kurobello.tallybook.core.database.Categoria.toDomain(): Categoria =
     Categoria(

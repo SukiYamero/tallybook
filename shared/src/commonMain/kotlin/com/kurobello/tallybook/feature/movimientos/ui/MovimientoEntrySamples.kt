@@ -6,12 +6,15 @@ import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.feature.movimientos.viewmodel.EtiquetasLoad
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSentenceUi
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSummaryUi
 import com.kurobello.tallybook.feature.movimientos.viewmodel.PhrasePreviewUi
+import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
@@ -25,7 +28,8 @@ import tallybook.shared.generated.resources.category_transporte
 
 /**
  * Deterministic UI models shared by previews, the UI catalog and device tests. Category names are
- * the localized seed names, so samples read like real data in every language.
+ * the localized seed names, so samples read like real data in every language; tag names are user
+ * data and never translated.
  */
 @Suppress("MagicNumber", "LongParameterList")
 internal class MovimientoEntrySamples(
@@ -41,15 +45,23 @@ internal class MovimientoEntrySamples(
 
   val all = listOf(cinema, food, transport, other, health, home, gifts)
 
+  val etiquetas =
+      listOf("Empresa", "Viaje Chile", "Casa", "Regalos", "Salud", "Auto").map { nombre ->
+        Etiqueta("tag_$nombre", nombre, Instant.parse("2026-01-01T00:00:00Z"))
+      }
+  val business = etiquetas.first()
+
   val emptySentence =
       MovimientoSentenceUi(
           text = "",
           detected = PhrasePreviewUi(TipoMovimiento.GASTO, monto = null, fecha = today),
           today = today,
           moneda = moneda,
-          categorias = listOf(other),
-          categoriasArePending = true,
+          categoria = other,
+          categoriaIsPending = true,
           suggestions = emptyList(),
+          etiquetas = emptyList(),
+          etiquetasLoad = EtiquetasLoad.READY,
           isEnabled = true,
           actionsEnabled = true,
       )
@@ -62,9 +74,10 @@ internal class MovimientoEntrySamples(
       partialSentence.copy(
           text = SENTENCE,
           detected = PhrasePreviewUi(TipoMovimiento.GASTO, twentyThousand, yesterday),
-          categorias = listOf(cinema),
-          categoriasArePending = false,
+          categoria = cinema,
+          categoriaIsPending = false,
           suggestions = listOf(food, transport),
+          etiquetas = listOf(business),
       )
   val incomeSentence =
       completeSentence.copy(
@@ -80,24 +93,22 @@ internal class MovimientoEntrySamples(
           amountNeedsReview = false,
           titulo = SENTENCE,
           descripcion = "",
-          categorias = listOf(cinema),
-          categoriasArePending = false,
+          categoria = cinema,
+          categoriaIsPending = false,
           suggestions = listOf(food, transport),
+          etiquetas = listOf(business),
+          etiquetasLoad = EtiquetasLoad.READY,
           isSubmitting = false,
       )
   val missingAmountSummary = completeSummary.copy(monto = null)
   val ambiguousAmountSummary = completeSummary.copy(amountNeedsReview = true)
   val pendingSummary =
       completeSummary.copy(
-          categorias = listOf(other),
-          categoriasArePending = true,
+          categoria = other,
+          categoriaIsPending = true,
           suggestions = listOf(cinema, food, transport),
       )
-  val fullSummary =
-      completeSummary.copy(
-          categorias = listOf(cinema, food, transport, health, home, gifts),
-          suggestions = emptyList(),
-      )
+  val fullSummary = completeSummary.copy(etiquetas = etiquetas)
   val submittingSummary = completeSummary.copy(isSubmitting = true)
   val incomeSummary =
       completeSummary.copy(

@@ -69,7 +69,8 @@ private val primaryDestinations: Set<Destination> = setOf(Home, History, Search,
 private fun Destination.opensOver(primary: Destination): Boolean =
     when (this) {
       UiCatalog -> true
-      Categories -> primary == Profile
+      Categories,
+      Tags -> primary == Profile
       Home,
       History,
       Search,
@@ -83,5 +84,6 @@ internal fun initialPrimaryNavigation(start: Destination): PrimaryNavigationStat
       Search -> PrimaryNavigationState(Search, searchVisited = true)
       Profile -> PrimaryNavigationState(Profile, profileVisited = true)
       UiCatalog -> PrimaryNavigationState(secondary = UiCatalog)
-      Categories -> PrimaryNavigationState(Profile, profileVisited = true, secondary = Categories)
+      Categories,
+      Tags -> PrimaryNavigationState(Profile, profileVisited = true, secondary = start)
     }

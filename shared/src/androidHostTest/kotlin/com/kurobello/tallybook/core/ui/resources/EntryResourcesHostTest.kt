@@ -3,7 +3,6 @@ package com.kurobello.tallybook.core.ui.resources
 import java.util.Locale
 import kotlin.test.assertEquals
 import kotlinx.coroutines.runBlocking
-import org.jetbrains.compose.resources.getPluralString
 import org.jetbrains.compose.resources.getString
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -12,7 +11,6 @@ import org.robolectric.annotation.Config
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.movimiento_amount_not_detected
 import tallybook.shared.generated.resources.movimiento_detected_label
-import tallybook.shared.generated.resources.movimiento_row_extra_categories
 import tallybook.shared.generated.resources.movimiento_summary_title
 
 @RunWith(RobolectricTestRunner::class)
@@ -53,29 +51,6 @@ class EntryResourcesHostTest {
       cases.forEach { (locale, message) ->
         Locale.setDefault(Locale.forLanguageTag(locale))
         assertEquals(message, getString(Res.string.movimiento_amount_not_detected), locale)
-      }
-    } finally {
-      Locale.setDefault(original)
-    }
-  }
-
-  @Test
-  fun extraCategoryCountAgreesInNumberForEveryLocale() = runBlocking {
-    val original = Locale.getDefault()
-    try {
-      val cases =
-          listOf(
-              Triple("es-CO", "1 categoría más", "2 categorías más"),
-              Triple("es-AR", "1 categoría más", "2 categorías más"),
-              Triple("en-US", "1 more category", "2 more categories"),
-              Triple("pt-BR", "mais 1 categoria", "mais 2 categorias"),
-          )
-      cases.forEach { (locale, singular, plural) ->
-        Locale.setDefault(Locale.forLanguageTag(locale))
-        val one = getPluralString(Res.plurals.movimiento_row_extra_categories, 1, 1)
-        val two = getPluralString(Res.plurals.movimiento_row_extra_categories, 2, 2)
-        assertEquals(singular, one, locale)
-        assertEquals(plural, two, locale)
       }
     } finally {
       Locale.setDefault(original)

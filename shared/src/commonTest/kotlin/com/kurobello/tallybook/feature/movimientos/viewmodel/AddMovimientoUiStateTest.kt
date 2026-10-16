@@ -8,6 +8,7 @@ import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlinx.datetime.LocalDate
 
 class AddMovimientoUiStateTest {
@@ -22,7 +23,7 @@ class AddMovimientoUiStateTest {
             fecha = LocalDate(2026, 10, 16),
             moneda = Moneda.COP,
             categorias = listOf(cine),
-            categoriaIds = emptyList(),
+            categoriaId = null,
             titulo = "Gasté 20000",
             descripcion = "",
             isLoading = false,
@@ -34,8 +35,8 @@ class AddMovimientoUiStateTest {
 
     val summary = state.summary
 
-    assertEquals(emptyList(), summary.categorias)
-    assertFalse(summary.categoriasArePending)
+    assertNull(summary.categoria)
+    assertFalse(summary.categoriaIsPending)
     assertEquals("Gasté 20000", summary.titulo)
   }
 }

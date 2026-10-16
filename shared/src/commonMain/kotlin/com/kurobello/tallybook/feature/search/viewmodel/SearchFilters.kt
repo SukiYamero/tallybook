@@ -26,32 +26,44 @@ internal class SearchFilters(
     val customEnd: LocalDate,
     val tipo: TipoMovimiento? = null,
     categoryIds: Set<String> = emptySet(),
+    etiquetaIds: Set<String> = emptySet(),
 ) {
   private val capturedCategoryIds = categoryIds.toSet()
+  private val capturedEtiquetaIds = etiquetaIds.toSet()
 
   init {
     require(capturedCategoryIds.none { it.isBlank() }) { "Selected category IDs must not be blank" }
+    require(capturedEtiquetaIds.none { it.isBlank() }) { "Selected etiqueta IDs must not be blank" }
   }
 
   val categoryIds: Set<String>
     get() = capturedCategoryIds.toSet()
 
-  val hasActiveFilters: Boolean
-    get() = preset != SearchDatePreset.All || tipo != null || capturedCategoryIds.isNotEmpty()
+  val etiquetaIds: Set<String>
+    get() = capturedEtiquetaIds.toSet()
 
+  val hasActiveFilters: Boolean
+    get() =
+        preset != SearchDatePreset.All ||
+            tipo != null ||
+            capturedCategoryIds.isNotEmpty() ||
+            capturedEtiquetaIds.isNotEmpty()
+
+  @Suppress("LongParameterList")
   fun copy(
       preset: SearchDatePreset = this.preset,
       customStart: LocalDate = this.customStart,
       customEnd: LocalDate = this.customEnd,
       tipo: TipoMovimiento? = this.tipo,
       categoryIds: Set<String> = capturedCategoryIds,
-  ): SearchFilters = SearchFilters(preset, customStart, customEnd, tipo, categoryIds)
+      etiquetaIds: Set<String> = capturedEtiquetaIds,
+  ): SearchFilters = SearchFilters(preset, customStart, customEnd, tipo, categoryIds, etiquetaIds)
 
   fun toggleCategory(id: String): SearchFilters =
-      copy(
-          categoryIds =
-              if (id in capturedCategoryIds) capturedCategoryIds - id else capturedCategoryIds + id
-      )
+      copy(categoryIds = capturedCategoryIds.toggled(id))
+
+  fun toggleEtiqueta(id: String): SearchFilters =
+      copy(etiquetaIds = capturedEtiquetaIds.toggled(id))
 
   fun availableYears(
       persistedYears: List<Int>,
@@ -74,20 +86,24 @@ internal class SearchFilters(
           customStart == other.customStart &&
           customEnd == other.customEnd &&
           tipo == other.tipo &&
-          capturedCategoryIds == other.capturedCategoryIds
+          capturedCategoryIds == other.capturedCategoryIds &&
+          capturedEtiquetaIds == other.capturedEtiquetaIds
 
   override fun hashCode(): Int {
     var result = preset.hashCode()
     result = FILTER_HASH_MULTIPLIER * result + customStart.hashCode()
     result = FILTER_HASH_MULTIPLIER * result + customEnd.hashCode()
     result = FILTER_HASH_MULTIPLIER * result + (tipo?.hashCode() ?: 0)
-    return FILTER_HASH_MULTIPLIER * result + capturedCategoryIds.hashCode()
+    result = FILTER_HASH_MULTIPLIER * result + capturedCategoryIds.hashCode()
+    return FILTER_HASH_MULTIPLIER * result + capturedEtiquetaIds.hashCode()
   }
 
   companion object {
     fun initial(today: LocalDate): SearchFilters = SearchFilters(SearchDatePreset.All, today, today)
   }
 }
+
+private fun Set<String>.toggled(id: String): Set<String> = if (id in this) this - id else this + id
 
 internal enum class SearchDateFailure {
   FutureDate,

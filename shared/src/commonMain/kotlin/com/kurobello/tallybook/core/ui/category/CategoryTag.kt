@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
@@ -25,8 +24,6 @@ import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.category_tag_add
-import tallybook.shared.generated.resources.category_tag_add_description
 import tallybook.shared.generated.resources.category_tag_remove
 
 /**
@@ -69,15 +66,19 @@ internal fun CategoryTag(
   }
 }
 
-/** Outlined tag with a leading plus that offers [categoria] as a choice to add. */
+/**
+ * Outlined tag with a leading plus that offers [categoria] as a choice to add. [dimmed] borrows the
+ * disabled look while staying clickable, for suggestions that would replace a current choice.
+ */
 @Composable
 internal fun CategorySuggestionTag(
     categoria: Categoria,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    dimmed: Boolean = false,
 ) {
-  val appearance = suggestedTagAppearance(categoria, enabled)
+  val appearance = suggestedTagAppearance(categoria, enabled = enabled && !dimmed)
   CategoryTagButton(
       onClick = onClick,
       enabled = enabled,
@@ -87,26 +88,6 @@ internal fun CategorySuggestionTag(
     CategoryTagIcon(Lucide.Plus, appearance.accent)
     CategoryAvatar(categoria, Modifier.size(TallybookTheme.spacing.space28))
     CategoryTagLabel(categoria.nombre)
-  }
-}
-
-/** Neutral "+ Add" tag that opens the category picker. */
-@Composable
-internal fun CategoryAddTag(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-) {
-  val appearance = addTagAppearance(enabled)
-  val description = stringResource(Res.string.category_tag_add_description)
-  CategoryTagButton(
-      onClick = onClick,
-      enabled = enabled,
-      appearance = appearance,
-      modifier = modifier.semantics { contentDescription = description },
-  ) {
-    CategoryTagIcon(Lucide.Plus, appearance.accent)
-    CategoryTagLabel(stringResource(Res.string.category_tag_add))
   }
 }
 
@@ -162,7 +143,7 @@ private fun suggestedTagAppearance(categoria: Categoria, enabled: Boolean): Cate
 }
 
 @Composable
-private fun addTagAppearance(enabled: Boolean): CategoryTagAppearance {
+internal fun addTagAppearance(enabled: Boolean): CategoryTagAppearance {
   val colors = TallybookTheme.colors
   val content = if (enabled) colors.foreground.secondary else colors.foreground.disabled
   return CategoryTagAppearance(
@@ -210,11 +191,7 @@ private fun CategoryTagPreviewMatrix() {
       CategorySuggestionTag(previewCategoria, onClick = {})
       CategorySuggestionTag(previewCategoria, onClick = {}, enabled = false)
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8)) {
-      CategoryAddTag(onClick = {})
-      CategoryAddTag(onClick = {}, enabled = false)
-      CategoryTag(previewCategoria, enabled = false, onRemove = {})
-    }
+    CategoryTag(previewCategoria, enabled = false, onRemove = {})
   }
 }
 

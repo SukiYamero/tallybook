@@ -1,13 +1,7 @@
 package com.kurobello.tallybook.feature.categories.ui
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -19,19 +13,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.kurobello.tallybook.core.ui.component.TallybookScreenSnackbar
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarDuration
-import com.kurobello.tallybook.core.ui.component.TallybookSnackbarHost
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarMessage
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarStatus
 import com.kurobello.tallybook.core.ui.navigation.DestinationModalController
 import com.kurobello.tallybook.core.ui.navigation.PrimaryModalCoordinator
-import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.categories.viewmodel.CategoriesActions
 import com.kurobello.tallybook.feature.categories.viewmodel.CategoriesEffect
 import com.kurobello.tallybook.feature.categories.viewmodel.CategoriesFeedback
@@ -40,14 +32,12 @@ import com.kurobello.tallybook.feature.categories.viewmodel.CategoriesViewModel
 import com.kurobello.tallybook.feature.categories.viewmodel.CategorySheetRequest
 import kotlinx.coroutines.flow.first
 import org.jetbrains.compose.resources.getString
-import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_created
 import tallybook.shared.generated.resources.category_deleted
 import tallybook.shared.generated.resources.category_hidden_feedback
 import tallybook.shared.generated.resources.category_updated
-import tallybook.shared.generated.resources.movimiento_notification_close
 
 @Composable
 internal fun CategoriesRoute(
@@ -96,40 +86,10 @@ internal fun CategoriesRoute(
   }
   Box(modifier = modifier.fillMaxSize()) {
     CategoriesScreen(uiState, actions, onBack)
-    CategoriesSnackbar(
+    TallybookScreenSnackbar(
         message = snackbar,
         isActive = uiState.sheet == null,
         onDismiss = { token -> if (snackbar?.token == token) snackbar = null },
-    )
-  }
-}
-
-@Composable
-private fun CategoriesSnackbar(
-    message: TallybookSnackbarMessage?,
-    isActive: Boolean,
-    onDismiss: (Long) -> Unit,
-) {
-  Box(
-      modifier =
-          Modifier.fillMaxSize()
-              .windowInsetsPadding(WindowInsets.safeDrawing)
-              .padding(
-                  start = TallybookTheme.dimensions.screenHorizontal,
-                  end = TallybookTheme.dimensions.screenHorizontal,
-                  bottom = TallybookTheme.spacing.space16,
-              )
-  ) {
-    TallybookSnackbarHost(
-        message = message,
-        isActive = isActive,
-        closeLabel = stringResource(Res.string.movimiento_notification_close),
-        onAction = { _, _ -> },
-        onDismiss = { token, _, _ -> onDismiss(token) },
-        modifier =
-            Modifier.align(Alignment.BottomCenter)
-                .widthIn(max = TallybookTheme.dimensions.screenContentMaxWidth)
-                .fillMaxWidth(),
     )
   }
 }

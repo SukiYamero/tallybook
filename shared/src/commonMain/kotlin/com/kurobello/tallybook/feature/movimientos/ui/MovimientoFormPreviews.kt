@@ -52,7 +52,7 @@ private fun previewUiState(
         fecha = LocalDate.parse("2026-09-15"),
         moneda = Moneda.COP,
         categorias = emptyList(),
-        categoriaIds = emptyList(),
+        categoriaId = null,
         titulo = "",
         descripcion = "",
         isLoading = isLoading,
@@ -69,9 +69,17 @@ private object PreviewAddMovimientoActions : AddMovimientoActions {
 
   override fun onFechaChanged(value: LocalDate) = Unit
 
-  override fun onCategoriasChanged(ids: List<String>) = Unit
+  override fun onCategoriaSelected(id: String) = Unit
 
-  override fun onCategoriaRemoved(id: String) = Unit
+  override fun onCategoriaCleared() = Unit
+
+  override fun onEtiquetasChanged(ids: List<String>) = Unit
+
+  override fun onEtiquetaRemoved(id: String) = Unit
+
+  override fun onCreateEtiqueta(nombre: String) = Unit
+
+  override fun onRetryEtiquetas() = Unit
 
   override fun onTituloChanged(value: String) = Unit
 

@@ -2,6 +2,7 @@ package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
+import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
@@ -34,11 +35,13 @@ import kotlinx.datetime.TimeZone
 internal class ManageMovimientoFixture(scope: CoroutineScope) {
   val repository = ManagementRepository()
   val categorias = ManagementCategorias()
+  val etiquetas = FakeEtiquetaRepository()
   val clock = ManagementClock()
   val viewModel =
       ManageMovimientoViewModel(
           repository,
           categorias,
+          etiquetas,
           clock,
           TimeZoneProvider { TimeZone.UTC },
           scope,
@@ -111,7 +114,8 @@ internal class ManagementRepository : MovimientoRepository {
               tipo = changes.tipo,
               monto = changes.monto,
               fecha = changes.fecha,
-              categoriaIds = changes.categoriaIds,
+              categoriaId = changes.categoriaId,
+              etiquetaIds = changes.etiquetaIds,
               titulo = changes.titulo,
               descripcion = changes.descripcion,
           )
@@ -176,7 +180,7 @@ internal fun managementMovimiento() =
         TipoMovimiento.GASTO,
         Money(1234, Moneda.USD),
         LocalDate(2026, 9, 15),
-        listOf("food"),
+        "food",
         "Lunch",
         null,
         Instant.parse("2026-09-15T10:00:00Z"),

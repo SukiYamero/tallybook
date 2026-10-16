@@ -76,10 +76,10 @@ class CategoryFormResourcesHostTest {
     val RESOURCE_NAME = Regex("""<(?:string|plurals|string-array) name="([^"]+)"""")
     val FORM_COPY =
         mapOf(
-            "es-CO" to ("Escribe un nombre para la categoría" to "Crear “Gym”"),
-            "es-AR" to ("Escribí un nombre para la categoría" to "Crear “Gym”"),
-            "en-US" to ("Enter a name for the category" to "Create “Gym”"),
-            "pt-BR" to ("Digite um nome para a categoria" to "Criar “Gym”"),
+            "es-CO" to ("Escribe un nombre para la categoría" to "Crear categoría “Gym”"),
+            "es-AR" to ("Escribí un nombre para la categoría" to "Crear categoría “Gym”"),
+            "en-US" to ("Enter a name for the category" to "Create category “Gym”"),
+            "pt-BR" to ("Digite um nome para a categoria" to "Criar categoria “Gym”"),
         )
   }
 }

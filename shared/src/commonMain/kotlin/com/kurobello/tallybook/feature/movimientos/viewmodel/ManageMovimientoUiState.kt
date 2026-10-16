@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Movimiento
 
 internal enum class MovimientoManagementPhase {
@@ -28,6 +29,8 @@ internal data class MovimientoManagementSession(
     val categorias: List<Categoria> = emptyList(),
     val isCategoriesLoading: Boolean = true,
     val isCategoriesFailed: Boolean = false,
+    val etiquetas: List<Etiqueta> = emptyList(),
+    val etiquetasLoad: EtiquetasLoad = EtiquetasLoad.LOADING,
     val edit: EditMovimientoDraftState? = null,
     val isSubmitting: Boolean = false,
     val isDeleteConfirmationVisible: Boolean = false,
@@ -41,11 +44,14 @@ internal data class MovimientoManagementSession(
           draft = it.draft,
           categorias = categorias,
           maxSelectableDate = it.maxSelectableDate,
+          etiquetas = etiquetas,
+          etiquetasLoad = etiquetasLoad,
           isLoading = isCategoriesLoading,
           isSubmitting = isSubmitting,
           submitAttempted = it.submitAttempted,
           error = if (isCategoriesFailed) MovimientoFormError.CATEGORIES_UNAVAILABLE else it.error,
           validationDate = it.validationDate,
+          failedEtiquetaNombre = it.failedEtiquetaNombre,
       )
     }
 

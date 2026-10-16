@@ -5,7 +5,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.kurobello.tallybook.feature.search.ui.SearchCategoryRequest
+import com.kurobello.tallybook.feature.search.ui.SearchFilterRequest
 
 /**
  * The shell's navigation intents, each refused while [modals] owns the screen. Search intents are
@@ -23,7 +23,7 @@ internal class PrimaryNavigator(
   var focusRequest by mutableStateOf<Long?>(null)
     private set
 
-  var categoryRequest by mutableStateOf<SearchCategoryRequest?>(null)
+  var searchFilterRequest by mutableStateOf<SearchFilterRequest?>(null)
     private set
 
   val state: PrimaryNavigationState
@@ -46,12 +46,17 @@ internal class PrimaryNavigator(
     if (navigate { select(Search) }) focusRequest = ++nextToken
   }
 
-  fun showCategory(id: String) {
-    if (navigate { select(Search) }) categoryRequest = SearchCategoryRequest(++nextToken, id)
+  fun showSearchFilter(
+      categoryIds: Set<String> = emptySet(),
+      etiquetaIds: Set<String> = emptySet(),
+  ) {
+    if (navigate { select(Search) }) {
+      searchFilterRequest = SearchFilterRequest(++nextToken, categoryIds, etiquetaIds)
+    }
   }
 
-  fun openCategories() {
-    navigate { openSecondary(Categories) }
+  fun openSecondary(destination: Destination) {
+    navigate { openSecondary(destination) }
   }
 
   fun back() {
@@ -62,8 +67,8 @@ internal class PrimaryNavigator(
     if (focusRequest == token) focusRequest = null
   }
 
-  fun acknowledgeCategory(token: Long) {
-    if (categoryRequest?.token == token) categoryRequest = null
+  fun acknowledgeSearchFilter(token: Long) {
+    if (searchFilterRequest?.token == token) searchFilterRequest = null
   }
 
   private fun navigate(transition: PrimaryNavigationState.() -> PrimaryNavigationState): Boolean {
@@ -75,6 +80,6 @@ internal class PrimaryNavigator(
 
   private fun clearRequests() {
     focusRequest = null
-    categoryRequest = null
+    searchFilterRequest = null
   }
 }

@@ -15,6 +15,8 @@ import androidx.savedstate.compose.LocalSavedStateRegistryOwner
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
+import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
@@ -184,6 +186,7 @@ private class ManagementOwnerSuite(val scope: TestScope) {
           viewModelModule,
           module {
             single<MovimientoRepository> { repository }
+            single<EtiquetaRepository> { FakeEtiquetaRepository() }
             single<CategoriaRepository> {
               CategoriaRepositoryImpl(
                   database,
@@ -204,8 +207,8 @@ private class ManagementOwnerSuite(val scope: TestScope) {
   }
 
   suspend fun prepare() {
-    repository.insert(managementMovimiento())
     koin.koin.get<CategoriaRepository>().ensureSeeded(listOf(managementCategoria()))
+    repository.insert(managementMovimiento())
   }
 
   fun attach() =

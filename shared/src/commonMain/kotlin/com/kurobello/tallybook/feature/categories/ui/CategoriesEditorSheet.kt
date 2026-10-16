@@ -60,7 +60,7 @@ internal fun CategoryEditorBody(editor: CategoryEditor, title: String, actions: 
       footer = { CategoryEditorFooter(editor, enabled, actions) },
       layout =
           TallybookSheetFormLayout(
-              minimumBodyHeight = TallybookTheme.dimensions.categorySheetFormMinimumHeight
+              minimumBodyHeight = TallybookTheme.dimensions.editorSheetFormMinimumHeight
           ),
   ) {
     CategoryForm(

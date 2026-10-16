@@ -120,7 +120,10 @@ internal fun SearchFilterSheetContent(
   val valid = resolveSearchFilters(filters, uiState.today) is SearchFilterResolution.Valid
   Column(modifier.fillMaxSize().imePadding().padding(horizontal = TallybookTheme.spacing.space20)) {
     Column(
-        modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+        modifier =
+            Modifier.weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = TallybookTheme.spacing.space16),
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space20),
     ) {
       TallybookSheetTitle(stringResource(Res.string.search_filters))
@@ -133,8 +136,18 @@ internal fun SearchFilterSheetContent(
           filters.categoryIds,
           enabled,
           { actions.onFilterDraftChanged(id, filters.toggleCategory(it)) },
-          Modifier.fillMaxWidth().padding(bottom = TallybookTheme.spacing.space16),
+          Modifier.fillMaxWidth(),
       )
+      val etiquetas = uiState.etiquetas.values.orEmpty()
+      if (etiquetas.isNotEmpty()) {
+        SearchTagFilters(
+            etiquetas,
+            filters.etiquetaIds,
+            enabled,
+            { actions.onFilterDraftChanged(id, filters.toggleEtiqueta(it)) },
+            Modifier.fillMaxWidth(),
+        )
+      }
     }
     SearchFilterFooter(
         enabled,

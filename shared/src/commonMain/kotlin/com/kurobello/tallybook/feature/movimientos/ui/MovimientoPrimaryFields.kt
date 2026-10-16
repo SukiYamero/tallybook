@@ -18,6 +18,13 @@ import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.movimiento_future_date
 
+/** Opens the pickers; a null [onDeselectCategoria] keeps the category fixed. */
+internal data class MovimientoSelectionCallbacks(
+    val onChooseCategoria: () -> Unit,
+    val onDeselectCategoria: (() -> Unit)?,
+    val onAddEtiqueta: () -> Unit,
+)
+
 internal data class MovimientoFieldFocus(
     val amount: FocusRequester = FocusRequester(),
     val amountModifier: Modifier = Modifier,
@@ -28,7 +35,7 @@ internal data class MovimientoFieldFocus(
 internal fun MovimientoPrimaryFields(
     uiState: MovimientoFormState,
     actions: MovimientoFormActions,
-    onOpenCategory: () -> Unit,
+    selection: MovimientoSelectionCallbacks,
     fieldFocus: MovimientoFieldFocus,
     interactionEnabled: Boolean = true,
 ) {
@@ -41,11 +48,19 @@ internal fun MovimientoPrimaryFields(
         modifier = Modifier.padding(top = TallybookTheme.spacing.space8),
     )
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
-    MovimientoCategoriesField(
+    MovimientoCategoryField(
         uiState = uiState,
-        actions = actions,
-        onOpen = onOpenCategory,
+        onChoose = selection.onChooseCategoria,
+        onSuggestion = { actions.onCategoriaSelected(it.id) },
+        onDeselect = selection.onDeselectCategoria,
         enabled = interactionEnabled && !uiState.isSubmitting && !uiState.isLoading,
+    )
+    Spacer(modifier = Modifier.height(TallybookTheme.spacing.space16))
+    MovimientoEtiquetasField(
+        etiquetas = uiState.selectedEtiquetas,
+        load = uiState.etiquetasLoad,
+        callbacks = actions.etiquetasCallbacks(onAdd = selection.onAddEtiqueta),
+        enabled = interactionEnabled && !uiState.isSubmitting,
     )
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
     MovimientoDateField(

@@ -3,6 +3,8 @@ package com.kurobello.tallybook.di
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
@@ -19,6 +21,14 @@ val repositoryModule = module {
         get(),
         get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
         get(),
+    )
+  }
+  single<EtiquetaRepository> {
+    EtiquetaRepositoryImpl(
+        database = get(),
+        dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
+        idGenerator = get(),
+        clock = get(),
     )
   }
   single { CategorySeedProvider() }

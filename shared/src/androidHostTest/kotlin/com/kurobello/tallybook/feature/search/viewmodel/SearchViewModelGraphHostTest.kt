@@ -15,12 +15,15 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
+import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.insertLegacy
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
@@ -101,6 +104,7 @@ internal class SearchViewModelGraphHostTest {
           module {
             single<AppPreferencesRepository> { preferences }
             single<MovimientoRepository> { movimientos }
+            single<EtiquetaRepository> { FakeEtiquetaRepository() }
             single<CategoriaRepository> { categorias }
             single<Clock> {
               object : Clock {
@@ -119,8 +123,8 @@ internal class SearchViewModelGraphHostTest {
       val collector = backgroundScope.launch { first.uiState.collect {} }
       runCurrent()
       assertEquals(0, first.uiState.value.currentCount)
-      movimientos.insert(row("inside", LocalDate(2026, 10, 5), Moneda.USD))
-      movimientos.insert(row("foreign", LocalDate(2026, 10, 5), Moneda.COP))
+      database.insertLegacy(row("inside", LocalDate(2026, 10, 5), Moneda.USD))
+      database.insertLegacy(row("foreign", LocalDate(2026, 10, 5), Moneda.COP))
       runCurrent()
       assertEquals(1, first.uiState.value.currentCount)
       val session = requireNotNull(first.onOpenFilters())
@@ -217,7 +221,7 @@ private fun row(id: String, date: LocalDate, moneda: Moneda) =
         TipoMovimiento.GASTO,
         Money(125, moneda),
         date,
-        listOf("missing"),
+        "missing",
         null,
         null,
         Instant.parse("2026-10-05T00:00:00Z"),

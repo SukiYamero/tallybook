@@ -58,7 +58,8 @@ private val noOpSentenceCallbacks =
         onTextChange = {},
         onContinue = {},
         onFillManually = {},
-        onRemoveCategoria = {},
-        onAddCategoria = {},
+        onDeselectCategoria = {},
+        onChooseCategoria = {},
         onSuggestion = {},
+        etiquetas = MovimientoEtiquetasCallbacks(onAdd = {}, onRemove = {}, onRetry = {}),
     )

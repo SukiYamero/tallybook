@@ -18,10 +18,13 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.platform.app.InstrumentationRegistry
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.EditMovimientoDraftState
+import com.kurobello.tallybook.feature.movimientos.viewmodel.EtiquetasLoad
 import com.kurobello.tallybook.feature.movimientos.viewmodel.ManageMovimientoSheetActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoDiscardTarget
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoManagementError
@@ -32,6 +35,7 @@ import com.kurobello.tallybook.feature.movimientos.viewmodel.managementMovimient
 import com.kurobello.tallybook.feature.movimientos.viewmodel.toDraft
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.StringResource
@@ -39,12 +43,16 @@ import org.jetbrains.compose.resources.getString
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.category_picker_single_title
+import tallybook.shared.generated.resources.category_tag_remove
 import tallybook.shared.generated.resources.movimiento_amount_expense_prompt
 import tallybook.shared.generated.resources.movimiento_cancel
 import tallybook.shared.generated.resources.movimiento_close
 import tallybook.shared.generated.resources.movimiento_delete
 import tallybook.shared.generated.resources.movimiento_edit_title
 import tallybook.shared.generated.resources.movimiento_save_changes
+import tallybook.shared.generated.resources.tag_add_description
+import tallybook.shared.generated.resources.tag_remove
 
 class ManageMovimientoSheetTest {
   @get:Rule val composeRule = createComposeRule()
@@ -67,6 +75,37 @@ class ManageMovimientoSheetTest {
       assertEquals(1, actions.deleteRequests)
       assertEquals(1, actions.cancels)
     }
+  }
+
+  @Test
+  fun editorKeepsItsCategoryAndShowsOnlyTheTagsTheCatalogStillHas() {
+    val actions = ManagementSheetActions()
+    val trip = Etiqueta("trip", "Viaje Chile", Instant.parse("2026-01-01T00:00:00Z"))
+    val session = editSession(etiquetaIds = listOf("deleted", trip.id))
+    composeRule.setContent {
+      TallybookTheme {
+        ManageMovimientoContent(
+            session.copy(etiquetas = listOf(trip), etiquetasLoad = EtiquetasLoad.READY),
+            actions,
+        )
+      }
+    }
+
+    composeRule
+        .onNodeWithContentDescription(managementString(Res.string.category_tag_remove, "Food"))
+        .assertDoesNotExist()
+    composeRule
+        .onNodeWithContentDescription(managementString(Res.string.category_picker_single_title))
+        .assertExists()
+    composeRule
+        .onNodeWithContentDescription(managementString(Res.string.tag_remove, trip.nombre))
+        .performScrollTo()
+        .performClick()
+    composeRule
+        .onNodeWithContentDescription(managementString(Res.string.tag_add_description))
+        .assertExists()
+    composeRule.onNodeWithText("deleted").assertDoesNotExist()
+    composeRule.runOnIdle { assertEquals(listOf(trip.id), actions.removedEtiquetas) }
   }
 
   @Test
@@ -316,6 +355,7 @@ private class ManagementSheetActions : ManageMovimientoSheetActions {
   var cancels = 0
   var backs = 0
   var hidden = 0
+  val removedEtiquetas = mutableListOf<String>()
 
   override fun onRequestDelete() {
     deleteRequests++
@@ -353,9 +393,17 @@ private class ManagementSheetActions : ManageMovimientoSheetActions {
 
   override fun onFechaChanged(value: LocalDate) = Unit
 
-  override fun onCategoriasChanged(ids: List<String>) = Unit
+  override fun onCategoriaSelected(id: String) = Unit
 
-  override fun onCategoriaRemoved(id: String) = Unit
+  override fun onEtiquetasChanged(ids: List<String>) = Unit
+
+  override fun onEtiquetaRemoved(id: String) {
+    removedEtiquetas += id
+  }
+
+  override fun onCreateEtiqueta(nombre: String) = Unit
+
+  override fun onRetryEtiquetas() = Unit
 
   override fun onTituloChanged(value: String) = Unit
 
@@ -364,10 +412,12 @@ private class ManagementSheetActions : ManageMovimientoSheetActions {
   override fun onRetryLoad() = Unit
 }
 
-private fun managementString(resource: StringResource) = runBlocking { getString(resource) }
+private fun managementString(resource: StringResource, vararg args: Any) = runBlocking {
+  getString(resource, *args)
+}
 
-private fun editSession(): MovimientoManagementSession {
-  val movimiento = managementMovimiento()
+private fun editSession(etiquetaIds: List<String> = emptyList()): MovimientoManagementSession {
+  val movimiento = managementMovimiento().copy(etiquetaIds = etiquetaIds)
   return MovimientoManagementSession(
       token = 1,
       movimientoId = movimiento.id,

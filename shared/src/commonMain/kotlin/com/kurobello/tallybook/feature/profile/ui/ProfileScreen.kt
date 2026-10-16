@@ -26,11 +26,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import com.composables.icons.lucide.ChevronRight
+import com.composables.icons.lucide.Hash
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Smartphone
 import com.composables.icons.lucide.Tags
@@ -48,6 +50,9 @@ import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
 import com.kurobello.tallybook.core.ui.component.rememberTallybookTapFeedback
 import com.kurobello.tallybook.core.ui.layout.TallybookScreenFrame
+import com.kurobello.tallybook.core.ui.navigation.Categories
+import com.kurobello.tallybook.core.ui.navigation.Destination
+import com.kurobello.tallybook.core.ui.navigation.Tags
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.profile.viewmodel.ProfileActions
 import com.kurobello.tallybook.feature.profile.viewmodel.ProfileExport
@@ -77,6 +82,8 @@ import tallybook.shared.generated.resources.profile_save_error
 import tallybook.shared.generated.resources.profile_section_about
 import tallybook.shared.generated.resources.profile_section_data
 import tallybook.shared.generated.resources.profile_section_preferences
+import tallybook.shared.generated.resources.profile_tags_body
+import tallybook.shared.generated.resources.profile_tags_label
 import tallybook.shared.generated.resources.profile_theme_label
 import tallybook.shared.generated.resources.profile_version_label
 import tallybook.shared.generated.resources.retry
@@ -85,7 +92,7 @@ import tallybook.shared.generated.resources.retry
 internal fun ProfileScreen(
     uiState: ProfileUiState,
     actions: ProfileActions,
-    onOpenCategories: () -> Unit,
+    onOpenSecondary: (Destination) -> Unit,
     bottomBarClearance: Dp,
     modifier: Modifier = Modifier,
 ) {
@@ -112,7 +119,18 @@ internal fun ProfileScreen(
       )
       ProfileSection(stringResource(Res.string.profile_section_data)) {
         LocalDataCard()
-        CategoriesCard(onOpenCategories)
+        NavigationCard(
+            icon = Lucide.Tags,
+            title = stringResource(Res.string.profile_categories_label),
+            body = stringResource(Res.string.profile_categories_body),
+            onClick = { onOpenSecondary(Categories) },
+        )
+        NavigationCard(
+            icon = Lucide.Hash,
+            title = stringResource(Res.string.profile_tags_label),
+            body = stringResource(Res.string.profile_tags_body),
+            onClick = { onOpenSecondary(Tags) },
+        )
         ExportCard(uiState.export, actions)
       }
       ProfileSection(stringResource(Res.string.profile_section_preferences)) {
@@ -157,7 +175,7 @@ private fun LocalDataCard() {
 }
 
 @Composable
-private fun CategoriesCard(onClick: () -> Unit) {
+private fun NavigationCard(icon: ImageVector, title: String, body: String, onClick: () -> Unit) {
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
   val tapFeedback = rememberTallybookTapFeedback()
@@ -183,17 +201,12 @@ private fun CategoriesCard(onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
       Image(
-          imageVector = Lucide.Tags,
+          imageVector = icon,
           contentDescription = null,
           modifier = Modifier.size(TallybookTheme.dimensions.iconLarge),
           colorFilter = ColorFilter.tint(TallybookTheme.colors.brand.primary),
       )
-      Box(modifier = Modifier.weight(1f)) {
-        CardText(
-            stringResource(Res.string.profile_categories_label),
-            stringResource(Res.string.profile_categories_body),
-        )
-      }
+      Box(modifier = Modifier.weight(1f)) { CardText(title, body) }
       Image(
           imageVector = Lucide.ChevronRight,
           contentDescription = null,

@@ -5,12 +5,15 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.CategorySeedCatalog
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
+import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
+import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
@@ -49,6 +52,7 @@ internal fun createAddViewModel(
     movimientoRepository: MovimientoRepository = AddFakeMovimientos(),
     categoriaRepository: CategoriaRepository = AddFakeCategorias(DataOutcome.Success(emptyList())),
     preferencesRepository: AppPreferencesRepository = AddFakePreferences(),
+    etiquetaRepository: EtiquetaRepository = FakeEtiquetaRepository(),
     clock: Clock = AddFixedClock(ADD_TEST_NOW),
     timeZone: TimeZone = TimeZone.UTC,
     computationDispatcher: CoroutineDispatcher = UnconfinedTestDispatcher(),
@@ -60,6 +64,7 @@ internal fun createAddViewModel(
                 preferences = preferencesRepository,
                 categorias = categoriaRepository,
                 movimientos = movimientoRepository,
+                etiquetas = etiquetaRepository,
             ),
         idGenerator = IdGenerator { "movement-id" },
         clock = clock,
@@ -68,6 +73,7 @@ internal fun createAddViewModel(
             MovimientoEntryEngine(
                 parser = MovimientoPhraseParser(),
                 suggester = CategorySuggester(CategoryKeywordDictionary.builtIn),
+                etiquetaMatcher = EtiquetaMatcher(),
                 localeProvider = AddFixedLocale,
                 computationDispatcher = computationDispatcher,
             ),
@@ -187,7 +193,8 @@ internal open class AddFakeMovimientos(
             tipo = changes.tipo,
             monto = changes.monto,
             fecha = changes.fecha,
-            categoriaIds = changes.categoriaIds,
+            categoriaId = changes.categoriaId,
+            etiquetaIds = changes.etiquetaIds,
             titulo = changes.titulo,
             descripcion = changes.descripcion,
         )

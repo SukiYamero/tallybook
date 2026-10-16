@@ -13,3 +13,17 @@ sealed interface AppPreferencesState {
       val value: AppPreferences,
   ) : AppPreferencesState
 }
+
+/** The primary moneda; preferences still uninitialized after app startup count as a failure. */
+internal fun DataOutcome<AppPreferencesState>.primaryMoneda(): DataOutcome<Moneda> =
+    when (this) {
+      is DataOutcome.Failure -> this
+      is DataOutcome.Success ->
+          when (val state = data) {
+            is AppPreferencesState.Ready -> DataOutcome.Success(state.value.monedaPrincipal)
+            AppPreferencesState.Uninitialized ->
+                DataOutcome.Failure(
+                    DataError.InvalidInput("Preferences are uninitialized after app startup")
+                )
+          }
+    }

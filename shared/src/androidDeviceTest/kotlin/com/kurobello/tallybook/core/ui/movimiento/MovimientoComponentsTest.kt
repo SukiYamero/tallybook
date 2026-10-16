@@ -32,12 +32,10 @@ import kotlin.test.assertTrue
 import kotlin.time.Instant
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
-import org.jetbrains.compose.resources.getPluralString
 import org.jetbrains.compose.resources.getString
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.movimiento_row_extra_categories
 import tallybook.shared.generated.resources.unknown_category
 
 class MovimientoComponentsTest {
@@ -172,38 +170,23 @@ class MovimientoComponentsTest {
   }
 
   @Test
-  fun rowWithSeveralCategoriesShowsTheFirstOneAndACount() {
+  fun taggedRowShowsOnlyItsCategoryWithoutCountOrTags() {
     composeRule.setContent {
       TallybookTheme {
         MovimientoRow(
             movimiento(TipoMovimiento.GASTO, 100)
-                .copy(categoriaIds = listOf("cat_comida", "cat_cine", "cat_salud")),
+                .copy(categoriaId = "cat_comida", etiquetaIds = listOf("t_empresa", "t_viaje")),
             comida,
         )
       }
     }
 
-    composeRule.onNodeWithText("Comida").assertExists()
-    composeRule.onNodeWithText("+2", useUnmergedTree = true).assertExists()
-    val extraLabel = runBlocking {
-      getPluralString(Res.plurals.movimiento_row_extra_categories, 2, 2)
-    }
-    composeRule.onNodeWithContentDescription(extraLabel, substring = true).assertExists()
-  }
-
-  @Test
-  fun rowWithOneCategoryShowsNoCount() {
-    composeRule.setContent {
-      TallybookTheme {
-        MovimientoRow(
-            movimiento(TipoMovimiento.GASTO, 100).copy(categoriaIds = listOf("cat_comida")),
-            comida,
-        )
-      }
-    }
-
-    composeRule.onNodeWithText("+0", useUnmergedTree = true).assertDoesNotExist()
+    composeRule.onNodeWithText("Comida", useUnmergedTree = true).assertExists()
     composeRule.onNodeWithText("+1", useUnmergedTree = true).assertDoesNotExist()
+    composeRule.onNodeWithText("+2", useUnmergedTree = true).assertDoesNotExist()
+    composeRule
+        .onNodeWithText("t_empresa", substring = true, useUnmergedTree = true)
+        .assertDoesNotExist()
   }
 
   private fun movimiento(tipo: TipoMovimiento, minorUnits: Long) =
@@ -212,7 +195,7 @@ class MovimientoComponentsTest {
           tipo = tipo,
           monto = Money(minorUnits, Moneda.COP),
           fecha = LocalDate(2026, 9, 15),
-          categoriaIds = listOf("cat_missing"),
+          categoriaId = "cat_missing",
           titulo = null,
           descripcion = null,
           createdAt = Instant.fromEpochMilliseconds(1_757_894_400_000),

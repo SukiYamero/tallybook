@@ -15,8 +15,13 @@ internal interface SearchActions {
 
   fun onRemoveCategoryFilter(id: String)
 
-  /** Resets the query and filters to All history, every type and only [id]. */
-  fun onShowCategory(id: String)
+  fun onRemoveTagFilter(id: String)
+
+  /**
+   * Resets the query and filters to All history, every type and exactly [categoryIds] and
+   * [etiquetaIds]. Blank IDs are ignored, and a request without any ID keeps the current input.
+   */
+  fun onShowFilters(categoryIds: Set<String>, etiquetaIds: Set<String>)
 
   fun onRetry()
 

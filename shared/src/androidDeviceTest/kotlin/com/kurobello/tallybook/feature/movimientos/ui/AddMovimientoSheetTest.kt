@@ -15,6 +15,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -30,6 +32,7 @@ import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -37,8 +40,10 @@ import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoAction
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoEffect
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoStep
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoUiState
+import com.kurobello.tallybook.feature.movimientos.viewmodel.EtiquetasLoad
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
@@ -57,6 +62,8 @@ import tallybook.shared.generated.resources.movimiento_phrase_fill_manually
 import tallybook.shared.generated.resources.movimiento_summary_edit
 import tallybook.shared.generated.resources.movimiento_summary_save
 import tallybook.shared.generated.resources.save_expense
+import tallybook.shared.generated.resources.tag_add_description
+import tallybook.shared.generated.resources.tag_picker_create
 
 class AddMovimientoSheetTest {
 
@@ -114,6 +121,30 @@ class AddMovimientoSheetTest {
       assertEquals(1, actions.fillManuallyCount)
       assertEquals(0, actions.submitCount)
     }
+  }
+
+  @Test
+  fun theSentenceDialogCreatesATagFromTheTagPickerSearch() {
+    val actions = SheetRecordingActions()
+    composeRule.setContent {
+      TallybookTheme {
+        AddMovimientoSheet(
+            visible = true,
+            uiState = state(step = AddMovimientoStep.PHRASE, phrase = "Gasté 1"),
+            actions = actions,
+            onDismiss = {},
+        )
+      }
+    }
+
+    composeRule
+        .onNodeWithContentDescription(resourceString(Res.string.tag_add_description))
+        .performClick()
+    composeRule.onNodeWithText(work.nombre).assertExists()
+    composeRule.onNode(hasSetTextAction() and !hasTestTag(PHRASE_INPUT_TAG)).performTextInput("Gym")
+    composeRule.onNodeWithText(resourceString(Res.string.tag_picker_create, "Gym")).performClick()
+
+    composeRule.runOnIdle { assertEquals(listOf("Gym"), actions.createdEtiquetas) }
   }
 
   @Test
@@ -552,7 +583,7 @@ class AddMovimientoSheetTest {
           fecha = LocalDate(2026, 9, 15),
           moneda = Moneda.COP,
           categorias = listOf(category, otros),
-          categoriaIds = listOf(category.id),
+          categoriaId = category.id,
           titulo = "Gasté 1 en comida",
           descripcion = "",
           isLoading = false,
@@ -563,6 +594,8 @@ class AddMovimientoSheetTest {
           phrase = phrase,
           hasUnsavedChanges = phrase.isNotBlank(),
           formOpenedFromSummary = step == AddMovimientoStep.FORM,
+          etiquetas = listOf(work),
+          etiquetasLoad = EtiquetasLoad.READY,
       )
 
   private val category =
@@ -574,6 +607,8 @@ class AddMovimientoSheetTest {
           color = CategoryTint.AMBER,
       )
 
+  private val work = Etiqueta("work", "Empresa", Instant.parse("2026-01-01T00:00:00Z"))
+
   private val otros =
       Categoria(
           id = CATEGORIA_OTROS_ID,
@@ -583,7 +618,9 @@ class AddMovimientoSheetTest {
           color = CategoryTint.NEUTRAL,
       )
 
-  private fun resourceString(resource: StringResource): String = runBlocking { getString(resource) }
+  private fun resourceString(resource: StringResource, vararg args: Any): String = runBlocking {
+    getString(resource, *args)
+  }
 
   @Suppress("TooManyFunctions")
   private class SheetRecordingActions(private val onSubmitRequested: () -> Unit = {}) :
@@ -594,6 +631,7 @@ class AddMovimientoSheetTest {
     var editCount = 0
     var stepBackCount = 0
     var lastPhrase: String? = null
+    val createdEtiquetas = mutableListOf<String>()
 
     override fun onTipoChanged(tipo: TipoMovimiento) = Unit
 
@@ -601,9 +639,19 @@ class AddMovimientoSheetTest {
 
     override fun onFechaChanged(value: LocalDate) = Unit
 
-    override fun onCategoriasChanged(ids: List<String>) = Unit
+    override fun onCategoriaSelected(id: String) = Unit
 
-    override fun onCategoriaRemoved(id: String) = Unit
+    override fun onCategoriaCleared() = Unit
+
+    override fun onEtiquetasChanged(ids: List<String>) = Unit
+
+    override fun onEtiquetaRemoved(id: String) = Unit
+
+    override fun onCreateEtiqueta(nombre: String) {
+      createdEtiquetas += nombre
+    }
+
+    override fun onRetryEtiquetas() = Unit
 
     override fun onTituloChanged(value: String) = Unit
 

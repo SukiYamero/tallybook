@@ -16,5 +16,7 @@ internal interface AddMovimientoActions : MovimientoFormActions {
 
   fun onSuggestionSelected(id: String)
 
+  fun onCategoriaCleared()
+
   fun onStepBack()
 }

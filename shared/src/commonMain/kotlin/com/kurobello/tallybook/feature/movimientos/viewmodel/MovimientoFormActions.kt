@@ -5,16 +5,27 @@ import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlinx.datetime.LocalDate
 
 @Stable
-internal interface MovimientoFormActions {
+internal interface MovimientoEtiquetaActions {
+  /** The whole selection the tag picker reports; ignored until the tags catalog is ready. */
+  fun onEtiquetasChanged(ids: List<String>)
+
+  fun onEtiquetaRemoved(id: String)
+
+  /** Creates a tag from the picker's search and selects it while the limit allows. */
+  fun onCreateEtiqueta(nombre: String)
+
+  fun onRetryEtiquetas()
+}
+
+@Stable
+internal interface MovimientoFormActions : MovimientoEtiquetaActions {
   fun onTipoChanged(tipo: TipoMovimiento)
 
   fun onAmountChanged(value: String)
 
   fun onFechaChanged(value: LocalDate)
 
-  fun onCategoriasChanged(ids: List<String>)
-
-  fun onCategoriaRemoved(id: String)
+  fun onCategoriaSelected(id: String)
 
   fun onTituloChanged(value: String)
 

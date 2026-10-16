@@ -34,6 +34,8 @@ import androidx.savedstate.savedState
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
+import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
@@ -271,6 +273,7 @@ private class ShellSuite(private val scope: TestScope) {
           module {
             single<AppPreferencesRepository> { ShellPreferences() }
             single<MovimientoRepository> { repository }
+            single<EtiquetaRepository> { FakeEtiquetaRepository() }
             single<CategoriaRepository> { ShellCategories() }
             single<Clock> {
               object : Clock {
@@ -423,7 +426,8 @@ private class ShellHarness(
               Search,
               Profile,
               UiCatalog,
-              Categories -> Unit
+              Categories,
+              Tags -> Unit
             }
             SideEffect {
               owners[destination] = owner
@@ -594,7 +598,8 @@ private class ShellMovimientos : MovimientoRepository {
             tipo = changes.tipo,
             monto = changes.monto,
             fecha = changes.fecha,
-            categoriaIds = changes.categoriaIds,
+            categoriaId = changes.categoriaId,
+            etiquetaIds = changes.etiquetaIds,
             titulo = changes.titulo,
             descripcion = changes.descripcion,
         )
@@ -673,7 +678,7 @@ private fun shellRow(id: String, date: LocalDate) =
         TipoMovimiento.GASTO,
         Money(125, Moneda.USD),
         date,
-        listOf("missing"),
+        "missing",
         null,
         null,
         Instant.parse("2026-10-05T12:00:00Z"),

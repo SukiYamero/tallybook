@@ -3,6 +3,7 @@ package com.kurobello.tallybook.core.data.export
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -15,7 +16,8 @@ import kotlinx.datetime.LocalDate
 
 private const val BOM = "﻿"
 private const val CRLF = "\r\n"
-private const val HEADER = "Fecha,Tipo,Categoría,Categoría padre,Título,Descripción,Monto,Moneda"
+private const val HEADER =
+    "Fecha,Tipo,Categoría,Categoría padre,Tags,Título,Descripción,Monto,Moneda"
 
 private val labels =
     MovimientoCsvLabels(
@@ -23,6 +25,7 @@ private val labels =
         typeHeader = "Tipo",
         categoryHeader = "Categoría",
         parentCategoryHeader = "Categoría padre",
+        tagsHeader = "Tags",
         titleHeader = "Título",
         descriptionHeader = "Descripción",
         amountHeader = "Monto",
@@ -35,17 +38,25 @@ private val comida = categoria(id = "comida", nombre = "Comida")
 private val supermercado = categoria(id = "super", nombre = "Supermercado", padreId = "comida")
 private val sueldo = categoria(id = "sueldo", nombre = "Sueldo")
 private val categorias = listOf(comida, supermercado, sueldo)
+private val etiquetas =
+    listOf(
+        Etiqueta("empresa", "Empresa", Instant.fromEpochSeconds(0)),
+        Etiqueta("viaje", "Viaje Chile", Instant.fromEpochSeconds(0)),
+    )
 
 class MovimientoCsvTest {
 
   @Test
   fun startsWithBomAndLocalizedHeaderAndEndsEveryRecordWithCrlf() {
-    val csv = buildMovimientoCsv(listOf(movimiento(id = "a")), categorias, labels)
+    val csv = buildMovimientoCsv(listOf(movimiento(id = "a")), categorias, etiquetas, labels)
 
     assertTrue(csv.startsWith(BOM + HEADER + CRLF))
     assertTrue(csv.endsWith(CRLF))
     assertEquals(2, csv.split(CRLF).size - 1)
-    assertEquals(BOM + HEADER + CRLF, buildMovimientoCsv(emptyList(), categorias, labels))
+    assertEquals(
+        BOM + HEADER + CRLF,
+        buildMovimientoCsv(emptyList(), categorias, etiquetas, labels),
+    )
   }
 
   @Test
@@ -61,7 +72,10 @@ class MovimientoCsvTest {
 
     val labelled = movimientos.map { it.copy(titulo = it.id) }
 
-    val titles = dataRows(buildMovimientoCsv(labelled, categorias, labels)).map { it.split(",")[4] }
+    val titles =
+        dataRows(buildMovimientoCsv(labelled, categorias, etiquetas, labels)).map {
+          it.split(",")[5]
+        }
 
     assertEquals(listOf("new", "late", "b", "a", "old"), titles)
   }
@@ -73,7 +87,7 @@ class MovimientoCsvTest {
             movimiento(
                 id = "gasto",
                 fecha = LocalDate(2026, 3, 5),
-                categoriaIds = listOf("super"),
+                categoriaId = "super",
                 titulo = "Feria",
                 descripcion = "Frutas y verduras",
                 monto = Money(1500, Moneda.CLP),
@@ -82,17 +96,17 @@ class MovimientoCsvTest {
                 id = "ingreso",
                 fecha = LocalDate(2026, 3, 1),
                 tipo = TipoMovimiento.INGRESO,
-                categoriaIds = listOf("sueldo"),
+                categoriaId = "sueldo",
                 monto = Money(250_000_000, Moneda.COP),
             ),
         )
 
     assertEquals(
         listOf(
-            "2026-03-05,Gasto,Supermercado,Comida,Feria,Frutas y verduras,1500,CLP",
-            "2026-03-01,Ingreso,Sueldo,Sueldo,,,2500000.00,COP",
+            "2026-03-05,Gasto,Supermercado,Comida,,Feria,Frutas y verduras,1500,CLP",
+            "2026-03-01,Ingreso,Sueldo,Sueldo,,,,2500000.00,COP",
         ),
-        dataRows(buildMovimientoCsv(movimientos, categorias, labels)),
+        dataRows(buildMovimientoCsv(movimientos, categorias, etiquetas, labels)),
     )
   }
 
@@ -110,7 +124,9 @@ class MovimientoCsvTest {
             .mapIndexed { index, monto -> movimiento(id = "$index", monto = monto) }
 
     val formatted =
-        dataRows(buildMovimientoCsv(amounts, categorias, labels)).map { it.split(",")[6] }
+        dataRows(buildMovimientoCsv(amounts, categorias, etiquetas, labels)).map {
+          it.split(",")[7]
+        }
 
     assertEquals(listOf("0", "1234567", "0.05", "1.00", "1234.56", "42.50"), formatted.reversed())
   }
@@ -128,15 +144,14 @@ class MovimientoCsvTest {
     descriptions.forEach { (descripcion, expected) ->
       val csv =
           buildMovimientoCsv(
-              listOf(
-                  movimiento(id = "a", categoriaIds = listOf("sueldo"), descripcion = descripcion)
-              ),
+              listOf(movimiento(id = "a", categoriaId = "sueldo", descripcion = descripcion)),
               categorias,
+              etiquetas,
               labels,
           )
 
       assertTrue(
-          csv.endsWith(",Sueldo,Sueldo,,$expected,1000,CLP$CRLF"),
+          csv.endsWith(",Sueldo,Sueldo,,,$expected,1000,CLP$CRLF"),
           "for '$descripcion': $csv",
       )
     }
@@ -159,6 +174,7 @@ class MovimientoCsvTest {
                   buildMovimientoCsv(
                       listOf(movimiento(id = "a", descripcion = descripcion)),
                       categorias,
+                      etiquetas,
                       labels,
                   ),
               )
@@ -170,8 +186,9 @@ class MovimientoCsvTest {
     val row =
         dataRows(
                 buildMovimientoCsv(
-                    listOf(movimiento(id = "a", categoriaIds = listOf("f"))),
+                    listOf(movimiento(id = "a", categoriaId = "f")),
                     listOf(formulaCategoria),
+                    emptyList(),
                     labels,
                 ),
             )
@@ -180,19 +197,19 @@ class MovimientoCsvTest {
   }
 
   @Test
-  fun joinsEveryCategoryNameAndItsParentInTheSamePositions() {
+  fun joinsTagNamesInTheMovimientoOrderAndSkipsDeletedTags() {
     val movimientos =
         listOf(
-            movimiento(id = "a", categoriaIds = listOf("sueldo", "super", "comida")),
-            movimiento(id = "b", categoriaIds = listOf("super", "missing"), createdAtSeconds = 5),
+            movimiento(id = "a", etiquetaIds = listOf("viaje", "empresa")),
+            movimiento(id = "b", etiquetaIds = listOf("deleted", "empresa"), createdAtSeconds = 5),
         )
 
     assertEquals(
         listOf(
-            "2026-01-15,Gasto,Supermercado,Comida,,,1000,CLP",
-            "2026-01-15,Gasto,Sueldo · Supermercado · Comida,Sueldo · Comida · Comida,,,1000,CLP",
+            "2026-01-15,Gasto,Comida,Comida,Empresa,,,1000,CLP",
+            "2026-01-15,Gasto,Comida,Comida,Viaje Chile · Empresa,,,1000,CLP",
         ),
-        dataRows(buildMovimientoCsv(movimientos, categorias, labels)),
+        dataRows(buildMovimientoCsv(movimientos, categorias, etiquetas, labels)),
     )
   }
 
@@ -201,13 +218,13 @@ class MovimientoCsvTest {
     val orphan = categoria(id = "orphan", nombre = "Huérfana", padreId = "deleted")
     val movimientos =
         listOf(
-            movimiento(id = "b", categoriaIds = listOf("missing")),
-            movimiento(id = "a", categoriaIds = listOf("orphan")),
+            movimiento(id = "b", categoriaId = "missing"),
+            movimiento(id = "a", categoriaId = "orphan"),
         )
 
     assertEquals(
-        listOf("2026-01-15,Gasto,,,,,1000,CLP", "2026-01-15,Gasto,Huérfana,,,,1000,CLP"),
-        dataRows(buildMovimientoCsv(movimientos, categorias + orphan, labels)),
+        listOf("2026-01-15,Gasto,,,,,,1000,CLP", "2026-01-15,Gasto,Huérfana,,,,,1000,CLP"),
+        dataRows(buildMovimientoCsv(movimientos, categorias + orphan, etiquetas, labels)),
     )
   }
 }
@@ -230,17 +247,19 @@ private fun movimiento(
     createdAtSeconds: Long = 0,
     tipo: TipoMovimiento = TipoMovimiento.GASTO,
     monto: Money = Money(1000, Moneda.CLP),
-    categoriaIds: List<String> = listOf("comida"),
+    categoriaId: String = "comida",
     titulo: String? = null,
     descripcion: String? = null,
+    etiquetaIds: List<String> = emptyList(),
 ) =
     Movimiento(
         id = id,
         tipo = tipo,
         monto = monto,
         fecha = fecha,
-        categoriaIds = categoriaIds,
+        categoriaId = categoriaId,
         titulo = titulo,
         descripcion = descripcion,
         createdAt = Instant.fromEpochSeconds(createdAtSeconds),
+        etiquetaIds = etiquetaIds,
     )

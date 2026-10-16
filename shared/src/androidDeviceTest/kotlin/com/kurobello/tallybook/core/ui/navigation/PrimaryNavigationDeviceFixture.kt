@@ -17,6 +17,8 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
+import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
@@ -83,6 +85,7 @@ internal class PrimaryDeviceShell {
           single<AppPreferencesRepository> { NavigationPreferences() }
           single<MovimientoRepository> { movimientos }
           single<CategoriaRepository> { NavigationCategories() }
+          single<EtiquetaRepository> { FakeEtiquetaRepository() }
           single<IdGenerator> { IdGenerator { "new-${ids.incrementAndGet()}" } }
           single<Clock> {
             object : Clock {
@@ -178,7 +181,7 @@ internal class NavigationMovimientos : MovimientoRepository {
                 TipoMovimiento.GASTO,
                 Money(125, Moneda.USD),
                 LocalDate(2026, 10, 5),
-                listOf("food"),
+                "food",
                 "Item $index",
                 null,
                 Instant.parse("2026-10-05T12:00:00Z"),
@@ -204,7 +207,7 @@ internal class NavigationMovimientos : MovimientoRepository {
                             row.fecha in criteria.range.start..criteria.range.end) &&
                             (criteria.tipo == null || row.tipo == criteria.tipo) &&
                             (criteria.categoryIds.isEmpty() ||
-                                row.categoriaIds.any { id -> id in criteria.categoryIds })
+                                row.categoriaId in criteria.categoryIds)
                       }
                       .sortedWith(navigationStorageOrder),
                   currencyRows.map { it.fecha.year }.distinct().sortedDescending(),
@@ -298,7 +301,8 @@ internal class NavigationMovimientos : MovimientoRepository {
             tipo = changes.tipo,
             monto = changes.monto,
             fecha = changes.fecha,
-            categoriaIds = changes.categoriaIds,
+            categoriaId = changes.categoriaId,
+            etiquetaIds = changes.etiquetaIds,
             titulo = changes.titulo,
             descripcion = changes.descripcion,
         )

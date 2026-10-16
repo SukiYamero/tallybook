@@ -24,11 +24,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.kurobello.tallybook.core.model.Categoria
-import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoMovimiento
-import com.kurobello.tallybook.core.ui.category.CategoryTagField
+import com.kurobello.tallybook.core.ui.category.CategorySingleField
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
 import com.kurobello.tallybook.core.ui.component.TallybookSectionHeading
@@ -60,9 +59,10 @@ internal data class MovimientoSentenceCallbacks(
     val onTextChange: (String) -> Unit,
     val onContinue: () -> Unit,
     val onFillManually: () -> Unit,
-    val onRemoveCategoria: (Categoria) -> Unit,
-    val onAddCategoria: () -> Unit,
+    val onDeselectCategoria: () -> Unit,
+    val onChooseCategoria: () -> Unit,
     val onSuggestion: (Categoria) -> Unit,
+    val etiquetas: MovimientoEtiquetasCallbacks,
 )
 
 /**
@@ -187,14 +187,20 @@ private fun DetectedArea(
         val monto = detected.monto
         if (monto == null) AmountNotDetected() else DetectedAmount(monto, detected.tipo)
       }
-      CategoryTagField(
-          categorias = sentence.categorias,
-          max = MAX_CATEGORIAS_POR_MOVIMIENTO,
-          onRemove = callbacks.onRemoveCategoria,
-          onAdd = callbacks.onAddCategoria,
-          pending = sentence.categoriasArePending,
-          suggestions = sentence.suggestions,
+      CategorySingleField(
+          categoria = sentence.categoria,
+          deselectable = true,
+          onChoose = callbacks.onChooseCategoria,
           onSuggestion = callbacks.onSuggestion,
+          onDeselect = callbacks.onDeselectCategoria,
+          pending = sentence.categoriaIsPending,
+          suggestions = sentence.suggestions,
+          enabled = sentence.isEnabled,
+      )
+      MovimientoEtiquetasField(
+          etiquetas = sentence.etiquetas,
+          load = sentence.etiquetasLoad,
+          callbacks = callbacks.etiquetas,
           enabled = sentence.isEnabled,
       )
     }

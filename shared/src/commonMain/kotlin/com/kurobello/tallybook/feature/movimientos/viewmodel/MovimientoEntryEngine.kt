@@ -6,12 +6,14 @@ import com.kurobello.tallybook.core.data.entry.CategoryHistoryEntry
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
 import com.kurobello.tallybook.core.data.entry.CategorySuggestion
 import com.kurobello.tallybook.core.data.entry.CategorySuggestionIndex
+import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.core.data.entry.SuggestionConfidence
 import com.kurobello.tallybook.core.data.entry.incomeCategoryIds
 import com.kurobello.tallybook.core.data.resolveDeviceLocale
 import com.kurobello.tallybook.core.model.AppLocale
-import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
+import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.ParsedMovimientoPhrase
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -22,8 +24,8 @@ import kotlinx.datetime.LocalDate
 
 internal const val MAX_SUGGESTION_CHIPS = 3
 
-// Selected categories are filtered out of the ranking, so keep enough to still fill the chips.
-private const val RANKING_LIMIT = MAX_SUGGESTION_CHIPS + MAX_CATEGORIAS_POR_MOVIMIENTO
+// The selected category is filtered out of the ranking, so keep one more to still fill the chips.
+private const val RANKING_LIMIT = MAX_SUGGESTION_CHIPS + 1
 
 internal data class PhraseContext(val moneda: Moneda, val locale: AppLocale, val today: LocalDate)
 
@@ -39,25 +41,23 @@ internal data class PhraseInterpretation(
     val tipo: TipoMovimiento,
     val query: SuggestionQuery,
     val ranking: List<CategorySuggestion>,
-    val learnedSet: List<String>,
+    val learnedCategoriaId: String?,
+    val etiquetaIds: List<String>,
 ) {
-  // A single learned categoria is already the HIGH suggestion, which also weighs the dictionary,
-  // so only a set of several needs its own path.
-  val preselectedCategoriaIds: List<String>
+  val preselectedCategoriaId: String?
     get() =
-        learnedSet.takeIf { it.size > 1 }
-            ?: listOfNotNull(
-                ranking
-                    .firstOrNull()
-                    ?.takeIf { it.confidence == SuggestionConfidence.HIGH }
-                    ?.categoriaId
-            )
+        learnedCategoriaId
+            ?: ranking
+                .firstOrNull()
+                ?.takeIf { it.confidence == SuggestionConfidence.HIGH }
+                ?.categoriaId
 }
 
 /** Pure sentence interpretation; only the history indexing and live preview leave the caller. */
 internal class MovimientoEntryEngine(
     private val parser: MovimientoPhraseParser,
     private val suggester: CategorySuggester,
+    private val etiquetaMatcher: EtiquetaMatcher,
     private val localeProvider: DeviceLocaleProvider,
     private val computationDispatcher: CoroutineDispatcher,
 ) {
@@ -74,15 +74,14 @@ internal class MovimientoEntryEngine(
   ): CategorySuggestionIndex =
       withContext(computationDispatcher) {
         suggester.index(
-            history.groupBy(CategoryHistoryRow::movimientoId).values.map { rows ->
-              val first = rows.first()
+            history.map { row ->
               CategoryHistoryEntry(
                   subject =
                       parser
-                          .parse(first.titulo, context.moneda, context.locale, context.today)
+                          .parse(row.titulo, context.moneda, context.locale, context.today)
                           .subject,
-                  categoriaIds = rows.map(CategoryHistoryRow::categoriaId),
-                  createdAt = first.createdAt,
+                  categoriaId = row.categoriaId,
+                  createdAt = row.createdAt,
               )
             },
             now,
@@ -94,20 +93,30 @@ internal class MovimientoEntryEngine(
       context: PhraseContext,
       index: CategorySuggestionIndex,
       candidates: SuggestionCandidates,
+      etiquetas: List<Etiqueta>,
   ): PhraseInterpretation =
-      withContext(computationDispatcher) { interpret(text, context, index, candidates) }
+      withContext(computationDispatcher) { interpret(text, context, index, candidates, etiquetas) }
 
   fun interpret(
       text: String,
       context: PhraseContext,
       index: CategorySuggestionIndex,
       candidates: SuggestionCandidates,
+      etiquetas: List<Etiqueta>,
   ): PhraseInterpretation {
     val parsed = parser.parse(text, context.moneda, context.locale, context.today)
     val tipo = parsed.tipo ?: impliedTipo(parsed.subject, index, candidates)
     val query = SuggestionQuery(parsed.subject, tipo)
-    val learned = index.learnedSet(query.subject, candidates.availableIds, candidates.excludedIds)
-    return PhraseInterpretation(parsed, tipo, query, rank(index, query, candidates), learned)
+    val learned =
+        index.learnedCategoria(query.subject, candidates.availableIds, candidates.excludedIds)
+    return PhraseInterpretation(
+        parsed = parsed,
+        tipo = tipo,
+        query = query,
+        ranking = rank(index, query, candidates),
+        learnedCategoriaId = learned,
+        etiquetaIds = etiquetaMatcher.match(text, etiquetas).take(MAX_ETIQUETAS_POR_MOVIMIENTO),
+    )
   }
 
   fun rank(

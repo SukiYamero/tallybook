@@ -7,6 +7,10 @@ import kotlin.test.assertFalse
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonObject
 
 class SearchSavedInputTest {
   private val today = LocalDate(2028, 3, 1)
@@ -18,6 +22,7 @@ class SearchSavedInputTest {
               customStart = LocalDate(2027, 12, 31),
               tipo = TipoMovimiento.GASTO,
               categoryIds = setOf("z-missing", "a"),
+              etiquetaIds = setOf("t_viaje", "t_empresa"),
           )
 
   @Test
@@ -25,6 +30,7 @@ class SearchSavedInputTest {
     val input = filters.savedInput(raw)
     assertEquals(1, input.version)
     assertEquals(listOf("a", "z-missing"), input.categoryIds)
+    assertEquals(listOf("t_empresa", "t_viaje"), input.etiquetaIds)
     val encoded = Json.encodeToString(input)
     assertFalse(encoded.contains("session"))
     assertFalse(encoded.contains("results"))
@@ -69,12 +75,26 @@ class SearchSavedInputTest {
                     customStart = today.toString(),
                     customEnd = "1900-01-01",
                     categoryIds = listOf("z-missing", "", "  ", "a", "a"),
+                    etiquetaIds = listOf("t_viaje", " ", "t_viaje"),
                 ),
             today,
         )
     assertEquals(LocalDate(1900, 1, 1), restored.filters.customStart)
     assertEquals(today, restored.filters.customEnd)
     assertEquals(setOf("a", "z-missing"), restored.filters.categoryIds)
+    assertEquals(setOf("t_viaje"), restored.filters.etiquetaIds)
+  }
+
+  @Test
+  fun inputSavedBeforeTagsExistedRestoresWithoutTagFilters() {
+    val legacy =
+        JsonObject(Json.encodeToJsonElement(filters.savedInput(raw)).jsonObject - "etiquetaIds")
+
+    val restored =
+        SearchSavedInput.restore(Json.decodeFromJsonElement<SearchSavedInput>(legacy), today)
+
+    assertEquals(raw, restored.rawQuery)
+    assertEquals(filters.copy(etiquetaIds = emptySet()), restored.filters)
   }
 
   @Test

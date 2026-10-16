@@ -23,7 +23,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
+import com.kurobello.tallybook.core.ui.component.DismissGuardState
 import com.kurobello.tallybook.core.ui.component.LastWhileVisible
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
@@ -90,7 +90,10 @@ private fun AddMovimientoSheet(
           onDiscardChanges = actions::onDiscardChanges,
           onDismiss = callbacks.onDismiss,
       )
-  val categoryPicker = rememberMovimientoCategoryPicker(interactionEnabled = !uiState.isSubmitting)
+  val categoryPicker = rememberMovimientoPicker(interactionEnabled = !uiState.isSubmitting)
+  val etiquetaPicker = rememberMovimientoPicker(interactionEnabled = !uiState.isSubmitting)
+  val pickers =
+      EntryPickers(onChooseCategoria = categoryPicker.onOpen, onAddEtiqueta = etiquetaPicker.onOpen)
   val isSentence = uiState.step == AddMovimientoStep.PHRASE
   // Either surface also hides when the flow moves between them; only a closed session is final.
   val currentVisible by rememberUpdatedState(visible)
@@ -99,7 +102,7 @@ private fun AddMovimientoSheet(
       visible = visible && isSentence,
       uiState = uiState,
       actions = actions,
-      onAddCategoria = categoryPicker.onOpen,
+      pickers = pickers,
       onDismissRequest = dismissGuard::requestDismiss,
       onHidden = onHidden,
   )
@@ -107,7 +110,7 @@ private fun AddMovimientoSheet(
       visible = visible && !isSentence,
       uiState = uiState,
       actions = actions,
-      onAddCategoria = categoryPicker.onOpen,
+      pickers = pickers,
       categoryCreation = categoryCreation,
       callbacks =
           callbacks.copy(
@@ -120,14 +123,25 @@ private fun AddMovimientoSheet(
           ),
       modifier = modifier,
   )
-  // The form hosts its own picker; this one serves the dialog and the review step.
+  // The form hosts its own pickers; these serve the dialog and the review step.
   MovimientoCategoryPickerSheet(
       visible = categoryPicker.isVisible && uiState.step != AddMovimientoStep.FORM,
       uiState = uiState,
-      onSelectionChange = actions::onCategoriasChanged,
+      onSelect = actions::onCategoriaSelected,
       picker = categoryPicker,
       creation = categoryCreation,
   )
+  MovimientoEtiquetaPickerSheet(
+      visible = etiquetaPicker.isVisible && uiState.step != AddMovimientoStep.FORM,
+      uiState = uiState,
+      actions = actions,
+      picker = etiquetaPicker,
+  )
+  DiscardEntryConfirmation(dismissGuard)
+}
+
+@Composable
+private fun DiscardEntryConfirmation(dismissGuard: DismissGuardState) {
   TallybookConfirmationDialog(
       visible = dismissGuard.isConfirmationVisible,
       copy =
@@ -148,7 +162,7 @@ private fun MovimientoSentenceDialog(
     visible: Boolean,
     uiState: AddMovimientoUiState,
     actions: AddMovimientoActions,
-    onAddCategoria: () -> Unit,
+    pickers: EntryPickers,
     onDismissRequest: () -> Boolean,
     onHidden: () -> Unit,
 ) {
@@ -164,9 +178,10 @@ private fun MovimientoSentenceDialog(
             focusManager.clearFocus(force = true)
             actions.onFillManually()
           },
-          onRemoveCategoria = { actions.onCategoriaRemoved(it.id) },
-          onAddCategoria = onAddCategoria,
+          onDeselectCategoria = actions::onCategoriaCleared,
+          onChooseCategoria = pickers.onChooseCategoria,
           onSuggestion = { actions.onSuggestionSelected(it.id) },
+          etiquetas = actions.etiquetasCallbacks(onAdd = pickers.onAddEtiqueta),
       )
   TallybookModalDialog(
       visible = visible,
@@ -193,7 +208,7 @@ private fun MovimientoReviewSheet(
     visible: Boolean,
     uiState: AddMovimientoUiState,
     actions: AddMovimientoActions,
-    onAddCategoria: () -> Unit,
+    pickers: EntryPickers,
     categoryCreation: CategoryPickerCreation?,
     callbacks: ModalBottomSheetCallbacks,
     modifier: Modifier = Modifier,
@@ -220,8 +235,13 @@ private fun MovimientoReviewSheet(
         label = "add movimiento step",
     ) { current ->
       if (current == AddMovimientoStep.FORM) {
-        MovimientoForm(uiState = shown, actions = actions, categoryCreation = categoryCreation)
-      } else SummaryStepContent(shown, actions, onAddCategoria)
+        MovimientoForm(
+            uiState = shown,
+            actions = actions,
+            categoryCreation = categoryCreation,
+            onDeselectCategoria = actions::onCategoriaCleared,
+        )
+      } else SummaryStepContent(shown, actions, pickers)
     }
   }
 }
@@ -257,15 +277,16 @@ private fun stepTransition(animated: Boolean, fadeMillis: Int): ContentTransform
 private fun SummaryStepContent(
     uiState: AddMovimientoUiState,
     actions: AddMovimientoActions,
-    onAddCategoria: () -> Unit,
+    pickers: EntryPickers,
 ) {
   MovimientoSummaryStep(
       summary = uiState.summary,
       callbacks =
           MovimientoSummaryCallbacks(
-              onRemoveCategoria = { actions.onCategoriaRemoved(it.id) },
-              onAddCategoria = onAddCategoria,
+              onDeselectCategoria = actions::onCategoriaCleared,
+              onChooseCategoria = pickers.onChooseCategoria,
               onSuggestion = { actions.onSuggestionSelected(it.id) },
+              etiquetas = actions.etiquetasCallbacks(onAdd = pickers.onAddEtiqueta),
               onDescripcionChange = actions::onDescripcionChanged,
               onEdit = actions::onEditMovimiento,
               onSave = actions::onSubmit,
@@ -285,6 +306,9 @@ private fun SummaryStepContent(
   )
 }
 
+/** The pickers the sentence dialog and the review share; the form hosts its own. */
+private data class EntryPickers(val onChooseCategoria: () -> Unit, val onAddEtiqueta: () -> Unit)
+
 @Composable
 @Suppress("LongParameterList")
 internal fun AddMovimientoSheetRoute(
@@ -303,9 +327,8 @@ internal fun AddMovimientoSheetRoute(
       effects = quickCategoryViewModel.effects,
       selection =
           CategoryPickerSelection(
-              selectedIds = uiState.categoriaIds.realCategoriaIds(),
-              max = MAX_CATEGORIAS_POR_MOVIMIENTO,
-              onSelectionChange = viewModel::onCategoriasChanged,
+              selectedId = uiState.categoriaId.realCategoriaId(),
+              onSelect = viewModel::onCategoriaSelected,
           ),
       catalog = uiState.categorias,
   )

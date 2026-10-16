@@ -88,7 +88,7 @@ class ManageMovimientoDirectEditorTest {
     f.viewModel.onTipoChanged(TipoMovimiento.INGRESO)
     f.viewModel.onFechaChanged(LocalDate(2026, 9, 14))
     f.viewModel.onDescripcionChanged("Stale text")
-    f.viewModel.onCategoriasChanged(listOf("food"))
+    f.viewModel.onCategoriaSelected("food")
     f.viewModel.onSubmit()
     f.viewModel.onCancelEdit()
     f.viewModel.onContinueEditing()

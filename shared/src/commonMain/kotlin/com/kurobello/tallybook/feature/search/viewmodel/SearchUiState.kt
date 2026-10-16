@@ -2,6 +2,7 @@ package com.kurobello.tallybook.feature.search.viewmodel
 
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.DataError
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
 import com.kurobello.tallybook.core.text.normalizeSearchText
@@ -18,6 +19,7 @@ internal data class SearchUiState(
     val filterSession: SearchFilterSession = SearchFilterSession.Hidden,
     val sessionMinimumYear: Int? = null,
     val categories: SearchCategoryState = SearchCategoryState(),
+    val etiquetas: SearchEtiquetaState = SearchEtiquetaState(),
     val years: SearchCurrencyYears? = null,
     val results: RetainedLoadState<SearchResultsUi, SearchFailure> = RetainedLoadState.Loading(),
     val work: SearchWork? = SearchWork.Reading,
@@ -28,7 +30,13 @@ internal data class SearchUiState(
       val currency = moneda ?: return null
       val resolution =
           resolveSearchFilters(filters, today) as? SearchFilterResolution.Valid ?: return null
-      return MovimientoReadCriteria(currency, resolution.range, filters.tipo, filters.categoryIds)
+      return MovimientoReadCriteria(
+          currency,
+          resolution.range,
+          filters.tipo,
+          filters.categoryIds,
+          filters.etiquetaIds,
+      )
     }
 
   val isCurrent: Boolean
@@ -51,6 +59,7 @@ internal data class SearchUiState(
         moneda != null &&
             preferenceFailure == null &&
             categories.isReady &&
+            etiquetas.isReady &&
             (years?.moneda == moneda ||
                 resolveSearchFilters(filters, today) is SearchFilterResolution.Invalid)
 
@@ -73,6 +82,14 @@ internal data class SearchUiState(
 internal data class SearchCategoryState(
     val values: List<Categoria>? = null,
     val isLoading: Boolean = true,
+    val failure: DataError? = null,
+) {
+  val isReady: Boolean
+    get() = values != null && failure == null
+}
+
+internal data class SearchEtiquetaState(
+    val values: List<Etiqueta>? = null,
     val failure: DataError? = null,
 ) {
   val isReady: Boolean

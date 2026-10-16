@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.kurobello.tallybook.core.data.AppInfo
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.export.MovimientoCsvLabels
@@ -15,6 +16,7 @@ import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.ThemeMode
@@ -53,6 +55,7 @@ internal interface ProfileActions {
 internal class ProfileExportDependencies(
     val movimientos: MovimientoRepository,
     val categorias: CategoriaRepository,
+    val etiquetas: EtiquetaRepository,
     val sharer: MovimientoExportSharer,
     val clock: Clock,
     val timeZoneProvider: TimeZoneProvider,
@@ -168,12 +171,18 @@ internal class ProfileViewModel(
   private suspend fun shareCsv(labels: MovimientoCsvLabels): DataOutcome<Unit> {
     val movimientos = export.movimientos.getAll()
     val categorias = export.categorias.getAll()
+    val etiquetas = export.etiquetas.getAll()
     return when (movimientos) {
       is DataOutcome.Failure -> movimientos
       is DataOutcome.Success ->
           when (categorias) {
             is DataOutcome.Failure -> categorias
-            is DataOutcome.Success -> shareCsv(movimientos.data, categorias.data, labels)
+            is DataOutcome.Success ->
+                when (etiquetas) {
+                  is DataOutcome.Failure -> etiquetas
+                  is DataOutcome.Success ->
+                      shareCsv(movimientos.data, categorias.data, etiquetas.data, labels)
+                }
           }
     }
   }
@@ -181,10 +190,13 @@ internal class ProfileViewModel(
   private suspend fun shareCsv(
       movimientos: List<Movimiento>,
       categorias: List<Categoria>,
+      etiquetas: List<Etiqueta>,
       labels: MovimientoCsvLabels,
   ): DataOutcome<Unit> {
     val csv =
-        withContext(computationDispatcher) { buildMovimientoCsv(movimientos, categorias, labels) }
+        withContext(computationDispatcher) {
+          buildMovimientoCsv(movimientos, categorias, etiquetas, labels)
+        }
     val today = export.clock.now().toLocalDateTime(export.timeZoneProvider.current()).date
     return export.sharer.share("tallybook-$today.csv", csv)
   }

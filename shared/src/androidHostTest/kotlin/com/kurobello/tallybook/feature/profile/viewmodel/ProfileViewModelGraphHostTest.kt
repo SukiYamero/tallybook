@@ -6,6 +6,8 @@ import com.kurobello.tallybook.core.data.AppInfo
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
@@ -67,6 +69,7 @@ internal class ProfileViewModelGraphHostTest {
           module {
             single<AppPreferencesRepository> { preferences }
             single<MovimientoRepository> { ProfileFakeMovimientos() }
+            single<EtiquetaRepository> { FakeEtiquetaRepository() }
             single<CategoriaRepository> { ProfileFakeCategorias }
             single<MovimientoExportSharer> { sharer }
             single<Clock> {
@@ -135,6 +138,7 @@ private val LABELS =
         "Type",
         "Category",
         "Parent",
+        "Tags",
         "Title",
         "Description",
         "Amount",

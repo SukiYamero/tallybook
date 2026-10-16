@@ -20,6 +20,6 @@ internal fun SearchResultRow(
       MovimientoRowText(row.title, row.movimiento.rowDescription, row.categoryLabel),
       modifier = modifier.fillMaxWidth(),
       onClick = onClick,
-      pending = CATEGORIA_OTROS_ID in row.movimiento.categoriaIds,
+      pending = row.movimiento.categoriaId == CATEGORIA_OTROS_ID,
   )
 }

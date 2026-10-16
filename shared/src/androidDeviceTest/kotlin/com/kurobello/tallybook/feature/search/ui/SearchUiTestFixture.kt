@@ -3,6 +3,7 @@ package com.kurobello.tallybook.feature.search.ui
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -11,6 +12,7 @@ import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.feature.search.viewmodel.SearchActions
 import com.kurobello.tallybook.feature.search.viewmodel.SearchCategoryState
+import com.kurobello.tallybook.feature.search.viewmodel.SearchEtiquetaState
 import com.kurobello.tallybook.feature.search.viewmodel.SearchFilterSessionId
 import com.kurobello.tallybook.feature.search.viewmodel.SearchFilters
 import com.kurobello.tallybook.feature.search.viewmodel.SearchUiState
@@ -20,13 +22,15 @@ import kotlinx.datetime.LocalDate
 internal val searchTestToday = LocalDate(2026, 10, 6)
 internal val searchTestCategory =
     Categoria("food", "Food", null, CategoryIcon.UTENSILS, CategoryTint.AMBER)
+internal val searchTestEtiqueta =
+    Etiqueta("t_empresa", "Empresa", Instant.parse("2026-01-01T00:00:00Z"))
 internal val searchTestMovement =
     Movimiento(
         "coffee",
         TipoMovimiento.GASTO,
         Money(450, Moneda.USD),
         searchTestToday,
-        listOf("food"),
+        "food",
         "Morning coffee",
         null,
         Instant.parse("2026-10-06T12:00:00Z"),
@@ -44,6 +48,7 @@ internal val searchTestState =
         searchTestToday,
         Moneda.USD,
         categories = SearchCategoryState(listOf(searchTestCategory), false),
+        etiquetas = SearchEtiquetaState(listOf(searchTestEtiqueta)),
         years = searchTestResults.years,
         results = RetainedLoadState.Ready(searchTestResults),
         work = null,
@@ -51,6 +56,7 @@ internal val searchTestState =
 
 internal open class SearchTestActions : SearchActions {
   val events = mutableListOf<String>()
+  var lastDraft: SearchFilters? = null
   override val hasActiveFilterSession = false
 
   override fun onQueryChanged(query: String) {
@@ -73,8 +79,12 @@ internal open class SearchTestActions : SearchActions {
     events += "remove-category:$id"
   }
 
-  override fun onShowCategory(id: String) {
-    events += "show-category:$id"
+  override fun onRemoveTagFilter(id: String) {
+    events += "remove-tag:$id"
+  }
+
+  override fun onShowFilters(categoryIds: Set<String>, etiquetaIds: Set<String>) {
+    events += "show-filters:$categoryIds:$etiquetaIds"
   }
 
   override fun onRetry() {
@@ -89,6 +99,7 @@ internal open class SearchTestActions : SearchActions {
 
   override fun onFilterDraftChanged(id: SearchFilterSessionId, filters: SearchFilters) {
     events += "draft:${filters.preset}"
+    lastDraft = filters
   }
 
   override fun onClearFilters(id: SearchFilterSessionId) {

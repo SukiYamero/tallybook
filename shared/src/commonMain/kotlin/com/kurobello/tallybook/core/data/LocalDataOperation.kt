@@ -2,6 +2,7 @@ package com.kurobello.tallybook.core.data
 
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.fold
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -22,3 +23,7 @@ internal suspend fun <T> runLocalDataOperation(
         DataOutcome.Failure(DataError.Local(error))
       }
     }
+
+/** Joins a storage outcome with the domain outcome decided inside the same transaction. */
+internal fun <T> DataOutcome<DataOutcome<T>>.flatten(): DataOutcome<T> =
+    fold(onSuccess = { it }, onFailure = { DataOutcome.Failure(it) })

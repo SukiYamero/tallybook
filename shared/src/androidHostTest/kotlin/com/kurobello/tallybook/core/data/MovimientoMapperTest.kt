@@ -1,6 +1,6 @@
 package com.kurobello.tallybook.core.data
 
-import com.kurobello.tallybook.core.database.Movimiento_con_categorias as DatabaseMovimiento
+import com.kurobello.tallybook.core.database.Movimiento_con_etiquetas as DatabaseMovimiento
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -22,10 +22,11 @@ class MovimientoMapperTest {
             tipo = TipoMovimiento.GASTO,
             monto = Money(1_050, Moneda.USD),
             fecha = LocalDate(2026, 9, 3),
-            categoriaIds = listOf("cat_comida"),
+            categoriaId = "cat_comida",
             titulo = "almuerzo",
             descripcion = "con Ana",
             createdAt = createdAt,
+            etiquetaIds = listOf("empresa"),
         ),
         databaseMovimiento(createdAt.toString()).toDomain(),
     )
@@ -46,23 +47,24 @@ class MovimientoMapperTest {
   }
 
   @Test
-  fun `toDomain orders categorias by posicion whatever the concatenation order`() {
+  fun `toDomain orders etiquetas by posicion whatever the concatenation order`() {
     val shuffled = "2\u001Fc\u001E0\u001Fa\u001E1\u001Fb"
 
     assertEquals(
         listOf("a", "b", "c"),
         databaseMovimiento("2026-09-03T12:00:00Z")
-            .copy(categoria_ids = shuffled)
+            .copy(etiqueta_ids = shuffled)
             .toDomain()
-            .categoriaIds,
+            .etiquetaIds,
     )
   }
 
   @Test
-  fun `toDomain rejects a movimiento without categorias`() {
-    assertFailsWith<IllegalArgumentException> {
-      databaseMovimiento("2026-09-03T12:00:00Z").copy(categoria_ids = "").toDomain()
-    }
+  fun `toDomain reads a movimiento without etiquetas and rejects one without categoria`() {
+    val row = databaseMovimiento("2026-09-03T12:00:00Z")
+
+    assertEquals(emptyList(), row.copy(etiqueta_ids = "").toDomain().etiquetaIds)
+    assertFailsWith<IllegalArgumentException> { row.copy(categoria_id = "").toDomain() }
   }
 
   private fun databaseMovimiento(createdAt: String) =
@@ -72,9 +74,10 @@ class MovimientoMapperTest {
           monto_minor = 1_050,
           monto_moneda = "USD",
           fecha = "2026-09-03",
-          categoria_ids = "0\u001Fcat_comida",
-          titulo = "almuerzo",
           descripcion = "con Ana",
           created_at = createdAt,
+          titulo = "almuerzo",
+          categoria_id = "cat_comida",
+          etiqueta_ids = "0\u001Fempresa",
       )
 }

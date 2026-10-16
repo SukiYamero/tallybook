@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.ui.theme.TallybookSpacing
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSummaryUi
@@ -32,14 +33,14 @@ import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.amount
-import tallybook.shared.generated.resources.category_tag_add_description
-import tallybook.shared.generated.resources.category_tag_field_label
+import tallybook.shared.generated.resources.category_picker_single_title
 import tallybook.shared.generated.resources.category_tag_remove
 import tallybook.shared.generated.resources.date
 import tallybook.shared.generated.resources.description_optional
 import tallybook.shared.generated.resources.expense
 import tallybook.shared.generated.resources.movement_type
 import tallybook.shared.generated.resources.movimiento_amount_not_detected
+import tallybook.shared.generated.resources.movimiento_category_section
 import tallybook.shared.generated.resources.movimiento_pending_label
 import tallybook.shared.generated.resources.movimiento_relative_yesterday
 import tallybook.shared.generated.resources.movimiento_summary_amount_missing_hint
@@ -50,6 +51,9 @@ import tallybook.shared.generated.resources.movimiento_summary_subtitle
 import tallybook.shared.generated.resources.movimiento_summary_title
 import tallybook.shared.generated.resources.movimiento_summary_title_label
 import tallybook.shared.generated.resources.movimiento_summary_title_quote
+import tallybook.shared.generated.resources.movimiento_tags_section
+import tallybook.shared.generated.resources.tag_add_description
+import tallybook.shared.generated.resources.tag_remove
 
 @OptIn(ExperimentalResourceApi::class)
 class MovimientoSummaryStepTest {
@@ -57,8 +61,10 @@ class MovimientoSummaryStepTest {
 
   private val samples = testEntrySamples()
   private val selected = mutableListOf<Categoria>()
-  private val removed = mutableListOf<Categoria>()
-  private var addRequests = 0
+  private var deselects = 0
+  private var chooseRequests = 0
+  private val removedTags = mutableListOf<Etiqueta>()
+  private var tagAddRequests = 0
   private var edits = 0
   private var saves = 0
   private val descriptions = mutableListOf<String>()
@@ -96,7 +102,7 @@ class MovimientoSummaryStepTest {
   }
 
   @Test
-  fun tappingASuggestionAddsThatCategory() {
+  fun tappingADimmedSuggestionSwitchesTheCategory() {
     show(samples.completeSummary)
 
     composeRule.onNodeWithText(samples.transport.nombre).performClick()
@@ -116,7 +122,8 @@ class MovimientoSummaryStepTest {
     composeRule
         .onNodeWithText(string(Res.string.movimiento_summary_title_label))
         .assertIsDisplayed()
-    composeRule.onNodeWithText(string(Res.string.category_tag_field_label)).assertIsDisplayed()
+    composeRule.onNodeWithText(string(Res.string.movimiento_category_section)).assertIsDisplayed()
+    composeRule.onNodeWithText(string(Res.string.movimiento_tags_section)).assertExists()
   }
 
   @Test
@@ -133,7 +140,8 @@ class MovimientoSummaryStepTest {
   fun actionsSitAtLeastSpace32BelowTheContent() {
     show(samples.completeSummary)
 
-    val lastContent = bounds(composeRule.onNodeWithText(samples.transport.nombre))
+    val lastContent =
+        bounds(composeRule.onNodeWithContentDescription(string(Res.string.tag_add_description)))
     val edit = bounds(composeRule.onNodeWithText(string(Res.string.movimiento_summary_edit)))
     val minimum = with(composeRule.density) { TallybookSpacing.space32.toPx() }
     assertTrue(
@@ -143,27 +151,38 @@ class MovimientoSummaryStepTest {
   }
 
   @Test
-  fun removingAndAddingTagsReportsTheCallbacks() {
-    show(samples.completeSummary.copy(categorias = listOf(samples.cinema, samples.food)))
+  fun theCategoryCanBeDeselectedOrChosenAndTagsRemovedOrAdded() {
+    show(samples.completeSummary)
 
     composeRule
-        .onNodeWithContentDescription(string(Res.string.category_tag_remove, samples.food.nombre))
+        .onNodeWithContentDescription(string(Res.string.category_tag_remove, samples.cinema.nombre))
         .performClick()
     composeRule
-        .onNodeWithContentDescription(string(Res.string.category_tag_add_description))
+        .onNodeWithContentDescription(string(Res.string.category_picker_single_title))
+        .performClick()
+    composeRule
+        .onNodeWithContentDescription(string(Res.string.tag_remove, samples.business.nombre))
+        .performScrollTo()
+        .performClick()
+    composeRule
+        .onNodeWithContentDescription(string(Res.string.tag_add_description))
+        .performScrollTo()
         .performClick()
     composeRule.runOnIdle {
-      assertEquals(listOf(samples.food), removed)
-      assertEquals(1, addRequests)
+      assertEquals(1, deselects)
+      assertEquals(1, chooseRequests)
+      assertEquals(listOf(samples.business), removedTags)
+      assertEquals(1, tagAddRequests)
     }
   }
 
   @Test
-  fun sixTagsHideAddAndSuggestions() {
+  fun sixTagsHideTheAddTag() {
     show(samples.fullSummary)
 
+    composeRule.onNodeWithText(samples.etiquetas.last().nombre).assertExists()
     composeRule
-        .onNodeWithContentDescription(string(Res.string.category_tag_add_description))
+        .onNodeWithContentDescription(string(Res.string.tag_add_description))
         .assertDoesNotExist()
   }
 
@@ -233,6 +252,9 @@ class MovimientoSummaryStepTest {
         .onNodeWithContentDescription(string(Res.string.movimiento_summary_save))
         .assertIsNotEnabled()
     composeRule.onNodeWithText(samples.food.nombre).assertIsNotEnabled()
+    composeRule
+        .onNodeWithContentDescription(string(Res.string.tag_add_description))
+        .assertIsNotEnabled()
   }
 
   private fun show(summary: MovimientoSummaryUi) {
@@ -242,9 +264,15 @@ class MovimientoSummaryStepTest {
             summary = summary,
             callbacks =
                 MovimientoSummaryCallbacks(
-                    onRemoveCategoria = { removed += it },
-                    onAddCategoria = { addRequests++ },
+                    onDeselectCategoria = { deselects++ },
+                    onChooseCategoria = { chooseRequests++ },
                     onSuggestion = { selected += it },
+                    etiquetas =
+                        MovimientoEtiquetasCallbacks(
+                            onAdd = { tagAddRequests++ },
+                            onRemove = { removedTags += it },
+                            onRetry = {},
+                        ),
                     onDescripcionChange = { descriptions += it },
                     onEdit = { edits++ },
                     onSave = { saves++ },

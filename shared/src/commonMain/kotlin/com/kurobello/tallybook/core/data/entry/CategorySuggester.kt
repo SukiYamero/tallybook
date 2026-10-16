@@ -7,10 +7,10 @@ import kotlin.math.pow
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
-/** One saved movimiento: its parsed subject and every categoria it carries, in display order. */
+/** One saved movimiento: its parsed subject and its categoria. */
 data class CategoryHistoryEntry(
     val subject: String,
-    val categoriaIds: List<String>,
+    val categoriaId: String,
     val createdAt: Instant,
 )
 
@@ -25,25 +25,19 @@ class CategorySuggester(private val dictionary: CategoryKeywordDictionary) {
 
   fun index(history: List<CategoryHistoryEntry>, now: Instant): CategorySuggestionIndex {
     val exact = mutableMapOf<String, CategoryMass>()
-    val exactSets = mutableMapOf<String, CategorySetMass>()
     val byToken = mutableMapOf<String, CategoryMass>()
     history.forEach { entry ->
       val tokens = suggestionTokens(entry.subject)
       // Otros means "not categorized yet", so it carries no signal about what the words mean.
-      val categoriaIds = entry.categoriaIds.filter { it != CATEGORIA_OTROS_ID }.distinct()
-      if (tokens.isNotEmpty() && categoriaIds.isNotEmpty()) {
-        // A movimiento is one vote, however many categorias it carries.
+      if (tokens.isNotEmpty() && entry.categoriaId != CATEGORIA_OTROS_ID) {
         val weight = recencyWeight(entry.createdAt, now)
-        val share = weight / categoriaIds.size
-        val key = subjectKey(tokens)
-        exact.getOrPut(key) { CategoryMass() }.addAll(categoriaIds, share)
-        exactSets.getOrPut(key) { CategorySetMass() }.add(categoriaIds, weight)
+        exact.getOrPut(subjectKey(tokens)) { CategoryMass() }.add(entry.categoriaId, weight)
         tokens.toSet().forEach { token ->
-          byToken.getOrPut(token) { CategoryMass() }.addAll(categoriaIds, share)
+          byToken.getOrPut(token) { CategoryMass() }.add(entry.categoriaId, weight)
         }
       }
     }
-    return CategorySuggestionIndex(dictionary, exact, exactSets, byToken)
+    return CategorySuggestionIndex(dictionary, exact, byToken)
   }
 }
 
@@ -51,7 +45,6 @@ class CategorySuggestionIndex
 internal constructor(
     private val dictionary: CategoryKeywordDictionary,
     private val exact: Map<String, CategoryMass>,
-    private val exactSets: Map<String, CategorySetMass>,
     private val byToken: Map<String, CategoryMass>,
 ) {
 
@@ -82,17 +75,19 @@ internal constructor(
   }
 
   /**
-   * The categoria set that a clear majority of the past movimientos with exactly this subject were
-   * saved with, in its saved order, or empty when no set has that majority. Unavailable and
-   * excluded ids are left out of the result.
+   * The categoria that a clear majority of the past movimientos with exactly this subject were
+   * saved with, or null when none has that majority or it is unavailable or excluded.
    */
-  fun learnedSet(
+  fun learnedCategoria(
       subject: String,
       availableIds: Set<String>,
       excludedIds: Set<String>,
-  ): List<String> {
-    val mass = exactSets[subjectKey(suggestionTokens(subject))] ?: return emptyList()
-    return mass.majority(CLEAR_MAJORITY).filter { it in availableIds && it !in excludedIds }
+  ): String? {
+    val mass = exact[subjectKey(suggestionTokens(subject))] ?: return null
+    return mass.byCategory.entries
+        .firstOrNull { (_, weight) -> weight / mass.total >= CLEAR_MAJORITY }
+        ?.key
+        ?.takeIf { it in availableIds && it !in excludedIds }
   }
 
   private fun evidence(tokens: List<String>): Map<String, Evidence> {
@@ -159,29 +154,9 @@ internal class CategoryMass {
 
   val byCategory = mutableMapOf<String, Double>()
 
-  fun addAll(categoriaIds: List<String>, weight: Double) {
-    categoriaIds.forEach { categoriaId ->
-      total += weight
-      byCategory[categoriaId] = (byCategory[categoriaId] ?: 0.0) + weight
-    }
-  }
-}
-
-/** Votes per whole categoria set; the first-seen order of a set is the one it is returned in. */
-internal class CategorySetMass {
-  private var total = 0.0
-  private val votes = mutableMapOf<Set<String>, Vote>()
-
-  fun add(categoriaIds: List<String>, weight: Double) {
+  fun add(categoriaId: String, weight: Double) {
     total += weight
-    votes.getOrPut(categoriaIds.toSet()) { Vote(categoriaIds) }.weight += weight
-  }
-
-  fun majority(minimumShare: Double): List<String> =
-      votes.values.firstOrNull { it.weight / total >= minimumShare }?.categoriaIds.orEmpty()
-
-  private class Vote(val categoriaIds: List<String>) {
-    var weight = 0.0
+    byCategory[categoriaId] = (byCategory[categoriaId] ?: 0.0) + weight
   }
 }
 

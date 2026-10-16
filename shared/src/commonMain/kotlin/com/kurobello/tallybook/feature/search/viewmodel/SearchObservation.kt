@@ -2,11 +2,13 @@ package com.kurobello.tallybook.feature.search.viewmodel
 
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
@@ -32,6 +34,7 @@ internal data class SearchRepositories(
     val preferences: AppPreferencesRepository,
     val movimientos: MovimientoRepository,
     val categorias: CategoriaRepository,
+    val etiquetas: EtiquetaRepository,
 )
 
 internal data class SearchInputs(
@@ -54,7 +57,13 @@ internal data class SearchInputs(
   fun criteria(moneda: Moneda): MovimientoReadCriteria? {
     val resolution =
         resolveSearchFilters(filters, today) as? SearchFilterResolution.Valid ?: return null
-    return MovimientoReadCriteria(moneda, resolution.range, filters.tipo, filters.categoryIds)
+    return MovimientoReadCriteria(
+        moneda,
+        resolution.range,
+        filters.tipo,
+        filters.categoryIds,
+        filters.etiquetaIds,
+    )
   }
 }
 
@@ -94,6 +103,8 @@ internal interface SearchObservationReceiver {
 
   fun onCategories(reload: Long, load: SearchSourceLoad<List<Categoria>>)
 
+  fun onEtiquetas(reload: Long, load: SearchSourceLoad<List<Etiqueta>>)
+
   fun onRead(read: SearchRead)
 
   fun onCandidateGeneration(request: SearchReadRequest?): Long
@@ -106,6 +117,7 @@ internal interface SearchObservationReceiver {
 private data class CandidateSources(
     val read: SearchRead,
     val categories: SearchSourceLoad<List<Categoria>>,
+    val etiquetas: SearchSourceLoad<List<Etiqueta>>,
     val label: String,
 )
 
@@ -141,14 +153,19 @@ internal fun observeSearch(
               repositories.categorias.observeAll().sourceLoads().onEach {
                 receiver.onCategories(reload, it)
               }
+          val etiquetas =
+              repositories.etiquetas.observeAll().sourceLoads().onEach {
+                receiver.onEtiquetas(reload, it)
+              }
           val reads = observeSearchReads(repositories, inputs, reload, receiver)
           val candidates =
               combine(
                       reads,
                       categories,
+                      etiquetas,
                       inputs.map { it.label to it.localeTag }.distinctUntilChanged(),
-                  ) { read, catalog, presentation ->
-                    CandidateSources(read, catalog, presentation.first)
+                  ) { read, catalog, tags, presentation ->
+                    CandidateSources(read, catalog, tags, presentation.first)
                   }
                   .mapLatest { it.toCandidates(dispatcher, receiver) }
           combine(
@@ -210,19 +227,21 @@ private suspend fun CandidateSources.toCandidates(
   val pending = CandidateFrame(read.request, generation)
   val failure =
       categories.failure?.let { SearchFailure.Repository(SearchSource.Categories, it) }
+          ?: etiquetas.failure?.let { SearchFailure.Repository(SearchSource.Etiquetas, it) }
           ?: read.load.failure?.let { SearchFailure.Repository(SearchSource.Movimientos, it) }
   val request = read.request
   val snapshot = read.load.data
   val catalog = categories.data
+  val tags = etiquetas.data
   return when {
     failure != null -> pending.copy(failure = failure)
-    request == null || snapshot == null || catalog == null -> pending
+    request == null || snapshot == null || catalog == null || tags == null -> pending
     else ->
         withContext(dispatcher) {
           CandidateFrame(
               request,
               generation,
-              buildSearchCandidates(snapshot.movimientos, catalog, label),
+              buildSearchCandidates(snapshot.movimientos, catalog, tags, label),
               requireNotNull(read.years),
           )
         }

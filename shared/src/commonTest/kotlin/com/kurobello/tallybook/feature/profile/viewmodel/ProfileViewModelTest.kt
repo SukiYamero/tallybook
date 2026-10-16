@@ -2,6 +2,7 @@ package com.kurobello.tallybook.feature.profile.viewmodel
 
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.data.export.MovimientoCsvLabels
@@ -14,6 +15,7 @@ import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -151,7 +153,17 @@ class ProfileViewModelTest {
   fun exportSharesADatedCsvAndReportsReadOrShareFailures() = runTest {
     val movimientos = ProfileFakeMovimientos()
     val sharer = FakeSharer()
-    val vm = profileViewModel(FakePreferences(AppPreferences(Moneda.COP)), movimientos, sharer)
+    val etiquetas =
+        FakeEtiquetaRepository(
+            listOf(Etiqueta("empresa", "Empresa", Instant.parse("2026-10-01T00:00:00Z")))
+        )
+    val vm =
+        profileViewModel(
+            FakePreferences(AppPreferences(Moneda.COP)),
+            movimientos,
+            sharer,
+            etiquetas,
+        )
     runCurrent()
 
     vm.onExport(LABELS)
@@ -161,15 +173,21 @@ class ProfileViewModelTest {
     assertEquals(ProfileExport.IDLE, vm.uiState.value.export)
     val (fileName, csv) = sharer.shared.single()
     assertEquals("tallybook-2026-10-15.csv", fileName)
-    assertTrue(csv.contains("2026-10-14,Gasto,Comida,Comida,café,,12.50,COP"), csv)
+    assertTrue(csv.contains("2026-10-14,Gasto,Comida,Comida,Empresa,café,,12.50,COP"), csv)
 
     sharer.result = DataOutcome.Failure(DataError.Unknown(IllegalStateException()))
     vm.onExport(LABELS)
     runCurrent()
     assertEquals(ProfileExport.FAILED, vm.uiState.value.export)
 
-    movimientos.result = DataOutcome.Failure(DataError.Local(IllegalStateException()))
+    etiquetas.failure = DataError.Local(IllegalStateException())
     sharer.result = DataOutcome.Success(Unit)
+    vm.onExport(LABELS)
+    runCurrent()
+    assertEquals(ProfileExport.FAILED, vm.uiState.value.export)
+
+    etiquetas.failure = null
+    movimientos.result = DataOutcome.Failure(DataError.Local(IllegalStateException()))
     vm.onExport(LABELS)
     runCurrent()
     assertEquals(ProfileExport.FAILED, vm.uiState.value.export)
@@ -183,6 +201,7 @@ private val LABELS =
         typeHeader = "Tipo",
         categoryHeader = "Categoría",
         parentCategoryHeader = "Categoría principal",
+        tagsHeader = "Tags",
         titleHeader = "Título",
         descriptionHeader = "Descripción",
         amountHeader = "Monto",
@@ -195,6 +214,7 @@ private fun TestScope.profileViewModel(
     preferences: AppPreferencesRepository,
     movimientos: ProfileFakeMovimientos = ProfileFakeMovimientos(),
     sharer: FakeSharer = FakeSharer(),
+    etiquetas: FakeEtiquetaRepository = FakeEtiquetaRepository(),
 ): ProfileViewModel =
     ProfileViewModel(
         preferencesRepository = preferences,
@@ -202,6 +222,7 @@ private fun TestScope.profileViewModel(
             ProfileExportDependencies(
                 movimientos = movimientos,
                 categorias = ProfileFakeCategorias,
+                etiquetas = etiquetas,
                 sharer = sharer,
                 clock =
                     object : Clock {
@@ -268,10 +289,11 @@ internal class ProfileFakeMovimientos : MovimientoRepository {
                   tipo = TipoMovimiento.GASTO,
                   monto = Money(1250, Moneda.COP),
                   fecha = LocalDate(2026, 10, 14),
-                  categoriaIds = listOf("cat_comida"),
+                  categoriaId = "cat_comida",
                   titulo = "café",
                   descripcion = null,
                   createdAt = Instant.parse("2026-10-14T12:00:00Z"),
+                  etiquetaIds = listOf("empresa"),
               )
           )
       )

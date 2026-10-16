@@ -35,6 +35,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.Dp
+import com.composables.icons.lucide.Hash
 import com.composables.icons.lucide.ListFilter
 import com.composables.icons.lucide.Lucide
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -293,6 +294,8 @@ private fun SearchAppliedChips(state: SearchUiState, actions: SearchActions) {
   val selectedCategories =
       categoryFamilies(categories).flatten().filter { it.id in state.filters.categoryIds }
   val missing = state.filters.categoryIds - categories.mapTo(mutableSetOf()) { it.id }
+  val selectedEtiquetas =
+      state.etiquetas.values.orEmpty().filter { it.id in state.filters.etiquetaIds }
   LazyRow(horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8)) {
     if (state.filters.preset != SearchDatePreset.All)
         item(key = "date") {
@@ -340,6 +343,14 @@ private fun SearchAppliedChips(state: SearchUiState, actions: SearchActions) {
           label,
           stringResource(Res.string.search_remove_filter, label),
           { actions.onRemoveCategoryFilter(id) },
+      )
+    }
+    items(selectedEtiquetas, key = { "etiqueta:${it.id}" }) { etiqueta ->
+      TallybookFilterTag(
+          etiqueta.nombre,
+          stringResource(Res.string.search_remove_filter, etiqueta.nombre),
+          { actions.onRemoveTagFilter(etiqueta.id) },
+          leadingIcon = Lucide.Hash,
       )
     }
   }

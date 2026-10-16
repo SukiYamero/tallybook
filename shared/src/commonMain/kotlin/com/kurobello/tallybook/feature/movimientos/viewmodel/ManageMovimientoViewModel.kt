@@ -3,10 +3,11 @@ package com.kurobello.tallybook.feature.movimientos.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
-import com.kurobello.tallybook.core.model.CategoriaSelection
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Money
@@ -15,6 +16,7 @@ import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.text.normalizeOptionalText
 import com.kurobello.tallybook.core.ui.component.DismissalDecision
 import com.kurobello.tallybook.core.ui.component.dismissalDecision
 import kotlin.time.Clock
@@ -32,6 +34,7 @@ import kotlinx.datetime.todayIn
 internal class ManageMovimientoViewModel(
     private val movimientoRepository: MovimientoRepository,
     private val categoriaRepository: CategoriaRepository,
+    private val etiquetaRepository: EtiquetaRepository,
     private val clock: Clock,
     private val timeZoneProvider: TimeZoneProvider,
     scope: CoroutineScope? = null,
@@ -41,6 +44,7 @@ internal class ManageMovimientoViewModel(
   private var readGeneration = 0L
   private var readJob: Job? = null
   private var categoryJob: Job? = null
+  private var etiquetaJob: Job? = null
   private var pendingFeedback: PendingMovimientoFeedback? = null
 
   val uiState: StateFlow<ManageMovimientoUiState>
@@ -51,6 +55,7 @@ internal class ManageMovimientoViewModel(
     val session = MovimientoManagementSession(token = ++nextToken, movimientoId = id)
     uiState.update { it.copy(session = session) }
     loadCategories(session.token)
+    loadEtiquetas(session.token)
     loadMovimiento(session.token)
     return true
   }
@@ -84,13 +89,37 @@ internal class ManageMovimientoViewModel(
     copy(descripcion = value.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH))
   }
 
-  override fun onCategoriasChanged(ids: List<String>) {
+  override fun onCategoriaSelected(id: String) {
     val catalog = uiState.value.session?.categorias ?: return
-    updateDraft { copy(categoriaIds = CategoriaSelection.reconcile(categoriaIds, ids, catalog)) }
+    if (isSelectableCategoria(id, catalog)) updateDraft { copy(categoriaId = id) }
   }
 
-  override fun onCategoriaRemoved(id: String) = updateDraft {
-    copy(categoriaIds = CategoriaSelection.remove(categoriaIds, id))
+  override fun onEtiquetasChanged(ids: List<String>) {
+    if (uiState.value.session?.etiquetasLoad != EtiquetasLoad.READY) return
+    updateDraft { copy(etiquetaIds = ids.toEtiquetaSelection()) }
+  }
+
+  override fun onEtiquetaRemoved(id: String) = updateDraft { copy(etiquetaIds = etiquetaIds - id) }
+
+  override fun onCreateEtiqueta(nombre: String) {
+    val session = uiState.value.session?.takeIf { it.canModifyDraft } ?: return
+    updateSession(session.token) { copy(edit = edit?.copy(failedEtiquetaNombre = null)) }
+    coroutineScope.launch {
+      val outcome = etiquetaRepository.create(nombre)
+      if (uiState.value.session?.token != session.token) return@launch
+      when (outcome) {
+        is DataOutcome.Success ->
+            updateDraft { copy(etiquetaIds = etiquetaIds.withCreated(outcome.data)) }
+        is DataOutcome.Failure ->
+            updateSession(session.token) { copy(edit = edit?.copy(failedEtiquetaNombre = nombre)) }
+      }
+    }
+  }
+
+  override fun onRetryEtiquetas() {
+    val session = uiState.value.session ?: return
+    if (session.canInteract && session.etiquetasLoad == EtiquetasLoad.UNAVAILABLE)
+        loadEtiquetas(session.token)
   }
 
   override fun onCancelEdit() {
@@ -160,7 +189,8 @@ internal class ManageMovimientoViewModel(
 
   private fun submitUpdate(session: MovimientoManagementSession, changes: MovimientoChanges) {
     coroutineScope.launch {
-      when (val outcome = movimientoRepository.update(session.movimientoId, changes)) {
+      val update = changes.withoutDeletedEtiquetas()
+      when (val outcome = movimientoRepository.update(session.movimientoId, update)) {
         is DataOutcome.Failure ->
             updateSession(session.token) {
               copy(isSubmitting = false, edit = edit?.copy(error = MovimientoFormError.SAVE_FAILED))
@@ -176,6 +206,17 @@ internal class ManageMovimientoViewModel(
             }
       }
     }
+  }
+
+  // A tag deleted while the editor is open would make the repository refuse the whole save; it
+  // simply leaves the movimiento instead. An unreadable catalog defers to the repository's check.
+  private suspend fun MovimientoChanges.withoutDeletedEtiquetas(): MovimientoChanges {
+    if (etiquetaIds.isEmpty()) return this
+    val existing =
+        (etiquetaRepository.getAll() as? DataOutcome.Success)
+            ?.data
+            ?.mapTo(mutableSetOf(), Etiqueta::id)
+    return if (existing == null) this else copy(etiquetaIds = etiquetaIds.filter { it in existing })
   }
 
   override fun onRequestDelete() {
@@ -384,6 +425,24 @@ internal class ManageMovimientoViewModel(
     }
   }
 
+  private fun loadEtiquetas(token: Long) {
+    etiquetaJob?.cancel()
+    updateSession(token) { copy(etiquetasLoad = EtiquetasLoad.LOADING) }
+    etiquetaJob = coroutineScope.launch {
+      etiquetaRepository.observeAll().collect { result ->
+        updateSession(token) {
+          if (phase == MovimientoManagementPhase.Closing) this
+          else
+              when (result) {
+                is DataOutcome.Success ->
+                    copy(etiquetas = result.data, etiquetasLoad = EtiquetasLoad.READY)
+                is DataOutcome.Failure -> copy(etiquetasLoad = EtiquetasLoad.UNAVAILABLE)
+              }
+        }
+      }
+    }
+  }
+
   private fun close(token: Long, feedback: PendingMovimientoFeedback? = null) {
     pendingFeedback = feedback
     readJob?.cancel()
@@ -419,6 +478,7 @@ internal class ManageMovimientoViewModel(
   private fun stopReads() {
     readJob?.cancel()
     categoryJob?.cancel()
+    etiquetaJob?.cancel()
     ++readGeneration
   }
 }
@@ -448,7 +508,8 @@ internal fun Movimiento.toDraft() =
         tipo,
         monto.toAmountInput(),
         fecha,
-        categoriaIds,
+        categoriaId,
+        etiquetaIds,
         titulo.orEmpty(),
         descripcion.orEmpty(),
     )
@@ -458,7 +519,8 @@ private fun Movimiento.toChanges() =
         tipo,
         monto,
         fecha,
-        categoriaIds,
+        categoriaId,
+        etiquetaIds,
         titulo.normalizeOptionalTextOrNull(),
         descripcion.normalizeOptionalTextOrNull(),
     )
@@ -467,18 +529,17 @@ private fun String?.normalizeOptionalTextOrNull(): String? = this?.normalizeOpti
 
 private fun EditMovimientoUiState.toChangesOrNull(): MovimientoChanges? {
   val amount = (parseAmountInput(amountInput, moneda) as? AmountInputResult.Valid)?.money
-  val isReady = !isLoading && error == null
-  val fieldsValid = hasValidCategoria && !isFechaInvalid
-  return amount
-      ?.takeIf { isReady && fieldsValid }
-      ?.let {
-        MovimientoChanges(
-            tipo,
-            it,
-            fecha,
-            categoriaIds,
-            titulo.normalizeOptionalText(),
-            descripcion.normalizeOptionalText(),
-        )
-      }
+  val categoria = categoriaId
+  val isReady = !isLoading && error == null && hasValidCategoria && !isFechaInvalid
+  return if (amount == null || categoria == null || !isReady) null
+  else
+      MovimientoChanges(
+          tipo,
+          amount,
+          fecha,
+          categoria,
+          etiquetaIds,
+          titulo.normalizeOptionalText(),
+          descripcion.normalizeOptionalText(),
+      )
 }

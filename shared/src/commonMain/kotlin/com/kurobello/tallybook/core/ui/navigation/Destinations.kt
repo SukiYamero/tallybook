@@ -16,3 +16,5 @@ import kotlinx.serialization.Serializable
 @Serializable data object UiCatalog : Destination
 
 @Serializable data object Categories : Destination
+
+@Serializable data object Tags : Destination

@@ -85,33 +85,34 @@ class CategoriaRepositoryTest {
       }
 
   @Test
-  fun `create and update reject an invalid nombre or descripcion without writing`() = runTest {
-    withRepository { _, repository ->
-      val custom = repository.create(draft("Gym")).savedCategoria()
-      val invalid =
-          listOf(
-              draft("   "),
-              draft("x".repeat(CategoriaRules.NOMBRE_MAX + 1)),
-              draft("Pilates", descripcion = "x".repeat(CategoriaRules.DESCRIPCION_MAX + 1)),
-          )
-
-      invalid.forEach { candidate ->
-        assertInvalid(repository.create(candidate))
-        assertInvalid(repository.update(custom.id, candidate))
-      }
-      assertEquals(listOf(custom), repository.getAll().rows())
-      assertIs<CategoriaWrite.Saved>(
-          repository
-              .create(
-                  draft(
-                      " ${"x".repeat(CategoriaRules.NOMBRE_MAX)} ",
-                      descripcion = "x".repeat(CategoriaRules.DESCRIPCION_MAX),
-                  )
+  fun `create and update reject a blank or over 30 character nombre or a long descripcion`() =
+      runTest {
+        withRepository { _, repository ->
+          val custom = repository.create(draft("Gym")).savedCategoria()
+          val invalid =
+              listOf(
+                  draft("   "),
+                  draft("x".repeat(31)),
+                  draft("Pilates", descripcion = "x".repeat(CategoriaRules.DESCRIPCION_MAX + 1)),
               )
-              .successData()
-      )
-    }
-  }
+
+          invalid.forEach { candidate ->
+            assertInvalid(repository.create(candidate))
+            assertInvalid(repository.update(custom.id, candidate))
+          }
+          assertEquals(listOf(custom), repository.getAll().rows())
+          assertIs<CategoriaWrite.Saved>(
+              repository
+                  .create(
+                      draft(
+                          " ${"x".repeat(30)} ",
+                          descripcion = "x".repeat(CategoriaRules.DESCRIPCION_MAX),
+                      )
+                  )
+                  .successData()
+          )
+        }
+      }
 
   @Test
   fun `update renames a custom categoria and rejects seeded or unknown targets`() = runTest {
@@ -179,16 +180,23 @@ class CategoriaRepositoryTest {
           database.seed(comida)
           val unused = repository.create(draft("Gym")).savedCategoria()
           val used = repository.create(draft("Yoga")).savedCategoria()
-          database.insertMovimiento("usd", Moneda.USD, listOf(used.id))
-          database.insertMovimiento("cop", Moneda.COP, listOf(comida.id, used.id))
+          val usedOnce = repository.create(draft("Pilates")).savedCategoria()
+          database.insertMovimiento("usd", Moneda.USD, used.id)
+          database.insertMovimiento("cop", Moneda.COP, used.id)
+          database.insertMovimiento("comida", Moneda.COP, comida.id)
+          database.insertMovimiento("once", Moneda.COP, usedOnce.id)
 
           assertEquals(DataOutcome.Success(0L), repository.countMovimientos(unused.id))
           assertEquals(DataOutcome.Success(2L), repository.countMovimientos(used.id))
           assertEquals(DataOutcome.Success(CategoriaDelete.Deleted), repository.delete(unused.id))
           assertEquals(DataOutcome.Success(CategoriaDelete.InUse(2)), repository.delete(used.id))
+          assertEquals(
+              DataOutcome.Success(CategoriaDelete.InUse(1)),
+              repository.delete(usedOnce.id),
+          )
           assertInvalid(repository.delete(comida.id))
           assertInvalid(repository.delete(unused.id))
-          assertEquals(setOf(comida, used), repository.getAll().rows().toSet())
+          assertEquals(setOf(comida, used, usedOnce), repository.getAll().rows().toSet())
         }
       }
 
@@ -200,15 +208,17 @@ class CategoriaRepositoryTest {
       val secondChild = comida.copy(id = "cat_child_2", padreId = parent.id)
       database.seed(parent, firstChild, secondChild, otros)
       val custom = repository.create(draft("Gym")).savedCategoria()
-      database.insertMovimiento("both-children", Moneda.COP, listOf(firstChild.id, secondChild.id))
-      database.insertMovimiento("parent", Moneda.COP, listOf(parent.id))
-      database.insertMovimiento("custom", Moneda.COP, listOf(custom.id, otros.id))
-      database.insertMovimiento("other-moneda", Moneda.USD, listOf(firstChild.id, custom.id))
+      database.insertMovimiento("first-child", Moneda.COP, firstChild.id)
+      database.insertMovimiento("second-child", Moneda.COP, secondChild.id)
+      database.insertMovimiento("parent", Moneda.COP, parent.id)
+      database.insertMovimiento("custom", Moneda.COP, custom.id)
+      database.insertMovimiento("pending", Moneda.COP, otros.id)
+      database.insertMovimiento("other-moneda", Moneda.USD, firstChild.id)
 
       assertEquals(
           DataOutcome.Success(
               mapOf(
-                  parent.id to 2L,
+                  parent.id to 3L,
                   firstChild.id to 1L,
                   secondChild.id to 1L,
                   custom.id to 1L,
@@ -255,23 +265,19 @@ class CategoriaRepositoryTest {
   private fun TallybookDatabase.insertMovimiento(
       id: String,
       moneda: Moneda,
-      categoriaIds: List<String>,
+      categoriaId: String,
   ) {
-    transaction {
-      movimientoQueries.insertMovimiento(
-          id,
-          "GASTO",
-          1_000,
-          moneda.name,
-          "2026-10-01",
-          null,
-          null,
-          "2026-10-01T12:00:00Z",
-      )
-      categoriaIds.forEachIndexed { posicion, categoriaId ->
-        movimientoQueries.insertMovimientoCategoria(id, categoriaId, posicion.toLong())
-      }
-    }
+    movimientoQueries.insertMovimiento(
+        id,
+        "GASTO",
+        1_000,
+        moneda.name,
+        "2026-10-01",
+        null,
+        null,
+        "2026-10-01T12:00:00Z",
+        categoriaId,
+    )
   }
 
   private fun draft(nombre: String, descripcion: String? = null) =

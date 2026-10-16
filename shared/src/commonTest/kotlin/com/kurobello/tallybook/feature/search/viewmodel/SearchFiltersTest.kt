@@ -126,6 +126,49 @@ class SearchFiltersTest {
     assertEquals(criteriaHash, criteria.hashCode())
   }
 
+  @Test
+  fun togglingTagsAddsAndRemovesExactIdsAndActivatesFilters() {
+    val initial = SearchFilters.initial(today)
+    val tagged = initial.toggleEtiqueta("t_empresa").toggleEtiqueta("t_viaje")
+
+    assertEquals(setOf("t_empresa", "t_viaje"), tagged.etiquetaIds)
+    assertTrue(tagged.hasActiveFilters)
+    assertEquals(emptySet(), tagged.categoryIds)
+    assertEquals(setOf("t_viaje"), tagged.toggleEtiqueta("t_empresa").etiquetaIds)
+    assertEquals(initial, tagged.toggleEtiqueta("t_empresa").toggleEtiqueta("t_viaje"))
+    assertFalse(initial.hasActiveFilters)
+  }
+
+  @Test
+  fun tagsTakePartInEqualityAndSurviveOtherDimensionCopies() {
+    val tagged = SearchFilters.initial(today).copy(etiquetaIds = setOf("t_empresa"))
+
+    assertFalse(tagged == SearchFilters.initial(today))
+    assertEquals(tagged, SearchFilters.initial(today).toggleEtiqueta("t_empresa"))
+    assertEquals(
+        tagged.hashCode(),
+        SearchFilters.initial(today).toggleEtiqueta("t_empresa").hashCode(),
+    )
+    val typed = tagged.copy(tipo = TipoMovimiento.GASTO).toggleCategory("food")
+    assertEquals(setOf("t_empresa"), typed.etiquetaIds)
+    assertEquals(setOf("t_empresa"), resolved(typed).filters.etiquetaIds)
+  }
+
+  @Test
+  fun clearingFiltersDropsTags() {
+    val tagged = SearchFilters.initial(today).toggleEtiqueta("t_empresa")
+    val cleared =
+        assertIs<SearchFilterSession.Closing>(
+                SearchFilterSession.Editing(SearchFilterSessionId(1), tagged)
+                    .clear(SearchFilterSessionId(1), today)
+                    .session
+            )
+            .renderSnapshot
+
+    assertEquals(emptySet(), cleared.etiquetaIds)
+    assertFalse(cleared.hasActiveFilters)
+  }
+
   private fun resolved(filters: SearchFilters): SearchFilterResolution.Valid =
       assertIs(resolveSearchFilters(filters, today))
 }

@@ -19,6 +19,8 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
+import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
 import com.kurobello.tallybook.core.data.MovimientoRepository
@@ -26,6 +28,7 @@ import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.insertLegacy
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -194,12 +197,7 @@ class HistoryIntegrationTest {
     withDiskFixture {
       val graph = open(createSchema = true)
       graph.start()
-      assertEquals(
-          DataOutcome.Success(Unit),
-          graph.movimientos.insert(
-              row("missing", TODAY, category = "later-category", title = null)
-          ),
-      )
+      graph.insertLegacy(row("missing", TODAY, category = "later-category", title = null))
       runCurrent()
       assertEquals("Unknown category", graph.period.groups.single().rows.single().title)
       val originalSummary = graph.period.summary
@@ -279,7 +277,7 @@ class HistoryIntegrationTest {
           graph.start()
           val form = graph.form("retry")
           form.viewModel.onAmountChanged("10,50")
-          form.viewModel.onCategoriasChanged(listOf("cat_comida"))
+          form.viewModel.onCategoriaSelected("cat_comida")
           form.viewModel.onTituloChanged("Lunch")
           graph.driver.failWrites = true
           form.viewModel.onSubmit()
@@ -287,7 +285,7 @@ class HistoryIntegrationTest {
           assertEquals(MovimientoFormError.SAVE_FAILED, form.viewModel.uiState.value.error)
           assertEquals("10,50", form.viewModel.uiState.value.amountInput)
           assertEquals(TODAY, form.viewModel.uiState.value.fecha)
-          assertEquals(listOf("cat_comida"), form.viewModel.uiState.value.categoriaIds)
+          assertEquals("cat_comida", form.viewModel.uiState.value.categoriaId)
           assertEquals("Lunch", form.viewModel.uiState.value.titulo)
           assertEquals(emptyList(), form.effects)
           assertEquals(0, graph.period.movementCount)
@@ -367,6 +365,9 @@ class HistoryIntegrationTest {
     val driver =
         ControlledDriver(JdbcSqliteDriver("jdbc:sqlite:${fixture.directory.resolve("history.db")}"))
     private val database = TallybookDatabase(driver)
+
+    fun insertLegacy(movimiento: Movimiento) = database.insertLegacy(movimiento)
+
     private val factory =
         PreferencesDataStoreFactory(
             object : PreferencesPathProvider {
@@ -383,6 +384,13 @@ class HistoryIntegrationTest {
             IdGenerator { error("Not used by this test") },
         )
     val movimientos = MovimientoRepositoryImpl(database, fixture.dispatcher)
+    private val etiquetas =
+        EtiquetaRepositoryImpl(
+            database,
+            fixture.dispatcher,
+            IdGenerator { error("Not used by this test") },
+            fixture.clock,
+        )
     private var nextId = "unset"
     private val owners = mutableListOf<GraphOwner>()
     val collectors = mutableListOf<Job>()
@@ -410,6 +418,7 @@ class HistoryIntegrationTest {
               single<AppPreferencesRepository> { preferences }
               single<MovimientoRepository> { movimientos }
               single<CategoriaRepository> { categorias }
+              single<EtiquetaRepository> { etiquetas }
               single<Clock> { fixture.clock }
               single<TimeZoneProvider> { TimeZoneProvider { fixture.clock.zone } }
               single<IdGenerator> { IdGenerator { nextId } }
@@ -471,9 +480,7 @@ class HistoryIntegrationTest {
       form.viewModel.apply {
         onTipoChanged(type)
         onAmountChanged(input)
-        onCategoriasChanged(
-            listOf(if (type == TipoMovimiento.INGRESO) "cat_ingresos" else "cat_comida")
-        )
+        onCategoriaSelected(if (type == TipoMovimiento.INGRESO) "cat_ingresos" else "cat_comida")
         onFechaChanged(date)
         onTituloChanged("Title $id")
         onSubmit()
@@ -595,7 +602,7 @@ class HistoryIntegrationTest {
             tipo = TipoMovimiento.GASTO,
             monto = Money(100, currency),
             fecha = date,
-            categoriaIds = listOf(category),
+            categoriaId = category,
             titulo = title,
             descripcion = null,
             createdAt = Instant.parse("2026-09-20T12:00:00Z"),

@@ -59,15 +59,20 @@ internal fun MovimientoForm(
     footerContent: (@Composable () -> Unit)? = null,
     interactionEnabled: Boolean = true,
     categoryCreation: CategoryPickerCreation? = null,
+    onDeselectCategoria: (() -> Unit)? = null,
 ) {
   val fieldFocus = remember { MovimientoFieldFocus() }
-  val categoryPicker = rememberMovimientoCategoryPicker(interactionEnabled)
+  val categoryPicker = rememberMovimientoPicker(interactionEnabled)
+  val etiquetaPicker = rememberMovimientoPicker(interactionEnabled)
   NavigationBackHandler(
       state = rememberNavigationEventState(NavigationEventInfo.None),
-      isBackEnabled = categoryPicker.isVisible && interactionEnabled,
+      isBackEnabled = (categoryPicker.isVisible || etiquetaPicker.isVisible) && interactionEnabled,
       onBackCompleted = {
-        if (categoryCreation?.state?.draft != null) categoryCreation.actions.onClose()
-        else categoryPicker.onDismiss()
+        when {
+          etiquetaPicker.isVisible -> etiquetaPicker.onDismiss()
+          categoryCreation?.state?.draft != null -> categoryCreation.actions.onClose()
+          else -> categoryPicker.onDismiss()
+        }
       },
   )
   val title = presentation?.title ?: stringResource(Res.string.add_movimiento_pane_title)
@@ -92,7 +97,12 @@ internal fun MovimientoForm(
         uiState = uiState,
         interactionEnabled = interactionEnabled,
         actions = actions,
-        onOpenCategory = categoryPicker.onOpen,
+        selection =
+            MovimientoSelectionCallbacks(
+                onChooseCategoria = categoryPicker.onOpen,
+                onDeselectCategoria = onDeselectCategoria,
+                onAddEtiqueta = etiquetaPicker.onOpen,
+            ),
         fieldFocus = fieldFocus.copy(amountModifier = Modifier.revealWhenFocused()),
     )
     val textEnabled = interactionEnabled && !uiState.isSubmitting
@@ -128,9 +138,15 @@ internal fun MovimientoForm(
   MovimientoCategoryPickerSheet(
       visible = interactionEnabled && categoryPicker.isVisible,
       uiState = uiState,
-      onSelectionChange = actions::onCategoriasChanged,
+      onSelect = actions::onCategoriaSelected,
       picker = categoryPicker,
       creation = categoryCreation,
+  )
+  MovimientoEtiquetaPickerSheet(
+      visible = interactionEnabled && etiquetaPicker.isVisible,
+      uiState = uiState,
+      actions = actions,
+      picker = etiquetaPicker,
   )
 }
 
@@ -185,7 +201,7 @@ internal fun MovimientoFormErrorMessage(
 }
 
 @Composable
-private fun MovimientoFormRetryError(
+internal fun MovimientoFormRetryError(
     message: String,
     onRetry: () -> Unit,
     interactionEnabled: Boolean,

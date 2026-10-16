@@ -614,7 +614,8 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) : Movimient
             tipo = changes.tipo,
             monto = changes.monto,
             fecha = changes.fecha,
-            categoriaIds = changes.categoriaIds,
+            categoriaId = changes.categoriaId,
+            etiquetaIds = changes.etiquetaIds,
             titulo = changes.titulo,
             descripcion = changes.descripcion,
         )
@@ -661,7 +662,7 @@ private fun movimiento(
         TipoMovimiento.GASTO,
         Money(amount, moneda),
         fecha,
-        listOf("missing"),
+        "missing",
         null,
         null,
         Instant.parse("2026-10-05T00:00:00Z"),

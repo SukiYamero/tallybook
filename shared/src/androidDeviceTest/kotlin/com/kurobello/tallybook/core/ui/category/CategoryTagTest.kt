@@ -4,15 +4,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasNoClickAction
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -22,7 +18,6 @@ import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.StringResource
@@ -32,19 +27,13 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.category_tag_add_description
-import tallybook.shared.generated.resources.category_tag_field_suggestions
 import tallybook.shared.generated.resources.category_tag_remove
-import tallybook.shared.generated.resources.movimiento_pending_label
 
 @OptIn(ExperimentalResourceApi::class)
 class CategoryTagTest {
   @get:Rule val composeRule = createComposeRule()
 
   private val cinema = Categoria("cinema", "Cinema", null, CategoryIcon.FILM, CategoryTint.PURPLE)
-  private val food = Categoria("food", "Food", null, CategoryIcon.UTENSILS, CategoryTint.AMBER)
-  private val transport =
-      Categoria("transport", "Transport", null, CategoryIcon.CAR, CategoryTint.BLUE)
 
   @Before
   fun setUp() {
@@ -110,129 +99,7 @@ class CategoryTagTest {
     composeRule.runOnIdle { assertEquals(0, clicks) }
   }
 
-  @Test
-  fun fieldShowsNoCounterAndOffersAddUntilTheLimit() {
-    var adds = 0
-    composeRule.setContent {
-      TallybookTheme {
-        CategoryTagField(
-            categorias = listOf(cinema, food),
-            max = LIMIT,
-            onRemove = {},
-            onAdd = { adds++ },
-        )
-      }
-    }
-
-    composeRule.onNodeWithText("2/$LIMIT").assertDoesNotExist()
-    composeRule
-        .onNodeWithContentDescription(string(Res.string.category_tag_add_description))
-        .performClick()
-    composeRule.runOnIdle { assertEquals(1, adds) }
-  }
-
-  @Test
-  fun fieldHidesAddAndSuggestionsAtTheLimit() {
-    composeRule.setContent {
-      TallybookTheme {
-        CategoryTagField(
-            categorias = listOf(cinema, food),
-            max = 2,
-            onRemove = {},
-            onAdd = {},
-            suggestions = listOf(transport),
-        )
-      }
-    }
-
-    composeRule
-        .onAllNodesWithContentDescription(string(Res.string.category_tag_add_description))
-        .assertCountEquals(0)
-    composeRule
-        .onNodeWithText(string(Res.string.category_tag_field_suggestions))
-        .assertDoesNotExist()
-    composeRule.onNodeWithText("Transport").assertDoesNotExist()
-  }
-
-  @Test
-  fun fieldRemovesEveryTagExceptTheLastOne() {
-    var removed: Categoria? = null
-    composeRule.setContent {
-      TallybookTheme {
-        CategoryTagField(
-            categorias = listOf(cinema, food),
-            max = LIMIT,
-            onRemove = { removed = it },
-            onAdd = {},
-        )
-      }
-    }
-
-    composeRule
-        .onNodeWithContentDescription(string(Res.string.category_tag_remove, "Food"))
-        .performClick()
-    composeRule.runOnIdle { assertEquals(food, removed) }
-  }
-
-  @Test
-  fun fieldWithASingleCategoryOffersNoRemoval() {
-    composeRule.setContent {
-      TallybookTheme {
-        CategoryTagField(categorias = listOf(cinema), max = LIMIT, onRemove = {}, onAdd = {})
-      }
-    }
-
-    composeRule
-        .onAllNodesWithContentDescription(string(Res.string.category_tag_remove, "Cinema"))
-        .assertCountEquals(0)
-  }
-
-  @Test
-  fun fieldOffersOnlySuggestionsThatAreNotSelected() {
-    var chosen: Categoria? = null
-    composeRule.setContent {
-      TallybookTheme {
-        CategoryTagField(
-            categorias = listOf(cinema),
-            max = LIMIT,
-            onRemove = {},
-            onAdd = {},
-            suggestions = listOf(cinema, food),
-            onSuggestion = { chosen = it },
-        )
-      }
-    }
-
-    composeRule.onNodeWithText(string(Res.string.category_tag_field_suggestions)).assertExists()
-    composeRule.onNodeWithText("Food").performClick()
-    composeRule.runOnIdle { assertEquals(food, chosen) }
-  }
-
-  @Test
-  fun pendingLabelSitsOnTheHeaderRowAboveTheTags() {
-    composeRule.setContent {
-      TallybookTheme {
-        CategoryTagField(
-            categorias = listOf(cinema),
-            max = LIMIT,
-            onRemove = {},
-            onAdd = {},
-            pending = true,
-        )
-      }
-    }
-
-    val label = composeRule.onNodeWithText(string(Res.string.movimiento_pending_label))
-    val tag = composeRule.onNodeWithText("Cinema")
-    label.assertIsDisplayed()
-    assertTrue(label.getBoundsInRoot().bottom <= tag.getBoundsInRoot().top)
-  }
-
   private fun string(resource: StringResource, vararg args: Any): String = runBlocking {
     getString(resource, *args)
-  }
-
-  private companion object {
-    const val LIMIT = 6
   }
 }

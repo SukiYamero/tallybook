@@ -447,11 +447,11 @@ hoisted above the active display, in that order, with stable content keys and pa
 Snapshotting extras for each parent lifetime prevents Activity Intent Bundles from resetting stores.
 Tabs select existing entries; History root Back selects Home, Home root delegates platform exit, and
 Search and Profile root Back select Home. One `secondary` slot shows a secondary destination over the
-selected primary with the bottom bar hidden: the UI catalog over any primary, Categories only over
-Profile. Back closes the secondary first, and selecting any primary clears it. Home search opens Search
-with a one-time focus intent; "View N movements" in a Categories sheet selects Search, once that
-sheet has hidden, with a one-shot `SearchCategoryRequest` that the retained Search ViewModel applies
-once.
+selected primary with the bottom bar hidden: the UI catalog over any primary, Categories and Tags only
+over Profile (`PrimaryNavigator.openSecondary`). Back closes the secondary first, and selecting any
+primary clears it. Home search opens Search with a one-time focus intent; "View N movements" in a
+Categories or Tags sheet selects Search, once that sheet has hidden, with a one-shot
+`SearchFilterRequest` (category or tag ids) that the retained Search ViewModel applies once.
 
 Home/History repository observations use five-second subscription sharing. Feature routes revalidate
 before lifecycle collection. `RetainedLoadState<Content, Failure>` is the shared snapshot contract:
@@ -619,7 +619,8 @@ title/description card text; category/currency/type semantics remain accessible.
 The filter sheet occupies 72% of available height, revealing the underlying Search field in portrait.
 It uses compact, vertically centered wrapping date presets, two existing date chips for Custom, Todos/Gastos/Ingresos,
 then parent-grouped real category chips with children visible. Show all persisted categories, with
-their existing icons/tints, plus selected missing-ID fallback chips with remove semantics. The body
+their existing icons/tints, plus selected missing-ID fallback chips with remove semantics. While the
+user has tags, a Tags section of `EtiquetaChip`s follows the categories. The body
 scrolls while a separate Limpiar/Aplicar footer remains reachable above safe/IME insets. Preserve
 minimum 48 dp targets and font scaling. Closing renders the captured draft as disabled until hidden.
 Only one calendar popup is active; Back closes it before cancelling filters. Custom date rows show
@@ -714,8 +715,9 @@ Selecting a movement opens a content-sized bottom sheet with the localized Edit 
 including during its initial read. A successful read supplies the original record and prefilled draft.
 The editor reuses creation's state-independent controls
 through `MovimientoFormState`/`MovimientoFormActions`: the type selector retains its directional icons
-and status colors, the currency precedes the numeric input, and the categories use the shared tag
-field with the multi-select picker. It opens with no initial category picker and no forced keyboard.
+and status colors, the currency precedes the numeric input, the Category section uses
+`CategorySingleField` without a × and the single-select picker, and the Tags section uses
+`EtiquetaTagField` with the tag picker. It opens with no initial picker and no forced keyboard.
 Existing title and description open filled. Focus, disclosure, keyboard and category-entry phases belong to
 composition.
 

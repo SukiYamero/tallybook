@@ -5,16 +5,14 @@ import androidx.lifecycle.viewModelScope
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.entry.CategoryAppearanceSuggester
-import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoriaDelete
 import com.kurobello.tallybook.core.model.CategoriaWrite
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
-import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
-import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.primaryMoneda
 import com.kurobello.tallybook.core.ui.category.categoryBlocks
 import com.kurobello.tallybook.core.ui.category.categoryGroups
 import kotlinx.coroutines.CoroutineScope
@@ -388,16 +386,3 @@ private fun CategorySheet.refreshedFrom(loaded: CategoriesSource): CategorySheet
     is CategoryDetails -> copy(categoria = stored, count = ready.count(stored.id))
   }
 }
-
-private fun DataOutcome<AppPreferencesState>.primaryMoneda(): DataOutcome<Moneda> =
-    when (this) {
-      is DataOutcome.Failure -> this
-      is DataOutcome.Success ->
-          when (val state = data) {
-            is AppPreferencesState.Ready -> DataOutcome.Success(state.value.monedaPrincipal)
-            AppPreferencesState.Uninitialized ->
-                DataOutcome.Failure(
-                    DataError.InvalidInput("Preferences are uninitialized after app startup")
-                )
-          }
-    }

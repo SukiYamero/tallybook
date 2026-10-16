@@ -23,7 +23,7 @@ card tokens live in [UI architecture](../ui/architecture.md#movement-card-amount
 - **Search**:
   - One `CivilDayHeader` (`dayHeading`, 15sp semibold, shared with History) per day that has results,
     newest first.
-  - Text matches title, description or category.
+  - Text matches title, description, category or tag names.
 - **Amounts**: the sign leads the symbol everywhere `Money.format` is used (`-$ 25,00`, `+$ 5.000,00`).
 
 ## Integration

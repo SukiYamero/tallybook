@@ -17,8 +17,11 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreOwner
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.ui.tag.EtiquetaPickerSheet
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryEffect
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
+import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormState
 import kotlinx.coroutines.flow.Flow
 import org.koin.compose.viewmodel.koinViewModel
@@ -26,19 +29,18 @@ import org.koin.compose.viewmodel.koinViewModel
 // Otros is the fallback for "no category", so choosing it explicitly would defeat the pending flag.
 internal val PICKER_EXCLUDED_CATEGORY_IDS: Set<String> = setOf(CATEGORIA_OTROS_ID)
 
-internal data class MovimientoCategoryPickerState(
+/** Whether a picker sheet a movimiento surface hosts is open; opening drops the keyboard. */
+internal data class MovimientoPickerState(
     val isVisible: Boolean,
     val onOpen: () -> Unit,
     val onDismiss: () -> Unit,
 )
 
 @Composable
-internal fun rememberMovimientoCategoryPicker(
-    interactionEnabled: Boolean
-): MovimientoCategoryPickerState {
+internal fun rememberMovimientoPicker(interactionEnabled: Boolean): MovimientoPickerState {
   var isVisible by rememberSaveable { mutableStateOf(false) }
   val focusManager = LocalFocusManager.current
-  return MovimientoCategoryPickerState(
+  return MovimientoPickerState(
       isVisible = isVisible,
       onOpen = {
         if (interactionEnabled) {
@@ -51,40 +53,58 @@ internal fun rememberMovimientoCategoryPicker(
 }
 
 /** The picker offers real categories only; the Otros fallback is not a selection. */
-internal fun List<String>.realCategoriaIds(): List<String> = filterNot {
-  it in PICKER_EXCLUDED_CATEGORY_IDS
-}
+internal fun String?.realCategoriaId(): String? = takeUnless { it in PICKER_EXCLUDED_CATEGORY_IDS }
 
 /**
  * What a movimiento picker leaves out: the Otros fallback and hidden categories, except a hidden
- * category already on the movimiento, which must stay visible so it can be removed.
+ * category already on the movimiento, which stays visible as the current choice.
  */
-internal fun pickerExcludedCategoryIds(
-    catalog: List<Categoria>,
-    selectedIds: List<String>,
-): Set<String> =
+internal fun pickerExcludedCategoryIds(catalog: List<Categoria>, selectedId: String?): Set<String> =
     PICKER_EXCLUDED_CATEGORY_IDS +
-        (catalog.filter(Categoria::oculta).map(Categoria::id) - selectedIds.toSet())
+        catalog.filter { it.oculta && it.id != selectedId }.map(Categoria::id)
 
 /** The picker every movimiento editor opens, so each one filters and quick-creates the same way. */
 @Composable
 internal fun MovimientoCategoryPickerSheet(
     visible: Boolean,
     uiState: MovimientoFormState,
-    onSelectionChange: (List<String>) -> Unit,
-    picker: MovimientoCategoryPickerState,
+    onSelect: (String) -> Unit,
+    picker: MovimientoPickerState,
     creation: CategoryPickerCreation?,
 ) {
-  val selectedIds = uiState.categoriaIds.realCategoriaIds()
+  val selectedId = uiState.categoriaId.realCategoriaId()
   CategoryPickerSheet(
       visible = visible,
       categorias = uiState.categorias,
-      selectedIds = selectedIds,
-      onSelectionChange = onSelectionChange,
+      selectedId = selectedId,
+      onSelect = onSelect,
       onDismiss = picker.onDismiss,
       onBack = picker.onDismiss,
-      excludedIds = pickerExcludedCategoryIds(uiState.categorias, selectedIds),
+      excludedIds = pickerExcludedCategoryIds(uiState.categorias, selectedId),
       creation = creation,
+  )
+}
+
+/**
+ * The tag picker every movimiento surface opens. It only sees tags the catalog still has, so a
+ * deleted tag never comes back through a toggle.
+ */
+@Composable
+internal fun MovimientoEtiquetaPickerSheet(
+    visible: Boolean,
+    uiState: MovimientoFormState,
+    actions: MovimientoFormActions,
+    picker: MovimientoPickerState,
+) {
+  EtiquetaPickerSheet(
+      visible = visible,
+      etiquetas = uiState.etiquetas,
+      selectedIds = uiState.selectedEtiquetas.map(Etiqueta::id),
+      onSelectionChange = actions::onEtiquetasChanged,
+      onCreate = actions::onCreateEtiqueta,
+      onDismiss = picker.onDismiss,
+      onBack = picker.onDismiss,
+      failedCreateNombre = uiState.failedEtiquetaNombre,
   )
 }
 
@@ -111,9 +131,9 @@ internal fun rememberQuickCategoryViewModel(key: String): QuickCategoryViewModel
 }
 
 /**
- * Selects what quick-create produced through [selection], so the picker's limit still applies. A
- * new categoria reaches [catalog] only after the repository emits it, and selecting an id the
- * catalog does not know yet would be dropped, so the selection waits for it.
+ * Selects what quick-create produced through [selection]. A new categoria reaches [catalog] only
+ * after the repository emits it, and selecting an id the catalog does not know yet would be
+ * dropped, so the selection waits for it.
  */
 @Composable
 internal fun QuickCategorySelectionEffect(
@@ -133,6 +153,6 @@ internal fun QuickCategorySelectionEffect(
     val id = pendingId ?: return@LaunchedEffect
     if (catalog.none { it.id == id }) return@LaunchedEffect
     pendingId = null
-    if (id !in currentSelection.selectedIds) currentSelection.choose(id, catalog)
+    currentSelection.choose(id)
   }
 }
