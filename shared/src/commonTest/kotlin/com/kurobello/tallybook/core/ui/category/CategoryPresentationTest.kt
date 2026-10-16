@@ -20,6 +20,7 @@ class CategoryPresentationTest {
             CategoryIcon.CALCULATOR to "calculator",
             CategoryIcon.CAR to "car",
             CategoryIcon.CHEF_HAT to "chef-hat",
+            CategoryIcon.CIRCLE_DASHED to "circle-dashed",
             CategoryIcon.COFFEE to "coffee",
             CategoryIcon.CREDIT_CARD to "credit-card",
             CategoryIcon.DUMBBELL to "dumbbell",
@@ -80,6 +81,7 @@ class CategoryPresentationTest {
             CategoryTint.SUCCESS to LightTallybookColors.status.success.base,
             CategoryTint.DANGER to LightTallybookColors.status.danger.base,
             CategoryTint.INFO to LightTallybookColors.status.info,
+            CategoryTint.NEUTRAL to null,
         )
 
     assertEquals(CategoryTint.entries.toSet(), expected.keys)

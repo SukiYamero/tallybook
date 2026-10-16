@@ -23,7 +23,8 @@ internal data class CategoryTintColors(
     val border: Color,
 )
 
-internal fun CategoryTint.accentColor(colors: TallybookColors): Color =
+// NEUTRAL has no chart accent; tintColors() resolves it through the Material neutral roles.
+internal fun CategoryTint.accentColor(colors: TallybookColors): Color? =
     when (this) {
       CategoryTint.EMERALD -> colors.chart[EMERALD_CHART_INDEX]
       CategoryTint.BLUE -> colors.chart[BLUE_CHART_INDEX]
@@ -33,11 +34,12 @@ internal fun CategoryTint.accentColor(colors: TallybookColors): Color =
       CategoryTint.SUCCESS -> colors.status.success.base
       CategoryTint.DANGER -> colors.status.danger.base
       CategoryTint.INFO -> colors.status.info
+      CategoryTint.NEUTRAL -> null
     }
 
 @Composable
 internal fun CategoryTint.tintColors(): CategoryTintColors {
-  val accent = accentColor(LocalTallybookColors.current)
+  val accent = accentColor(LocalTallybookColors.current) ?: return neutralCategoryTintColors()
   return CategoryTintColors(
       content = accent,
       container = accent.copy(alpha = CATEGORY_CONTAINER_ALPHA),

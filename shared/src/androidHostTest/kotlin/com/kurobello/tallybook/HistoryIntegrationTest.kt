@@ -424,7 +424,7 @@ class HistoryIntegrationTest {
           DataOutcome.Success(AppPreferencesState.Ready(AppPreferences(Moneda.COP))),
           preferences.preferences.first(),
       )
-      assertEquals(58, assertSuccess(categorias.getAll()).size)
+      assertEquals(59, assertSuccess(categorias.getAll()).size)
       history.onPresentationChanged("Unknown category")
       history.onResume()
       collectors += fixture.test.backgroundScope.launch { home.uiState.collect {} }

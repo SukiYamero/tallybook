@@ -195,6 +195,7 @@
     <string name="category_ventas">Vendas</string>
     <string name="category_regalo">Presente</string>
     <string name="category_reembolso">Reembolso</string>
+    <string name="category_otros">Outros</string>
     <string name="movimiento_category_expense_prompt">Com o que você gastou?</string>
     <string name="movimiento_category_income_prompt">De onde veio a receita?</string>
     <string name="movimiento_category_hint">Escolha uma categoria para organizar seus registros.</string>

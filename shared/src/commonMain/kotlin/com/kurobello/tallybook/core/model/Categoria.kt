@@ -7,3 +7,5 @@ data class Categoria(
     val icono: CategoryIcon,
     val color: CategoryTint,
 )
+
+const val CATEGORIA_OTROS_ID: String = "cat_otros"
