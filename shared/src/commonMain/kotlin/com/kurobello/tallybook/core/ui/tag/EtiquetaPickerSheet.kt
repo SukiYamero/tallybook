@@ -198,7 +198,8 @@ private fun EtiquetaPickerSelected(selected: List<Etiqueta>, onRemove: (Etiqueta
 
 /**
  * A fixed area as tall as the category picker's results, so the sheet opens tall with the search
- * near the top and the keyboard does not cover it however few tags exist.
+ * near the top and the keyboard does not cover it however few tags exist. Messages sit at its top,
+ * right under the search field: centered, the create action would land under the keyboard.
  */
 @Composable
 private fun EtiquetaPickerResults(
@@ -211,7 +212,7 @@ private fun EtiquetaPickerResults(
           Modifier.fillMaxWidth()
               .height(TallybookTheme.dimensions.pickerResultsHeight)
               .testTag(ETIQUETA_PICKER_RESULTS_TAG),
-      contentAlignment = Alignment.Center,
+      contentAlignment = Alignment.TopCenter,
   ) {
     when {
       state.results.isEmpty() && state.search.isSearching ->
@@ -246,7 +247,7 @@ private fun EtiquetaPickerResults(
 @Composable
 private fun EtiquetaPickerEmpty() {
   Column(
-      modifier = Modifier.fillMaxWidth(),
+      modifier = Modifier.fillMaxWidth().padding(top = TallybookTheme.spacing.space24),
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
   ) {
@@ -276,7 +277,7 @@ private fun EtiquetaPickerNoResults(
 ) {
   val nombre = query.trim()
   Column(
-      modifier = Modifier.fillMaxWidth(),
+      modifier = Modifier.fillMaxWidth().padding(top = TallybookTheme.spacing.space16),
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
   ) {

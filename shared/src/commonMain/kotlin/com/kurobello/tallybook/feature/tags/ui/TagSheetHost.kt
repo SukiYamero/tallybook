@@ -33,6 +33,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookIconButton
 import com.kurobello.tallybook.core.ui.component.TallybookIconButtonDefaults
 import com.kurobello.tallybook.core.ui.component.TallybookModalBottomSheet
 import com.kurobello.tallybook.core.ui.component.TallybookSheetForm
+import com.kurobello.tallybook.core.ui.component.TallybookSheetFormLayout
 import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
@@ -102,6 +103,10 @@ private fun TagSheetBody(sheet: TagSheet, title: String, actions: TagsActions) {
   TallybookSheetForm(
       header = { TagSheetHeader(sheet, title, enabled, actions) },
       footer = { TagSheetFooter(sheet, enabled, actions) },
+      layout =
+          TallybookSheetFormLayout(
+              minimumBodyHeight = TallybookTheme.dimensions.editorSheetFormMinimumHeight
+          ),
   ) {
     val nombreModifier = Modifier.revealWhenFocused()
     Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4)) {
