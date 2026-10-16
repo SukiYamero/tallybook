@@ -40,6 +40,9 @@ import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.expense
 import tallybook.shared.generated.resources.income
 import tallybook.shared.generated.resources.movimiento_open_detail
+import tallybook.shared.generated.resources.movimiento_pending_label
+
+private const val PENDING_SUBTITLE_SEPARATOR = " · "
 
 internal data class MovimientoRowText(
     val primary: String,
@@ -57,9 +60,11 @@ internal fun MovimientoRowContent(
     maxDescriptionLines: Int = 2,
     maxSubtitleLines: Int = 1,
     onClick: (() -> Unit)? = null,
+    pending: Boolean = false,
 ) {
   val amountText = signedMovimientoAmountText(movimiento.monto, movimiento.tipo)
-  val description = movimientoRowDescription(movimiento, text, amountText)
+  val pendingLabel = if (pending) stringResource(Res.string.movimiento_pending_label) else null
+  val description = movimientoRowDescription(movimiento, text, amountText, pendingLabel)
   val interactions = remember { MutableInteractionSource() }
   val isPressed by interactions.collectIsPressedAsState()
   val tapFeedback = rememberTallybookTapFeedback()
@@ -91,9 +96,8 @@ internal fun MovimientoRowContent(
     ) {
       MovimientoRowDescription(
           categoria,
-          text,
-          maxDescriptionLines,
-          maxSubtitleLines,
+          text.copy(secondary = pendingSubtitle(pendingLabel, text.secondary)),
+          RowDescriptionLayout(maxDescriptionLines, maxSubtitleLines, pending),
           Modifier.weight(1f),
       )
       TallybookText(
@@ -113,6 +117,7 @@ private fun movimientoRowDescription(
     movimiento: Movimiento,
     text: MovimientoRowText,
     amountText: String,
+    pendingLabel: String?,
 ): String {
   val typeLabel =
       stringResource(
@@ -122,6 +127,7 @@ private fun movimientoRowDescription(
           text.primary,
           text.secondary,
           text.categoryLabel.takeUnless { it == text.primary },
+          pendingLabel,
           typeLabel,
           amountText,
           movimiento.monto.moneda.name,
@@ -163,12 +169,21 @@ internal fun signedMovimientoAmountText(monto: Money, tipo: TipoMovimiento): Str
   return prefix + "+" + formatted.removePrefix(prefix)
 }
 
+internal fun pendingSubtitle(pendingLabel: String?, secondary: String?): String? =
+    if (pendingLabel == null) secondary
+    else listOfNotNull(pendingLabel, secondary).joinToString(PENDING_SUBTITLE_SEPARATOR)
+
+private data class RowDescriptionLayout(
+    val maxDescriptionLines: Int,
+    val maxSubtitleLines: Int,
+    val pending: Boolean,
+)
+
 @Composable
 private fun MovimientoRowDescription(
     categoria: Categoria?,
     text: MovimientoRowText,
-    maxDescriptionLines: Int,
-    maxSubtitleLines: Int,
+    layout: RowDescriptionLayout,
     modifier: Modifier,
 ) {
   Row(
@@ -177,12 +192,12 @@ private fun MovimientoRowDescription(
       verticalAlignment = Alignment.CenterVertically,
   ) {
     if (categoria == null) CategoryAvatar(Lucide.CircleQuestionMark, neutralCategoryTintColors())
-    else CategoryAvatar(categoria)
+    else CategoryAvatar(categoria, pending = layout.pending)
     Column(modifier = Modifier.weight(1f)) {
       TallybookText(
           text.primary,
           style = TallybookTheme.typography.bodyEmphasis,
-          maxLines = maxDescriptionLines,
+          maxLines = layout.maxDescriptionLines,
           overflow = TextOverflow.Ellipsis,
       )
       text.secondary?.let {
@@ -190,7 +205,7 @@ private fun MovimientoRowDescription(
             it,
             color = TallybookTheme.colors.foreground.tertiary,
             style = TallybookTheme.typography.bodySmall,
-            maxLines = maxSubtitleLines,
+            maxLines = layout.maxSubtitleLines,
             overflow = TextOverflow.Ellipsis,
         )
       }

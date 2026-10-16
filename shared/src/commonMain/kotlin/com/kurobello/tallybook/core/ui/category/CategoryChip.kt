@@ -33,17 +33,19 @@ import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_comida
 
 @Composable
+@Suppress("LongParameterList")
 fun CategoryChip(
     categoria: Categoria,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    pending: Boolean = false,
 ) {
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
   val tapFeedback = rememberTallybookTapFeedback()
-  val colors = categoria.color.tintColors()
+  val colors = if (pending) neutralCategoryTintColors() else categoria.color.tintColors()
   val shape = MaterialTheme.shapes.extraLarge
   val containerColor =
       if (selected) colors.container else MaterialTheme.colorScheme.surfaceContainerLow
@@ -81,7 +83,7 @@ fun CategoryChip(
       horizontalArrangement = Arrangement.spacedBy(8.dp),
       verticalAlignment = Alignment.CenterVertically,
   ) {
-    CategoryAvatar(categoria = categoria, modifier = Modifier.size(28.dp))
+    CategoryAvatar(categoria = categoria, modifier = Modifier.size(28.dp), pending = pending)
     TallybookText(
         text = categoria.nombre,
         color = if (selected) colors.content else MaterialTheme.colorScheme.onSurface,

@@ -26,6 +26,7 @@ fun MovimientoRow(
     categoria: Categoria?,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    pending: Boolean = false,
 ) {
   val categoryLabel = categoria?.nombre ?: stringResource(Res.string.unknown_category)
   MovimientoRowContent(
@@ -39,6 +40,7 @@ fun MovimientoRow(
           ),
       modifier = modifier,
       onClick = onClick,
+      pending = pending,
   )
 }
 

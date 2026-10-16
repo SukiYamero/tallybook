@@ -1,0 +1,161 @@
+package com.kurobello.tallybook.feature.movimientos.ui
+
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.test.platform.app.InstrumentationRegistry
+import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSummaryUi
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlinx.coroutines.runBlocking
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.setResourceReaderAndroidContext
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.movimiento_pending_label
+import tallybook.shared.generated.resources.movimiento_summary_amount_missing
+import tallybook.shared.generated.resources.movimiento_summary_amount_review
+import tallybook.shared.generated.resources.movimiento_summary_description_quote
+import tallybook.shared.generated.resources.movimiento_summary_edit
+import tallybook.shared.generated.resources.movimiento_summary_save
+
+@OptIn(ExperimentalResourceApi::class)
+class MovimientoSummaryStepTest {
+  @get:Rule val composeRule = createComposeRule()
+
+  private val samples = MovimientoEntrySamples
+  private val selected = mutableListOf<Categoria>()
+  private var edits = 0
+  private var saves = 0
+
+  @Before
+  fun setUp() {
+    setResourceReaderAndroidContext(InstrumentationRegistry.getInstrumentation().targetContext)
+  }
+
+  @Test
+  fun completeSummaryShowsDescriptionInQuotesAndCategoryStates() {
+    show(samples.completeSummary)
+
+    composeRule
+        .onNodeWithText(
+            string(
+                Res.string.movimiento_summary_description_quote,
+                samples.completeSummary.descripcion,
+            )
+        )
+        .assertIsDisplayed()
+    composeRule.onNodeWithText(samples.cinema.nombre).assertIsSelected()
+    composeRule.onNodeWithText(samples.food.nombre).assertIsNotSelected().assertIsEnabled()
+    composeRule.onNodeWithText(samples.transport.nombre).assertIsNotSelected().assertIsEnabled()
+  }
+
+  @Test
+  fun tappingASuggestionSelectsThatCategory() {
+    show(samples.completeSummary)
+
+    composeRule.onNodeWithText(samples.transport.nombre).performClick()
+
+    composeRule.runOnIdle { assertEquals(listOf(samples.transport), selected) }
+  }
+
+  @Test
+  fun footerPlacesEditBeforeSaveInOneRowWithEqualWidths() {
+    show(samples.completeSummary)
+
+    val edit = bounds(composeRule.onNodeWithText(string(Res.string.movimiento_summary_edit)))
+    val save =
+        bounds(composeRule.onNodeWithContentDescription(string(Res.string.movimiento_summary_save)))
+    assertTrue(edit.right <= save.left, "Edit must sit to the left of Save")
+    assertEquals(edit.top, save.top)
+    assertEquals(edit.width, save.width, absoluteTolerance = 1f)
+
+    composeRule.onNodeWithText(string(Res.string.movimiento_summary_edit)).performClick()
+    composeRule
+        .onNodeWithContentDescription(string(Res.string.movimiento_summary_save))
+        .performClick()
+    composeRule.runOnIdle {
+      assertEquals(1, edits)
+      assertEquals(1, saves)
+    }
+  }
+
+  @Test
+  fun missingAmountShowsTheRequiredMessageInsteadOfAnAmount() {
+    show(samples.missingAmountSummary)
+
+    composeRule
+        .onNodeWithText(string(Res.string.movimiento_summary_amount_missing))
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun ambiguousAmountShowsTheReviewHintOnlyWhenFlagged() {
+    show(samples.ambiguousAmountSummary)
+    composeRule
+        .onNodeWithText(string(Res.string.movimiento_summary_amount_review))
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun unflaggedAmountHasNoReviewHint() {
+    show(samples.completeSummary)
+    composeRule
+        .onNodeWithText(string(Res.string.movimiento_summary_amount_review))
+        .assertDoesNotExist()
+  }
+
+  @Test
+  fun pendingCategoryShowsTheToCompleteLabel() {
+    show(samples.pendingSummary)
+
+    composeRule.onNodeWithText(string(Res.string.movimiento_pending_label)).assertIsDisplayed()
+    composeRule.onNodeWithText(samples.other.nombre).assertIsSelected()
+  }
+
+  @Test
+  fun submittingDisablesEveryAction() {
+    show(samples.submittingSummary)
+
+    composeRule.onNodeWithText(string(Res.string.movimiento_summary_edit)).assertIsNotEnabled()
+    composeRule
+        .onNodeWithContentDescription(string(Res.string.movimiento_summary_save))
+        .assertIsNotEnabled()
+    composeRule.onNodeWithText(samples.food.nombre).assertIsNotEnabled()
+  }
+
+  private fun show(summary: MovimientoSummaryUi) {
+    composeRule.setContent {
+      TallybookTheme {
+        MovimientoSummaryStep(
+            summary = summary,
+            onSelectSuggestion = { selected += it },
+            onEdit = { edits++ },
+            onSave = { saves++ },
+            today = samples.today,
+        )
+      }
+    }
+  }
+
+  private fun bounds(node: androidx.compose.ui.test.SemanticsNodeInteraction): Rect =
+      node.fetchSemanticsNode().boundsInRoot
+
+  private fun string(resource: StringResource, vararg args: Any): String = runBlocking {
+    getString(resource, *args)
+  }
+}

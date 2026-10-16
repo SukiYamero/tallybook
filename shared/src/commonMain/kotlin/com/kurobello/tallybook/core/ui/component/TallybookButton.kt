@@ -45,6 +45,15 @@ internal object TallybookButtonDefaults {
       )
 
   @Composable
+  fun secondaryColors(): TallybookButtonColors =
+      TallybookButtonColors(
+          container = TallybookTheme.colors.surface.raised,
+          content = TallybookTheme.colors.foreground.primary,
+          disabledContainer = TallybookTheme.colors.surface.high,
+          disabledContent = TallybookTheme.colors.foreground.disabled,
+      )
+
+  @Composable
   fun destructiveColors(): TallybookButtonColors =
       TallybookButtonColors(
           container = TallybookTheme.colors.status.danger.strong,
@@ -64,11 +73,13 @@ internal object TallybookButtonDefaults {
 }
 
 @Composable
+@Suppress("LongParameterList")
 internal fun TallybookButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     colors: TallybookButtonColors = TallybookButtonDefaults.primaryColors(),
+    contentPadding: PaddingValues = TallybookButtonDefaults.contentPadding,
     content: @Composable RowScope.() -> Unit,
 ) {
   val interactionSource = remember { MutableInteractionSource() }
@@ -104,7 +115,7 @@ internal fun TallybookButton(
       hasTapFeedback = tapFeedback.isActive,
   ) {
     Row(
-        modifier = Modifier.align(Alignment.Center).padding(TallybookButtonDefaults.contentPadding),
+        modifier = Modifier.align(Alignment.Center).padding(contentPadding),
         horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
         verticalAlignment = Alignment.CenterVertically,
         content = content,
