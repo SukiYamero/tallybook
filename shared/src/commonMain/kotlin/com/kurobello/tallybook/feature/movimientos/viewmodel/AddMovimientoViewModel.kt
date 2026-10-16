@@ -45,6 +45,7 @@ import kotlinx.datetime.todayIn
 
 private const val HISTORY_LIMIT = 1_000
 private const val PREVIEW_DEBOUNCE_MILLIS = 250L
+private val LINE_BREAKS = Regex("[\r\n]+")
 
 @Suppress("TooManyFunctions")
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -150,7 +151,7 @@ internal class AddMovimientoViewModel(
   }
 
   override fun onPhraseChanged(value: String) {
-    val phrase = value.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH)
+    val phrase = value.replace(LINE_BREAKS, " ").take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH)
     updateFields { if (phrase.isBlank()) withoutInterpretation(phrase) else copy(phrase = phrase) }
     refreshPreview(debounce = true)
   }
@@ -182,7 +183,14 @@ internal class AddMovimientoViewModel(
 
   override fun onFillManually() {
     previewJob?.cancel()
-    updateFields { withInitialEntry().copy(step = AddMovimientoStep.FORM) }
+    updateFields {
+      withInitialEntry()
+          .copy(
+              step = AddMovimientoStep.FORM,
+              categoriaIds = manualCategoriaIds,
+              categoriasEdited = categoriasEdited,
+          )
+    }
   }
 
   override fun onEditMovimiento() {
@@ -336,13 +344,22 @@ internal class AddMovimientoViewModel(
     )
   }
 
+  // Tags picked by hand are the only draft value a blank sentence leaves behind.
   private fun AddMovimientoUiState.withoutInterpretation(phrase: String): AddMovimientoUiState =
       copy(
           phrase = phrase,
           preview = null,
           suggestionQuery = null,
-          categoriaIds = if (categoriasEdited) categoriaIds else emptyList(),
+          tipo = initialDraft.tipo,
+          amountInput = initialDraft.amountInput,
+          fecha = initialDraft.fecha,
+          descripcion = initialDraft.descripcion,
+          amountNeedsReview = false,
+          categoriaIds = manualCategoriaIds,
       )
+
+  private val AddMovimientoUiState.manualCategoriaIds: List<String>
+    get() = if (categoriasEdited) categoriaIds else initialDraft.categoriaIds
 
   private fun AddMovimientoUiState.withDetection(
       interpretation: PhraseInterpretation,

@@ -307,7 +307,7 @@ class AddMovimientoEntryFlowTest {
   }
 
   @Test
-  fun fillingManuallyAfterContinueOpensAnEmptyForm() = runTest {
+  fun fillingManuallyAfterContinueKeepsOnlyTheCategoriesPickedByHand() = runTest {
     val viewModel = entryViewModel()
     viewModel.onPhraseChanged("Sueldo 3 millones ayer")
     viewModel.onPhraseContinue()
@@ -323,14 +323,43 @@ class AddMovimientoEntryFlowTest {
     assertEquals("", state.descripcion)
     assertEquals("", state.phrase)
     assertEquals(state.today, state.fecha)
-    assertTrue(state.categoriaIds.isEmpty())
-    assertEquals(listOf(CATEGORIA_OTROS_ID), state.displayedCategoriaIds)
-    assertFalse(state.categoriasEdited)
+    assertEquals(listOf("cat_comida"), state.categoriaIds)
+    assertTrue(state.categoriasEdited)
     assertTrue(state.suggestions.isEmpty())
     assertTrue(state.dismissedSuggestionIds.isEmpty())
     assertFalse(state.amountNeedsReview)
-    assertFalse(state.hasUnsavedChanges)
     assertNull(state.stepBackTarget)
+  }
+
+  @Test
+  fun fillingManuallyDropsTheCategoriesTheSentenceDerived() = runTest {
+    val viewModel = entryViewModel()
+    viewModel.onPhraseChanged("Gasté 20.000 en cine")
+    viewModel.onPhraseContinue()
+    viewModel.onStepBack()
+    assertEquals(listOf("cat_cine"), viewModel.uiState.value.categoriaIds)
+
+    viewModel.onFillManually()
+
+    val state = viewModel.uiState.value
+    assertTrue(state.categoriaIds.isEmpty())
+    assertEquals(listOf(CATEGORIA_OTROS_ID), state.displayedCategoriaIds)
+    assertFalse(state.categoriasEdited)
+    assertFalse(state.hasUnsavedChanges)
+  }
+
+  @Test
+  fun fillingManuallyKeepsTheTagsPickedByHandInTheDialog() = runTest {
+    val viewModel = entryViewModel()
+    viewModel.onCategoriasChanged(listOf("cat_comida", "cat_salud"))
+    viewModel.onPhraseChanged("Gasté 20.000 en cine")
+    viewModel.onFillManually()
+
+    val state = viewModel.uiState.value
+    assertEquals(AddMovimientoStep.FORM, state.step)
+    assertEquals(listOf("cat_comida", "cat_salud"), state.categoriaIds)
+    assertEquals("", state.amountInput)
+    assertEquals("", state.phrase)
   }
 
   @Test
@@ -557,6 +586,109 @@ class AddMovimientoEntryFlowTest {
     assertEquals(listOf("cat_cine"), viewModel.uiState.value.categoriaIds)
   }
 
+  @Test
+  fun clearingTheSentenceAfterBackLeavesTheDialogClean() = runTest {
+    val viewModel = entryViewModel()
+    viewModel.onPhraseChanged("Sueldo 3 millones ayer")
+    viewModel.onPhraseContinue()
+    viewModel.onStepBack()
+    assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+
+    viewModel.onPhraseChanged("")
+
+    val state = viewModel.uiState.value
+    assertFalse(state.hasUnsavedChanges)
+    assertEquals(TipoMovimiento.GASTO, state.tipo)
+    assertEquals("", state.amountInput)
+    assertEquals("", state.descripcion)
+    assertEquals(state.today, state.fecha)
+    assertFalse(state.amountNeedsReview)
+    assertTrue(state.categoriaIds.isEmpty())
+  }
+
+  @Test
+  fun tagsPickedByHandSurviveClearingTheSentenceWithoutMakingTheDialogDirty() = runTest {
+    val viewModel = entryViewModel()
+    viewModel.onPhraseChanged("Gasté 20.000 en cine")
+    viewModel.onPhraseContinue()
+    viewModel.onCategoriasChanged(listOf("cat_cine", "cat_comida"))
+    viewModel.onStepBack()
+
+    viewModel.onPhraseChanged("  ")
+
+    val state = viewModel.uiState.value
+    assertEquals(listOf("cat_cine", "cat_comida"), state.categoriaIds)
+    assertEquals("", state.amountInput)
+    assertFalse(state.hasUnsavedChanges)
+  }
+
+  @Test
+  fun newlinesInTheSentenceBecomeSingleSpaces() = runTest {
+    val viewModel = entryViewModel()
+
+    viewModel.onPhraseChanged("Gasté 20.000\nen cine")
+    assertEquals("Gasté 20.000 en cine", viewModel.uiState.value.phrase)
+
+    viewModel.onPhraseChanged("Gasté\r\n\r\n20.000\n")
+    assertEquals("Gasté 20.000 ", viewModel.uiState.value.phrase)
+  }
+
+  @Test
+  fun aSentenceMadeOfNewlinesIsBlank() = runTest {
+    val viewModel = entryViewModel()
+
+    viewModel.onPhraseChanged("\n\n")
+    viewModel.onPhraseContinue()
+
+    assertEquals(AddMovimientoStep.PHRASE, viewModel.uiState.value.step)
+    assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+  }
+
+  @Test
+  fun aSubjectAlwaysSavedWithTwoCategoriesPreselectsBoth() = runTest {
+    val movimientos = AddFakeMovimientos()
+    movimientos.history.value = DataOutcome.Success(cineHistory(times = 3))
+    val viewModel = entryViewModel(movimientos = movimientos)
+
+    viewModel.onPhraseChanged("Gasté 20.000 en cine")
+    viewModel.onPhraseContinue()
+
+    assertEquals(listOf("cat_cine", "cat_comida"), viewModel.uiState.value.categoriaIds)
+  }
+
+  @Test
+  fun aSubjectSavedWithOneCategoryPreselectsItAlone() = runTest {
+    val movimientos = AddFakeMovimientos()
+    movimientos.history.value =
+        DataOutcome.Success(
+            List(3) { CategoryHistoryRow("m$it", "cine", "cat_cine", ADD_TEST_NOW - (it + 1).days) }
+        )
+    val viewModel = entryViewModel(movimientos = movimientos)
+
+    viewModel.onPhraseChanged("Gasté 20.000 en cine")
+    viewModel.onPhraseContinue()
+
+    assertEquals(listOf("cat_cine"), viewModel.uiState.value.categoriaIds)
+  }
+
+  @Test
+  fun aSplitHistoryFallsBackToTheClearlyLeadingSingleCategory() = runTest {
+    val movimientos = AddFakeMovimientos()
+    movimientos.history.value =
+        DataOutcome.Success(
+            cineHistory(times = 2) +
+                List(2) {
+                  CategoryHistoryRow("s$it", "cine", "cat_comida", ADD_TEST_NOW - (it + 1).days)
+                }
+        )
+    val viewModel = entryViewModel(movimientos = movimientos)
+
+    viewModel.onPhraseChanged("Gasté 20.000 en cine")
+    viewModel.onPhraseContinue()
+
+    assertEquals(listOf("cat_comida"), viewModel.uiState.value.categoriaIds)
+  }
+
   private fun TestScope.entryViewModel(
       movimientos: AddFakeMovimientos = AddFakeMovimientos(),
       timeZone: TimeZone = TimeZone.UTC,
@@ -587,3 +719,10 @@ private class HeldDispatcher : CoroutineDispatcher() {
     while (pending.isNotEmpty()) pending.removeFirst().run()
   }
 }
+
+private fun cineHistory(times: Int): List<CategoryHistoryRow> =
+    (0 until times).flatMap { index ->
+      listOf("cat_cine", "cat_comida").map { categoriaId ->
+        CategoryHistoryRow("c$index", "cine", categoriaId, ADD_TEST_NOW - (index + 1).days)
+      }
+    }
