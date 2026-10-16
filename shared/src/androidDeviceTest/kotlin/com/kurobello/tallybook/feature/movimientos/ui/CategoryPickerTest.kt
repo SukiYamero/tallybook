@@ -34,9 +34,9 @@ import org.jetbrains.compose.resources.getString
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.categories_search_empty
 import tallybook.shared.generated.resources.category_picker_current
 import tallybook.shared.generated.resources.category_picker_single_title
-import tallybook.shared.generated.resources.no_categories_found
 
 class CategoryPickerTest {
 
@@ -233,7 +233,9 @@ class CategoryPickerTest {
 
     composeRule.onCategoryOptionWithText(supermercado.nombre).assertIsSelected()
     composeRule.onNode(hasSetTextAction()).performTextInput("no-match")
-    composeRule.onNodeWithText(resourceString(Res.string.no_categories_found)).assertExists()
+    composeRule
+        .onNodeWithText(resourceString(Res.string.categories_search_empty, "no-match"))
+        .assertExists()
   }
 
   @Test
@@ -316,7 +318,9 @@ class CategoryPickerTest {
     composeRule.onNodeWithText(transporte.nombre).assertDoesNotExist()
     composeRule.onNodeWithText(comida.nombre).assertExists()
     composeRule.onNode(hasSetTextAction()).performTextInput(supermercado.nombre)
-    composeRule.onNodeWithText(resourceString(Res.string.no_categories_found)).assertExists()
+    composeRule
+        .onNodeWithText(resourceString(Res.string.categories_search_empty, supermercado.nombre))
+        .assertExists()
   }
 
   private fun resourceString(resource: StringResource, vararg args: Any): String = runBlocking {

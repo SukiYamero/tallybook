@@ -120,7 +120,6 @@
     <string name="continue_editing">Continue</string>
     <string name="search_categories">Search categories</string>
     <string name="clear_search">Clear search</string>
-    <string name="no_categories_found">No categories found</string>
     <string name="unknown_category">No category</string>
     <string name="loading">Loading…</string>
 
@@ -396,7 +395,7 @@
     <string name="category_save_changes">Save changes</string>
     <string name="category_created">Category created</string>
     <string name="cancel">Cancel</string>
-    <string name="category_picker_create">Create “%1$s”</string>
+    <string name="category_picker_create">Create category “%1$s”</string>
     <string name="category_duplicate_use">Use %1$s</string>
     <string name="profile_categories_label">Categories</string>
     <string name="profile_categories_body">Create your own and hide the ones you don’t use.</string>

@@ -23,9 +23,9 @@ import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 /**
  * The shared "no results" state of a search: a [Lucide.SearchX] icon, [message] and an optional
  * [action] with an [error] under it. It stays top-aligned so, under a search field, the keyboard
- * never covers the action. The top padding matches the message-to-action gap: together with the
- * callers' `space16` content spacing, the search field sits as far above the state as the message
- * sits above the action.
+ * never covers the action. With the callers' `space16` content spacing plus this top padding, the
+ * search field sits 32 dp above the icon; the action's own touch-target inset adds about 16 dp
+ * above its label, so a `space16` spacer makes the label read as the same 32 dp below the message.
  */
 @Composable
 internal fun TallybookSearchEmptyState(
@@ -51,7 +51,7 @@ internal fun TallybookSearchEmptyState(
         style = TallybookTheme.typography.body.copy(textAlign = TextAlign.Center),
     )
     if (action != null) {
-      Spacer(Modifier.height(TallybookTheme.spacing.space32))
+      Spacer(Modifier.height(TallybookTheme.spacing.space16))
       action()
     }
     if (error != null) {

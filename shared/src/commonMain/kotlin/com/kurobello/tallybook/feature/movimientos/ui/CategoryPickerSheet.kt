@@ -43,12 +43,12 @@ import com.kurobello.tallybook.core.ui.component.rememberPickerSearchState
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.categories_search_empty
 import tallybook.shared.generated.resources.category_new_title
 import tallybook.shared.generated.resources.category_picker_create
 import tallybook.shared.generated.resources.category_picker_current
 import tallybook.shared.generated.resources.category_picker_single_title
 import tallybook.shared.generated.resources.clear_search
-import tallybook.shared.generated.resources.no_categories_found
 import tallybook.shared.generated.resources.search_categories
 
 internal const val CATEGORY_PICKER_OFFER_CREATE_TAG = "category_picker_offer_create"
@@ -342,7 +342,7 @@ private fun CategoryPickerResults(
 private fun CategoryPickerNoResults(query: String, onCreate: ((String) -> Unit)?) {
   val nombre = query.trim()
   TallybookSearchEmptyState(
-      message = stringResource(Res.string.no_categories_found),
+      message = stringResource(Res.string.categories_search_empty, nombre),
       modifier = Modifier.fillMaxWidth(),
       action =
           if (onCreate == null || nombre.isEmpty()) null
