@@ -17,6 +17,61 @@ Un **movimiento** registra un gasto o un ingreso.
 - **Obligatorios**: tipo (gasto / ingreso), monto, fecha, categoría, moneda.
 - **Opcionales**: descripción (por ahora el único campo opcional). `createdAt` es metadata técnica para
   ordenar de forma estable, no un campo solicitado al usuario.
+- La categoría es obligatoria en el dato, no en la interacción: si el usuario guarda una creación sin
+  elegir ninguna, el movimiento queda en la categoría de sistema **Otros** y se marca como pendiente
+  de completar (ver [Categorías](#categorías)).
+
+### Natural-language entry
+
+Creation starts from one sentence that describes the movimiento ("Gasté 20.000 en cine ayer"). The
+app derives the draft from it and the user confirms or refines it; the manual form stays available.
+
+- The entry opens with focus on the sentence input. Its placeholder is a localized example whose
+  amount is formatted for the primary currency. A secondary "fill manually" action opens the empty
+  form directly. The sentence respects the description length limit.
+- While typing, a live preview shows the detected values. Continue parses the sentence once and
+  writes tipo, monto, fecha, categoría and descripción into the draft, replacing earlier derived
+  values. Nothing is persisted until Save.
+- **Tipo**: expense and income verbs in every supported language decide it (`gasté`, `pagué`,
+  `me cobraron` → gasto; `recibí`, `me pagaron`, `cobré`, `vendí` → ingreso). Without a verb, an
+  income category suggestion selects ingreso; otherwise gasto.
+- **Monto**: digits with the primary currency's group/decimal separators, a currency symbol,
+  multipliers (`k`, `mil`, `millón`/`millones`, regional slang such as `lucas` or `palos`) and basic
+  number words. A separator followed by exactly three digits groups; any other separator is decimal.
+  The amount is always in the primary currency. When several candidates remain, the largest one wins
+  and the summary flags the amount for review. No amount leaves the field empty and required.
+- **Fecha**: today, yesterday, the day before yesterday, a weekday (its most recent occurrence, today
+  included) and explicit day/month dates (day-first except in English). A day without month resolves
+  to its most recent past occurrence. Future expressions are ignored and the date stays today.
+- **Descripción**: the trimmed sentence exactly as typed. Parsing never rewrites what the user wrote.
+- **Categoría**: the suggestion engine below runs on the sentence without its verb, amount, date and
+  stop words. A high-confidence result is preselected; other results appear as tappable suggestions.
+- After Continue, a compact summary shows tipo, fecha, a prominent amount, the description and the
+  category with its suggestions. Its two equal-level actions are Edit movimiento (left), which opens
+  the complete form with the same draft, and Save (right). Save with an invalid required value opens
+  the form with that field's error and focus instead of persisting. Back returns from the form to the
+  summary (when the form was reached through it) and from the summary to the sentence, preserving the
+  draft and the typed text.
+- A non-empty sentence counts as an unsaved change for the existing dismissal guard. Editing an
+  existing movimiento keeps opening the form directly.
+
+### Category suggestions
+
+Suggestions are computed on the device from the user's own history and a built-in keyword
+dictionary. No text leaves the device and no separate learning store exists: saved movimientos are
+the training data, so correcting a suggestion teaches the next one.
+
+- Text is compared after the shared search normalization (case and supported accent folding), stop
+  word removal and basic plural reduction.
+- Signals, strongest first: an exact match with a previous description's subject; word-to-category
+  associations learned from history, weighted by frequency and recency; dictionary phrases; then
+  dictionary words and brands. Phrases outweigh their words ("cambio de aceite" → Transporte), and
+  ambiguous words ("aceite") never produce a high-confidence result on their own.
+- The dictionary covers every seeded category in all supported languages, with regional variants
+  and common local brands, and points at the most specific category.
+- High confidence means an exact history match or one strong dictionary match without a competing
+  category. At most three suggestions are shown. A suggestion the user dismisses is not offered
+  again for the same draft. Otros is never suggested.
 
 ### Editing and deletion
 
@@ -29,9 +84,9 @@ edited or deleted; failed reads require Retry before mutation actions become ava
 - Creation's validation and description normalization also apply to editing. Civil today/timezone
   is captured at editor entry and again on Save; future dates are rejected without silently changing
   the draft when the clock moves backward.
-- The picker selects existing parent categories. An existing child or missing category remains
-  visible and valid when untouched; a replacement must exist in the loaded catalog. Category updates
-  cannot overwrite typed input or clear an unretried save failure.
+- The picker selects any existing category, parent or child, except Otros. An existing Otros or
+  missing category remains visible and valid when untouched; a replacement must exist in the loaded
+  catalog. Category updates cannot overwrite typed input or clear an unretried save failure.
 - Unsaved-change guarding compares input with its opening baseline. A valid normalized no-op performs
   no database update and closes the editor without saved feedback. A changed successful Save closes
   management; failure retains the draft for explicit retry. Saving a missing ID never inserts it.
@@ -85,9 +140,9 @@ Home recent movimientos use the primary currency before applying the six-row lim
 
 ## Categorías
 
-Lista predefinida (no las crea el usuario en el MVP), portada de moneta — no se retipea acá para no
-tener una segunda copia que se desincronice; fuente real: `web/moneta/src/lib/schema.ts`
-(`CATEGORIAS_SEMILLA`).
+Lista predefinida portada de moneta — no se retipea acá para no tener una segunda copia que se
+desincronice; fuente real: `web/moneta/src/lib/schema.ts` (`CATEGORIAS_SEMILLA`). Las categorías
+personalizadas y varias categorías por movimiento son alcance aceptado en fases posteriores (abajo).
 
 - 12 categorías padre, 58 en total (cada padre con 3–6 hijas). Estructura por entrada: `{id, nombre,
   padreId?, icono, color}`.
@@ -99,6 +154,52 @@ tener una segunda copia que se desincronice; fuente real: `web/moneta/src/lib/sc
   tipo (gasto/ingreso) lo determina el movimiento, no la categoría.
 - Nombres de categoría traducidos por idioma en moneta (`src/lib/seedConfig.ts`,
   `SEED_CATEGORY_NAMES`) — mismo criterio a portar, ver `docs/wording.md`.
+
+### Otros and pending movimientos
+
+- **Otros** (`cat_otros`) is a seeded, localized system root with a neutral tint. It only exists as
+  the creation fallback: pickers and suggestions never offer it, while Search filters list it so
+  pending movimientos can be found.
+- A movimiento in Otros is pending. Rows and the editor show a subtle pending treatment (dashed
+  avatar and a muted "to complete" label) without blocking any action. Choosing a real category in
+  the editor resolves it.
+
+### Hierarchy and filtering
+
+- Parents and children are both selectable. A parent means the general case ("transport, not more
+  specific"); a child is the specific case.
+- Filtering by a parent includes the parent and all its children. Filtering by a child includes only
+  that child. Roll-up never goes upward.
+- Children keep their parent's tint, so the family stays recognizable; parents and children have
+  the same visual weight in chips. The hierarchy is shown only in the picker, where a parent heads
+  its group of children.
+
+### Multiple categories per movimiento (phase 2, accepted)
+
+- A movimiento has one to six categories. All are equal: there is no primary category, and the last
+  one cannot be removed. Order is kept only for display; rows show the first one plus a count.
+- A parent and one of its own children never coexist on a movimiento: choosing the child replaces the
+  parent and choosing the parent replaces its children. Siblings may coexist.
+- Totals per category count the full amount in every category of the movimiento, so they do not add
+  up to the overall total; category charts must not present them as parts of a whole.
+- Choosing a real category removes the Otros fallback. Search matches a movimiento through any of its
+  categories, with the same roll-up.
+
+### Custom categories (phase 3, accepted)
+
+- The user creates root categories with a required name (trimmed, up to 40 characters, unique among
+  all categories ignoring case and supported accents), an icon preselected by default and suggested
+  from the name, an optional tint (suggested with the icon) and an optional description of up to 340
+  characters. Custom names are not translated.
+- Creating a name that already exists offers the existing category instead of a duplicate.
+- From the movimiento picker, a search without results offers a non-intrusive action to create a
+  category with the typed name; the quick form shows name and icon, with tint and description behind
+  "More options", and the created category becomes selected.
+- Profile links to a dedicated Categories screen: search, the user's categories (editable), the
+  predefined ones (read-only, grouped by parent), each with its movimiento count; tapping a category
+  opens Search filtered by it. Unused predefined categories can be hidden from pickers without being
+  deleted.
+- Deleting a custom category that has movimientos is an open product decision.
 
 ## Tracking and History
 
@@ -161,7 +262,8 @@ Search is a separate destination over the primary currency. Its implementation c
   keep an existing now-future Custom selection visible with an invalid-range error until corrected;
   never silently clamp it or run its invalid query.
 - Date/type/category dimensions compose AND; selected IDs compose OR. No IDs means all categories;
-  selecting a parent matches its own ID only. All real categories, including children, remain
+  selecting a parent matches the parent and its children (see
+  [Hierarchy and filtering](#hierarchy-and-filtering)). All real categories, including children, remain
   selectable regardless of type. Missing selected IDs remain visible with a localized fallback and
   explicit remove action.
 - Filter edits form a draft. Apply atomically commits and closes; Back, scrim or drag discards and
