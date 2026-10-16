@@ -10,7 +10,8 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
   shared `TEAM_ID`. Validate Home/History/Search, filters, creation (sentence dialog keyboard
   placement, review sheet, multi-select picker), lifecycle and safe areas,
   including management scene teardown, edit/delete/Undo and VoiceOver action-window usability, and
-  Profile: theme with status-bar style, in-app language switch (`AppleLanguages`; the subtree reset returns to Home and drops retained
+  Profile: theme with status-bar style, the Categories screen (chips, category sheets, keyboard
+  scrolling in the category form) and quick-create from the picker, in-app language switch (`AppleLanguages`; the subtree reset returns to Home and drops retained
   screen state — hoist navigation state if that is not acceptable) and
   CSV share sheet presentation.
   Precise management evidence lives in [Manage movimientos](features/manage-movimientos.md#verification-boundaries).
@@ -18,23 +19,16 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 
 ## Media
 
-- **Custom categories (phase 3 of categories)** — Accepted rules live in
-  [business-logic.md](business-logic.md#custom-categories-phase-3-accepted): creation with name,
-  suggested icon/tint and description, quick creation from the picker's empty search, a Categories
-  screen linked from Profile with movimiento counts and Search shortcuts, duplicate detection and
-  hiding predefined categories. Needs schema migration `3.sqm`. Deleting a custom category that has
-  movimientos is an open product decision to settle before implementation.
-
-
 - **Android automated device checks and Search scale** — The 2,000-row isolated scale fixture is prepared
   and compiled but unexecuted; dataset authorization and a usable runner remain prerequisites.
   The Xiaomi UI runner stalled before assertions (0/20 completed) and was stopped after bounded
   diagnosis. Prioritize runner repair before retrying, then execute the agreed bounded scale check
   with correctness, latency, responsiveness and subscription/allocation evidence. Existing manual
   Android evidence and precise limits live in [Search](features/search.md#verification-boundaries).
-  Smart entry fixtures (sentence dialog, review, tag field, multi-select picker) and management sheet
-  fixtures also compile but remain unexecuted after a bounded stalled-runner retry;
-  execute them after runner repair, preserving their Back, reread-height and IME assertions.
+  Smart entry fixtures (sentence dialog, review, tag field, multi-select picker), management sheet
+  fixtures and custom categories fixtures (category form, Categories screen and sheets, quick-create,
+  Profile → Categories navigation, sheet-form keyboard scrolling) also compile but remain
+  unexecuted after a bounded stalled-runner retry; execute them after runner repair, preserving their Back, reread-height and IME assertions.
 
 - **Management accessibility on Android** — Verify TalkBack announcements/focus and enlarged-text
   snackbar, Undo, Close and sheet-action reachability on a confirmed physical device. Manual Xiaomi

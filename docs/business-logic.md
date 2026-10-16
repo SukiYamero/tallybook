@@ -220,7 +220,7 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
   name of a movimiento joined by " · " and, in the parent column, the top-level name at the same
   position (a root category repeats its own name).
 
-### Custom categories (phase 3, accepted)
+### Custom categories
 
 - The user creates root categories with a required name (trimmed, up to 40 characters, unique among
   all categories ignoring case and supported accents), an icon preselected by default and suggested
@@ -229,7 +229,8 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
 - Creating a name that already exists offers the existing category instead of a duplicate.
 - From the movimiento picker, a search without results offers a non-intrusive action to create a
   category with the typed name; the quick form shows name and icon, with tint and description behind
-  "More options", and the created category becomes selected.
+  "More options", and the created category becomes selected when the six-category limit allows.
+  Custom categories come first in pickers, sorted by name.
 - Profile links to a dedicated Categories screen that shows chips, like the picker: search, the
   user's categories first, then the predefined ones grouped by parent, each with its movimiento count
   in the primary currency. Tapping a chip opens its sheet: the editor for a custom category, a
