@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.model.CategoriaSelection
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Money
@@ -78,10 +79,13 @@ internal class ManageMovimientoViewModel(
     copy(descripcion = value.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH))
   }
 
-  override fun onCategoriaSelected(id: String) {
-    val session = uiState.value.session ?: return
-    if (session.categorias.none { it.id == id && it.padreId == null }) return
-    updateDraft { copy(selectedCategoriaId = id) }
+  override fun onCategoriasChanged(ids: List<String>) {
+    val catalog = uiState.value.session?.categorias ?: return
+    updateDraft { copy(categoriaIds = CategoriaSelection.reconcile(categoriaIds, ids, catalog)) }
+  }
+
+  override fun onCategoriaRemoved(id: String) = updateDraft {
+    copy(categoriaIds = CategoriaSelection.remove(categoriaIds, id))
   }
 
   override fun onCancelEdit() {
@@ -435,10 +439,10 @@ internal fun Money.toAmountInput(): String {
 }
 
 internal fun Movimiento.toDraft() =
-    MovimientoDraft(tipo, monto.toAmountInput(), fecha, categoriaId, descripcion.orEmpty())
+    MovimientoDraft(tipo, monto.toAmountInput(), fecha, categoriaIds, descripcion.orEmpty())
 
 private fun Movimiento.toChanges() =
-    MovimientoChanges(tipo, monto, fecha, categoriaId, descripcion.normalizeDescriptionOrNull())
+    MovimientoChanges(tipo, monto, fecha, categoriaIds, descripcion.normalizeDescriptionOrNull())
 
 private fun String?.normalizeDescriptionOrNull(): String? = this?.normalizeDescription()
 
@@ -453,7 +457,7 @@ private fun EditMovimientoUiState.toChangesOrNull(): MovimientoChanges? {
             tipo,
             it,
             fecha,
-            requireNotNull(selectedCategoriaId),
+            categoriaIds,
             descripcion.normalizeDescription(),
         )
       }

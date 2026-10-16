@@ -3,6 +3,7 @@ package com.kurobello.tallybook.feature.home
 import androidx.lifecycle.ViewModelStore
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
@@ -494,6 +495,9 @@ class HomeViewModelTest {
     override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> =
         error("History year reads are not expected in this fixture")
 
+    override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
+        error("Category history reads are not expected in this fixture")
+
     override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> {
       insertCalls += 1
       return DataOutcome.Success(Unit)
@@ -584,7 +588,7 @@ class HomeViewModelTest {
             tipo = TipoMovimiento.GASTO,
             monto = Money(100, moneda),
             fecha = LocalDate(2026, 9, 15),
-            categoriaId = categoriaId,
+            categoriaIds = listOf(categoriaId),
             descripcion = null,
             createdAt = Instant.parse("2026-09-15T00:00:00Z"),
         )

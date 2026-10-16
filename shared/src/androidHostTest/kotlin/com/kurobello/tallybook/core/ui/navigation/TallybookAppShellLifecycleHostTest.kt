@@ -33,6 +33,7 @@ import androidx.savedstate.compose.LocalSavedStateRegistryOwner
 import androidx.savedstate.savedState
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.model.AppLocale
@@ -549,6 +550,9 @@ private class ShellMovimientos : MovimientoRepository {
     )
   }
 
+  override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
+      error("Category history is not expected in this fixture")
+
   override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> {
     rows.value += movimiento
     return DataOutcome.Success(Unit)
@@ -571,7 +575,7 @@ private class ShellMovimientos : MovimientoRepository {
             tipo = changes.tipo,
             monto = changes.monto,
             fecha = changes.fecha,
-            categoriaId = changes.categoriaId,
+            categoriaIds = changes.categoriaIds,
             descripcion = changes.descripcion,
         )
     val values = rows.value.map { if (it.id == id) updated else it }
@@ -649,7 +653,7 @@ private fun shellRow(id: String, date: LocalDate) =
         TipoMovimiento.GASTO,
         Money(125, Moneda.USD),
         date,
-        "missing",
+        listOf("missing"),
         null,
         Instant.parse("2026-10-05T12:00:00Z"),
     )

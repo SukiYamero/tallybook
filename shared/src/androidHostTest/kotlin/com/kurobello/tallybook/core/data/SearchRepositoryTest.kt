@@ -8,6 +8,7 @@ import app.cash.sqldelight.db.SqlPreparedStatement
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.MovimientoQueries
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
@@ -56,7 +58,7 @@ class SearchRepositoryTest {
                   movimiento("upper", "2026-09-30"),
                   movimiento("before", "2026-08-31"),
                   movimiento("after", "2026-10-01"),
-                  movimiento("child", "2026-09-15", categoryId = "food-child"),
+                  movimiento("child", "2026-09-15", categoryIds = listOf("food-child")),
                   movimiento("income", "2026-09-15", tipo = TipoMovimiento.INGRESO),
                   movimiento("usd", "2026-09-15", moneda = Moneda.USD),
               )
@@ -133,7 +135,84 @@ class SearchRepositoryTest {
       }
 
   @Test
-  fun `excluded mutations update coherent currency years and cancellation releases one table listener`() =
+  fun `parent filter rolls up to children and a child filter never goes upward`() = runTest {
+    withHierarchy { repository, _ ->
+      val family = setOf("on-parent", "on-child", "on-sibling")
+      assertEquals(family, ids(repository, setOf("food")))
+      assertEquals(setOf("on-child"), ids(repository, setOf("food-child")))
+      assertEquals(setOf("on-unrelated"), ids(repository, setOf("other")))
+      assertEquals(family + "on-unrelated", ids(repository, setOf("food", "other")))
+      assertEquals(setOf("on-child", "on-unrelated"), ids(repository, setOf("food-child", "other")))
+      assertEquals(family, ids(repository, setOf("food", "food-child")))
+    }
+  }
+
+  @Test
+  fun `a movimiento matches through any of its categories exactly once with roll-up`() = runTest {
+    withHierarchy { repository, _ ->
+      val multi = movimiento("multi", "2026-09-15", categoryIds = listOf("other", "food-child"))
+      val redundant = movimiento("both", "2026-09-15", categoryIds = listOf("food", "food-sibling"))
+      repository.insert(multi)
+      repository.insert(redundant)
+
+      assertEquals(setOf("on-unrelated", "multi"), ids(repository, setOf("other")))
+      assertEquals(setOf("on-child", "multi"), ids(repository, setOf("food-child")))
+      assertEquals(
+          setOf("on-parent", "on-child", "on-sibling", "multi", "both"),
+          ids(repository, setOf("food")),
+      )
+      val found =
+          snapshot(repository, MovimientoReadCriteria(Moneda.COP, categoryIds = setOf("food")))
+      assertEquals(
+          found.movimientos.size,
+          found.movimientos.map { it.id }.distinct().size,
+          "a row matched through several categories is returned once",
+      )
+      assertEquals(
+          listOf("other", "food-child"),
+          found.movimientos.single { it.id == "multi" }.categoriaIds,
+      )
+    }
+  }
+
+  @Test
+  fun `Otros is filterable and unknown ids are tolerated next to a parent`() = runTest {
+    withHierarchy { repository, _ ->
+      assertEquals(setOf("on-otros"), ids(repository, setOf(CATEGORIA_OTROS_ID)))
+      assertEquals(emptySet(), ids(repository, setOf("missing")))
+      assertEquals(
+          setOf("on-parent", "on-child", "on-sibling"),
+          ids(repository, setOf("missing", "food")),
+      )
+    }
+  }
+
+  @Test
+  fun `parent roll-up composes with the type filter and follows category changes`() = runTest {
+    withHierarchy { repository, database ->
+      repository.insert(
+          movimiento(
+              "child-income",
+              "2026-09-15",
+              tipo = TipoMovimiento.INGRESO,
+              categoryIds = listOf("food-child"),
+          )
+      )
+
+      assertEquals(
+          setOf("on-parent", "on-child", "on-sibling"),
+          ids(repository, setOf("food"), TipoMovimiento.GASTO),
+      )
+      assertEquals(setOf("child-income"), ids(repository, setOf("food"), TipoMovimiento.INGRESO))
+
+      database.categoriaQueries.insertCategoria("late-child", "Late", "other", "i", "c")
+      repository.insert(movimiento("on-late", "2026-09-15", categoryIds = listOf("late-child")))
+      assertEquals(setOf("on-unrelated", "on-late"), ids(repository, setOf("other")))
+    }
+  }
+
+  @Test
+  fun `excluded mutations update coherent currency years and cancellation releases one query listener`() =
       runTest {
         val driver = TrackingDriver(JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY))
         try {
@@ -151,7 +230,10 @@ class SearchRepositoryTest {
               emissions.single(),
           )
           assertEquals(1, driver.listeners)
-          assertEquals(setOf("movimiento"), driver.listenerKeys)
+          assertEquals(
+              setOf("movimiento", "movimiento_categoria", "categoria"),
+              driver.listenerKeys,
+          )
 
           val matching = movimiento("matching", "2026-09-15")
           assertEquals(DataOutcome.Success(Unit), repository.insert(matching))
@@ -167,7 +249,7 @@ class SearchRepositoryTest {
                       "excluded",
                       "2024-01-01",
                       tipo = TipoMovimiento.INGRESO,
-                      categoryId = "other",
+                      categoryIds = listOf("other"),
                   )
               ),
           )
@@ -197,25 +279,27 @@ class SearchRepositoryTest {
                   100,
                   "COP",
                   "2026-09-15",
-                  "food",
                   null,
                   "2026-09-15T12:00:00Z",
               )
+              database.movimientoQueries.insertMovimientoCategoria("transaction-$index", "food", 0)
               database.movimientoQueries.insertMovimiento(
                   "old-$index",
                   "INGRESO",
                   100,
                   "COP",
                   "2023-01-01",
-                  "other",
                   null,
                   "2026-09-15T12:00:00Z",
               )
+              database.movimientoQueries.insertMovimientoCategoria("old-$index", "other", 0)
             }
             runCurrent()
             database.transaction {
               database.movimientoQueries.deleteMovimiento("transaction-$index")
+              database.movimientoQueries.deleteMovimientoCategorias("transaction-$index")
               database.movimientoQueries.deleteMovimiento("old-$index")
+              database.movimientoQueries.deleteMovimientoCategorias("old-$index")
             }
             runCurrent()
           }
@@ -277,7 +361,7 @@ class SearchRepositoryTest {
           val ids = listOf("quote' OR 1=1 --", "percent%", "underscore_", "unrelated")
           val dates = listOf("-0001-01-01", "0000-01-01", "+10000-01-01", "2026-01-01")
           for ((index, id) in ids.withIndex()) repository.insert(
-              movimiento("row-$index", dates[index], categoryId = id)
+              movimiento("row-$index", dates[index], categoryIds = listOf(id))
           )
           val selected =
               snapshot(
@@ -346,10 +430,10 @@ class SearchRepositoryTest {
               0,
               "COP",
               "2026-09-15",
-              "food",
               null,
               "2026-09-15T12:00:00Z",
           )
+          database.movimientoQueries.insertMovimientoCategoria("invalid", "food", 0)
           runCurrent()
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(emissions.last()).error)
           assertTrue(job.isCompleted)
@@ -366,10 +450,10 @@ class SearchRepositoryTest {
               100,
               "COP",
               "02026-09-15",
-              "other",
               null,
               "2026-09-15T12:00:00Z",
           )
+          database.movimientoQueries.insertMovimientoCategoria("invalid-year", "other", 0)
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(flow.first()).error)
           repository.delete("invalid-year")
           assertEquals(
@@ -462,7 +546,7 @@ class SearchRepositoryTest {
                   "row-$index",
                   if (index % 2 == 0) "2026-09-15" else "2024-01-01",
                   if (index % 3 == 0) Moneda.USD else Moneda.COP,
-                  categoryId = if (index % 4 == 0) "sparse" else "food",
+                  categoryIds = listOf(if (index % 4 == 0) "sparse" else "food"),
               )
           )
           val criteria =
@@ -506,6 +590,52 @@ class SearchRepositoryTest {
         }
       }
 
+  private suspend fun TestScope.withHierarchy(
+      block: suspend (MovimientoRepository, TallybookDatabase) -> Unit
+  ) {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      TallybookDatabase.Schema.create(driver)
+      val database = TallybookDatabase(driver)
+      val categories =
+          listOf(
+              Triple("food", "Food", null),
+              Triple("food-child", "Groceries", "food"),
+              Triple("food-sibling", "Dining", "food"),
+              Triple("other", "Other root", null),
+              Triple(CATEGORIA_OTROS_ID, "Otros", null),
+          )
+      for ((id, nombre, padreId) in categories) {
+        database.categoriaQueries.insertCategoria(id, nombre, padreId, "icon", "color")
+      }
+      val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+      val rows =
+          mapOf(
+              "on-parent" to "food",
+              "on-child" to "food-child",
+              "on-sibling" to "food-sibling",
+              "on-unrelated" to "other",
+              "on-otros" to CATEGORIA_OTROS_ID,
+          )
+      for ((id, categoryId) in rows) repository.insert(
+          movimiento(id, "2026-09-15", categoryIds = listOf(categoryId))
+      )
+      block(repository, database)
+    }
+  }
+
+  private suspend fun ids(
+      repository: MovimientoRepository,
+      categoryIds: Set<String>,
+      tipo: TipoMovimiento? = null,
+  ): Set<String> =
+      snapshot(
+              repository,
+              MovimientoReadCriteria(Moneda.COP, tipo = tipo, categoryIds = categoryIds),
+          )
+          .movimientos
+          .map { it.id }
+          .toSet()
+
   private suspend fun snapshot(repository: MovimientoRepository, criteria: MovimientoReadCriteria) =
       assertIs<DataOutcome.Success<MovimientoSearchSnapshot>>(
               repository.observeFiltered(criteria).first()
@@ -530,7 +660,7 @@ class SearchRepositoryTest {
         parameters: Int,
         binders: (SqlPreparedStatement.() -> Unit)?,
     ): QueryResult<R> {
-      val structural = sql.trimStart().startsWith("SELECT movimiento.id")
+      val structural = sql.trimStart().startsWith("SELECT movimiento_con_categorias.id")
       if (sql.trimStart().startsWith("SELECT")) readTransactions += currentTransaction()
       if (structural) structuralRead = StructuralRead(sql, parameters, binders)
       val result = delegate.executeQuery(identifier, sql, mapper, parameters, binders)
@@ -565,7 +695,7 @@ class SearchRepositoryTest {
       fecha: String,
       moneda: Moneda = Moneda.COP,
       tipo: TipoMovimiento = TipoMovimiento.GASTO,
-      categoryId: String = "food",
+      categoryIds: List<String> = listOf("food"),
       createdAt: String = "2026-09-15T12:00:00Z",
   ) =
       Movimiento(
@@ -573,7 +703,7 @@ class SearchRepositoryTest {
           tipo,
           Money(100, moneda),
           LocalDate.parse(fecha),
-          categoryId,
+          categoryIds,
           "Lunch",
           Instant.parse(createdAt),
       )

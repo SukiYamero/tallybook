@@ -10,6 +10,7 @@ private const val RECORD_SEPARATOR = "\r\n"
 private const val FIELD_SEPARATOR = ","
 private const val QUOTE = "\""
 private const val FORMULA_ESCAPE = "'"
+private const val CATEGORY_SEPARATOR = " · "
 private val CHARACTERS_REQUIRING_QUOTES = charArrayOf(',', '"', '\r', '\n')
 
 // OWASP CSV-injection list: spreadsheets evaluate a cell starting with any of these as a formula.
@@ -30,7 +31,9 @@ data class MovimientoCsvLabels(
 /**
  * RFC 4180 document (CRLF records, every record terminated) prefixed with a UTF-8 BOM so Excel
  * detects the encoding. Amounts are unsigned plain decimals with `Moneda.scale` digits after a `.`:
- * the type column carries the direction, and a locale-free number stays importable everywhere.
+ * the type column carries the direction, and a locale-free number stays importable everywhere. A
+ * movimiento with several categorias lists every name in display order, joined by " · ", and the
+ * parent column holds each category's top-level name at the same position.
  */
 fun buildMovimientoCsv(
     movimientos: List<Movimiento>,
@@ -56,12 +59,12 @@ fun buildMovimientoCsv(
                   .thenByDescending { it.id },
           )
           .map { movimiento ->
-            val categoria = categoriasById[movimiento.categoriaId]
+            val categorias = movimiento.categoriaIds.mapNotNull(categoriasById::get)
             listOf(
                 movimiento.fecha.toString(),
                 labels.typeLabel(movimiento.tipo),
-                categoria?.nombre.orEmpty(),
-                categoria?.padreId?.let(categoriasById::get)?.nombre.orEmpty(),
+                categorias.joinToString(CATEGORY_SEPARATOR, transform = Categoria::nombre),
+                categorias.joinToString(CATEGORY_SEPARATOR) { it.parentName(categoriasById) },
                 movimiento.descripcion.orEmpty(),
                 movimiento.monto.toPlainUnsignedDecimal(),
                 movimiento.monto.moneda.name,
@@ -75,6 +78,11 @@ fun buildMovimientoCsv(
     }
   }
 }
+
+// A root category is its own top level, so its parent cell repeats its name; a parent that no
+// longer exists stays empty.
+private fun Categoria.parentName(categoriasById: Map<String, Categoria>): String =
+    if (padreId == null) nombre else categoriasById[padreId]?.nombre.orEmpty()
 
 private fun MovimientoCsvLabels.typeLabel(tipo: TipoMovimiento): String =
     when (tipo) {

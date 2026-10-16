@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.model.AppLocale
@@ -498,7 +499,7 @@ private class SearchMovimientos : MovimientoRepository {
             TipoMovimiento.GASTO,
             Money(100, Moneda.USD),
             TODAY,
-            "food",
+            listOf("food"),
             text,
             Instant.parse("2026-10-06T12:00:00Z"),
         )
@@ -530,7 +531,7 @@ private class SearchMovimientos : MovimientoRepository {
                             } != false) &&
                             (criteria.tipo == null || it.tipo == criteria.tipo) &&
                             (criteria.categoryIds.isEmpty() ||
-                                it.categoriaId in criteria.categoryIds)
+                                it.categoriaIds.any { id -> id in criteria.categoryIds })
                       }
               )
             }
@@ -557,6 +558,9 @@ private class SearchMovimientos : MovimientoRepository {
 
   override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> = error("Unexpected read")
 
+  override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
+      error("Unexpected read")
+
   override suspend fun insert(movimiento: Movimiento) = DataOutcome.Success(Unit)
 
   override suspend fun getAll() = DataOutcome.Success(emptyList<Movimiento>())
@@ -578,7 +582,7 @@ private class SearchMovimientos : MovimientoRepository {
             tipo = changes.tipo,
             monto = changes.monto,
             fecha = changes.fecha,
-            categoriaId = changes.categoriaId,
+            categoriaIds = changes.categoriaIds,
             descripcion = changes.descripcion,
         )
     val values = rows.map { if (it.id == id) updated else it }

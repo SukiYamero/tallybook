@@ -1,13 +1,12 @@
 package com.kurobello.tallybook.feature.movimientos.ui
 
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -26,7 +25,6 @@ import org.jetbrains.compose.resources.getString
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.back
 import tallybook.shared.generated.resources.no_categories_found
 
 class CategoryPickerTest {
@@ -34,129 +32,48 @@ class CategoryPickerTest {
   @get:Rule val composeRule = createComposeRule()
 
   @Test
-  fun parentOnlySelectionClosesImmediatelyWithoutShowingChildren() {
-    var selectedId: String? = null
-    var dismissCount = 0
-    composeRule.setContent {
-      TallybookTheme {
-        CategoryPickerSheet(
-            visible = true,
-            categorias = categories,
-            selectedId = null,
-            onSelect = { selectedId = it },
-            onDismiss = { dismissCount += 1 },
-            allowSubcategories = false,
-        )
-      }
-    }
-    composeRule.onCategoryOptionWithText(comida.nombre).performClick()
-    composeRule.onNodeWithText(supermercado.nombre).assertDoesNotExist()
-    composeRule.runOnIdle {
-      assertEquals(comida.id, selectedId)
-      assertEquals(1, dismissCount)
-    }
-  }
-
-  @Test
-  fun parentOnlySearchDoesNotExposeSubcategories() {
-    composeRule.setContent {
-      TallybookTheme {
-        CategoryPickerSheet(
-            visible = true,
-            categorias = categories,
-            selectedId = null,
-            onSelect = {},
-            onDismiss = {},
-            allowSubcategories = false,
-        )
-      }
-    }
-    composeRule.onNode(hasSetTextAction()).performTextInput(supermercado.nombre)
-    composeRule
-        .onNode(
-            hasText(supermercado.nombre) and
-                SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button)
-        )
-        .assertDoesNotExist()
-    composeRule.onNodeWithText(resourceString(Res.string.no_categories_found)).assertExists()
-  }
-
-  @Test
-  fun rootWithChildrenOpensDrillInAndSelectsTheGeneralCategory() {
-    var selectedId: String? = null
-    var dismissCount = 0
-
-    composeRule.setContent {
-      TallybookTheme {
-        CategoryPickerSheet(
-            visible = true,
-            categorias = categories,
-            selectedId = null,
-            onSelect = { selectedId = it },
-            onDismiss = { dismissCount += 1 },
-        )
-      }
-    }
-
-    composeRule.onCategoryOptionWithText(comida.nombre).performClick()
-    composeRule.runOnIdle {
-      assertEquals(comida.id, selectedId)
-      assertEquals(0, dismissCount)
-    }
-    composeRule.onNodeWithText(supermercado.nombre).assertExists()
-    composeRule.onCategoryOptionWithText(comida.nombre).performClick()
-
-    composeRule.runOnIdle {
-      assertEquals(comida.id, selectedId)
-      assertEquals(1, dismissCount)
-    }
-  }
-
-  @Test
   fun searchShowsFlatResultsAndSelectsAChild() {
-    var selectedId: String? = null
-    var dismissCount = 0
+    var selected = emptyList<String>()
 
     composeRule.setContent {
       TallybookTheme {
         CategoryPickerSheet(
             visible = true,
             categorias = categories,
-            selectedId = null,
-            onSelect = { selectedId = it },
-            onDismiss = { dismissCount += 1 },
+            selectedIds = emptyList(),
+            onSelectionChange = { selected = it },
+            onDismiss = {},
         )
       }
     }
 
     composeRule.onNode(hasSetTextAction()).performTextInput("supermercado")
-    composeRule.onNodeWithText(supermercado.nombre).performClick()
+    composeRule.onCategoryOptionWithText(supermercado.nombre).performClick()
 
-    composeRule.runOnIdle {
-      assertEquals(supermercado.id, selectedId)
-      assertEquals(1, dismissCount)
-    }
+    composeRule.runOnIdle { assertEquals(listOf(supermercado.id), selected) }
   }
 
   @Test
-  fun backFromDrillInReturnsToRoots() {
+  fun familiesShowTheParentThenItsChildrenInOneLevelAndSeparateBlocks() {
     composeRule.setContent {
       TallybookTheme {
         CategoryPickerSheet(
             visible = true,
             categorias = categories,
-            selectedId = null,
-            onSelect = {},
+            selectedIds = emptyList(),
+            onSelectionChange = {},
             onDismiss = {},
         )
       }
     }
 
-    composeRule.onCategoryOptionWithText(comida.nombre).performClick()
-    composeRule.onNodeWithText(resourceString(Res.string.back)).performClick()
+    val parent = composeRule.onCategoryOptionWithText(comida.nombre).boundsInRoot()
+    val child = composeRule.onCategoryOptionWithText(supermercado.nombre).boundsInRoot()
+    val nextFamily = composeRule.onCategoryOptionWithText(transporte.nombre).boundsInRoot()
 
-    composeRule.onNodeWithText(supermercado.nombre).assertDoesNotExist()
-    composeRule.onNodeWithText(transporte.nombre).assertExists()
+    assertTrue(parent.left < child.left, "Parent $parent should precede child $child")
+    assertEquals(parent.top, child.top)
+    assertTrue(nextFamily.top > parent.bottom, "Next family $nextFamily should start below $parent")
   }
 
   @Test
@@ -166,15 +83,14 @@ class CategoryPickerTest {
         CategoryPickerSheet(
             visible = true,
             categorias = categories,
-            selectedId = supermercado.id,
-            onSelect = {},
+            selectedIds = listOf(supermercado.id),
+            onSelectionChange = {},
             onDismiss = {},
         )
       }
     }
 
-    composeRule.onCategoryOptionWithText(comida.nombre).performClick()
-    composeRule.onNodeWithText(supermercado.nombre).assertIsSelected()
+    composeRule.onCategoryOptionWithText(supermercado.nombre).assertIsSelected()
     composeRule.onNode(hasSetTextAction()).performTextInput("no-match")
     composeRule.onNodeWithText(resourceString(Res.string.no_categories_found)).assertExists()
   }
@@ -186,8 +102,8 @@ class CategoryPickerTest {
         CategoryPickerSheet(
             visible = true,
             categorias = categories,
-            selectedId = null,
-            onSelect = {},
+            selectedIds = emptyList(),
+            onSelectionChange = {},
             onDismiss = {},
         )
       }
@@ -217,8 +133,8 @@ class CategoryPickerTest {
         CategoryPickerSheet(
             visible = true,
             categorias = categories,
-            selectedId = null,
-            onSelect = {},
+            selectedIds = emptyList(),
+            onSelectionChange = {},
             onDismiss = {},
         )
       }
@@ -241,10 +157,33 @@ class CategoryPickerTest {
     assertTrue(abs(initialHeight - filteredHeight) <= 1f)
   }
 
+  @Test
+  fun excludedIdsAreHiddenFromRootsAndSearch() {
+    composeRule.setContent {
+      TallybookTheme {
+        CategoryPickerSheet(
+            visible = true,
+            categorias = categories,
+            selectedIds = emptyList(),
+            onSelectionChange = {},
+            onDismiss = {},
+            excludedIds = setOf(transporte.id, supermercado.id),
+        )
+      }
+    }
+
+    composeRule.onNodeWithText(transporte.nombre).assertDoesNotExist()
+    composeRule.onNodeWithText(comida.nombre).assertExists()
+    composeRule.onNode(hasSetTextAction()).performTextInput(supermercado.nombre)
+    composeRule.onNodeWithText(resourceString(Res.string.no_categories_found)).assertExists()
+  }
+
   private fun resourceString(resource: StringResource): String = runBlocking { getString(resource) }
 
   private fun SemanticsNodeInteractionsProvider.onCategoryOptionWithText(text: String) =
-      onNode(hasText(text) and hasClickAction())
+      onNode(hasText(text) and hasClickAction() and isSelectable())
+
+  private fun SemanticsNodeInteraction.boundsInRoot() = fetchSemanticsNode().boundsInRoot
 
   private companion object {
     val comida = categoria(id = "comida", nombre = "Comida")

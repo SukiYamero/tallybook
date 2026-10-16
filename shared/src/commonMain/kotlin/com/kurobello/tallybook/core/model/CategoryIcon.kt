@@ -9,6 +9,7 @@ enum class CategoryIcon(val storageKey: String) {
   CALCULATOR("calculator"),
   CAR("car"),
   CHEF_HAT("chef-hat"),
+  CIRCLE_DASHED("circle-dashed"),
   COFFEE("coffee"),
   CREDIT_CARD("credit-card"),
   DUMBBELL("dumbbell"),

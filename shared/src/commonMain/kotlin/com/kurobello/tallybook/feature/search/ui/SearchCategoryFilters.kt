@@ -11,6 +11,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.ui.category.CategoryChip
+import com.kurobello.tallybook.core.ui.category.categoryFamilies
 import com.kurobello.tallybook.core.ui.component.TallybookSectionHeading
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
@@ -32,9 +33,7 @@ internal fun SearchCategoryFilters(
   val unknownLabel = stringResource(Res.string.unknown_category)
   val groups =
       remember(categories, unknownLabel) {
-        searchCategoryGroups(
-            categories.map { it.copy(nombre = searchCategoryLabel(it, unknownLabel)) }
-        )
+        categoryFamilies(categories.map { it.copy(nombre = searchCategoryLabel(it, unknownLabel)) })
       }
   val missingIds =
       remember(categories, selectedIds) { selectedIds - categories.mapTo(mutableSetOf()) { it.id } }
@@ -74,15 +73,4 @@ internal fun SearchCategoryFilters(
       }
     }
   }
-}
-
-internal fun searchCategoryGroups(categories: List<Categoria>): List<List<Categoria>> {
-  val ids = categories.mapTo(mutableSetOf()) { it.id }
-  val children = categories.groupBy { it.padreId }
-  val visited = mutableSetOf<String>()
-  fun descendants(category: Categoria): List<Categoria> =
-      if (!visited.add(category.id)) emptyList()
-      else listOf(category) + children[category.id].orEmpty().flatMap(::descendants)
-  val roots = categories.filter { it.padreId == null || it.padreId !in ids }
-  return (roots + categories).mapNotNull { descendants(it).takeIf(List<Categoria>::isNotEmpty) }
 }

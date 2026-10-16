@@ -38,8 +38,8 @@ class LocalDataBootstrapperTest {
     assertEquals(1, localeProvider.calls)
     assertEquals(listOf(Moneda.USD), preferencesRepository.initializedWith)
     assertEquals(1, categoriaRepository.seedCalls)
-    assertEquals(58, categoriaRepository.seededCategorias.single().size)
-    assertEquals(58, resolvedResourceCount)
+    assertEquals(59, categoriaRepository.seededCategorias.single().size)
+    assertEquals(59, resolvedResourceCount)
   }
 
   @Test

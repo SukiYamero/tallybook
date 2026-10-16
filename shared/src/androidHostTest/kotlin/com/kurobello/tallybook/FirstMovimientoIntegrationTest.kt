@@ -11,9 +11,13 @@ import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
+import com.kurobello.tallybook.core.data.entry.CategorySuggester
+import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
@@ -23,6 +27,7 @@ import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.feature.home.HomeViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoRepositories
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
+import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoEntryEngine
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -80,7 +85,7 @@ class FirstMovimientoIntegrationTest {
               DataOutcome.Success(AppPreferencesState.Ready(AppPreferences(Moneda.COP))),
               preferences.preferences.first(),
           )
-          assertEquals(58, assertSuccess(categorias.getAll()).size)
+          assertEquals(59, assertSuccess(categorias.getAll()).size)
 
           val home =
               HomeViewModel(
@@ -98,15 +103,15 @@ class FirstMovimientoIntegrationTest {
 
           val expenseForm =
               createMovimientoViewModel(
-                  repositories = AddMovimientoRepositories(preferences, categorias),
-                  movimientos = movimientos,
+                  repositories = AddMovimientoRepositories(preferences, categorias, movimientos),
                   id = "expense",
                   scope = scopes.newScope(dispatcher),
+                  dispatcher = dispatcher,
               )
           testScheduler.advanceUntilIdle()
           expenseForm.apply {
             onAmountChanged("10,50")
-            onCategoriaSelected("cat_comida")
+            onCategoriasChanged(listOf("cat_comida"))
             onSubmit()
           }
           testScheduler.advanceUntilIdle()
@@ -116,16 +121,16 @@ class FirstMovimientoIntegrationTest {
 
           val incomeForm =
               createMovimientoViewModel(
-                  repositories = AddMovimientoRepositories(preferences, categorias),
-                  movimientos = movimientos,
+                  repositories = AddMovimientoRepositories(preferences, categorias, movimientos),
                   id = "income",
                   scope = scopes.newScope(dispatcher),
+                  dispatcher = dispatcher,
               )
           testScheduler.advanceUntilIdle()
           incomeForm.apply {
             onTipoChanged(TipoMovimiento.INGRESO)
             onAmountChanged("20,00")
-            onCategoriaSelected("cat_ingresos")
+            onCategoriasChanged(listOf("cat_ingresos"))
             onSubmit()
           }
           testScheduler.advanceUntilIdle()
@@ -147,7 +152,7 @@ class FirstMovimientoIntegrationTest {
                       tipo = TipoMovimiento.INGRESO,
                       monto = Money(9_999, Moneda.USD),
                       fecha = FIXED_DATE,
-                      categoriaId = "cat_ingresos",
+                      categoriaIds = listOf("cat_ingresos"),
                       descripcion = null,
                       createdAt = FIXED_INSTANT,
                   )
@@ -174,7 +179,7 @@ class FirstMovimientoIntegrationTest {
               DataOutcome.Success(AppPreferencesState.Ready(AppPreferences(Moneda.COP))),
               recreatedPreferences.preferences.first(),
           )
-          assertEquals(58, assertSuccess(recreatedCategorias.getAll()).size)
+          assertEquals(59, assertSuccess(recreatedCategorias.getAll()).size)
           assertEquals(
               setOf("expense", "income", "foreign-income"),
               assertSuccess(recreatedMovimientos.getAll()).map(Movimiento::id).toSet(),
@@ -188,18 +193,107 @@ class FirstMovimientoIntegrationTest {
         }
       }
 
+  @Test
+  fun `a sentence becomes a persisted row and a saved correction teaches the next one`() =
+      runTest(timeout = ZERO) {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val databaseDriver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+        TallybookDatabase.Schema.create(databaseDriver)
+        val database = TallybookDatabase(databaseDriver)
+        val preferencesDirectory = createTempDirectory("tallybook-sentence-entry-")
+        val scopes = mutableListOf<CoroutineScope>()
+        val preferencesFactory =
+            PreferencesDataStoreFactory(
+                TestPreferencesPathProvider(preferencesDirectory.toString()),
+                dispatcher,
+            )
+
+        try {
+          val preferences = AppPreferencesRepositoryImpl(preferencesFactory.create())
+          val categorias = CategoriaRepositoryImpl(database, dispatcher)
+          val movimientos = MovimientoRepositoryImpl(database, dispatcher)
+          val bootstrapper =
+              LocalDataBootstrapper(
+                  localeProvider = FixedDeviceLocaleProvider("es-CO"),
+                  preferencesRepository = preferences,
+                  categoriaRepository = categorias,
+                  categorySeedProvider = CategorySeedProvider { resource -> resource.key },
+              )
+          assertEquals(DataOutcome.Success(Unit), bootstrapper.initialize())
+
+          val repositories = AddMovimientoRepositories(preferences, categorias, movimientos)
+          val first =
+              createMovimientoViewModel(
+                  repositories,
+                  "first",
+                  scopes.newScope(dispatcher),
+                  dispatcher,
+              )
+          testScheduler.advanceUntilIdle()
+          first.onPhraseChanged("Aceite 30 mil")
+          first.onPhraseContinue()
+          assertTrue(first.uiState.value.categoriaIds.isEmpty())
+          first.onSuggestionSelected("cat_supermercado")
+          first.onSubmit()
+          testScheduler.advanceUntilIdle()
+
+          val saved = assertSuccess(movimientos.getAll()).single()
+          assertEquals("first", saved.id)
+          assertEquals("Aceite 30 mil", saved.descripcion)
+          assertEquals(listOf("cat_supermercado"), saved.categoriaIds)
+          assertEquals(Money(3_000_000, Moneda.COP), saved.monto)
+          assertEquals(FIXED_DATE, saved.fecha)
+
+          val second =
+              createMovimientoViewModel(
+                  repositories,
+                  "second",
+                  scopes.newScope(dispatcher),
+                  dispatcher,
+              )
+          testScheduler.advanceUntilIdle()
+          second.onPhraseChanged("Aceite 15 mil")
+          second.onPhraseContinue()
+
+          assertEquals(listOf("cat_supermercado"), second.uiState.value.categoriaIds)
+          assertEquals(Money(1_500_000, Moneda.COP), second.uiState.value.summary?.monto)
+
+          second.onDiscardChanges()
+          second.onPhraseChanged("Gasté 5.000 en algo raro")
+          second.onPhraseContinue()
+          second.onSubmit()
+          testScheduler.advanceUntilIdle()
+
+          assertEquals(
+              listOf(CATEGORIA_OTROS_ID),
+              assertSuccess(movimientos.getAll()).single { it.id == "second" }.categoriaIds,
+          )
+        } finally {
+          scopes.forEach(CoroutineScope::cancel)
+          preferencesFactory.close()
+          databaseDriver.close()
+          preferencesDirectory.toFile().deleteRecursively()
+        }
+      }
+
   private fun createMovimientoViewModel(
       repositories: AddMovimientoRepositories,
-      movimientos: MovimientoRepositoryImpl,
       id: String,
       scope: CoroutineScope,
+      dispatcher: TestDispatcher,
   ) =
       AddMovimientoViewModel(
           repositories = repositories,
-          movimientoRepository = movimientos,
           idGenerator = IdGenerator { id },
           clock = FixedClock(FIXED_INSTANT),
           timeZoneProvider = TimeZoneProvider { TimeZone.UTC },
+          entryEngine =
+              MovimientoEntryEngine(
+                  parser = MovimientoPhraseParser(),
+                  suggester = CategorySuggester(CategoryKeywordDictionary.builtIn),
+                  localeProvider = FixedDeviceLocaleProvider("es-CO"),
+                  computationDispatcher = dispatcher,
+              ),
           scope = scope,
       )
 

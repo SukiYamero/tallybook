@@ -9,6 +9,7 @@ import com.composables.icons.lucide.Bus
 import com.composables.icons.lucide.Calculator
 import com.composables.icons.lucide.Car
 import com.composables.icons.lucide.ChefHat
+import com.composables.icons.lucide.CircleDashed
 import com.composables.icons.lucide.CircleParking
 import com.composables.icons.lucide.Clapperboard
 import com.composables.icons.lucide.Coffee
@@ -65,6 +66,7 @@ fun CategoryIcon.toImageVector(): ImageVector =
       CategoryIcon.CALCULATOR -> Lucide.Calculator
       CategoryIcon.CAR -> Lucide.Car
       CategoryIcon.CHEF_HAT -> Lucide.ChefHat
+      CategoryIcon.CIRCLE_DASHED -> Lucide.CircleDashed
       CategoryIcon.COFFEE -> Lucide.Coffee
       CategoryIcon.CREDIT_CARD -> Lucide.CreditCard
       CategoryIcon.DUMBBELL -> Lucide.Dumbbell

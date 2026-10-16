@@ -19,6 +19,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
@@ -41,15 +42,15 @@ import org.junit.Test
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.amount_overflow
 import tallybook.shared.generated.resources.amount_required
-import tallybook.shared.generated.resources.category
 import tallybook.shared.generated.resources.category_required
+import tallybook.shared.generated.resources.category_tag_add_description
+import tallybook.shared.generated.resources.category_tag_remove
 import tallybook.shared.generated.resources.date
 import tallybook.shared.generated.resources.description_optional
 import tallybook.shared.generated.resources.income
-import tallybook.shared.generated.resources.more_fields
 import tallybook.shared.generated.resources.movimiento_amount_expense_prompt
 import tallybook.shared.generated.resources.movimiento_amount_income_prompt
-import tallybook.shared.generated.resources.movimiento_category_expense_prompt
+import tallybook.shared.generated.resources.movimiento_pending_label
 import tallybook.shared.generated.resources.movimiento_preferences_error
 import tallybook.shared.generated.resources.movimiento_save_error
 import tallybook.shared.generated.resources.retry
@@ -74,7 +75,7 @@ class MovimientoFormTest {
 
     composeRule.setContent {
       TallybookTheme {
-        MovimientoForm(state(tipo = tipo, selectedCategoriaId = category.id), actions)
+        MovimientoForm(state(tipo = tipo, categoriaIds = listOf(category.id)), actions)
       }
     }
 
@@ -91,33 +92,13 @@ class MovimientoFormTest {
   }
 
   @Test
-  fun emptySubmitShowsAmountAndCategoryErrorsWithoutDismissing() {
-    val actions = RecordingActions()
-    val invalidState = state(submitAttempted = true)
-    val amountRequired = localizedString(Res.string.amount_required)
-    val categoryRequired = localizedString(Res.string.category_required)
-
-    composeRule.setContent { TallybookTheme { MovimientoForm(invalidState, actions) } }
-
-    composeRule.onNodeWithText(amountRequired).assertIsDisplayed()
-    composeRule
-        .onNode(
-            SemanticsMatcher.expectValue(
-                SemanticsProperties.Error,
-                categoryRequired,
-            )
-        )
-        .assertIsDisplayed()
-  }
-
-  @Test
   fun invalidAmountReceivesFocusAndAnnouncesItsSpecificError() {
     val amountRequired = localizedString(Res.string.amount_required)
 
     composeRule.setContent {
       TallybookTheme {
         MovimientoForm(
-            state(submitAttempted = true, selectedCategoriaId = category.id),
+            state(submitAttempted = true, categoriaIds = listOf(category.id)),
             RecordingActions(),
         )
       }
@@ -135,35 +116,12 @@ class MovimientoFormTest {
   }
 
   @Test
-  fun missingCategoryReceivesFocusOnTheCategoryField() {
-    val categoryRequired = localizedString(Res.string.category_required)
-
-    composeRule.setContent {
-      TallybookTheme {
-        MovimientoForm(
-            state(amountInput = "1", submitAttempted = true),
-            RecordingActions(),
-        )
-      }
-    }
-
-    composeRule
-        .onNode(
-            SemanticsMatcher.expectValue(
-                SemanticsProperties.Error,
-                categoryRequired,
-            )
-        )
-        .assertIsFocused()
-  }
-
-  @Test
   fun openingTheCategoryPickerClearsFocusFromThePreviousTextField() {
-    val categoryLabel = localizedString(Res.string.category)
+    val addLabel = localizedString(Res.string.category_tag_add_description)
 
     composeRule.setContent {
       TallybookTheme {
-        MovimientoForm(state(selectedCategoriaId = category.id), RecordingActions())
+        MovimientoForm(state(categoriaIds = listOf(category.id)), RecordingActions())
       }
     }
 
@@ -171,40 +129,11 @@ class MovimientoFormTest {
         .onNodeWithContentDescription(localizedString(Res.string.movimiento_amount_expense_prompt))
         .performClick()
         .assertIsFocused()
-    composeRule.onNodeWithText(categoryLabel).performClick()
+    composeRule.onNodeWithContentDescription(addLabel).performClick()
 
     composeRule
         .onNodeWithContentDescription(localizedString(Res.string.movimiento_amount_expense_prompt))
         .assertIsNotFocused()
-  }
-
-  @Test
-  fun newEntryStartsWithCategoryAndSelectionFocusesAmount() {
-    var selectedId by mutableStateOf<String?>(null)
-    val actions =
-        object : AddMovimientoActions by RecordingActions() {
-          override fun onCategoriaSelected(id: String) {
-            selectedId = id
-          }
-        }
-    composeRule.setContent {
-      TallybookTheme {
-        MovimientoForm(
-            uiState = state(selectedCategoriaId = selectedId),
-            actions = actions,
-            startWithCategory = true,
-        )
-      }
-    }
-    composeRule
-        .onNodeWithText(localizedString(Res.string.movimiento_category_expense_prompt))
-        .assertIsDisplayed()
-    composeRule.onNodeWithText(category.nombre).performClick()
-    composeRule.waitForIdle()
-    composeRule
-        .onNodeWithContentDescription(localizedString(Res.string.movimiento_amount_expense_prompt))
-        .assertIsFocused()
-    composeRule.runOnIdle { assertEquals(category.id, selectedId) }
   }
 
   @Test
@@ -253,38 +182,31 @@ class MovimientoFormTest {
     composeRule.setContent {
       TallybookTheme {
         MovimientoForm(
-            uiState = state(selectedCategoriaId = category.id, submitAttempted = true),
+            uiState = state(categoriaIds = listOf(category.id), submitAttempted = true),
             actions = RecordingActions(),
         )
       }
     }
     composeRule.onNodeWithContentDescription(amountPrompt).assertIsFocused()
-    composeRule.onNodeWithText(localizedString(Res.string.category)).performClick()
+    composeRule
+        .onNodeWithContentDescription(localizedString(Res.string.category_tag_add_description))
+        .performClick()
     InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
     composeRule.waitForIdle()
     composeRule.onNodeWithContentDescription(amountPrompt).assertIsNotFocused()
   }
 
   @Test
-  fun descriptionDisclosureLimitsInputTo180Characters() {
+  fun descriptionIsAlwaysVisibleAndLimitsInputTo180Characters() {
     var descripcion by mutableStateOf("x".repeat(179))
-    var detailsExpanded by mutableStateOf(false)
     val actions = RecordingActions(onDescripcionChangedCallback = { descripcion = it })
-    val moreFields = localizedString(Res.string.more_fields)
 
     composeRule.setContent {
       TallybookTheme {
-        MovimientoForm(
-            uiState = state(descripcion = descripcion),
-            actions = actions,
-            detailsExpanded = detailsExpanded,
-            onDetailsExpandedChange = { detailsExpanded = it },
-        )
+        MovimientoForm(uiState = state(descripcion = descripcion), actions = actions)
       }
     }
 
-    composeRule.onNodeWithText(moreFields).performClick()
-    composeRule.waitForIdle()
     composeRule
         .onNodeWithContentDescription(localizedString(Res.string.description_optional))
         .performScrollTo()
@@ -301,30 +223,92 @@ class MovimientoFormTest {
   }
 
   @Test
-  fun descriptionRemainsComposedUntilItsExitAnimationCompletes() {
-    val moreFields = localizedString(Res.string.more_fields)
-    val description = localizedString(Res.string.description_optional)
-    var detailsExpanded by mutableStateOf(false)
+  fun childCategoriesAreSelectableAndOtrosIsNeverOffered() {
+    val selections = mutableListOf<List<String>>()
+    val actions =
+        object : AddMovimientoActions by RecordingActions() {
+          override fun onCategoriasChanged(ids: List<String>) {
+            selections += ids
+          }
+        }
+    composeRule.setContent { TallybookTheme { MovimientoForm(state(), actions) } }
 
+    composeRule
+        .onNodeWithContentDescription(localizedString(Res.string.category_tag_add_description))
+        .performClick()
+    composeRule.onNodeWithText(otros.nombre).assertDoesNotExist()
+    composeRule.onNodeWithText(category.nombre).performClick()
+    composeRule.onNodeWithText(child.nombre).performClick()
+
+    composeRule.runOnIdle { assertEquals(listOf(listOf(child.id)), selections) }
+  }
+
+  @Test
+  fun everySelectedCategoryIsATagAndAllButTheLastCanBeRemoved() {
+    val removed = mutableListOf<String>()
+    val actions =
+        object : AddMovimientoActions by RecordingActions() {
+          override fun onCategoriaRemoved(id: String) {
+            removed += id
+          }
+        }
+    composeRule.setContent {
+      TallybookTheme {
+        MovimientoForm(state(categoriaIds = listOf(category.id, other.id)), actions)
+      }
+    }
+
+    composeRule
+        .onNodeWithContentDescription(localizedString(Res.string.category_tag_remove, other.nombre))
+        .performClick()
+
+    composeRule.onNodeWithText(category.nombre).assertIsDisplayed()
+    composeRule.runOnIdle { assertEquals(listOf(other.id), removed) }
+  }
+
+  @Test
+  fun sixCategoriesHideTheAddTag() {
+    val six = (1..6).map { category.copy(id = "c$it", nombre = "Tag $it") }
     composeRule.setContent {
       TallybookTheme {
         MovimientoForm(
-            uiState = state(),
-            actions = RecordingActions(),
-            detailsExpanded = detailsExpanded,
-            onDetailsExpandedChange = { detailsExpanded = it },
+            state(categoriaIds = six.map { it.id }, categorias = six),
+            RecordingActions(),
         )
       }
     }
 
-    composeRule.onNodeWithText(moreFields).performClick()
-    composeRule.waitForIdle()
-    composeRule.mainClock.autoAdvance = false
-    composeRule.onNodeWithText(moreFields).performClick()
+    composeRule
+        .onNodeWithContentDescription(localizedString(Res.string.category_tag_add_description))
+        .assertDoesNotExist()
+  }
 
-    composeRule.onNodeWithContentDescription(description).assertIsDisplayed()
-    composeRule.mainClock.advanceTimeBy(200)
-    composeRule.onNodeWithContentDescription(description).assertDoesNotExist()
+  @Test
+  fun otrosSelectionShowsThePendingLabelOnTheCategoryField() {
+    composeRule.setContent {
+      TallybookTheme { MovimientoForm(state(categoriaIds = listOf(otros.id)), RecordingActions()) }
+    }
+
+    composeRule
+        .onNodeWithText(localizedString(Res.string.movimiento_pending_label))
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun savingWithoutACategoryShowsOnlyTheAmountError() {
+    composeRule.setContent {
+      TallybookTheme { MovimientoForm(state(submitAttempted = true), RecordingActions()) }
+    }
+
+    composeRule.onNodeWithText(localizedString(Res.string.amount_required)).assertIsDisplayed()
+    composeRule
+        .onNode(
+            SemanticsMatcher.expectValue(
+                SemanticsProperties.Error,
+                localizedString(Res.string.category_required),
+            )
+        )
+        .assertDoesNotExist()
   }
 
   @Test
@@ -383,7 +367,7 @@ class MovimientoFormTest {
         MovimientoForm(
             state(
                 amountInput = "10",
-                selectedCategoriaId = category.id,
+                categoriaIds = listOf(category.id),
                 error = error,
             ),
             actions,
@@ -403,8 +387,8 @@ class MovimientoFormTest {
     composeRule.onNodeWithText("10").assertIsDisplayed()
   }
 
-  private fun localizedString(resource: StringResource): String = runBlocking {
-    getString(resource)
+  private fun localizedString(resource: StringResource, vararg args: Any): String = runBlocking {
+    getString(resource, *args)
   }
 
   private companion object {
@@ -416,11 +400,36 @@ class MovimientoFormTest {
             icono = CategoryIcon.UTENSILS,
             color = CategoryTint.AMBER,
         )
+    val child =
+        Categoria(
+            id = "pizza",
+            nombre = "Pizza",
+            padreId = "food",
+            icono = CategoryIcon.UTENSILS,
+            color = CategoryTint.AMBER,
+        )
+    val other =
+        Categoria(
+            id = "health",
+            nombre = "Salud",
+            padreId = null,
+            icono = CategoryIcon.HEART_PULSE,
+            color = CategoryTint.ROSE,
+        )
+    val otros =
+        Categoria(
+            id = CATEGORIA_OTROS_ID,
+            nombre = "Otros",
+            padreId = null,
+            icono = CategoryIcon.CIRCLE_DASHED,
+            color = CategoryTint.NEUTRAL,
+        )
 
     fun state(
         tipo: TipoMovimiento = TipoMovimiento.GASTO,
         amountInput: String = "",
-        selectedCategoriaId: String? = null,
+        categoriaIds: List<String> = emptyList(),
+        categorias: List<Categoria> = listOf(category, child, other, otros),
         descripcion: String = "",
         submitAttempted: Boolean = false,
         error: MovimientoFormError? = null,
@@ -430,8 +439,8 @@ class MovimientoFormTest {
             amountInput = amountInput,
             fecha = LocalDate(2026, 9, 15),
             moneda = Moneda.COP,
-            categorias = listOf(category),
-            selectedCategoriaId = selectedCategoriaId,
+            categorias = categorias,
+            categoriaIds = categoriaIds,
             descripcion = descripcion,
             isLoading = false,
             isSubmitting = false,
@@ -460,7 +469,9 @@ class MovimientoFormTest {
 
     override fun onFechaChanged(value: LocalDate) = Unit
 
-    override fun onCategoriaSelected(id: String) = Unit
+    override fun onCategoriasChanged(ids: List<String>) = Unit
+
+    override fun onCategoriaRemoved(id: String) = Unit
 
     override fun onDescripcionChanged(value: String) {
       descripcion = value
@@ -468,6 +479,18 @@ class MovimientoFormTest {
     }
 
     override fun onDiscardChanges() = Unit
+
+    override fun onPhraseChanged(value: String) = Unit
+
+    override fun onPhraseContinue() = Unit
+
+    override fun onFillManually() = Unit
+
+    override fun onEditMovimiento() = Unit
+
+    override fun onSuggestionSelected(id: String) = Unit
+
+    override fun onStepBack() = Unit
 
     override fun onRetryLoad() {
       retryCount += 1

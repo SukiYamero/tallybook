@@ -10,10 +10,13 @@ import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.PREFERENCES_FILE_NAME
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
+import com.kurobello.tallybook.core.data.entry.CategorySuggester
+import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.core.database.DatabaseDriverFactory
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.feature.home.HomeViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
+import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoEntryEngine
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -23,7 +26,7 @@ import org.koin.dsl.module
 class RepositoryModulesTest {
 
   @Test
-  fun `app modules resolve repositories and form view models`() {
+  fun `app modules resolve repositories entry engine and form view models`() {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     val directory = createTempDirectory("tallybook-repositories-")
     TallybookDatabase.Schema.create(driver)
@@ -47,6 +50,9 @@ class RepositoryModulesTest {
       assertNotNull(application.koin.get<LocalDataBootstrapper>())
       assertNotNull(application.koin.get<AppStartupViewModel>())
       assertNotNull(application.koin.get<HomeViewModel>())
+      assertNotNull(application.koin.get<MovimientoPhraseParser>())
+      assertNotNull(application.koin.get<CategorySuggester>())
+      assertNotNull(application.koin.get<MovimientoEntryEngine>())
       assertNotNull(application.koin.get<AddMovimientoViewModel>())
     } finally {
       application.koin.get<PreferencesDataStoreFactory>().close()

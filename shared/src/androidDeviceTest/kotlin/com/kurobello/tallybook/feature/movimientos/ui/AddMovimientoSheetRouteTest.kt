@@ -8,9 +8,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.CategoryHistoryRow
+import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
+import com.kurobello.tallybook.core.data.entry.CategorySuggester
+import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -32,6 +37,7 @@ import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoRepositories
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
+import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoEntryEngine
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Clock
@@ -72,7 +78,7 @@ class AddMovimientoSheetRouteTest {
 
       composeRule.runOnIdle {
         viewModel.onAmountChanged("1234")
-        viewModel.onCategoriaSelected(category.id)
+        viewModel.onCategoriasChanged(listOf(category.id))
       }
       composeRule.waitUntil(5_000) { viewModel.uiState.value.canSubmit }
       composeRule.runOnIdle {
@@ -125,13 +131,24 @@ class AddMovimientoSheetRouteTest {
               AddMovimientoRepositories(
                   preferences = FakePreferencesRepository(),
                   categorias = FakeCategoriaRepository(),
+                  movimientos = movementRepository,
               ),
-          movimientoRepository = movementRepository,
           idGenerator = IdGenerator { "movement-id" },
           clock = FixedClock,
           timeZoneProvider = TimeZoneProvider { TimeZone.UTC },
+          entryEngine =
+              MovimientoEntryEngine(
+                  parser = MovimientoPhraseParser(),
+                  suggester = CategorySuggester(CategoryKeywordDictionary.builtIn),
+                  localeProvider = FixedDeviceLocale,
+                  computationDispatcher = Dispatchers.Default,
+              ),
           scope = scope,
       )
+
+  private object FixedDeviceLocale : DeviceLocaleProvider {
+    override fun currentLanguageTag(): String = "es-CO"
+  }
 
   private class FakePreferencesRepository : AppPreferencesRepository {
     override val preferences: Flow<DataOutcome<AppPreferencesState>> =
@@ -188,6 +205,9 @@ class AddMovimientoSheetRouteTest {
     override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> =
         error("History year reads are not expected in this fixture")
 
+    override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
+        emptyFlow()
+
     override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> {
       inserted += movimiento
       return DataOutcome.Success(Unit)
@@ -212,7 +232,7 @@ class AddMovimientoSheetRouteTest {
               tipo = changes.tipo,
               monto = changes.monto,
               fecha = changes.fecha,
-              categoriaId = changes.categoriaId,
+              categoriaIds = changes.categoriaIds,
               descripcion = changes.descripcion,
           )
       val values = inserted.map { if (it.id == id) updated else it }

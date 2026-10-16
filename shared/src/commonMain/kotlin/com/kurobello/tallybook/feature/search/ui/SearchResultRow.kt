@@ -3,6 +3,7 @@ package com.kurobello.tallybook.feature.search.ui
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoRowContent
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoRowText
 import kotlinx.datetime.LocalDate
@@ -30,6 +31,7 @@ internal fun SearchResultRow(
       maxDescriptionLines = Int.MAX_VALUE,
       maxSubtitleLines = Int.MAX_VALUE,
       onClick = onClick,
+      pending = CATEGORIA_OTROS_ID in row.movimiento.categoriaIds,
   )
 }
 

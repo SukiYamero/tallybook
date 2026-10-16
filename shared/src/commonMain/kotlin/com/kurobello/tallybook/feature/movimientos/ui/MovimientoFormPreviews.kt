@@ -52,7 +52,7 @@ private fun previewUiState(
         fecha = LocalDate.parse("2026-09-15"),
         moneda = Moneda.COP,
         categorias = emptyList(),
-        selectedCategoriaId = null,
+        categoriaIds = emptyList(),
         descripcion = "",
         isLoading = isLoading,
         isSubmitting = isSubmitting,
@@ -60,6 +60,7 @@ private fun previewUiState(
         error = error,
     )
 
+@Suppress("TooManyFunctions")
 private object PreviewAddMovimientoActions : AddMovimientoActions {
   override fun onTipoChanged(tipo: TipoMovimiento) = Unit
 
@@ -67,11 +68,25 @@ private object PreviewAddMovimientoActions : AddMovimientoActions {
 
   override fun onFechaChanged(value: LocalDate) = Unit
 
-  override fun onCategoriaSelected(id: String) = Unit
+  override fun onCategoriasChanged(ids: List<String>) = Unit
+
+  override fun onCategoriaRemoved(id: String) = Unit
 
   override fun onDescripcionChanged(value: String) = Unit
 
   override fun onDiscardChanges() = Unit
+
+  override fun onPhraseChanged(value: String) = Unit
+
+  override fun onPhraseContinue() = Unit
+
+  override fun onFillManually() = Unit
+
+  override fun onEditMovimiento() = Unit
+
+  override fun onSuggestionSelected(id: String) = Unit
+
+  override fun onStepBack() = Unit
 
   override fun onRetryLoad() = Unit
 

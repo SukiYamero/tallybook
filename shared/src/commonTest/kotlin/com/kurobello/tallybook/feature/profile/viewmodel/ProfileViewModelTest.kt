@@ -160,7 +160,7 @@ class ProfileViewModelTest {
     assertEquals(ProfileExport.IDLE, vm.uiState.value.export)
     val (fileName, csv) = sharer.shared.single()
     assertEquals("tallybook-2026-10-15.csv", fileName)
-    assertTrue(csv.contains("2026-10-14,Gasto,Comida,,café,12.50,COP"), csv)
+    assertTrue(csv.contains("2026-10-14,Gasto,Comida,Comida,café,12.50,COP"), csv)
 
     sharer.result = DataOutcome.Failure(DataError.Unknown(IllegalStateException()))
     vm.onExport(LABELS)
@@ -266,7 +266,7 @@ internal class ProfileFakeMovimientos : MovimientoRepository {
                   tipo = TipoMovimiento.GASTO,
                   monto = Money(1250, Moneda.COP),
                   fecha = LocalDate(2026, 10, 14),
-                  categoriaId = "cat_comida",
+                  categoriaIds = listOf("cat_comida"),
                   descripcion = "café",
                   createdAt = Instant.parse("2026-10-14T12:00:00Z"),
               )
@@ -286,6 +286,8 @@ internal class ProfileFakeMovimientos : MovimientoRepository {
   override fun observeYears(moneda: Moneda) = unused()
 
   override fun observeFiltered(criteria: MovimientoReadCriteria) = unused()
+
+  override fun observeCategoryHistory(limit: Int) = unused()
 
   override suspend fun insert(movimiento: Movimiento) = unused()
 

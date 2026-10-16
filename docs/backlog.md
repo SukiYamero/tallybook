@@ -7,7 +7,8 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 - **iOS physical end-to-end** — Shared production/test sources compile for Native, but physical
   iPhone runtime validation remains pending and was explicitly deferred for History. Confirm the
   authorized connected iPhone and developer services, then run the app from Xcode using the existing
-  shared `TEAM_ID`. Validate Home/History/Search, filters, creation, lifecycle and safe areas,
+  shared `TEAM_ID`. Validate Home/History/Search, filters, creation (sentence dialog keyboard
+  placement, review sheet, multi-select picker), lifecycle and safe areas,
   including management scene teardown, edit/delete/Undo and VoiceOver action-window usability, and
   Profile: theme with status-bar style, in-app language switch (`AppleLanguages`; the subtree reset returns to Home and drops retained
   screen state — hoist navigation state if that is not acceptable) and
@@ -17,13 +18,22 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 
 ## Media
 
+- **Custom categories (phase 3 of categories)** — Accepted rules live in
+  [business-logic.md](business-logic.md#custom-categories-phase-3-accepted): creation with name,
+  suggested icon/tint and description, quick creation from the picker's empty search, a Categories
+  screen linked from Profile with movimiento counts and Search shortcuts, duplicate detection and
+  hiding predefined categories. Needs schema migration `3.sqm`. Deleting a custom category that has
+  movimientos is an open product decision to settle before implementation.
+
+
 - **Android automated device checks and Search scale** — The 2,000-row isolated scale fixture is prepared
   and compiled but unexecuted; dataset authorization and a usable runner remain prerequisites.
   The Xiaomi UI runner stalled before assertions (0/20 completed) and was stopped after bounded
   diagnosis. Prioritize runner repair before retrying, then execute the agreed bounded scale check
   with correctness, latency, responsiveness and subscription/allocation evidence. Existing manual
   Android evidence and precise limits live in [Search](features/search.md#verification-boundaries).
-  Management sheet fixtures also compile but remain unexecuted after a bounded stalled-runner retry;
+  Smart entry fixtures (sentence dialog, review, tag field, multi-select picker) and management sheet
+  fixtures also compile but remain unexecuted after a bounded stalled-runner retry;
   execute them after runner repair, preserving their Back, reread-height and IME assertions.
 
 - **Management accessibility on Android** — Verify TalkBack announcements/focus and enlarged-text
@@ -41,6 +51,13 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
   `Dispatchers.Default`). Mover el test a `commonTest` requiere reescribir esa aserción.
 
 ## Baja
+
+- **Smart entry polish** — Voice dictation is a placeholder (UI only). The sentence step's root is
+  focusable to keep Android from auto-focusing the input, which adds an unlabeled focus stop;
+  replace it during the TalkBack pass. A sheet session left open across midnight resets Fill manually
+  and Discard to the session's opening date. Native-speaker review of es-AR and pt-BR entry copy is
+  pending. See [Add movimiento](features/add-movimiento.md#verification-boundaries).
+
 
 - **Profile polish** — A Dark/Light override on the opposite system theme shows default status-bar
   icons until the first composed frame; language options do not expose their locale to TalkBack;

@@ -42,6 +42,7 @@ import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.di.DispatcherQualifier
+import com.kurobello.tallybook.di.entryModule
 import com.kurobello.tallybook.di.viewModelModule
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryFailure
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryProjection
@@ -278,7 +279,7 @@ class HistoryIntegrationTest {
           graph.start()
           val form = graph.form("retry")
           form.viewModel.onAmountChanged("10,50")
-          form.viewModel.onCategoriaSelected("cat_comida")
+          form.viewModel.onCategoriasChanged(listOf("cat_comida"))
           form.viewModel.onDescripcionChanged("Lunch")
           graph.driver.failWrites = true
           form.viewModel.onSubmit()
@@ -286,7 +287,7 @@ class HistoryIntegrationTest {
           assertEquals(MovimientoFormError.SAVE_FAILED, form.viewModel.uiState.value.error)
           assertEquals("10,50", form.viewModel.uiState.value.amountInput)
           assertEquals(TODAY, form.viewModel.uiState.value.fecha)
-          assertEquals("cat_comida", form.viewModel.uiState.value.selectedCategoriaId)
+          assertEquals(listOf("cat_comida"), form.viewModel.uiState.value.categoriaIds)
           assertEquals("Lunch", form.viewModel.uiState.value.descripcion)
           assertEquals(emptyList(), form.effects)
           assertEquals(0, graph.period.movementCount)
@@ -394,7 +395,13 @@ class HistoryIntegrationTest {
       context = koinApplication {
         modules(
             viewModelModule,
+            entryModule,
             module {
+              single<DeviceLocaleProvider> {
+                object : DeviceLocaleProvider {
+                  override fun currentLanguageTag() = "es-CO"
+                }
+              }
               single<AppPreferencesRepository> { preferences }
               single<MovimientoRepository> { movimientos }
               single<CategoriaRepository> { categorias }
@@ -424,7 +431,7 @@ class HistoryIntegrationTest {
           DataOutcome.Success(AppPreferencesState.Ready(AppPreferences(Moneda.COP))),
           preferences.preferences.first(),
       )
-      assertEquals(58, assertSuccess(categorias.getAll()).size)
+      assertEquals(59, assertSuccess(categorias.getAll()).size)
       history.onPresentationChanged("Unknown category")
       history.onResume()
       collectors += fixture.test.backgroundScope.launch { home.uiState.collect {} }
@@ -459,7 +466,9 @@ class HistoryIntegrationTest {
       form.viewModel.apply {
         onTipoChanged(type)
         onAmountChanged(input)
-        onCategoriaSelected(if (type == TipoMovimiento.INGRESO) "cat_ingresos" else "cat_comida")
+        onCategoriasChanged(
+            listOf(if (type == TipoMovimiento.INGRESO) "cat_ingresos" else "cat_comida")
+        )
         onFechaChanged(date)
         onDescripcionChanged("Description $id")
         onSubmit()
@@ -581,7 +590,7 @@ class HistoryIntegrationTest {
             TipoMovimiento.GASTO,
             Money(100, currency),
             date,
-            category,
+            listOf(category),
             description,
             Instant.parse("2026-09-20T12:00:00Z"),
         )

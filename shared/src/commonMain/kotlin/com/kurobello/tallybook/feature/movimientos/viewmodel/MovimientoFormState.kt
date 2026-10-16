@@ -11,7 +11,7 @@ internal interface MovimientoFormState {
   val fecha: LocalDate
   val moneda: Moneda
   val categorias: List<Categoria>
-  val selectedCategoriaId: String?
+  val categoriaIds: List<String>
   val descripcion: String
   val isLoading: Boolean
   val isSubmitting: Boolean
@@ -19,6 +19,11 @@ internal interface MovimientoFormState {
   val error: MovimientoFormError?
   val amountError: AmountInputError?
   val isCategoriaMissing: Boolean
+
+  /** The categories the form presents, which are the Otros fallback for an empty selection. */
+  val displayedCategoriaIds: List<String>
+    get() = categoriaIds
+
   val maxSelectableDate: LocalDate?
     get() = null
 

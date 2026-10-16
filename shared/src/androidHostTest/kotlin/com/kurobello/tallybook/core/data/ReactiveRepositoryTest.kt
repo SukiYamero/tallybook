@@ -85,10 +85,10 @@ class ReactiveRepositoryTest {
               100,
               "USD",
               "2026-09-16",
-              "cat_comida",
               null,
               "invalid-instant",
           )
+          database.movimientoQueries.insertMovimientoCategoria("foreign-corrupt", "cat_comida", 0)
           testScheduler.runCurrent()
           assertEquals(DataOutcome.Success(listOf(third, second)), emissions.last())
           assertIs<DataOutcome.Failure>(repository.observeRecent(10).first())
@@ -101,10 +101,10 @@ class ReactiveRepositoryTest {
               0,
               "COP",
               "2026-09-16",
-              "cat_comida",
               null,
               first.createdAt.toString(),
           )
+          database.movimientoQueries.insertMovimientoCategoria("selected-corrupt", "cat_comida", 0)
           testScheduler.runCurrent()
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(emissions.last()).error)
           assertTrue(collector.isCompleted)
@@ -288,7 +288,7 @@ class ReactiveRepositoryTest {
                     tipo = TipoMovimiento.INGRESO,
                     monto = Money(1_000, Moneda.COP),
                     fecha = LocalDate(2025, 12, 31),
-                    categoriaId = "other",
+                    categoriaIds = listOf("other"),
                     descripcion = "changed",
                 )
         assertEquals(
@@ -299,7 +299,7 @@ class ReactiveRepositoryTest {
                     changed.tipo,
                     changed.monto,
                     changed.fecha,
-                    changed.categoriaId,
+                    changed.categoriaIds,
                     changed.descripcion,
                 ),
             ),
@@ -370,7 +370,7 @@ class ReactiveRepositoryTest {
           tipo = tipo,
           monto = monto,
           fecha = LocalDate(2026, 9, 3),
-          categoriaId = "cat_comida",
+          categoriaIds = listOf("cat_comida"),
           descripcion = "almuerzo",
           createdAt = Instant.parse("2026-09-03T12:00:00Z"),
       )

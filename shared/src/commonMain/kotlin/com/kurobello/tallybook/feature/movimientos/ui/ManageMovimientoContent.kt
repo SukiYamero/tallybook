@@ -6,10 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -55,8 +51,7 @@ import tallybook.shared.generated.resources.movimiento_read_error
 import tallybook.shared.generated.resources.movimiento_save_changes
 import tallybook.shared.generated.resources.retry
 
-private val MANAGEMENT_CONTENT_DETENTS =
-    listOf("loading", "load-failed", "missing", "edit-compact", "edit-details")
+private val MANAGEMENT_CONTENT_DETENTS = listOf("loading", "load-failed", "missing", "edit")
 
 @Composable
 internal fun ManageMovimientoContent(
@@ -64,13 +59,8 @@ internal fun ManageMovimientoContent(
     actions: ManageMovimientoSheetActions,
 ) {
   val origin = session.token
-  val isEditing = session.form != null
   val title = stringResource(Res.string.movimiento_edit_title)
-  var detailsExpanded by
-      rememberSaveable(origin, isEditing) {
-        mutableStateOf(session.form?.descripcion?.isNotEmpty() == true)
-      }
-  val detent = session.contentDetent(detailsExpanded)
+  val detent = session.contentDetent()
   TallybookModalBottomSheet(
       visible = session.isVisible,
       paneTitle = title,
@@ -87,14 +77,14 @@ internal fun ManageMovimientoContent(
               activeContentDetentIdentifier = detent,
           ),
   ) {
-    ManagementSheetBody(session, actions, title, detailsExpanded) { detailsExpanded = it }
+    ManagementSheetBody(session, actions, title)
   }
   ManagementConfirmations(session, actions)
 }
 
-private fun MovimientoManagementSession.contentDetent(detailsExpanded: Boolean): String =
+private fun MovimientoManagementSession.contentDetent(): String =
     when {
-      edit != null -> if (detailsExpanded) "edit-details" else "edit-compact"
+      edit != null -> "edit"
       phase == MovimientoManagementPhase.LoadFailed -> "load-failed"
       phase == MovimientoManagementPhase.Missing -> "missing"
       else -> "loading"
@@ -105,12 +95,10 @@ private fun ManagementSheetBody(
     session: MovimientoManagementSession,
     actions: ManageMovimientoSheetActions,
     title: String,
-    detailsExpanded: Boolean,
-    onDetailsExpandedChange: (Boolean) -> Unit,
 ) {
   val interactionEnabled = session.phase != MovimientoManagementPhase.Closing
   if (session.form != null) {
-    ManagementEditContent(session, actions, title, detailsExpanded, onDetailsExpandedChange)
+    ManagementEditContent(session, actions, title)
   } else {
     ManagementReadContent(
         session.phase,
@@ -127,8 +115,6 @@ private fun ManagementEditContent(
     session: MovimientoManagementSession,
     actions: ManageMovimientoSheetActions,
     title: String,
-    detailsExpanded: Boolean,
-    onDetailsExpandedChange: (Boolean) -> Unit,
 ) {
   val interactionEnabled = session.canInteractWithEditor
   val presentation =
@@ -141,8 +127,6 @@ private fun ManagementEditContent(
       uiState = requireNotNull(session.form),
       interactionEnabled = interactionEnabled,
       actions = actions,
-      detailsExpanded = detailsExpanded,
-      onDetailsExpandedChange = onDetailsExpandedChange,
       presentation = presentation,
       headerAction = {
         TallybookIconButton(

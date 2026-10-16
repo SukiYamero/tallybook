@@ -53,7 +53,7 @@ class AppDisplayViewModelTest {
     vm.onLocaleApplied()
     runCurrent()
     val localized = categorias.localized.single()
-    assertEquals(58, localized.size)
+    assertEquals(59, localized.size)
     assertEquals("category_comida", localized.first { it.id == "cat_comida" }.nombre)
   }
 }

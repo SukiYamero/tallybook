@@ -10,6 +10,7 @@ accepted scope, integration details and verification boundaries.
 | Search and filters | DONE | [Search and filters](search.md) |
 | Manage movimientos and Undo | DONE | [Manage movimientos and Undo](manage-movimientos.md) |
 | Profile and preferences | DONE | [Profile and preferences](profile.md) |
+| Smart entry and multiple categories | DONE | [Add movimiento](add-movimiento.md) |
 
 ## Status rules
 

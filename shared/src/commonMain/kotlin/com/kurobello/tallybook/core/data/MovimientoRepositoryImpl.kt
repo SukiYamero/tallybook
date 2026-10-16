@@ -5,6 +5,7 @@ import app.cash.sqldelight.coroutines.mapToList
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
@@ -18,6 +19,7 @@ import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.model.fold
+import kotlin.time.Instant
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -175,6 +177,35 @@ internal class MovimientoRepositoryImpl(
             .asLocalDataOutcome()
       }
 
+  override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
+      if (limit <= 0) {
+        flowOf(
+            DataOutcome.Failure(DataError.InvalidInput("Category history limit must be positive"))
+        )
+      } else {
+        flow {
+              emitAll(
+                  database.movimientoQueries
+                      .selectCategoryHistory(limit.toLong())
+                      .asFlow()
+                      .mapToList(dispatcher)
+                      .map { rows ->
+                        rows.map { row ->
+                          currentCoroutineContext().ensureActive()
+                          CategoryHistoryRow(
+                              movimientoId = row.movimiento_id,
+                              descripcion = row.descripcion,
+                              categoriaId = row.categoria_id,
+                              createdAt = Instant.parse(row.created_at),
+                          )
+                        }
+                      }
+              )
+            }
+            .flowOn(dispatcher)
+            .asLocalDataOutcome()
+      }
+
   override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> =
       database.movimientoQueries
           .sumMovimientosByTipo(moneda.name)
@@ -201,7 +232,7 @@ internal class MovimientoRepositoryImpl(
     validate(movimiento)?.let {
       return DataOutcome.Failure(it)
     }
-    return runLocalDataOperation(dispatcher) { insertRow(movimiento) }
+    return runLocalDataOperation(dispatcher) { database.transaction { insertRow(movimiento) } }
   }
 
   override suspend fun getAll(): DataOutcome<List<Movimiento>> =
@@ -244,12 +275,13 @@ internal class MovimientoRepositoryImpl(
                         tipo = changes.tipo.name,
                         monto_minor = changes.monto.minorUnits,
                         fecha = changes.fecha.toString(),
-                        categoria_id = changes.categoriaId,
                         descripcion = changes.descripcion,
                         id = id,
                     )
                     .value == 1L
             )
+            queries.deleteMovimientoCategorias(id)
+            insertCategorias(id, changes.categoriaIds)
             DataOutcome.Success(MovimientoUpdateResult.Updated)
           }
         }
@@ -270,6 +302,7 @@ internal class MovimientoRepositoryImpl(
               captured == null -> DataOutcome.Success(null)
               else -> {
                 check(queries.deleteMovimiento(id).value == 1L)
+                queries.deleteMovimientoCategorias(id)
                 DataOutcome.Success(captured)
               }
             }
@@ -289,6 +322,7 @@ internal class MovimientoRepositoryImpl(
         val existing =
             database.movimientoQueries.selectMovimientoById(movimiento.id).executeAsOneOrNull()
         if (existing == null) {
+          database.movimientoQueries.deleteMovimientoCategorias(movimiento.id)
           insertRow(movimiento)
           MovimientoRestoreResult.Restored
         } else {
@@ -316,12 +350,22 @@ internal class MovimientoRepositoryImpl(
                 monto_minor = movimiento.monto.minorUnits,
                 monto_moneda = movimiento.monto.moneda.name,
                 fecha = movimiento.fecha.toString(),
-                categoria_id = movimiento.categoriaId,
                 descripcion = movimiento.descripcion,
                 created_at = movimiento.createdAt.toString(),
             )
             .value == 1L
     )
+    insertCategorias(movimiento.id, movimiento.categoriaIds)
+  }
+
+  private fun insertCategorias(movimientoId: String, categoriaIds: List<String>) {
+    categoriaIds.forEachIndexed { posicion, categoriaId ->
+      check(
+          database.movimientoQueries
+              .insertMovimientoCategoria(movimientoId, categoriaId, posicion.toLong())
+              .value == 1L
+      )
+    }
   }
 
   private fun validateRestorable(movimiento: Movimiento): DataError.InvalidInput? =
@@ -331,7 +375,7 @@ internal class MovimientoRepositoryImpl(
                   movimiento.tipo,
                   movimiento.monto,
                   movimiento.fecha,
-                  movimiento.categoriaId,
+                  movimiento.categoriaIds,
                   movimiento.descripcion,
               )
           )
@@ -343,15 +387,16 @@ internal class MovimientoRepositoryImpl(
       when {
         changes.monto.minorUnits <= 0 ->
             DataError.InvalidInput("Movimiento amount must be positive")
-        changes.categoriaId.isBlank() -> DataError.InvalidInput("Categoria id must not be blank")
-        (changes.descripcion?.length ?: 0) > MOVIMIENTO_DESCRIPTION_MAX_LENGTH ->
-            DataError.InvalidInput("Movimiento description is too long")
-        else -> null
+        else ->
+            validateCategoriaIds(changes.categoriaIds) ?: validateDescription(changes.descripcion)
       }
 
   override suspend fun delete(id: String): DataOutcome<Unit> =
       runLocalDataOperation(dispatcher) {
-        check(database.movimientoQueries.deleteMovimiento(id).value in 0L..1L)
+        database.transaction {
+          check(database.movimientoQueries.deleteMovimiento(id).value in 0L..1L)
+          database.movimientoQueries.deleteMovimientoCategorias(id)
+        }
       }
 
   private fun validate(movimiento: Movimiento): DataError.InvalidInput? =
@@ -359,12 +404,30 @@ internal class MovimientoRepositoryImpl(
         movimiento.monto.minorUnits <= 0 ->
             DataError.InvalidInput("Movimiento amount must be positive")
         movimiento.id.isEmpty() -> DataError.InvalidInput("Movimiento id must not be empty")
-        movimiento.categoriaId.isEmpty() -> DataError.InvalidInput("Categoria id must not be empty")
-        movimiento.descripcion?.length ?: 0 > MOVIMIENTO_DESCRIPTION_MAX_LENGTH ->
-            DataError.InvalidInput("Movimiento description is too long")
-        else -> null
+        else ->
+            validateCategoriaIds(movimiento.categoriaIds)
+                ?: validateDescription(movimiento.descripcion)
       }
 }
+
+private fun validateDescription(descripcion: String?): DataError.InvalidInput? =
+    if ((descripcion?.length ?: 0) > MOVIMIENTO_DESCRIPTION_MAX_LENGTH) {
+      DataError.InvalidInput("Movimiento description is too long")
+    } else null
+
+private fun validateCategoriaIds(categoriaIds: List<String>): DataError.InvalidInput? =
+    when {
+      categoriaIds.size !in 1..MAX_CATEGORIAS_POR_MOVIMIENTO ->
+          DataError.InvalidInput(
+              "Movimiento needs 1 to $MAX_CATEGORIAS_POR_MOVIMIENTO categorias, got ${categoriaIds.size}"
+          )
+      categoriaIds.any { it.isBlank() } -> DataError.InvalidInput("Categoria id must not be blank")
+      categoriaIds.any { id -> id.any { it in VIEW_SEPARATORS } } ->
+          DataError.InvalidInput("Categoria id must not contain a control separator")
+      categoriaIds.toSet().size != categoriaIds.size ->
+          DataError.InvalidInput("Movimiento categorias must be distinct")
+      else -> null
+    }
 
 private fun parseStoredYear(value: String): Int {
   val canonicalDate = "$value-01-01"
@@ -384,3 +447,7 @@ private fun validateRange(range: MovimientoDateRange): DataError.InvalidInput? =
     } else null
 
 private const val MAX_FOUR_DIGIT_YEAR = 9999
+
+// movimiento_con_categorias joins ids with these characters, so an id holding one would corrupt
+// the parsed set.
+private val VIEW_SEPARATORS = charArrayOf('\u001E', '\u001F')

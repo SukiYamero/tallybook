@@ -211,7 +211,7 @@ private fun row(id: String, date: LocalDate, moneda: Moneda) =
         TipoMovimiento.GASTO,
         Money(125, moneda),
         date,
-        "missing",
+        listOf("missing"),
         null,
         Instant.parse("2026-10-05T00:00:00Z"),
     )

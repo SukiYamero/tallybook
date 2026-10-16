@@ -1,9 +1,14 @@
 package com.kurobello.tallybook.core.database
 
+import app.cash.sqldelight.db.QueryResult
+import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.kurobello.tallybook.core.data.toDomain
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 class DatabaseSchemaTest {
@@ -38,7 +43,11 @@ class DatabaseSchemaTest {
         0,
     )
 
-    TallybookDatabase.Schema.migrate(driver, oldVersion = 1, newVersion = 2)
+    TallybookDatabase.Schema.migrate(
+        driver,
+        oldVersion = 1,
+        newVersion = TallybookDatabase.Schema.version,
+    )
 
     val row =
         TallybookDatabase(driver).movimientoQueries.selectMovimientoById("legacy").executeAsOne()
@@ -47,10 +56,124 @@ class DatabaseSchemaTest {
     assertEquals(1_050L, row.monto_minor)
     assertEquals("USD", row.monto_moneda)
     assertEquals("2026-09-03", row.fecha)
-    assertEquals("cat_comida", row.categoria_id)
+    assertEquals(listOf("cat_comida"), row.toDomain().categoriaIds)
     assertEquals("almuerzo", row.descripcion)
     assertEquals(Instant.parse("2026-09-03T00:00:00Z").toString(), row.created_at)
   }
+
+  @Test
+  fun `migration from schema 2 moves every categoria into the join table and rebuilds movimiento`() {
+    val snapshot = File("src/commonMain/sqldelight/databases/2.db")
+    assertTrue(snapshot.exists(), "schema 2 snapshot not found at ${snapshot.absolutePath}")
+    val file = File.createTempFile("tallybook-v2", ".db")
+    try {
+      snapshot.copyTo(file, overwrite = true)
+      val driver = JdbcSqliteDriver("jdbc:sqlite:${file.absolutePath}")
+      try {
+        val v2Rows =
+            listOf(
+                Triple("cafe", "cat_comida", "2026-09-03"),
+                Triple("sueldo", "cat_sueldo", "2026-09-01"),
+                Triple("orphan", "category-that-was-never-seeded", "2026-08-15"),
+                Triple("tied", "cat_comida", "2026-09-03"),
+            )
+        v2Rows.forEachIndexed { index, (id, categoriaId, fecha) ->
+          driver.execute(
+              null,
+              "INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, categoria_id, " +
+                  "descripcion, created_at) VALUES ('$id', 'GASTO', ${1_000 + index}, 'COP', " +
+                  "'$fecha', '$categoriaId', ${if (index == 0) "'almuerzo'" else "NULL"}, " +
+                  "'2026-09-03T12:00:0${index}Z')",
+              0,
+          )
+        }
+
+        TallybookDatabase.Schema.migrate(driver, oldVersion = 2, newVersion = 3)
+
+        val queries = TallybookDatabase(driver).movimientoQueries
+        val migrated = queries.selectAllMovimientos().executeAsList().map { it.toDomain() }
+        assertEquals(
+            listOf("tied", "cafe", "sueldo", "orphan"),
+            migrated.map { it.id },
+            "fecha DESC, created_at DESC, id DESC order survives the rebuild",
+        )
+        assertEquals(
+            mapOf(
+                "cafe" to listOf("cat_comida"),
+                "sueldo" to listOf("cat_sueldo"),
+                "orphan" to listOf("category-that-was-never-seeded"),
+                "tied" to listOf("cat_comida"),
+            ),
+            migrated.associate { it.id to it.categoriaIds },
+        )
+        val cafe = migrated.single { it.id == "cafe" }
+        assertEquals("almuerzo", cafe.descripcion)
+        assertEquals(1_000L, cafe.monto.minorUnits)
+        assertEquals(Instant.parse("2026-09-03T12:00:00Z"), cafe.createdAt)
+        assertEquals(
+            listOf("cafe:0", "orphan:0", "sueldo:0", "tied:0"),
+            driver.queryStrings(
+                "SELECT movimiento_id || ':' || posicion FROM movimiento_categoria ORDER BY 1"
+            ),
+        )
+        assertEquals(
+            listOf(
+                "id",
+                "tipo",
+                "monto_minor",
+                "monto_moneda",
+                "fecha",
+                "descripcion",
+                "created_at",
+            ),
+            driver.queryStrings("SELECT name FROM pragma_table_info('movimiento')"),
+        )
+        assertEquals(
+            listOf("movimiento_categoria_categoria", "movimiento_recent"),
+            driver.queryStrings(
+                "SELECT name FROM sqlite_master WHERE type = 'index' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+            ),
+        )
+        assertEquals(
+            listOf("categoria_id"),
+            driver.queryStrings(
+                "SELECT name FROM pragma_index_info('movimiento_categoria_categoria')"
+            ),
+        )
+        assertEquals(
+            listOf("fecha", "created_at", "id"),
+            driver.queryStrings("SELECT name FROM pragma_index_info('movimiento_recent')"),
+        )
+        assertEquals(
+            listOf("movimiento_con_categorias"),
+            driver.queryStrings("SELECT name FROM sqlite_master WHERE type = 'view'"),
+        )
+        assertEquals(
+            listOf("categoria", "movimiento", "movimiento_categoria"),
+            driver.queryStrings(
+                "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
+            ),
+        )
+      } finally {
+        driver.close()
+      }
+    } finally {
+      file.delete()
+    }
+  }
+
+  private fun SqlDriver.queryStrings(sql: String): List<String> =
+      executeQuery(
+              null,
+              sql,
+              { cursor ->
+                val rows = mutableListOf<String>()
+                while (cursor.next().value) rows += requireNotNull(cursor.getString(0))
+                QueryResult.Value(rows)
+              },
+              0,
+          )
+          .value
 
   private fun inMemoryDatabase(): TallybookDatabase {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
@@ -64,20 +187,25 @@ class DatabaseSchemaTest {
       montoMinor: Long,
       moneda: String = "COP",
       fecha: String = "2026-09-03",
-      categoriaId: String = "cat1",
+      categoriaIds: List<String> = listOf("cat1"),
       descripcion: String? = null,
       createdAt: String = "2026-09-03T12:00:00Z",
-  ) =
+  ) {
+    transaction {
       movimientoQueries.insertMovimiento(
           id = id,
           tipo = tipo,
           monto_minor = montoMinor,
           monto_moneda = moneda,
           fecha = fecha,
-          categoria_id = categoriaId,
           descripcion = descripcion,
           created_at = createdAt,
       )
+      categoriaIds.forEachIndexed { posicion, categoriaId ->
+        movimientoQueries.insertMovimientoCategoria(id, categoriaId, posicion.toLong())
+      }
+    }
+  }
 
   @Test
   fun `a movimiento round-trips through the database`() {
@@ -89,7 +217,7 @@ class DatabaseSchemaTest {
         montoMinor = 1050,
         moneda = "USD",
         fecha = "2026-09-03",
-        categoriaId = "cat_comida",
+        categoriaIds = listOf("cat_comida"),
         descripcion = "almuerzo",
     )
     val row = db.movimientoQueries.selectMovimientoById("mov1").executeAsOne()
@@ -98,7 +226,7 @@ class DatabaseSchemaTest {
     assertEquals(1050L, row.monto_minor)
     assertEquals("USD", row.monto_moneda)
     assertEquals("2026-09-03", row.fecha)
-    assertEquals("cat_comida", row.categoria_id)
+    assertEquals(listOf("cat_comida"), row.toDomain().categoriaIds)
     assertEquals("almuerzo", row.descripcion)
     assertEquals("2026-09-03T12:00:00Z", row.created_at)
   }
@@ -107,7 +235,12 @@ class DatabaseSchemaTest {
   fun `descripcion is the only optional movimiento field`() {
     val db = inMemoryDatabase()
 
-    db.insert(id = "mov1", tipo = "INGRESO", montoMinor = 120_000, categoriaId = "cat_sueldo")
+    db.insert(
+        id = "mov1",
+        tipo = "INGRESO",
+        montoMinor = 120_000,
+        categoriaIds = listOf("cat_sueldo"),
+    )
 
     assertNull(db.movimientoQueries.selectMovimientoById("mov1").executeAsOne().descripcion)
   }
@@ -196,35 +329,60 @@ class DatabaseSchemaTest {
   @Test
   fun `sumMovimientosPorCategoria totals minor units per categoria and tipo`() {
     val db = inMemoryDatabase()
-    db.insert(id = "in1", montoMinor = 1_500, categoriaId = "cat_comida", fecha = "2026-09-05")
-    db.insert(id = "in2", montoMinor = 2_500, categoriaId = "cat_comida", fecha = "2026-09-20")
+    db.insert(
+        id = "in1",
+        montoMinor = 1_500,
+        categoriaIds = listOf("cat_comida"),
+        fecha = "2026-09-05",
+    )
+    db.insert(
+        id = "in2",
+        montoMinor = 2_500,
+        categoriaIds = listOf("cat_comida"),
+        fecha = "2026-09-20",
+    )
     db.insert(
         id = "in3",
         tipo = "INGRESO",
         montoMinor = 700,
-        categoriaId = "cat_comida",
+        categoriaIds = listOf("cat_comida"),
         fecha = "2026-09-10",
     )
-    db.insert(id = "in4", montoMinor = -300, categoriaId = "cat_transporte", fecha = "2026-09-11")
+    db.insert(
+        id = "in4",
+        montoMinor = -300,
+        categoriaIds = listOf("cat_transporte"),
+        fecha = "2026-09-11",
+    )
     db.insert(
         id = "edge1",
         montoMinor = 1_000,
-        categoriaId = "cat_transporte",
+        categoriaIds = listOf("cat_transporte"),
         fecha = "2026-09-01",
     )
     db.insert(
         id = "edge2",
         montoMinor = 2_000,
-        categoriaId = "cat_transporte",
+        categoriaIds = listOf("cat_transporte"),
         fecha = "2026-09-30",
     )
-    db.insert(id = "before", montoMinor = 9_999, categoriaId = "cat_comida", fecha = "2026-08-31")
-    db.insert(id = "after", montoMinor = 8_888, categoriaId = "cat_comida", fecha = "2026-10-01")
+    db.insert(
+        id = "before",
+        montoMinor = 9_999,
+        categoriaIds = listOf("cat_comida"),
+        fecha = "2026-08-31",
+    )
+    db.insert(
+        id = "after",
+        montoMinor = 8_888,
+        categoriaIds = listOf("cat_comida"),
+        fecha = "2026-10-01",
+    )
     db.insert(
         id = "otherMoneda",
         montoMinor = 7_777,
         moneda = "USD",
-        categoriaId = "cat_comida",
+        categoriaIds = listOf("cat_comida"),
         fecha = "2026-09-15",
     )
 
@@ -241,6 +399,30 @@ class DatabaseSchemaTest {
             ("cat_transporte" to "GASTO") to 2_700L,
         ),
         totals,
+    )
+  }
+
+  @Test
+  fun `sumMovimientosPorCategoria counts the full amount in every categoria of a movimiento`() {
+    val db = inMemoryDatabase()
+    db.insert(id = "both", montoMinor = 1_000, categoriaIds = listOf("cat_comida", "cat_social"))
+    db.insert(id = "one", montoMinor = 500, categoriaIds = listOf("cat_comida"))
+
+    val perCategoria =
+        db.movimientoQueries
+            .sumMovimientosPorCategoria("COP", "2026-09-01", "2026-09-30")
+            .executeAsList()
+            .associate { (it.categoria_id to it.tipo) to it.total_minor }
+
+    assertEquals(
+        mapOf(("cat_comida" to "GASTO") to 1_500L, ("cat_social" to "GASTO") to 1_000L),
+        perCategoria,
+    )
+    assertEquals(
+        mapOf("GASTO" to 1_500L),
+        db.movimientoQueries.sumMovimientosByTipo("COP").executeAsList().associate {
+          it.tipo to it.total_minor
+        },
     )
   }
 

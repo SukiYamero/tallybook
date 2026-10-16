@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.model.Categoria
@@ -109,7 +110,7 @@ internal class ManagementRepository : MovimientoRepository {
               tipo = changes.tipo,
               monto = changes.monto,
               fecha = changes.fecha,
-              categoriaId = changes.categoriaId,
+              categoriaIds = changes.categoriaIds,
               descripcion = changes.descripcion,
           )
     }
@@ -151,6 +152,9 @@ internal class ManagementRepository : MovimientoRepository {
       criteria: MovimientoReadCriteria
   ): Flow<DataOutcome<MovimientoSearchSnapshot>> = emptyFlow()
 
+  override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
+      emptyFlow()
+
   override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> =
       error("Management cannot insert")
 
@@ -170,7 +174,7 @@ internal fun managementMovimiento() =
         TipoMovimiento.GASTO,
         Money(1234, Moneda.USD),
         LocalDate(2026, 9, 15),
-        "food",
+        listOf("food"),
         "Lunch",
         Instant.parse("2026-09-15T10:00:00Z"),
     )

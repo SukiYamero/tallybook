@@ -1,4 +1,4 @@
-package com.kurobello.tallybook.core.ui.text
+package com.kurobello.tallybook.core.text
 
 /** Supported-locale accent folding preserves ñ; it is not universal transliteration. */
 internal fun normalizeSearchText(value: String): String {

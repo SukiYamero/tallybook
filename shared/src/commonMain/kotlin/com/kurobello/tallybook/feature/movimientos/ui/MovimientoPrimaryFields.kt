@@ -9,26 +9,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
-import com.kurobello.tallybook.core.ui.category.CategoryAvatar
-import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
-import com.kurobello.tallybook.core.ui.component.TallybookInputLabel
-import com.kurobello.tallybook.core.ui.component.TallybookSelectionField
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormState
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.category
-import tallybook.shared.generated.resources.category_required
 import tallybook.shared.generated.resources.movimiento_future_date
-import tallybook.shared.generated.resources.unknown_category
 
 internal data class MovimientoFieldFocus(
     val amount: FocusRequester = FocusRequester(),
-    val category: FocusRequester = FocusRequester(),
     val amountModifier: Modifier = Modifier,
 )
 
@@ -37,16 +28,11 @@ internal data class MovimientoFieldFocus(
 internal fun MovimientoPrimaryFields(
     uiState: MovimientoFormState,
     actions: MovimientoFormActions,
-    categoryEntry: MovimientoCategoryEntry,
+    onOpenCategory: () -> Unit,
     fieldFocus: MovimientoFieldFocus,
     interactionEnabled: Boolean = true,
 ) {
   val focusManager = LocalFocusManager.current
-  val selectedCategoria = uiState.categorias.firstOrNull { it.id == uiState.selectedCategoriaId }
-  val categoryMessage =
-      stringResource(Res.string.category_required)
-          .takeIf { uiState.isCategoriaMissing }
-          ?.let(TallybookFieldMessage::Error)
   Column {
     MovimientoTypeSelector(
         selected = uiState.tipo,
@@ -55,28 +41,11 @@ internal fun MovimientoPrimaryFields(
         modifier = Modifier.padding(top = TallybookTheme.spacing.space8),
     )
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
-    TallybookSelectionField(
-        label = stringResource(Res.string.category),
-        value =
-            selectedCategoria?.nombre
-                ?: stringResource(Res.string.unknown_category).takeIf {
-                  uiState.selectedCategoriaId != null
-                },
-        placeholder = stringResource(Res.string.category_required),
-        onClick = categoryEntry.onOpen,
-        modifier = Modifier.focusRequester(fieldFocus.category),
+    MovimientoCategoriesField(
+        uiState = uiState,
+        actions = actions,
+        onOpen = onOpenCategory,
         enabled = interactionEnabled && !uiState.isSubmitting && !uiState.isLoading,
-        message = categoryMessage,
-        leadingContent = selectedCategoria?.let { categoria -> { CategoryAvatar(categoria) } },
-        labelContent = {
-          TallybookInputLabel(
-              text = stringResource(Res.string.category),
-              color =
-                  if (categoryMessage is TallybookFieldMessage.Error)
-                      TallybookTheme.colors.status.danger.base
-                  else TallybookTheme.colors.foreground.tertiary,
-          )
-        },
     )
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
     MovimientoDateField(

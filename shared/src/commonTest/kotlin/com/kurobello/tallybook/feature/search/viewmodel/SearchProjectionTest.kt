@@ -7,7 +7,7 @@ import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.TipoMovimiento
-import com.kurobello.tallybook.core.ui.text.normalizeSearchText
+import com.kurobello.tallybook.core.text.normalizeSearchText
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
@@ -48,13 +48,32 @@ class SearchProjectionTest {
     assertEquals("Unknown", matchSearchCandidates(candidates, "unknown").single().categoryLabel)
   }
 
-  private fun row(id: String, description: String?) =
+  @Test
+  fun matchesAnyCategoryNameWhileTheRowShowsTheFirstOne() = runTest {
+    val food = Categoria("food", "Comida", null, CategoryIcon.WALLET, CategoryTint.BLUE)
+    val gift = Categoria("gift", "Regalo", null, CategoryIcon.WALLET, CategoryTint.BLUE)
+    val rows = listOf(row("multi", "Cena", listOf("food", "gift")), row("single", "Cine"))
+    val candidates = buildSearchCandidates(rows, listOf(food, gift), "Unknown")
+
+    val byGift = matchSearchCandidates(candidates, "regalo")
+    assertEquals(listOf("multi"), byGift.map { it.id })
+    assertEquals("Comida", byGift.single().categoryLabel)
+    assertSame(food, byGift.single().categoria)
+    assertEquals(listOf("multi"), matchSearchCandidates(candidates, "comida").map { it.id })
+    assertEquals(emptyList(), matchSearchCandidates(candidates, "gift"))
+  }
+
+  private fun row(
+      id: String,
+      description: String?,
+      categoriaIds: List<String> = listOf("missing"),
+  ) =
       Movimiento(
           id,
           TipoMovimiento.GASTO,
           Money(Long.MAX_VALUE, Moneda.USD),
           LocalDate(2026, 10, 6),
-          "missing",
+          categoriaIds,
           description,
           Instant.parse("2026-10-06T12:00:00Z"),
       )

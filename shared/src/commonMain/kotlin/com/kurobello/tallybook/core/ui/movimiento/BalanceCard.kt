@@ -17,14 +17,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.composables.icons.lucide.ArrowDownLeft
-import com.composables.icons.lucide.ArrowUpRight
-import com.composables.icons.lucide.Lucide
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
-import com.kurobello.tallybook.core.ui.theme.LocalTallybookColors
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
@@ -62,13 +58,13 @@ fun BalanceCard(
         SummaryAmount(
             label = stringResource(Res.string.home_income),
             amountText = secondaryAmountFormatter(summary.ingresos, TipoMovimiento.INGRESO),
-            positive = true,
+            tipo = TipoMovimiento.INGRESO,
             modifier = Modifier.fillMaxWidth(),
         )
         SummaryAmount(
             label = stringResource(Res.string.home_expenses),
             amountText = secondaryAmountFormatter(summary.gastos, TipoMovimiento.GASTO),
-            positive = false,
+            tipo = TipoMovimiento.GASTO,
             modifier = Modifier.fillMaxWidth(),
         )
       }
@@ -81,12 +77,10 @@ fun BalanceCard(
 private fun SummaryAmount(
     label: String,
     amountText: String,
-    positive: Boolean,
+    tipo: TipoMovimiento,
     modifier: Modifier = Modifier,
 ) {
-  val accent =
-      if (positive) LocalTallybookColors.current.status.success.base
-      else LocalTallybookColors.current.status.danger.base
+  val accent = tipo.accentColor
   Surface(
       modifier = modifier,
       shape = MaterialTheme.shapes.large,
@@ -104,7 +98,7 @@ private fun SummaryAmount(
               verticalAlignment = Alignment.CenterVertically,
           ) {
             Icon(
-                imageVector = if (positive) Lucide.ArrowDownLeft else Lucide.ArrowUpRight,
+                imageVector = tipo.presentation.icon,
                 contentDescription = null,
                 modifier = Modifier.size(TallybookTheme.dimensions.movementSummaryIcon),
                 tint = accent,

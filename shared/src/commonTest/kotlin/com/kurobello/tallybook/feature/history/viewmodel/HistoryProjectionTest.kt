@@ -366,7 +366,7 @@ class HistoryProjectionTest {
           tipo,
           Money(amount, moneda),
           fecha,
-          categoriaId,
+          listOf(categoriaId),
           descripcion,
           Instant.parse("2026-09-15T12:00:00Z"),
       )

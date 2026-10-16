@@ -179,7 +179,7 @@ internal fun LazyListScope.catalogControlMatrices() {
   }
 }
 
-private fun LazyListScope.catalogControlSection(
+internal fun LazyListScope.catalogControlSection(
     key: String,
     title: @Composable () -> String,
     content: @Composable () -> Unit,
@@ -742,7 +742,7 @@ private fun CatalogFoodIcon() {
 }
 
 @Composable
-private fun CatalogSample(label: String, content: @Composable () -> Unit) {
+internal fun CatalogSample(label: String, content: @Composable () -> Unit) {
   Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8)) {
     TallybookText(text = label, style = TallybookTheme.typography.caption)
     content()

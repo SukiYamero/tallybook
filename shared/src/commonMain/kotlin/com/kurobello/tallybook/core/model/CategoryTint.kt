@@ -9,4 +9,5 @@ enum class CategoryTint(val storageKey: String) {
   SUCCESS("success"),
   DANGER("danger"),
   INFO("info"),
+  NEUTRAL("neutral"),
 }

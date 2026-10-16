@@ -111,6 +111,7 @@ internal fun UiCatalogScreen(
       catalogActions(title = actions)
       catalogSection(key = "snackbar", title = snackbarTitle) { UiCatalogSnackbar() }
       catalogControlMatrices()
+      catalogEntryComponents(fixtures)
       catalogDataDisplay(title = dataDisplay, fixtures = fixtures)
     }
   }

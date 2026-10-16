@@ -26,6 +26,7 @@ fun MovimientoRow(
     categoria: Categoria?,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    pending: Boolean = false,
 ) {
   val categoryLabel = categoria?.nombre ?: stringResource(Res.string.unknown_category)
   MovimientoRowContent(
@@ -39,6 +40,7 @@ fun MovimientoRow(
           ),
       modifier = modifier,
       onClick = onClick,
+      pending = pending,
   )
 }
 
@@ -74,7 +76,7 @@ private fun previewMovimiento(tipo: TipoMovimiento) =
         tipo = tipo,
         monto = Money(128_500, Moneda.COP),
         fecha = LocalDate(2026, 9, 15),
-        categoriaId = previewMovimientoCategoria().id,
+        categoriaIds = listOf(previewMovimientoCategoria().id),
         descripcion = null,
         createdAt = Instant.fromEpochMilliseconds(1_757_894_400_000),
     )

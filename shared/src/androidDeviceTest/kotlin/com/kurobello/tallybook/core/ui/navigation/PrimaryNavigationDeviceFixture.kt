@@ -14,6 +14,8 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.savedState
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.CategoryHistoryRow
+import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
@@ -38,6 +40,7 @@ import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.di.DispatcherQualifier
+import com.kurobello.tallybook.di.entryModule
 import com.kurobello.tallybook.di.viewModelModule
 import java.io.Serializable as JavaSerializable
 import java.util.concurrent.atomic.AtomicInteger
@@ -67,7 +70,13 @@ internal class PrimaryDeviceShell {
   val context = koinApplication {
     modules(
         viewModelModule,
+        entryModule,
         module {
+          single<DeviceLocaleProvider> {
+            object : DeviceLocaleProvider {
+              override fun currentLanguageTag() = "es-CO"
+            }
+          }
           single<AppPreferencesRepository> { NavigationPreferences() }
           single<MovimientoRepository> { movimientos }
           single<CategoriaRepository> { NavigationCategories() }
@@ -160,7 +169,7 @@ internal class NavigationMovimientos : MovimientoRepository {
                 TipoMovimiento.GASTO,
                 Money(125, Moneda.USD),
                 LocalDate(2026, 10, 5),
-                "food",
+                listOf("food"),
                 "Item $index",
                 Instant.parse("2026-10-05T12:00:00Z"),
             )
@@ -185,7 +194,7 @@ internal class NavigationMovimientos : MovimientoRepository {
                             row.fecha in criteria.range.start..criteria.range.end) &&
                             (criteria.tipo == null || row.tipo == criteria.tipo) &&
                             (criteria.categoryIds.isEmpty() ||
-                                row.categoriaId in criteria.categoryIds)
+                                row.categoriaIds.any { id -> id in criteria.categoryIds })
                       }
                       .sortedWith(navigationStorageOrder),
                   currencyRows.map { it.fecha.year }.distinct().sortedDescending(),
@@ -254,6 +263,9 @@ internal class NavigationMovimientos : MovimientoRepository {
     )
   }
 
+  override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
+      error("Category history is not expected in this fixture")
+
   override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> {
     rows.value += movimiento
     return DataOutcome.Success(Unit)
@@ -276,7 +288,7 @@ internal class NavigationMovimientos : MovimientoRepository {
             tipo = changes.tipo,
             monto = changes.monto,
             fecha = changes.fecha,
-            categoriaId = changes.categoriaId,
+            categoriaIds = changes.categoriaIds,
             descripcion = changes.descripcion,
         )
     val values = rows.value.map { if (it.id == id) updated else it }

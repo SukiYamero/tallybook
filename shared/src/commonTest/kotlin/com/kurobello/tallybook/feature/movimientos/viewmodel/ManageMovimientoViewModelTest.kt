@@ -1,5 +1,6 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
@@ -119,28 +120,42 @@ class ManageMovimientoViewModelTest {
   }
 
   @Test
-  fun originalChildAndMissingCategoryArePreservedWhileNewSelectionRequiresParent() = runTest {
+  fun originalCategoryIsPreservedWhenTheCatalogNoLongerHasIt() = runTest {
     val f = ManageMovimientoFixture(backgroundScope)
-    f.repository.current = managementMovimiento().copy(categoriaId = "child")
+    f.repository.current = managementMovimiento().copy(categoriaIds = listOf("child"))
     f.categorias.values.value =
-        DataOutcome.Success(
-            listOf(
-                managementCategoria(),
-                managementCategoria("child", "food"),
-                managementCategoria("other-child", "food"),
-            )
-        )
+        DataOutcome.Success(listOf(managementCategoria(), managementCategoria("child", "food")))
     f.viewModel.open("movement")
     runCurrent()
-    f.viewModel.onCategoriaSelected("other-child")
-    assertEquals("child", f.viewModel.uiState.value.session?.form?.selectedCategoriaId)
     f.categorias.values.value = DataOutcome.Success(emptyList())
     runCurrent()
     f.viewModel.onAmountChanged("20.00")
     f.viewModel.onSubmit()
     runCurrent()
-    assertEquals("child", f.repository.changes?.categoriaId)
+    assertEquals(listOf("child"), f.repository.changes?.categoriaIds)
     assertEquals(1, f.repository.updates)
+  }
+
+  @Test
+  fun childrenAreSelectableButOtrosIsNot() = runTest {
+    val f = ManageMovimientoFixture(backgroundScope)
+    f.categorias.values.value =
+        DataOutcome.Success(
+            listOf(
+                managementCategoria(),
+                managementCategoria("child", "food"),
+                managementCategoria(CATEGORIA_OTROS_ID),
+            )
+        )
+    f.viewModel.open("movement")
+    runCurrent()
+    f.viewModel.onCategoriasChanged(listOf("child"))
+    f.viewModel.onCategoriasChanged(listOf("child", CATEGORIA_OTROS_ID))
+    assertEquals(listOf("child"), f.viewModel.uiState.value.session?.form?.categoriaIds)
+    f.viewModel.onAmountChanged("20.00")
+    f.viewModel.onSubmit()
+    runCurrent()
+    assertEquals(listOf("child"), f.repository.changes?.categoriaIds)
   }
 
   @Test

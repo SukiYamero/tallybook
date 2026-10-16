@@ -99,7 +99,7 @@ private fun searchPreviewState(): SearchUiState {
           TipoMovimiento.GASTO,
           Money(450, Moneda.USD),
           date,
-          "food",
+          listOf("food"),
           "Morning coffee",
           Instant.parse("2026-10-06T12:00:00Z"),
       )

@@ -1,11 +1,14 @@
 package com.kurobello.tallybook.core.ui.category
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -16,11 +19,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.composables.icons.lucide.Check
+import com.composables.icons.lucide.Lucide
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
@@ -32,24 +41,30 @@ import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_comida
 
+private const val DISABLED_ALPHA = 0.4f
+
 @Composable
+@Suppress("LongParameterList")
 fun CategoryChip(
     categoria: Categoria,
     selected: Boolean,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    pending: Boolean = false,
+    trailingCheck: Boolean = false,
 ) {
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
   val tapFeedback = rememberTallybookTapFeedback()
-  val colors = categoria.color.tintColors()
+  val colors = if (pending) neutralCategoryTintColors() else categoria.color.tintColors()
   val shape = MaterialTheme.shapes.extraLarge
   val containerColor =
       if (selected) colors.container else MaterialTheme.colorScheme.surfaceContainerLow
   Row(
       modifier =
           modifier
+              .alpha(if (enabled) 1f else DISABLED_ALPHA)
               .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
               .clip(shape)
               .background(
@@ -65,27 +80,47 @@ fun CategoryChip(
                   color = if (selected) colors.border else MaterialTheme.colorScheme.outlineVariant,
                   shape = shape,
               )
-              .selectable(
-                  selected = selected,
-                  enabled = enabled,
-                  interactionSource = interactionSource,
-                  indication = null,
-                  onClick = {
-                    tapFeedback.trigger()
-                    onClick()
-                  },
-                  role = Role.Button,
+              .then(
+                  if (onClick == null) {
+                    Modifier.semantics { this.selected = selected }
+                  } else {
+                    Modifier.selectable(
+                        selected = selected,
+                        enabled = enabled,
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = {
+                          tapFeedback.trigger()
+                          onClick()
+                        },
+                        role = Role.Button,
+                    )
+                  }
               )
               .semantics(mergeDescendants = true) {}
               .padding(horizontal = 12.dp, vertical = 6.dp),
       horizontalArrangement = Arrangement.spacedBy(8.dp),
       verticalAlignment = Alignment.CenterVertically,
   ) {
-    CategoryAvatar(categoria = categoria, modifier = Modifier.size(28.dp))
+    CategoryAvatar(categoria = categoria, modifier = Modifier.size(28.dp), pending = pending)
     TallybookText(
         text = categoria.nombre,
         color = if (selected) colors.content else MaterialTheme.colorScheme.onSurface,
         style = TallybookTheme.typography.controlValue,
+    )
+    if (trailingCheck) CategoryChipCheck(selected, colors.content)
+  }
+}
+
+@Composable
+private fun RowScope.CategoryChipCheck(selected: Boolean, tint: Color) {
+  Spacer(Modifier.weight(1f))
+  if (selected) {
+    Image(
+        imageVector = Lucide.Check,
+        contentDescription = null,
+        modifier = Modifier.size(TallybookTheme.dimensions.iconMedium),
+        colorFilter = ColorFilter.tint(tint),
     )
   }
 }
