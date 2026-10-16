@@ -15,8 +15,7 @@ A pure, deterministic `MovimientoPhraseParser` in `commonMain` that turns one se
 - Vocabulary is the union of all supported languages regardless of `locale`; `locale` only selects
   day/month order for numeric dates (month-first for `EN`, day-first otherwise). Users mix languages
   and dictation output.
-- Reuse `normalizeSearchText` for matching keywords (`core/ui/text/SearchText.kt`) from its current
-  package; task2 depends on it in parallel, so it does not move in this wave.
+- Reuse `normalizeSearchText` for matching keywords (`core/text/SearchText.kt`, framework-free).
 - Amount conversion must produce exact `Money` minor units with `Moneda.scale`. Reuse the existing
   overflow semantics of `AmountInput.kt` (Long minor units; reject overflow instead of wrapping).
 - Pure value mappings (verb → tipo, multiplier word → factor, weekday word → `DayOfWeek`) use typed
