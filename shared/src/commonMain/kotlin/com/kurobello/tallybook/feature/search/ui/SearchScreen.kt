@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.Dp
 import com.composables.icons.lucide.ListFilter
 import com.composables.icons.lucide.Lucide
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.category.categoryFamilies
 import com.kurobello.tallybook.core.ui.category.tintColors
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookButtonColors
@@ -281,7 +282,7 @@ private fun SearchAppliedChips(state: SearchUiState, actions: SearchActions) {
         it.copy(nombre = searchCategoryLabel(it, unknownLabel))
       }
   val selectedCategories =
-      searchCategoryGroups(categories).flatten().filter { it.id in state.filters.categoryIds }
+      categoryFamilies(categories).flatten().filter { it.id in state.filters.categoryIds }
   val missing = state.filters.categoryIds - categories.mapTo(mutableSetOf()) { it.id }
   LazyRow(horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8)) {
     if (state.filters.preset != SearchDatePreset.All)

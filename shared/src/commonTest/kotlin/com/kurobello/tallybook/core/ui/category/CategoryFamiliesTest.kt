@@ -1,4 +1,4 @@
-package com.kurobello.tallybook.feature.search.ui
+package com.kurobello.tallybook.core.ui.category
 
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
@@ -6,7 +6,7 @@ import com.kurobello.tallybook.core.model.CategoryTint
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class SearchCategoryFiltersTest {
+class CategoryFamiliesTest {
   @Test
   fun parentsKeepPersistedSiblingOrderWithChildrenAndOrphansReachable() {
     val input =
@@ -19,14 +19,14 @@ class SearchCategoryFiltersTest {
         )
     assertEquals(
         listOf(listOf("parent", "child-b", "child-a"), listOf("orphan"), listOf("other")),
-        searchCategoryGroups(input).map { group -> group.map { it.id } },
+        categoryFamilies(input).map { group -> group.map { it.id } },
     )
   }
 
   @Test
   fun cyclicImportedParentsDoNotHideEntriesOrVisitThemTwice() {
     val input = listOf(category("first", "second"), category("second", "first"))
-    assertEquals(listOf("first", "second"), searchCategoryGroups(input).flatten().map { it.id })
+    assertEquals(listOf("first", "second"), categoryFamilies(input).flatten().map { it.id })
   }
 
   private fun category(id: String, parent: String? = null) =

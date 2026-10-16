@@ -14,7 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -42,6 +44,7 @@ internal fun TallybookFilterTag(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     colors: TallybookButtonColors = TallybookFilterTagDefaults.colors(),
+    leadingIcon: ImageVector? = null,
 ) {
   val interactionSource = remember { MutableInteractionSource() }
   val contentColor = if (enabled) colors.content else colors.disabledContent
@@ -74,23 +77,34 @@ internal fun TallybookFilterTag(
                 contentAlignment = Alignment.Center,
             ),
     ) {
-      Row(
-          modifier =
-              Modifier.padding(
-                  horizontal = TallybookTheme.spacing.space8,
-                  vertical = TallybookTheme.spacing.space4,
-              ),
-          horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4),
-          verticalAlignment = Alignment.CenterVertically,
-      ) {
-        TallybookText(label, style = TallybookTheme.typography.caption)
-        Image(
-            Lucide.X,
-            null,
-            Modifier.size(TallybookTheme.dimensions.iconSmall),
-            colorFilter = ColorFilter.tint(contentColor),
-        )
-      }
+      FilterTagContent(label, leadingIcon, contentColor)
     }
   }
+}
+
+@Composable
+private fun FilterTagContent(label: String, leadingIcon: ImageVector?, contentColor: Color) {
+  Row(
+      modifier =
+          Modifier.padding(
+              horizontal = TallybookTheme.spacing.space8,
+              vertical = TallybookTheme.spacing.space4,
+          ),
+      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4),
+      verticalAlignment = Alignment.CenterVertically,
+  ) {
+    if (leadingIcon != null) FilterTagIcon(leadingIcon, contentColor)
+    TallybookText(label, style = TallybookTheme.typography.caption)
+    FilterTagIcon(Lucide.X, contentColor)
+  }
+}
+
+@Composable
+private fun FilterTagIcon(icon: ImageVector, tint: Color) {
+  Image(
+      icon,
+      null,
+      Modifier.size(TallybookTheme.dimensions.iconSmall),
+      colorFilter = ColorFilter.tint(tint),
+  )
 }

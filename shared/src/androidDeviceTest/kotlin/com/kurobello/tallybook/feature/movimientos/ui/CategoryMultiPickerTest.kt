@@ -6,10 +6,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -30,6 +33,8 @@ import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_picker_done
 import tallybook.shared.generated.resources.category_picker_keep_one
 import tallybook.shared.generated.resources.category_picker_limit_reached
+import tallybook.shared.generated.resources.category_picker_selected_label
+import tallybook.shared.generated.resources.category_tag_remove
 
 @OptIn(ExperimentalResourceApi::class)
 class CategoryMultiPickerTest {
@@ -49,7 +54,7 @@ class CategoryMultiPickerTest {
 
     composeRule.onCategoryOption(health.nombre).performClick()
     composeRule.runOnIdle { assertEquals(listOf(leisure.id, health.id), selection) }
-    composeRule.onNodeWithText(health.nombre).assertIsSelected()
+    composeRule.onCategoryOption(health.nombre).assertIsSelected()
     composeRule.onNodeWithText(string(Res.string.category_picker_done, 2)).assertExists()
 
     composeRule.onCategoryOption(health.nombre).performClick()
@@ -77,16 +82,57 @@ class CategoryMultiPickerTest {
   }
 
   @Test
-  fun drillingIntoAParentNeverSelectsItButItsOwnRowDoes() {
+  fun parentAndChildReplaceEachOtherAndTheTagsFollowImmediately() {
     show(initial = listOf(health.id))
 
-    composeRule.onCategoryOption(food.nombre).performClick()
-    composeRule.runOnIdle { assertEquals(listOf(health.id), selection) }
     composeRule.onCategoryOption(groceries.nombre).performClick()
     composeRule.runOnIdle { assertEquals(listOf(health.id, groceries.id), selection) }
-    composeRule.onCategoryOption(food.nombre).performClick()
+    composeRule.onCategoryOption(groceries.nombre).assertIsSelected()
 
+    composeRule.onCategoryOption(food.nombre).performClick()
     composeRule.runOnIdle { assertEquals(listOf(health.id, food.id), selection) }
+    composeRule.onCategoryOption(food.nombre).assertIsSelected()
+    composeRule.onCategoryOption(groceries.nombre).assertIsNotSelected()
+    composeRule.onNodeWithContentDescription(removeLabel(groceries)).assertDoesNotExist()
+
+    composeRule.onCategoryOption(groceries.nombre).performClick()
+    composeRule.runOnIdle { assertEquals(listOf(health.id, groceries.id), selection) }
+    composeRule.onCategoryOption(food.nombre).assertIsNotSelected()
+  }
+
+  @Test
+  fun selectedSectionListsTheSelectionAndTappingATagRemovesIt() {
+    show(initial = listOf(leisure.id, health.id))
+
+    composeRule.onNodeWithTag(CATEGORY_PICKER_SELECTED_TAG).assertExists()
+    composeRule.onNodeWithText(string(Res.string.category_picker_selected_label)).assertExists()
+
+    composeRule.onNodeWithContentDescription(removeLabel(health)).performClick()
+
+    composeRule.runOnIdle { assertEquals(listOf(leisure.id), selection) }
+    composeRule.onNodeWithContentDescription(removeLabel(health)).assertDoesNotExist()
+    composeRule.onCategoryOption(health.nombre).assertIsNotSelected()
+  }
+
+  @Test
+  fun selectedSectionIsHiddenWhileNothingIsSelected() {
+    show(initial = emptyList())
+
+    composeRule.onNodeWithTag(CATEGORY_PICKER_SELECTED_TAG).assertDoesNotExist()
+
+    composeRule.onCategoryOption(health.nombre).performClick()
+
+    composeRule.onNodeWithTag(CATEGORY_PICKER_SELECTED_TAG).assertExists()
+  }
+
+  @Test
+  fun theLastSelectedTagCannotBeRemoved() {
+    show(initial = listOf(leisure.id))
+
+    composeRule.onNodeWithContentDescription(removeLabel(leisure)).assertIsNotEnabled()
+    composeRule.onNodeWithContentDescription(removeLabel(leisure)).performClick()
+
+    composeRule.runOnIdle { assertEquals(listOf(leisure.id), selection) }
   }
 
   @Test
@@ -127,8 +173,13 @@ class CategoryMultiPickerTest {
         getString(resource, *args)
       }
 
+  // A selected category also appears as a removable tag, so a chip is told apart by being
+  // selectable.
   private fun SemanticsNodeInteractionsProvider.onCategoryOption(text: String) =
-      onNode(hasText(text) and hasClickAction())
+      onNode(hasText(text) and hasClickAction() and isSelectable())
+
+  private fun removeLabel(categoria: Categoria) =
+      string(Res.string.category_tag_remove, categoria.nombre)
 
   private companion object {
     val food = categoria("food", "Food")
