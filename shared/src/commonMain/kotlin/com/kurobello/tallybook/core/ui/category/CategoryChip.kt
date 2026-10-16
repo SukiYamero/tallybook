@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -37,7 +38,7 @@ import tallybook.shared.generated.resources.category_comida
 fun CategoryChip(
     categoria: Categoria,
     selected: Boolean,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     pending: Boolean = false,
@@ -67,16 +68,22 @@ fun CategoryChip(
                   color = if (selected) colors.border else MaterialTheme.colorScheme.outlineVariant,
                   shape = shape,
               )
-              .selectable(
-                  selected = selected,
-                  enabled = enabled,
-                  interactionSource = interactionSource,
-                  indication = null,
-                  onClick = {
-                    tapFeedback.trigger()
-                    onClick()
-                  },
-                  role = Role.Button,
+              .then(
+                  if (onClick == null) {
+                    Modifier.semantics { this.selected = selected }
+                  } else {
+                    Modifier.selectable(
+                        selected = selected,
+                        enabled = enabled,
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = {
+                          tapFeedback.trigger()
+                          onClick()
+                        },
+                        role = Role.Button,
+                    )
+                  }
               )
               .semantics(mergeDescendants = true) {}
               .padding(horizontal = 12.dp, vertical = 6.dp),

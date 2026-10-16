@@ -2,10 +2,11 @@ package com.kurobello.tallybook.feature.movimientos.ui
 
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -59,9 +60,9 @@ class MovimientoSummaryStepTest {
             )
         )
         .assertIsDisplayed()
-    composeRule.onNodeWithText(samples.cinema.nombre).assertIsSelected()
-    composeRule.onNodeWithText(samples.food.nombre).assertIsNotSelected().assertIsEnabled()
-    composeRule.onNodeWithText(samples.transport.nombre).assertIsNotSelected().assertIsEnabled()
+    composeRule.onNodeWithText(samples.cinema.nombre).assertIsSelected().assertHasNoClickAction()
+    composeRule.onNodeWithText(samples.food.nombre).assertHasClickAction().assertIsEnabled()
+    composeRule.onNodeWithText(samples.transport.nombre).assertHasClickAction().assertIsEnabled()
   }
 
   @Test

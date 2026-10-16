@@ -38,7 +38,6 @@ import tallybook.shared.generated.resources.ui_catalog_state_empty
 import tallybook.shared.generated.resources.ui_catalog_state_missing_amount
 import tallybook.shared.generated.resources.ui_catalog_state_partial
 import tallybook.shared.generated.resources.ui_catalog_state_pending_category
-import tallybook.shared.generated.resources.ui_catalog_state_selected
 import tallybook.shared.generated.resources.ui_catalog_state_submitting
 import tallybook.shared.generated.resources.ui_catalog_state_suggested
 import tallybook.shared.generated.resources.ui_catalog_suggestion_chips
@@ -75,13 +74,10 @@ private fun CatalogSuggestionChipMatrix() {
   val category = rememberMovimientoEntrySamples().cinema
   CatalogSurface {
     CatalogSample(label = stringResource(Res.string.ui_catalog_state_suggested)) {
-      CategorySuggestionChip(category, selected = false, onClick = {})
-    }
-    CatalogSample(label = stringResource(Res.string.ui_catalog_state_selected)) {
-      CategorySuggestionChip(category, selected = true, onClick = {})
+      CategorySuggestionChip(category, onClick = {})
     }
     CatalogSample(label = stringResource(Res.string.ui_catalog_state_disabled)) {
-      CategorySuggestionChip(category, selected = false, onClick = {}, enabled = false)
+      CategorySuggestionChip(category, onClick = {}, enabled = false)
     }
   }
 }

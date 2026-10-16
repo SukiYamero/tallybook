@@ -202,7 +202,7 @@ private fun SummaryCategories(
     CategoryChip(
         categoria = summary.categoria,
         selected = true,
-        onClick = {},
+        onClick = null,
         pending = summary.categoriaIsPending,
     )
     if (summary.categoriaIsPending) {
@@ -215,7 +215,6 @@ private fun SummaryCategories(
     summary.suggestions.forEach { suggestion ->
       CategorySuggestionChip(
           categoria = suggestion,
-          selected = false,
           onClick = { onSelectSuggestion(suggestion) },
           enabled = !summary.isSubmitting,
       )
