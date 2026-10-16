@@ -27,7 +27,7 @@ internal val foodKeywords: List<CategoryKeywordEntry> =
                 """,
             weak =
                 """
-                aceite, agua, pan, tienda, bodega, snacks, bebidas, cerveza, licor, vino, ron,
+                aceite, oil, oleo, agua, pan, tienda, bodega, snacks, bebidas, cerveza, licor, vino, ron,
                 aguardiente, tequila, whisky, carne, asado, pasta, metro, cornershop, disco, alkosto,
                 kiosco, almacen
                 """,

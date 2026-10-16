@@ -18,7 +18,7 @@ internal val mobilityKeywords: List<CategoryKeywordEntry> =
             """,
         weak =
             """
-            aceite, taller, multa, mecanico, mecanica, carburador
+            aceite, oil, oleo, taller, multa, mecanico, mecanica, carburador
             """,
     ) +
         keywords(

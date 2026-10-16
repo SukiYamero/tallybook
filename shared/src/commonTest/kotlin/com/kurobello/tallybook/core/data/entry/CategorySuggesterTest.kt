@@ -54,6 +54,27 @@ class CategorySuggesterTest {
   }
 
   @Test
+  fun everyAmbiguousWordSurfacesSeveralMediumSuggestions() {
+    listOf("aceite", "oil", "óleo", "ticket", "gas").forEach { subject ->
+      val result = suggest(subject)
+
+      assertTrue(result.size in 2..3, "$subject: $result")
+      assertTrue(result.all { it.confidence == SuggestionConfidence.MEDIUM }, subject)
+    }
+  }
+
+  @Test
+  fun oilInEveryLanguageMapsToGroceriesAndTransport() {
+    listOf("aceite", "oil", "óleo").forEach { subject ->
+      assertEquals(
+          setOf("cat_supermercado", "cat_transporte"),
+          ids(suggest(subject)).toSet(),
+          subject,
+      )
+    }
+  }
+
+  @Test
   fun aPhraseOutweighsItsAmbiguousWord() {
     val result = suggest("cambio de aceite")
 

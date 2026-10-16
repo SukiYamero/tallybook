@@ -80,6 +80,8 @@ class CategoryKeywordDictionaryTest {
     val expected =
         mapOf(
             "aceite" to setOf("cat_supermercado", "cat_transporte"),
+            "oil" to setOf("cat_supermercado", "cat_transporte"),
+            "oleo" to setOf("cat_supermercado", "cat_transporte"),
             "reservacion" to setOf("cat_hospedaje", "cat_restaurante", "cat_vuelos"),
             "ticket" to setOf("cat_cine", "cat_vuelos", "cat_paseos"),
             "gas" to setOf("cat_gasolina", "cat_servicios"),
