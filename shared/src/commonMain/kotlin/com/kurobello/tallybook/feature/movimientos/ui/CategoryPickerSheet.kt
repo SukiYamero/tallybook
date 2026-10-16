@@ -108,7 +108,6 @@ fun CategoryPickerSheet(
           onBack = { parentId = null },
           onCategoryClick = { categoria ->
             if (tree.shouldOpenChildren(categoria, allowSubcategories, isSearching, parent)) {
-              onSelect(categoria.id)
               parentId = categoria.id
             } else {
               onSelect(categoria.id)
@@ -156,7 +155,7 @@ internal fun CategoryTree.without(excludedIds: Set<String>): CategoryTree =
       )
     }
 
-private fun CategoryTree.shouldOpenChildren(
+internal fun CategoryTree.shouldOpenChildren(
     categoria: Categoria,
     allowSubcategories: Boolean,
     isSearching: Boolean,

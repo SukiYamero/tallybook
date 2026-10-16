@@ -19,6 +19,7 @@ import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.math.abs
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.StringResource
@@ -82,7 +83,7 @@ class CategoryPickerTest {
   }
 
   @Test
-  fun rootWithChildrenOpensDrillInAndSelectsTheGeneralCategory() {
+  fun drillingIntoARootKeepsTheSelectionUntilItsParentRowIsChosen() {
     var selectedId: String? = null
     var dismissCount = 0
 
@@ -100,7 +101,7 @@ class CategoryPickerTest {
 
     composeRule.onCategoryOptionWithText(comida.nombre).performClick()
     composeRule.runOnIdle {
-      assertEquals(comida.id, selectedId)
+      assertNull(selectedId)
       assertEquals(0, dismissCount)
     }
     composeRule.onNodeWithText(supermercado.nombre).assertExists()
