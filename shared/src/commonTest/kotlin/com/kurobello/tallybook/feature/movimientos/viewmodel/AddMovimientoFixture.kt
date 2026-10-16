@@ -8,6 +8,7 @@ import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
@@ -111,7 +112,8 @@ internal class AddFakePreferences(
       DataOutcome.Success(Unit)
 }
 
-internal class AddFakeCategorias(initial: DataOutcome<List<Categoria>>) : CategoriaRepository {
+internal class AddFakeCategorias(initial: DataOutcome<List<Categoria>>) :
+    CategoriaRepository by UnsupportedCategoriaRepository {
   private val values = MutableStateFlow(initial)
 
   override fun observeAll(): Flow<DataOutcome<List<Categoria>>> = values

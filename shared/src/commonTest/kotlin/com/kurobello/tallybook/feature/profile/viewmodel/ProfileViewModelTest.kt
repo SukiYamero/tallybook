@@ -3,6 +3,7 @@ package com.kurobello.tallybook.feature.profile.viewmodel
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.data.export.MovimientoCsvLabels
 import com.kurobello.tallybook.core.data.export.MovimientoExportSharer
 import com.kurobello.tallybook.core.model.AppLocale
@@ -302,7 +303,7 @@ internal class ProfileFakeMovimientos : MovimientoRepository {
   override suspend fun delete(id: String) = unused()
 }
 
-internal object ProfileFakeCategorias : CategoriaRepository {
+internal object ProfileFakeCategorias : CategoriaRepository by UnsupportedCategoriaRepository {
   override suspend fun getAll(): DataOutcome<List<Categoria>> =
       DataOutcome.Success(
           listOf(

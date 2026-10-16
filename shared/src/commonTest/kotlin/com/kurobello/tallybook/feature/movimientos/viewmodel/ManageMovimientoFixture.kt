@@ -4,6 +4,7 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
@@ -55,7 +56,7 @@ internal class ManagementClock : Clock {
   }
 }
 
-internal class ManagementCategorias : CategoriaRepository {
+internal class ManagementCategorias : CategoriaRepository by UnsupportedCategoriaRepository {
   val values =
       MutableStateFlow<DataOutcome<List<Categoria>>>(
           DataOutcome.Success(listOf(managementCategoria()))

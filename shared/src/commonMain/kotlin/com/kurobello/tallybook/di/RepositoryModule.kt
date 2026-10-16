@@ -15,7 +15,11 @@ val repositoryModule = module {
     MovimientoRepositoryImpl(get(), get<CoroutineDispatcher>(named(DispatcherQualifier.IO)))
   }
   single<CategoriaRepository> {
-    CategoriaRepositoryImpl(get(), get<CoroutineDispatcher>(named(DispatcherQualifier.IO)))
+    CategoriaRepositoryImpl(
+        get(),
+        get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
+        get(),
+    )
   }
   single { CategorySeedProvider() }
   single {

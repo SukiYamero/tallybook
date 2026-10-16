@@ -19,6 +19,7 @@ import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -347,7 +348,7 @@ private class NavigationPreferences : AppPreferencesRepository {
       DataOutcome.Success(Unit)
 }
 
-private class NavigationCategories : CategoriaRepository {
+private class NavigationCategories : CategoriaRepository by UnsupportedCategoriaRepository {
   private val category = Categoria("food", "Food", null, CategoryIcon.UTENSILS, CategoryTint.AMBER)
 
   override fun observeAll(): Flow<DataOutcome<List<Categoria>>> =

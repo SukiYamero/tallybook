@@ -5,6 +5,7 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -543,7 +544,7 @@ class HomeViewModelTest {
   }
 
   private class FakeCategoriaRepository(initial: DataOutcome<List<Categoria>>? = null) :
-      CategoriaRepository {
+      CategoriaRepository by UnsupportedCategoriaRepository {
     private val values = MutableStateFlow(initial)
     var subscriptionCount = 0
       private set

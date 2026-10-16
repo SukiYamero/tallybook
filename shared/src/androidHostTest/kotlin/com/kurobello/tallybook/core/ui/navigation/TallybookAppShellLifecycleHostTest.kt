@@ -36,6 +36,7 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -634,7 +635,7 @@ private class ShellPreferences : AppPreferencesRepository {
       DataOutcome.Success(Unit)
 }
 
-private class ShellCategories : CategoriaRepository {
+private class ShellCategories : CategoriaRepository by UnsupportedCategoriaRepository {
   override fun observeAll(): Flow<DataOutcome<List<Categoria>>> =
       MutableStateFlow(DataOutcome.Success(emptyList()))
 

@@ -135,7 +135,11 @@ class ReactiveRepositoryTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     TallybookDatabase.Schema.create(driver)
     val repository =
-        CategoriaRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
+        CategoriaRepositoryImpl(
+            TallybookDatabase(driver),
+            StandardTestDispatcher(testScheduler),
+            IdGenerator { error("Not used by this test") },
+        )
     val categoria =
         Categoria("cat_comida", "Comida", null, CategoryIcon.UTENSILS, CategoryTint.AMBER)
     val emissions = Channel<DataOutcome<List<Categoria>>>(Channel.UNLIMITED)

@@ -5,6 +5,7 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategorySeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
+import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
@@ -117,7 +118,8 @@ class AppStartupViewModelTest {
     }
   }
 
-  private class SuccessfulCategoriaRepository : CategoriaRepository {
+  private class SuccessfulCategoriaRepository :
+      CategoriaRepository by UnsupportedCategoriaRepository {
     override fun observeAll(): Flow<DataOutcome<List<Categoria>>> = emptyFlow()
 
     override suspend fun getAll(): DataOutcome<List<Categoria>> = DataOutcome.Success(emptyList())

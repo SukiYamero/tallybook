@@ -7,6 +7,7 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -476,7 +477,7 @@ private class SearchPreferences : AppPreferencesRepository {
   override suspend fun setMonedaPrincipal(moneda: Moneda) = DataOutcome.Success(Unit)
 }
 
-private class SearchCategorias : CategoriaRepository {
+private class SearchCategorias : CategoriaRepository by UnsupportedCategoriaRepository {
   val source = MutableStateFlow<DataOutcome<List<Categoria>>?>(DataOutcome.Success(emptyList()))
 
   override fun observeAll() = source.filterNotNull()

@@ -7,6 +7,7 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -485,7 +486,7 @@ private class HistoryPreferences : AppPreferencesRepository {
   }
 }
 
-private class HistoryCategorias : CategoriaRepository {
+private class HistoryCategorias : CategoriaRepository by UnsupportedCategoriaRepository {
   val source = HistorySource<List<Categoria>>(DataOutcome.Success(emptyList()))
 
   override fun observeAll() = source.observe()

@@ -1,0 +1,21 @@
+-- SQLDelight 2.3.2 cannot resolve a CHECK that names the column an ADD COLUMN is adding, so the table
+-- is rebuilt instead. Renaming the old table keeps the exact unquoted DDL of a fresh install, and
+-- no view, index or trigger references categoria.
+ALTER TABLE categoria RENAME TO categoria_legacy;
+
+CREATE TABLE categoria (
+    id TEXT NOT NULL PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    padre_id TEXT,
+    icono TEXT NOT NULL,
+    color TEXT NOT NULL,
+    descripcion TEXT,
+    origen TEXT NOT NULL DEFAULT 'sistema' CHECK (origen IN ('sistema', 'usuario')),
+    oculta INTEGER NOT NULL DEFAULT 0 CHECK (oculta IN (0, 1))
+);
+
+INSERT INTO categoria(id, nombre, padre_id, icono, color)
+SELECT id, nombre, padre_id, icono, color
+FROM categoria_legacy;
+
+DROP TABLE categoria_legacy;

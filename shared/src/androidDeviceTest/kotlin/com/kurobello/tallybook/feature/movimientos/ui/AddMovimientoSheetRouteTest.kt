@@ -13,6 +13,7 @@ import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
@@ -167,7 +168,7 @@ class AddMovimientoSheetRouteTest {
         DataOutcome.Success(Unit)
   }
 
-  private class FakeCategoriaRepository : CategoriaRepository {
+  private class FakeCategoriaRepository : CategoriaRepository by UnsupportedCategoriaRepository {
     override fun observeAll(): Flow<DataOutcome<List<Categoria>>> =
         MutableStateFlow(DataOutcome.Success(listOf(category)))
 
