@@ -4,12 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepository
-import com.kurobello.tallybook.core.model.AppPreferencesState
-import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.EtiquetaWrite
-import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.primaryMoneda
 import com.kurobello.tallybook.core.ui.tag.searchEtiquetas
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -231,16 +229,3 @@ private fun TagSheet.refreshedFrom(loaded: TagsSource): TagSheet {
   return if (ready == null || stored == null) this
   else copy(editing = stored, count = ready.count(stored.id))
 }
-
-private fun DataOutcome<AppPreferencesState>.primaryMoneda(): DataOutcome<Moneda> =
-    when (this) {
-      is DataOutcome.Failure -> this
-      is DataOutcome.Success ->
-          when (val state = data) {
-            is AppPreferencesState.Ready -> DataOutcome.Success(state.value.monedaPrincipal)
-            AppPreferencesState.Uninitialized ->
-                DataOutcome.Failure(
-                    DataError.InvalidInput("Preferences are uninitialized after app startup")
-                )
-          }
-    }

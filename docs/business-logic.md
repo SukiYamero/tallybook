@@ -45,7 +45,7 @@ app derives the draft from it and the user confirms or refines it; the manual fo
   section and an optional "Tags" section below it. Values update while typing; nothing is persisted
   until Save. While the user has not touched the category, the sentence owns it: the high-confidence
   category shows selected and the other suggestions stay visible but dimmed. Tapping a dimmed
-  suggestion switches to it; tapping the selected one clears it. The first manual choice hands the
+  suggestion switches to it; the × on the selected one clears it. The first manual choice hands the
   category to the user, and later sentences or Continue no longer replace it. Tags follow the same
   ownership: tags the sentence detected stay owned by it until the user adds or removes a tag.
 - The Continue action is pinned in a footer under the scrolling content, so it stays visible with

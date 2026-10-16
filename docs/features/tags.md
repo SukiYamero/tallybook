@@ -39,7 +39,7 @@ entry flow are described in [Add movimiento](add-movimiento.md); visual ownershi
 
 ## Verification boundaries
 
-The current tree passes the 757 shared host tests with zero failures,
+The current tree passes the 760 shared host tests with zero failures,
 `verifyCommonMainTallybookDatabaseMigration`, the Android debug APK, Native compilation, Detekt and
 ktfmtCheck. Host tests cover the schema 5 → 6 migration (0, 1 and 3 linked categories per
 movimiento), the tag repository rules, an integration test through the real repositories (create with
@@ -49,6 +49,5 @@ create, the Tags screen ViewModel, Search tag filters and the CSV Tags column.
 
 Not covered: the device tests for the Category and Tags sections, the tag picker, the Tags screen and
 its navigation, the Search tag filter and the UI catalog compile but have not run (tracked in the
-[backlog](../backlog.md)). The final independent review, the upgrade install over the previous build
-on the Xiaomi and the physical acceptance of the main flows are pending, as are iOS runtime, TalkBack
-and enlarged-text passes.
+[backlog](../backlog.md)). The upgrade install over the previous build on the Xiaomi and the physical
+acceptance of the main flows are pending, as are iOS runtime, TalkBack and enlarged-text passes.

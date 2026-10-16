@@ -23,7 +23,7 @@ Creation moves through three steps; business rules for each live in
   footer outside the scrolling body, so it stays on screen with the keyboard open and suggestions
   showing. The body scrolls the input, the Detected card, the "or" divider with the voice placeholder
   and "Fill manually", which opens the empty form, discarding anything an earlier Continue derived but
-  keeping tags picked by hand. Continue and Fill manually wait for the initial data to load; a load
+  keeping the category and tags picked by hand. Continue and Fill manually wait for the initial data to load; a load
   failure shows the existing retry message. The dialog opens vertically centered and that top edge is kept: the
   Detected card and the suggestions grow it downward with an animated size change, so it never jumps.
   When the keyboard opens the dialog moves up only as far as its bottom needs to stay above it, with
@@ -60,7 +60,7 @@ Creation moves through three steps; business rules for each live in
   reachable through body scrolling and keyboard dismissal restores the scroll position. Done clears
   focus and does not submit.
 - A non-blank sentence or any changed draft requires confirmation before a scrim tap, drag or Back can
-  dismiss. A blank sentence closes the dialog directly even if tags were picked. Dismissing the
+  dismiss. A blank sentence closes the dialog directly even if a category or tags were picked. Dismissing the
   confirmation means Continue; Discard resets the whole entry, step included, before closing. Editing
   an existing movimiento keeps opening the form directly with the same sections, without the ×
   on the category.
