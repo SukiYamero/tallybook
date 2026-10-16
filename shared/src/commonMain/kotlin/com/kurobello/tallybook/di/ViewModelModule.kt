@@ -2,6 +2,8 @@ package com.kurobello.tallybook.di
 
 import com.kurobello.tallybook.AppDisplayViewModel
 import com.kurobello.tallybook.AppStartupViewModel
+import com.kurobello.tallybook.feature.categories.viewmodel.CategoriesViewModel
+import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryDateProvider
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryRepositories
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryViewModel
@@ -62,6 +64,7 @@ internal val viewModelModule = module {
         timeZoneProvider = get(),
     )
   }
+  viewModel { QuickCategoryViewModel(categoriaRepository = get(), suggester = get()) }
   viewModel { parameters ->
     SearchViewModel(
         repositories = SearchRepositories(get(), get(), get()),
@@ -79,4 +82,5 @@ internal val viewModelModule = module {
         computationDispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.DEFAULT)),
     )
   }
+  viewModel { CategoriesViewModel(categorias = get(), preferences = get(), suggester = get()) }
 }
