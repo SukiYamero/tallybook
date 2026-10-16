@@ -2,6 +2,7 @@ package com.kurobello.tallybook.core.data
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
@@ -19,9 +20,10 @@ class CategorySeedTest {
     val categories =
         CategorySeedProvider { resource -> resource.key.removePrefix("string:") }.getCategories()
 
-    assertEquals(58, categories.size)
+    assertEquals(59, categories.size)
     assertEquals("category_comida", categories.first { it.id == "cat_comida" }.nombre)
     assertEquals("category_reembolso", categories.first { it.id == "cat_reembolso" }.nombre)
+    assertEquals("category_otros", categories.first { it.id == CATEGORIA_OTROS_ID }.nombre)
   }
 
   @Test
@@ -29,7 +31,7 @@ class CategorySeedTest {
     withRepository(StandardTestDispatcher(testScheduler)) { database, repository ->
       assertEquals(DataOutcome.Success(Unit), repository.ensureSeeded(seedCategorias()))
 
-      assertEquals(58, database.categoriaQueries.selectAllCategorias().executeAsList().size)
+      assertEquals(59, database.categoriaQueries.selectAllCategorias().executeAsList().size)
     }
   }
 
@@ -39,7 +41,25 @@ class CategorySeedTest {
       repository.ensureSeeded(seedCategorias())
       assertEquals(DataOutcome.Success(Unit), repository.ensureSeeded(seedCategorias()))
 
+      assertEquals(59, database.categoriaQueries.selectAllCategorias().executeAsList().size)
+    }
+  }
+
+  @Test
+  fun `ensure seeded adds Otros to an install seeded before it existed`() = runTest {
+    withRepository(StandardTestDispatcher(testScheduler)) { database, repository ->
+      repository.ensureSeeded(seedCategorias().filterNot { it.id == CATEGORIA_OTROS_ID })
       assertEquals(58, database.categoriaQueries.selectAllCategorias().executeAsList().size)
+
+      assertEquals(DataOutcome.Success(Unit), repository.ensureSeeded(seedCategorias()))
+
+      val otros =
+          database.categoriaQueries.selectAllCategorias().executeAsList().single {
+            it.id == CATEGORIA_OTROS_ID
+          }
+      assertEquals(null, otros.padre_id)
+      assertEquals(CategoryIcon.CIRCLE_DASHED.storageKey, otros.icono)
+      assertEquals(CategoryTint.NEUTRAL.storageKey, otros.color)
     }
   }
 
@@ -80,7 +100,7 @@ class CategorySeedTest {
       assertEquals(DataOutcome.Success(Unit), repository.localizeSeeded(english))
 
       val rows = database.categoriaQueries.selectAllCategorias().executeAsList()
-      assertEquals(58, rows.size)
+      assertEquals(59, rows.size)
       assertEquals("Food", rows.first { it.id == "cat_comida" }.nombre)
       assertEquals(1, notifications)
     }

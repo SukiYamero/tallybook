@@ -14,8 +14,8 @@ class CategorySeedCatalogTest {
         }
 
     assertEquals(expectedCatalog, actual)
-    assertEquals(58, actual.size)
-    assertEquals(12, actual.count { it.padreId == null })
+    assertEquals(59, actual.size)
+    assertEquals(13, actual.count { it.padreId == null })
     assertEquals(actual.size, actual.map(SeedExpectation::id).distinct().size)
     actual.forEachIndexed { index, category ->
       assertTrue(category.icono.isNotBlank())
@@ -94,6 +94,7 @@ class CategorySeedCatalogTest {
             SeedExpectation("cat_ventas", "cat_ingresos", "trending-up", "emerald"),
             SeedExpectation("cat_regalo", "cat_ingresos", "gift", "emerald"),
             SeedExpectation("cat_reembolso", "cat_ingresos", "hand-coins", "emerald"),
+            SeedExpectation("cat_otros", null, "circle-dashed", "neutral"),
         )
   }
 }

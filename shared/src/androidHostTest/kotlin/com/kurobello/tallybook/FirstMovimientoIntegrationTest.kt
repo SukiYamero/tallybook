@@ -80,7 +80,7 @@ class FirstMovimientoIntegrationTest {
               DataOutcome.Success(AppPreferencesState.Ready(AppPreferences(Moneda.COP))),
               preferences.preferences.first(),
           )
-          assertEquals(58, assertSuccess(categorias.getAll()).size)
+          assertEquals(59, assertSuccess(categorias.getAll()).size)
 
           val home =
               HomeViewModel(
@@ -174,7 +174,7 @@ class FirstMovimientoIntegrationTest {
               DataOutcome.Success(AppPreferencesState.Ready(AppPreferences(Moneda.COP))),
               recreatedPreferences.preferences.first(),
           )
-          assertEquals(58, assertSuccess(recreatedCategorias.getAll()).size)
+          assertEquals(59, assertSuccess(recreatedCategorias.getAll()).size)
           assertEquals(
               setOf("expense", "income", "foreign-income"),
               assertSuccess(recreatedMovimientos.getAll()).map(Movimiento::id).toSet(),

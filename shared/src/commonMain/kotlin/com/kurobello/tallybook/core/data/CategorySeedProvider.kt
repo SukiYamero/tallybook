@@ -1,5 +1,6 @@
 package com.kurobello.tallybook.core.data
 
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
@@ -39,6 +40,7 @@ import tallybook.shared.generated.resources.category_mascotas
 import tallybook.shared.generated.resources.category_medico
 import tallybook.shared.generated.resources.category_muebles
 import tallybook.shared.generated.resources.category_ocio
+import tallybook.shared.generated.resources.category_otros
 import tallybook.shared.generated.resources.category_parqueadero
 import tallybook.shared.generated.resources.category_paseos
 import tallybook.shared.generated.resources.category_peluqueria
@@ -138,6 +140,7 @@ class CategorySeedProvider(
             "cat_ventas" to Res.string.category_ventas,
             "cat_regalo" to Res.string.category_regalo,
             "cat_reembolso" to Res.string.category_reembolso,
+            CATEGORIA_OTROS_ID to Res.string.category_otros,
         )
   }
 

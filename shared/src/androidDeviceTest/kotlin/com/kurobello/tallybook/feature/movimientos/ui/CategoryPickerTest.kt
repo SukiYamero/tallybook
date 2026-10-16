@@ -241,6 +241,27 @@ class CategoryPickerTest {
     assertTrue(abs(initialHeight - filteredHeight) <= 1f)
   }
 
+  @Test
+  fun excludedIdsAreHiddenFromRootsAndSearch() {
+    composeRule.setContent {
+      TallybookTheme {
+        CategoryPickerSheet(
+            visible = true,
+            categorias = categories,
+            selectedId = null,
+            onSelect = {},
+            onDismiss = {},
+            excludedIds = setOf(transporte.id, supermercado.id),
+        )
+      }
+    }
+
+    composeRule.onNodeWithText(transporte.nombre).assertDoesNotExist()
+    composeRule.onNodeWithText(comida.nombre).assertExists()
+    composeRule.onNode(hasSetTextAction()).performTextInput(supermercado.nombre)
+    composeRule.onNodeWithText(resourceString(Res.string.no_categories_found)).assertExists()
+  }
+
   private fun resourceString(resource: StringResource): String = runBlocking { getString(resource) }
 
   private fun SemanticsNodeInteractionsProvider.onCategoryOptionWithText(text: String) =

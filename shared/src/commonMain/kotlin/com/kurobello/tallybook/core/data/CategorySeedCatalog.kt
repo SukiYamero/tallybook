@@ -1,5 +1,6 @@
 package com.kurobello.tallybook.core.data
 
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 
@@ -109,6 +110,11 @@ object CategorySeedCatalog {
           category("cat_ventas", "cat_ingresos", CategoryIcon.TRENDING_UP, CategoryTint.EMERALD),
           category("cat_regalo", "cat_ingresos", CategoryIcon.GIFT, CategoryTint.EMERALD),
           category("cat_reembolso", "cat_ingresos", CategoryIcon.HAND_COINS, CategoryTint.EMERALD),
+          category(
+              CATEGORIA_OTROS_ID,
+              icono = CategoryIcon.CIRCLE_DASHED,
+              color = CategoryTint.NEUTRAL,
+          ),
       )
 
   private fun category(

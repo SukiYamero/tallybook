@@ -49,13 +49,15 @@ fun CategoryPickerSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     allowSubcategories: Boolean = true,
+    excludedIds: Set<String> = emptySet(),
     onHidden: () -> Unit = {},
     onShown: () -> Unit = {},
     headerContent: (@Composable () -> Unit)? = null,
     paneTitle: String? = null,
     onBack: (() -> Unit)? = null,
 ) {
-  val tree = remember(categorias) { buildCategoryTree(categorias) }
+  val tree =
+      remember(categorias, excludedIds) { buildCategoryTree(categorias).without(excludedIds) }
   var query by rememberSaveable { mutableStateOf("") }
   var parentId by rememberSaveable { mutableStateOf<String?>(null) }
   var shownContentHeightPx by remember { mutableIntStateOf(0) }
@@ -72,7 +74,8 @@ fun CategoryPickerSheet(
 
   val parent = tree.roots.firstOrNull { it.id == parentId }
   val isSearching = query.isNotBlank()
-  val searchableCategories = if (allowSubcategories) categorias else tree.roots
+  val searchableCategories =
+      if (allowSubcategories) categorias.filterNot { it.id in excludedIds } else tree.roots
   val shownCategories =
       when {
         isSearching -> searchCategorias(searchableCategories, query)
@@ -138,6 +141,20 @@ fun CategoryPickerSheet(
     )
   }
 }
+
+// Filters after building so an excluded parent never promotes its children to roots.
+internal fun CategoryTree.without(excludedIds: Set<String>): CategoryTree =
+    if (excludedIds.isEmpty()) {
+      this
+    } else {
+      CategoryTree(
+          roots = roots.filterNot { it.id in excludedIds },
+          childrenByParent =
+              childrenByParent.mapValues { (_, children) ->
+                children.filterNot { it.id in excludedIds }
+              },
+      )
+    }
 
 private fun CategoryTree.shouldOpenChildren(
     categoria: Categoria,
