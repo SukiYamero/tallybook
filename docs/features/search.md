@@ -10,7 +10,7 @@ references; their sample data and quantity-bearing Apply button are not requirem
 ## Integration
 
 - SQLDelight structural predicates produce rows and currency years in one transaction-backed
-  `MovimientoSearchSnapshot`. Categories come from their existing repository. Text matching uses
+  `MovimientoSearchSnapshot`. Categories and tags come from their repositories. Text matching uses
   the shared normalization utility and injected computation dispatcher, without resubscribing for
   each character. Cancellation and generation/revision guards prevent stale publication.
 - SearchViewModel owns raw input, applied criteria, transactional editing/closing sessions and
@@ -26,8 +26,12 @@ references; their sample data and quantity-bearing Apply button are not requirem
 - Shared `TallybookChoicePill` and `TallybookFilterTag` preserve 48dp interaction targets with smaller
   visuals and no press shading. Shared movement-row amounts and skeletons follow the
   [global card typography](../ui/architecture.md#movement-card-amounts); monetary formatting is unchanged. Reusable APIs live in the [catalog](../ui/components.md).
+- Tag filters reach SQL through `MovimientoReadCriteria.etiquetaIds`. SQLDelight `IN :list` cannot
+  express "no filter", so `MovimientoRepositoryImpl.observeFiltered` picks one of four named queries
+  (none, category, tag, both). The filter sheet shows a Tags section of `EtiquetaChip`s after the
+  categories while the user has tags; applied tags render as `TallybookFilterTag`s with a `#` icon.
 - Results are grouped under one full-date header per day with results; rows show title (category
-  fallback) and description, without date.
+  fallback) and description, without date or tags.
 - Real result rows open [movimiento management](manage-movimientos.md); its mutations refresh the
   existing repository projection while retaining Search input and criteria.
 - No chart, currency selector, category authoring, sync, FTS, pager or dependency upgrade is included.

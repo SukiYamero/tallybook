@@ -8,10 +8,12 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
   iPhone runtime validation remains pending and was explicitly deferred for History. Confirm the
   authorized connected iPhone and developer services, then run the app from Xcode using the existing
   shared `TEAM_ID`. Validate Home/History/Search, filters, creation (sentence dialog keyboard
-  placement, review sheet with its description field, multi-select picker), lifecycle and safe areas,
+  placement, review sheet with its description field, the Category section switch and single-select
+  picker, the Tags section and tag picker with create), lifecycle and safe areas,
   including management scene teardown, edit/delete/Undo and VoiceOver action-window usability, and
   Profile: theme with status-bar style, the Categories screen (chips, category sheets, keyboard
-  scrolling in the category form) and quick-create from the picker, in-app language switch (`AppleLanguages`; the subtree reset returns to Home and drops retained
+  scrolling in the category form) and quick-create from the picker, the Tags screen (create, rename,
+  delete, View movements), the Search tag filter, in-app language switch (`AppleLanguages`; the subtree reset returns to Home and drops retained
   screen state — hoist navigation state if that is not acceptable) and
   CSV share sheet presentation.
   Precise management evidence lives in [Manage movimientos](features/manage-movimientos.md#verification-boundaries).
@@ -25,10 +27,12 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
   diagnosis. Prioritize runner repair before retrying, then execute the agreed bounded scale check
   with correctness, latency, responsiveness and subscription/allocation evidence. Existing manual
   Android evidence and precise limits live in [Search](features/search.md#verification-boundaries).
-  Smart entry fixtures (sentence dialog, review, tag field, multi-select picker), management sheet
-  fixtures and custom categories fixtures (category form, Categories screen and sheets, quick-create,
-  Profile → Categories navigation, sheet-form keyboard scrolling) and movimiento title fixtures
-  (summary description field, Search day headings, signed amounts) also compile but remain
+  Smart entry fixtures (sentence dialog, review, form), management sheet fixtures, custom categories
+  fixtures (category form, Categories screen and sheets, quick-create, Profile → Categories
+  navigation, sheet-form keyboard scrolling), movimiento title fixtures (summary description field,
+  Search day headings, signed amounts) and single category and tags fixtures (`CategorySingleFieldTest`,
+  `EtiquetaTagFieldTest`, `EtiquetaPickerSheetTest`, `TagsScreenTest`, `TagsNavigationTest`, the tag
+  filter in `SearchFilterSheetTest`, the catalog sections in `UiCatalogScreenTest`) also compile but remain
   unexecuted after a bounded stalled-runner retry; execute them after runner repair, preserving their Back, reread-height and IME assertions.
 
 - **Management accessibility on Android** — Verify TalkBack announcements/focus and enlarged-text

@@ -2,8 +2,8 @@
 
 The direct movement editor is delivered and accepted for the verified Xiaomi scope.
 Home, History and Search open the prefilled editor using the existing form, and confirmed deletion offers
-Undo through a reusable snackbar with queued delivery. Tags, bulk actions, currency changes, sync
-and persistent trash remain outside this delivery.
+Undo through a reusable snackbar with queued delivery. Bulk actions, currency changes, sync and
+persistent trash remain outside this delivery.
 
 [Business logic](../business-logic.md#editing-and-deletion) owns mutation and identity rules.
 [UI architecture](../ui/architecture.md#movimiento-management-and-feedback) owns presentation,

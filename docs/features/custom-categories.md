@@ -29,8 +29,8 @@ Profile, and hide the ones they do not use. Product rules live in
   keeps the scroll position (a body that fits at rest returns to the top).
 - **Quick-create**: a picker search without results offers "Create “<query>”", which switches the
   picker sheet to the compact form (name and icon; tint and description behind "More options"). The
-  created category is selected within the six-category limit; a duplicate offers "Use <name>",
-  showing a hidden category again first.
+  created category becomes the movimiento's category and the picker closes; a duplicate offers
+  "Use <name>", showing a hidden category again first.
 
 ## Integration
 
@@ -42,8 +42,8 @@ Profile, and hide the ones they do not use. Product rules live in
   writes share one transaction, and no-op writes do not notify observers.
 - Pickers exclude Otros and hidden categories except those already selected
   (`pickerExcludedCategoryIds`); entry suggestions only consider visible categories.
-- Navigation keeps one `secondary` slot (UI catalog or Categories). Search receives category requests
-  as a one-shot `SearchCategoryRequest` applied by its retained ViewModel.
+- Navigation keeps one `secondary` slot (UI catalog, Categories or Tags). Search receives "View N
+  movements" as a one-shot `SearchFilterRequest` applied by its retained ViewModel.
 
 ## Verification boundaries
 

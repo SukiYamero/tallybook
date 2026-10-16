@@ -8,9 +8,11 @@ owns the destination set and modal admission.
 
 ## Sections
 
-- **Your data.** A card stating that records stay on this device, and CSV export. The card is the slot
-  the [Google + Drive plan](../tasks/google-drive-persistence.md) replaces with account, access mode
-  and backup status.
+- **Your data.** A card stating that records stay on this device, the Categories and Tags cards
+  (secondary destinations described in [Custom categories](custom-categories.md) and
+  [Tags](tags.md)), and CSV export. The first card is the slot the
+  [Google + Drive plan](../tasks/google-drive-persistence.md) replaces with account, access mode and
+  backup status.
 - **Preferences.** Main currency and language open one shared option sheet; theme (System, Light,
   Dark) is an inline segmented control. All three persist in DataStore and the screen renders the
   stored values, never an optimistic copy. A failed write shows an error under its own row; a read
