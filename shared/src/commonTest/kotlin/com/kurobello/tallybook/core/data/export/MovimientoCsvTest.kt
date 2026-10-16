@@ -89,7 +89,7 @@ class MovimientoCsvTest {
     assertEquals(
         listOf(
             "2026-03-05,Gasto,Supermercado,Comida,Feria,1500,CLP",
-            "2026-03-01,Ingreso,Sueldo,,,2500000.00,COP",
+            "2026-03-01,Ingreso,Sueldo,Sueldo,,2500000.00,COP",
         ),
         dataRows(buildMovimientoCsv(movimientos, categorias, labels)),
     )
@@ -134,7 +134,7 @@ class MovimientoCsvTest {
               labels,
           )
 
-      assertTrue(csv.endsWith(",Sueldo,,$expected,1000,CLP$CRLF"), "for '$descripcion': $csv")
+      assertTrue(csv.endsWith(",Sueldo,Sueldo,$expected,1000,CLP$CRLF"), "for '$descripcion': $csv")
     }
   }
 
@@ -176,7 +176,7 @@ class MovimientoCsvTest {
   }
 
   @Test
-  fun joinsEveryCategoryNameInDisplayOrderAndListsEachParentOnce() {
+  fun joinsEveryCategoryNameAndItsParentInTheSamePositions() {
     val movimientos =
         listOf(
             movimiento(id = "a", categoriaIds = listOf("sueldo", "super", "comida")),
@@ -186,7 +186,7 @@ class MovimientoCsvTest {
     assertEquals(
         listOf(
             "2026-01-15,Gasto,Supermercado,Comida,,1000,CLP",
-            "2026-01-15,Gasto,Sueldo · Supermercado · Comida,Comida,,1000,CLP",
+            "2026-01-15,Gasto,Sueldo · Supermercado · Comida,Sueldo · Comida · Comida,,1000,CLP",
         ),
         dataRows(buildMovimientoCsv(movimientos, categorias, labels)),
     )

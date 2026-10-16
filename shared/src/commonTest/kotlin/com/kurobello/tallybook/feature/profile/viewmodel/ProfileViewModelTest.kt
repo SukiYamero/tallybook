@@ -160,7 +160,7 @@ class ProfileViewModelTest {
     assertEquals(ProfileExport.IDLE, vm.uiState.value.export)
     val (fileName, csv) = sharer.shared.single()
     assertEquals("tallybook-2026-10-15.csv", fileName)
-    assertTrue(csv.contains("2026-10-14,Gasto,Comida,,café,12.50,COP"), csv)
+    assertTrue(csv.contains("2026-10-14,Gasto,Comida,Comida,café,12.50,COP"), csv)
 
     sharer.result = DataOutcome.Failure(DataError.Unknown(IllegalStateException()))
     vm.onExport(LABELS)

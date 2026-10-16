@@ -32,7 +32,8 @@ data class MovimientoCsvLabels(
  * RFC 4180 document (CRLF records, every record terminated) prefixed with a UTF-8 BOM so Excel
  * detects the encoding. Amounts are unsigned plain decimals with `Moneda.scale` digits after a `.`:
  * the type column carries the direction, and a locale-free number stays importable everywhere. A
- * movimiento with several categorias lists every name in display order, joined by " · ".
+ * movimiento with several categorias lists every name in display order, joined by " · ", and the
+ * parent column holds each category's top-level name at the same position.
  */
 fun buildMovimientoCsv(
     movimientos: List<Movimiento>,
@@ -63,10 +64,7 @@ fun buildMovimientoCsv(
                 movimiento.fecha.toString(),
                 labels.typeLabel(movimiento.tipo),
                 categorias.joinToString(CATEGORY_SEPARATOR, transform = Categoria::nombre),
-                categorias
-                    .mapNotNull { it.padreId?.let(categoriasById::get)?.nombre }
-                    .distinct()
-                    .joinToString(CATEGORY_SEPARATOR),
+                categorias.joinToString(CATEGORY_SEPARATOR) { it.parentName(categoriasById) },
                 movimiento.descripcion.orEmpty(),
                 movimiento.monto.toPlainUnsignedDecimal(),
                 movimiento.monto.moneda.name,
@@ -80,6 +78,11 @@ fun buildMovimientoCsv(
     }
   }
 }
+
+// A root category is its own top level, so its parent cell repeats its name; a parent that no
+// longer exists stays empty.
+private fun Categoria.parentName(categoriasById: Map<String, Categoria>): String =
+    if (padreId == null) nombre else categoriasById[padreId]?.nombre.orEmpty()
 
 private fun MovimientoCsvLabels.typeLabel(tipo: TipoMovimiento): String =
     when (tipo) {
