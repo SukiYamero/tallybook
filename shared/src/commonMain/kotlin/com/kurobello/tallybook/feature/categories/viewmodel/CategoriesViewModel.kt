@@ -172,7 +172,7 @@ internal class CategoriesViewModel(
   }
 
   override fun onContinueEditing() = updateEditor {
-    it.copy(confirmingDiscard = false, opensSearch = false)
+    if (it.confirmingDiscard) it.copy(confirmingDiscard = false, opensSearch = false) else it
   }
 
   override fun onSheetHidden() {

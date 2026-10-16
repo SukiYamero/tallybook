@@ -188,6 +188,27 @@ class CategoriesViewModelTest {
   }
 
   @Test
+  fun aLateDismissOfTheDiscardDialogKeepsOpeningSearch() = runTest {
+    val fixture = CategoriesFixture(this)
+    fixture.categorias.counts[Moneda.COP] = mapOf("zz" to 2L)
+    val vm = fixture.create()
+    val effects = fixture.collectEffects(vm)
+    runCurrent()
+
+    vm.onOpenSheet(CategorySheetRequest.Open("zz"))
+    vm.onDescripcionChanged("Jugos")
+    vm.onViewMovimientos()
+    vm.onConfirmDiscard()
+    vm.onContinueEditing()
+    val editor = assertNotNull(vm.uiState.value.editor)
+    assertEquals(true, editor.isClosing)
+    assertEquals(true, editor.opensSearch)
+    vm.onSheetHidden()
+    runCurrent()
+    assertEquals(listOf<CategoriesEffect>(CategoriesEffect.OpenSearch("zz")), effects)
+  }
+
+  @Test
   fun createPrefillsTheQueryAndClosesWithFeedbackAfterSaving() = runTest {
     val fixture = CategoriesFixture(this)
     val vm = fixture.create()
