@@ -3,10 +3,13 @@ package com.kurobello.tallybook.feature.categories.ui
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpRect
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
@@ -35,10 +38,13 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.back
+import tallybook.shared.generated.resources.categories_title
 import tallybook.shared.generated.resources.category_chip_hidden_state
 import tallybook.shared.generated.resources.category_delete
 import tallybook.shared.generated.resources.category_hide_named
 import tallybook.shared.generated.resources.category_movimiento_count
+import tallybook.shared.generated.resources.category_new_title
 import tallybook.shared.generated.resources.category_show_named
 import tallybook.shared.generated.resources.category_view_movimientos_count
 
@@ -81,6 +87,37 @@ class CategoriesScreenTest {
           ),
           actions.opened,
       )
+    }
+  }
+
+  @Test
+  fun headerControlsAreCenteredOnTheTitleAndStayTappable() {
+    var backs = 0
+    val actions = RecordingActions()
+    composeRule.setContent {
+      TallybookTheme {
+        TallybookViewportOverlayHost {
+          CategoriesScreen(
+              CategoriesUiState(content = CategoriesContent.Browse(emptyList(), emptyList())),
+              actions,
+              onBack = { backs++ },
+          )
+        }
+      }
+    }
+
+    val title = composeRule.onNodeWithText(text(Res.string.categories_title))
+    val back = composeRule.onNodeWithContentDescription(text(Res.string.back))
+    val create = composeRule.onNodeWithText(text(Res.string.category_new_title))
+    val titleCenter = title.getUnclippedBoundsInRoot().centerY()
+    assertEquals(titleCenter.value, back.getUnclippedBoundsInRoot().centerY().value, 1f)
+    assertEquals(titleCenter.value, create.getUnclippedBoundsInRoot().centerY().value, 1f)
+    back.performClick()
+    create.performClick()
+
+    composeRule.runOnIdle {
+      assertEquals(1, backs)
+      assertEquals(listOf<CategorySheetRequest>(CategorySheetRequest.New("")), actions.opened)
     }
   }
 
@@ -243,3 +280,5 @@ class CategoriesScreenTest {
         )
   }
 }
+
+private fun DpRect.centerY(): Dp = (top + bottom) / 2

@@ -55,6 +55,8 @@ internal object TallybookDimensions {
   val voiceDictationButton = 56.dp
   val categoryPickerResultsMaximumHeight = 420.dp
   val categorySheetFormMinimumHeight = categoryPickerResultsMaximumHeight
+  val categoryDetailsMinimumHeight = 180.dp
+  val categoryDetailsActionSpacing = TallybookSpacing.space32
   val yearMenuMaximumWidth = 128.dp
   val segmentedControlMinimumHeight = minimumTouchTarget
   val movementSummaryIcon = iconSmall

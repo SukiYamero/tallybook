@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
@@ -91,50 +92,31 @@ internal fun CategorySheetHost(sheet: CategorySheet?, actions: CategoriesActions
 
 @Composable
 private fun CategoryDetailsBody(details: CategoryDetails, actions: CategoriesActions) {
-  val categoria = details.categoria
   val enabled = !details.isClosing && !details.visibilityPending
   Column(
       modifier =
           Modifier.fillMaxWidth()
+              .heightIn(min = TallybookTheme.dimensions.categoryDetailsMinimumHeight)
               .padding(horizontal = TallybookTheme.dimensions.screenHorizontal)
               .padding(bottom = TallybookTheme.spacing.space8),
-      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16),
+      verticalArrangement = Arrangement.SpaceBetween,
   ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-      CategoryAvatar(categoria)
-      Column(
-          modifier = Modifier.weight(1f),
-          verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space2),
-      ) {
-        TallybookSheetTitle(categoria.nombre)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8)) {
-          TallybookText(
-              movimientoCountLabel(details.count),
-              color = TallybookTheme.colors.foreground.tertiary,
-              style = TallybookTheme.typography.bodySmall,
-          )
-          if (categoria.oculta) CategoryHiddenStatus()
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16)) {
+      CategoryDetailsSummary(details, enabled, actions)
+      if (details.visibilityFailed) {
+        TallybookText(
+            stringResource(Res.string.category_visibility_error),
+            color = TallybookTheme.colors.status.danger.base,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        )
       }
-      if (categoria.canChangeVisibility) {
-        CategoryVisibilityButton(categoria, enabled, actions::onToggleHidden)
-      }
-    }
-    if (details.visibilityFailed) {
-      TallybookText(
-          stringResource(Res.string.category_visibility_error),
-          color = TallybookTheme.colors.status.danger.base,
-          modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-      )
     }
     if (details.count > 0) {
       TallybookButton(
           onClick = actions::onViewMovimientos,
-          modifier = Modifier.fillMaxWidth(),
+          modifier =
+              Modifier.fillMaxWidth()
+                  .padding(top = TallybookTheme.dimensions.categoryDetailsActionSpacing),
           enabled = enabled,
       ) {
         TallybookText(viewMovimientosLabel(details.count))
@@ -143,7 +125,43 @@ private fun CategoryDetailsBody(details: CategoryDetails, actions: CategoriesAct
   }
 }
 
-/** The icon shows what a tap does: an open eye brings a hidden categoria back. */
+@Composable
+private fun CategoryDetailsSummary(
+    details: CategoryDetails,
+    enabled: Boolean,
+    actions: CategoriesActions,
+) {
+  val categoria = details.categoria
+  Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
+      verticalAlignment = Alignment.CenterVertically,
+  ) {
+    CategoryAvatar(categoria)
+    Column(
+        modifier = Modifier.weight(1f),
+        verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space2),
+    ) {
+      TallybookSheetTitle(categoria.nombre)
+      FlowRow(horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8)) {
+        TallybookText(
+            movimientoCountLabel(details.count),
+            color = TallybookTheme.colors.foreground.tertiary,
+            style = TallybookTheme.typography.bodySmall,
+        )
+        if (categoria.oculta) CategoryHiddenStatus()
+      }
+    }
+    if (categoria.canChangeVisibility) {
+      CategoryVisibilityButton(categoria, enabled, actions::onToggleHidden)
+    }
+  }
+}
+
+/**
+ * The icon shows the current state, matching the hidden chip's eye-off mark, while the label names
+ * what a tap does.
+ */
 @Composable
 internal fun CategoryVisibilityButton(
     categoria: Categoria,
@@ -152,7 +170,7 @@ internal fun CategoryVisibilityButton(
 ) {
   TallybookIconButton(
       onClick = { onToggle(categoria.id) },
-      icon = if (categoria.oculta) Lucide.Eye else Lucide.EyeOff,
+      icon = if (categoria.oculta) Lucide.EyeOff else Lucide.Eye,
       contentDescription =
           stringResource(
               if (categoria.oculta) Res.string.category_show_named

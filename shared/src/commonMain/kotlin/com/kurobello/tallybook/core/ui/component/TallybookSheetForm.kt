@@ -15,7 +15,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
@@ -43,7 +42,9 @@ internal interface TallybookSheetFormScope : ColumnScope {
  * A modal sheet form whose sheet stays put while the keyboard is open: the [header] and [footer]
  * sit outside the scrolling body, the body keeps the height it had at rest and gains the keyboard's
  * height as scroll room, and the footer gives way to the keyboard (it would sit under it) until the
- * keyboard closes, when the body scrolls back to the top.
+ * keyboard closes. Closing it only takes that scroll room back, so the scroll position is clamped
+ * to the new end rather than reset and the field being edited stays in view; a body that fits at
+ * rest has no scroll range left, so it lands back at the top.
  */
 @Composable
 internal fun TallybookSheetForm(
@@ -59,7 +60,6 @@ internal fun TallybookSheetForm(
   val restingBodyHeight = remember { mutableStateOf<Dp?>(null) }
   val imeBottom = WindowInsets.ime.getBottom(density)
   val isImeVisible = imeBottom > 0
-  LaunchedEffect(isImeVisible) { if (!isImeVisible) scrollState.scrollTo(0) }
   val maximumBodyHeight =
       if (isImeVisible) restingBodyHeight.value ?: layout.maximumBodyHeight
       else layout.maximumBodyHeight
