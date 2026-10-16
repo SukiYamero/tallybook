@@ -24,6 +24,7 @@ import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 internal enum class TallybookIconButtonStyle {
   Neutral,
   Brand,
+  Ghost,
 }
 
 @Immutable
@@ -53,10 +54,12 @@ internal fun resolveTallybookIconButtonColors(
             when (style) {
               TallybookIconButtonStyle.Neutral -> tokens.neutralContainer
               TallybookIconButtonStyle.Brand -> tokens.brandContainer
+              TallybookIconButtonStyle.Ghost -> Color.Transparent
             },
         content =
             when (style) {
-              TallybookIconButtonStyle.Neutral -> tokens.neutralContent
+              TallybookIconButtonStyle.Neutral,
+              TallybookIconButtonStyle.Ghost -> tokens.neutralContent
               TallybookIconButtonStyle.Brand -> tokens.brandContent
             },
         disabledContainer = tokens.disabledContainer,

@@ -20,6 +20,7 @@ import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Plus
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookIconButton
+import com.kurobello.tallybook.core.ui.component.TallybookIconButtonStyle
 import com.kurobello.tallybook.core.ui.component.TallybookLoadingState
 import com.kurobello.tallybook.core.ui.component.TallybookScreenHeader
 import com.kurobello.tallybook.core.ui.component.TallybookSearchField
@@ -66,7 +67,7 @@ internal fun CategoriesScreen(
           onQueryChange = actions::onQueryChanged,
           placeholder = stringResource(Res.string.search_categories),
           clearContentDescription = stringResource(Res.string.search_clear_query),
-          modifier = Modifier.fillMaxWidth().padding(top = TallybookTheme.spacing.space12),
+          modifier = Modifier.fillMaxWidth().padding(top = TallybookTheme.spacing.space32),
           onClear = actions::onClearQuery,
       )
       LazyColumn(
@@ -137,6 +138,7 @@ private fun CategoriesTopBar(onBack: () -> Unit, onNewCategory: () -> Unit) {
             onClick = onBack,
             icon = Lucide.ChevronLeft,
             contentDescription = stringResource(Res.string.back),
+            style = TallybookIconButtonStyle.Ghost,
         )
       },
       actions = {
