@@ -2,10 +2,8 @@ package com.kurobello.tallybook.feature.movimientos.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -69,8 +67,8 @@ internal data class MovimientoSentenceCallbacks(
 
 /**
  * Content of the sentence dialog. The title and the Continue footer stay put and the middle
- * scrolls, because the dialog keeps its anchor when the keyboard opens and only the height
- * available to it shrinks. The Detected card appears once the sentence has text.
+ * scrolls, because the height available above the keyboard bounds the dialog. The Detected card
+ * fades in once the sentence has text; the dialog animates the height it adds.
  */
 @Composable
 internal fun MovimientoSentenceStep(
@@ -95,12 +93,8 @@ internal fun MovimientoSentenceStep(
         SentenceInput(sentence, callbacks)
         AnimatedVisibility(
             visible = sentence.text.isNotBlank(),
-            enter =
-                fadeIn(tween(TallybookTheme.motion.fadeMillis)) +
-                    expandVertically(tween(TallybookTheme.motion.fadeMillis)),
-            exit =
-                fadeOut(tween(TallybookTheme.motion.fadeMillis)) +
-                    shrinkVertically(tween(TallybookTheme.motion.fadeMillis)),
+            enter = fadeIn(tween(TallybookTheme.motion.fadeMillis)),
+            exit = fadeOut(tween(TallybookTheme.motion.fadeMillis)),
         ) {
           DetectedArea(sentence, callbacks, Modifier.padding(top = TallybookTheme.spacing.space16))
         }
