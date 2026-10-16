@@ -26,7 +26,8 @@ creating another one. Visual tokens, interaction rules, and ownership remain def
 | `TallybookPeriodPickerRow` | Choosing one bounded day, week, or month period in a horizontally scrollable row | The caller owns the typed period values; optional captions and data indicators are presentational metadata. |
 | `TallybookYearMenu` | Changing the year that scopes a period picker | It is an anchored, accessible popup with the same scrim and motion as the date picker; four year rows are visible before its list scrolls. |
 | `TallybookSelectionField` | Opening a dedicated selection flow from a form | It displays a value or placeholder; it is not a free-text input or inline dropdown. |
-| `CategoryChip` | Selecting a category inside the category picker | Use it in the selection flow, not as a substitute for the form field. |
+| `CategoryChip` | Selecting a category inside the category picker or showing the selected one in the entry summary | Use it in the selection flow, not as a substitute for the form field. `pending` swaps in the neutral dashed treatment for Otros. |
+| `CategorySuggestionChip` | Offering one category as a tappable suggestion | Outlined with a leading plus; the selected form is filled with a check, so state never relies on color. Category-agnostic so a multi-category field can reuse it. |
 
 ## Sheet headings
 
@@ -43,7 +44,7 @@ Existing and future bottom sheets use these shared headings and the standard def
 | Component | Use it for | Notes |
 |---|---|---|
 | `TallybookInputLabel` | Identifying an input field, including Description | Independent inputLabel token, 14sp/400; gray or supplied error color, without section-heading semantics. |
-| `TallybookTextField` | A themed single-line or multi-line text input with label, placeholder, error, and leading or trailing content | It owns focus, cursor, border, and disabled appearance; optional `labelContent` preserves the semantic label. |
+| `TallybookTextField` | A themed single-line or multi-line text input with label, placeholder, error, and leading or trailing content | It owns focus, cursor, border, and disabled appearance; optional `labelContent` preserves the semantic label. `minLines`/`maxLines` fix the height of a multi-line field that must not grow its container. |
 | `TallybookSearchField` | Search queries with a search affordance and optional clear action | Its outer size remains stable while the query changes. |
 | `TallybookAmountInput` | A prominent monetary value with its currency symbol, decimal keyboard, and field feedback | It does not parse, normalize, or format while the user is editing; optional `labelContent` supplies a field label. |
 | `TallybookDateChipPicker` | Selecting one calendar date from a compact date chip | S and M variants preserve the minimum touch target; both apply a date immediately and support inclusive `minDate`/`maxDate`. Omitted bounds preserve existing callers. |
@@ -63,7 +64,9 @@ Existing and future bottom sheets use these shared headings and the standard def
 |---|---|---|
 | `BalanceCard` | The Home or selected-period summary of balance and income/expense context | Full-width stacked income/expense rows with trailing amounts. Caller supplies the localized label, typed secondary-amount formatter and optional feedback footer; reuse its matching skeleton. |
 | `BalanceCardSkeleton` | A pending Home balance summary | Matches the existing card's typography, spacing, surfaces and income/expense mini-cards; placeholder text has no semantics. |
-| `MovimientoRow` | A compact movement item in a list | Optional `onClick` opens the stored row ID through the caller; placeholders remain non-interactive. Shared card amounts and skeletons use the size14 token. |
+| `MovimientoRow` | A compact movement item in a list | Optional `onClick` opens the stored row ID through the caller; placeholders remain non-interactive. Shared card amounts and skeletons use the size14 token. Callers pass `pending` for Otros: a dashed avatar and a muted "to complete" label announced with the row. |
+| `MovimientoPhraseStep` | The sentence step of movimiento creation | Stateless: text, preview model, focus requester and the civil today come from the caller. The input is three lines tall and the preview row reserves its height so the sheet's measured detent never has to grow. |
+| `MovimientoSummaryStep` | The compact summary after the sentence | Card with tipo, date, amount, quoted sentence, selected category and suggestion chips, plus the Edit movimiento / Save footer. Amount review and missing-amount messages are announced; the selected chip stays enabled with selected semantics. |
 | `MovimientoRowSkeleton` | A pending movement row | Shares the current row's avatar size, spacing, surface and responsive amount layout. Placeholder height represents a typical two-line row. |
 | `TallybookBottomNavigation` | Stable primary destinations and the centered Add movimiento action | A `null` selection callback renders a non-interactive bar for catalogs and fixtures. |
 | `TallybookNavHost` | Connecting approved routes to shared navigation UI | It owns route composition, not feature business logic. |
