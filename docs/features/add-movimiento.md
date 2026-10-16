@@ -17,10 +17,13 @@ Creation moves through three steps; business rules for each live in
   the keyboard continues. The "Detected" card always shows the tipo and date badges (expense and
   today until the sentence says more), the amount when found, and the tag field: selected tags,
   "+ Add", `n/6` and suggestions. Detection runs after a 250 ms debounce and clears immediately when
-  the input is emptied. Below Continue, the "or" divider introduces the voice placeholder, then
-  "Fill manually" opens the empty form, discarding anything an earlier Continue derived. Continue and
-  Fill manually wait for the initial data to load; a load failure shows the existing retry message.
-  The dialog keeps its position when the keyboard opens and scrolls inside the height left over.
+  the input is emptied, which also resets what an earlier Continue derived. Continue is pinned in a
+  footer outside the scrolling body, so it stays on screen with the keyboard open and suggestions
+  showing. The body scrolls the input, the Detected card, the "or" divider with the voice placeholder
+  and "Fill manually", which opens the empty form, discarding anything an earlier Continue derived but
+  keeping tags picked by hand. Continue and Fill manually wait for the initial data to load; a load
+  failure shows the existing retry message. The dialog keeps its position when the keyboard opens and
+  scrolls inside the height left over.
 - **Review (sheet)**: opens tall rather than hugging its content. A title and one-line subtitle
   lead labeled sections: Type and Date as large badges side by side, Amount, the quoted Description
   and the Categories tag field with suggestions. Edit movimiento (left) opens the form with the same
@@ -28,7 +31,8 @@ Creation moves through three steps; business rules for each live in
   A failed save shows the shared save error above the actions and keeps the draft.
 - **Form**: the complete form in the same sheet, with the tag field and the multi-select picker in
   place of a single category field. Save without a real category persists Otros; the field shows the
-  pending style and label whenever the effective selection is Otros. The picker never offers Otros.
+  pending style and, beside the "Categories" label, the "to complete" caption whenever the effective
+  selection is Otros. The picker never offers Otros and disables the last selected row with a hint.
   Save with an invalid amount from the review opens the form with the field error and focus on it.
 - Back follows the path taken: form to review when the form came from the review, review to the
   dialog (text and draft kept), and otherwise the dismissal guard. Fill manually has no way back to

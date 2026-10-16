@@ -35,8 +35,14 @@ app derives the draft from it and the user confirms or refines it; the manual fo
   touched the categories, the sentence owns them: the high-confidence category shows as a tag and
   the rest as tappable suggestions. The first manual add or remove hands the categories to the user,
   and later sentences or Continue no longer replace them.
-- Under the main action, an "or" divider introduces voice dictation. It is a non-functional
-  placeholder marked as coming soon. A secondary "fill manually" action opens the empty form.
+- The Continue action is pinned in a footer under the scrolling content, so it stays visible with
+  the keyboard open. Inside the scrolling area, below the Detected card, an "or" divider introduces
+  voice dictation (a non-functional placeholder marked as coming soon), followed by a secondary
+  "fill manually" action that opens the empty form. Fill manually drops everything the sentence
+  derived but keeps the categories the user picked by hand in the dialog.
+- Line breaks typed or pasted into the sentence become single spaces. Clearing the sentence also
+  clears what it derived (tipo, amount, fecha, descripción and the sentence-owned categories), so the
+  dialog counts as clean again even after a Continue and Back; categories picked by hand remain.
 - Tapping outside or the Back gesture closes the dialog directly while the sentence is blank;
   otherwise it asks to discard first. Continue parses the sentence once, writes tipo, monto, fecha,
   categorías (unless the user took them over) and descripción into the draft (replacing earlier
@@ -76,8 +82,13 @@ the training data, so correcting a suggestion teaches the next one.
   word removal and basic plural reduction.
 - Signals, strongest first: an exact match with a previous description's subject; word-to-category
   associations learned from history, weighted by frequency and recency; dictionary phrases; then
-  dictionary words and brands. Phrases outweigh their words ("cambio de aceite" → Transporte), and
-  ambiguous words ("aceite") never produce a high-confidence result on their own.
+  dictionary words and brands. Phrases outweigh their words ("cambio de aceite" → Transporte).
+- Ambiguous words ("aceite", "oil", "óleo", "ticket", "gas") point at several categories and never
+  produce a high-confidence result on their own; when unsure, the app offers up to three of them as
+  suggestions instead of guessing.
+- A movimiento with several categories is one vote split among them. When a clear majority of the
+  past movimientos with exactly the same subject were saved with the same set of categories, the
+  whole set is preselected; a single learned category stays the high-confidence suggestion.
 - The dictionary covers every seeded category in all supported languages, with regional variants
   and common local brands, and points at the most specific category.
 - High confidence means an exact history match or one strong dictionary match without a competing
@@ -198,7 +209,10 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
   categories, with the same roll-up, and text search matches any of its category names.
 - Every category surface (sentence dialog, summary, form and editor) uses the same tag field:
   medium tags, a remove action on each except the last, an "Add" tag that opens a multi-select
-  picker, and an n/6 counter; the Add tag disappears at six. CSV exports all names of a movimiento.
+  picker, and an n/6 counter; the Add tag disappears at six. The picker disables the last selected
+  category, with a short hint, because a movimiento keeps at least one. CSV exports every category
+  name of a movimiento joined by " · " and, in the parent column, the top-level name at the same
+  position (a root category repeats its own name).
 
 ### Custom categories (phase 3, accepted)
 
