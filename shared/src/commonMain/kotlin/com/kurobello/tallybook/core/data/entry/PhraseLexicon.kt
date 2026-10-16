@@ -163,9 +163,6 @@ internal val numberWordValues: Map<String, Long> =
         "novecentos" to 900,
     )
 
-// "one coffee" must not become an amount, but "un millón" and "one hundred" are number words.
-internal val singleUnitWords: Set<String> = setOf("un", "uno", "una", "one", "um", "uma")
-
 internal const val HUNDRED_FACTOR = 100L
 internal const val THOUSAND_FACTOR = 1_000L
 internal const val MILLION_FACTOR = 1_000_000L
@@ -183,6 +180,8 @@ internal val scaleWords: Map<String, Long> =
         "milhoes" to MILLION_FACTOR,
     )
 
+// "dos pasajes" and "one coffee" are not amounts, but "dos mil", "cinco dólares" and "un millón"
+// are.
 internal val numberWordUnits: Set<String> = numberWordValues.filterValues { it in 1..9 }.keys
 
 // "millones" alone is not an amount; "mil" and "hundred" are ("mil pesos", "hundred bucks").

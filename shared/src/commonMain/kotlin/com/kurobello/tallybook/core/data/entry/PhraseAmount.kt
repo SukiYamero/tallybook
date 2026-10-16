@@ -36,7 +36,7 @@ private class PhraseAmountScanner(private val cursor: PhraseCursor, private val 
   private fun candidateAt(index: Int): AmountCandidate? {
     val hasLeadingSymbol = cursor.tokenAt(index)?.kind == PhraseTokenKind.SYMBOL
     val coreStart = if (hasLeadingSymbol) index + 1 else index
-    val core = numeric(coreStart) ?: spelled(coreStart)
+    val core = numeric(coreStart) ?: spelled(coreStart, hasLeadingSymbol)
     return core?.let {
       val hasTrailingCurrency = isCurrencyAt(it.endExclusive)
       AmountCandidate(it.money, index, it.endExclusive + (if (hasTrailingCurrency) 1 else 0))
@@ -61,29 +61,30 @@ private class PhraseAmountScanner(private val cursor: PhraseCursor, private val 
         }
   }
 
-  private fun spelled(index: Int): AmountCandidate? {
+  private fun spelled(index: Int, hasLeadingSymbol: Boolean): AmountCandidate? {
     // A multiplier right after digits belongs to them, even when that number was rejected.
     val followsDigits = cursor.tokens.getOrNull(index - 1)?.kind == PhraseTokenKind.NUMBER
     val startsWithBareMagnitude = cursor.wordAt(index) in bareMagnitudeWords
-    return if (followsDigits || startsWithBareMagnitude) null else spelledAt(index)
+    return if (followsDigits || startsWithBareMagnitude) null
+    else spelledAt(index, hasLeadingSymbol)
   }
 
-  private fun spelledAt(index: Int): AmountCandidate? {
+  private fun spelledAt(index: Int, hasLeadingSymbol: Boolean): AmountCandidate? {
     val words =
         generateSequence(index) { it + 1 }
             .map(::spelledWordAt)
             .takeWhile { it != null }
             .filterNotNull()
             .toList()
-    val number = evaluateNumberWords(words)
-    val slangIndex = index + (number?.wordCount ?: 0)
+    val number = evaluateNumberWords(words) ?: return null
+    val slangIndex = index + number.wordCount
     val slangFactor = slangMultipliers[cursor.wordAt(slangIndex)]
-    val money = number?.let {
-      DecimalDigits(it.amount.toString(), "").toMoney(slangFactor ?: 1L, moneda)
-    }
-    return money?.let {
-      AmountCandidate(it, index, slangIndex + (if (slangFactor != null) 1 else 0))
-    }
+    val endExclusive = slangIndex + (if (slangFactor != null) 1 else 0)
+    val isMarked = hasLeadingSymbol || slangFactor != null || isCurrencyAt(endExclusive)
+    val money = DecimalDigits(number.amount.toString(), "").toMoney(slangFactor ?: 1L, moneda)
+    return money
+        ?.takeUnless { number.isLoneUnit && !isMarked }
+        ?.let { AmountCandidate(it, index, endExclusive) }
   }
 
   private fun spelledWordAt(index: Int): String? =

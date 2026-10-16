@@ -24,15 +24,11 @@ private class PhraseDateScanner(
     private val today: LocalDate,
     private val locale: AppLocale,
 ) {
+  private val explicitMatchers: List<(Int) -> DateMatch?> =
+      listOf(this::slashDate, this::dayThenMonth, this::monthThenDay)
+
   private val matchers: List<(Int) -> DateMatch?> =
-      listOf(
-          this::relativeDay,
-          this::weekday,
-          this::slashDate,
-          this::dayThenMonth,
-          this::monthThenDay,
-          this::dayOfMonth,
-      )
+      listOf(this::relativeDay, this::weekday) + explicitMatchers + this::dayOfMonth
 
   fun find(): PhraseDate? =
       cursor.tokens.indices.firstNotNullOfOrNull { index ->
@@ -59,8 +55,23 @@ private class PhraseDateScanner(
     val needsContext =
         word in ambiguousWeekdays && feiraLength == 0 && cursor.wordAt(index - 1) != "na"
     val daysBack = (today.dayOfWeek.ordinal - dayOfWeek.ordinal).mod(DAYS_IN_WEEK)
-    return DateMatch(today.plus(-daysBack, DateTimeUnit.DAY), 1 + feiraLength, takesPrefix = true)
-        .takeUnless { needsContext }
+    val length = 1 + feiraLength
+    return if (needsContext) {
+      null
+    } else {
+      explicitDateAfter(index, length)
+          ?: DateMatch(today.plus(-daysBack, DateTimeUnit.DAY), length, takesPrefix = true)
+    }
+  }
+
+  // "el lunes 12 de octubre": the explicit date wins and the weekday is only decoration.
+  private fun explicitDateAfter(weekdayIndex: Int, weekdayLength: Int): DateMatch? {
+    var next = weekdayIndex + weekdayLength
+    if (cursor.tokenAt(next)?.text == ",") next++
+    if (cursor.wordAt(next) in datePrefixes) next++
+    return explicitMatchers
+        .firstNotNullOfOrNull { it(next) }
+        ?.let { DateMatch(it.date, next + it.length - weekdayIndex, takesPrefix = true) }
   }
 
   private fun slashDate(index: Int): DateMatch? =
