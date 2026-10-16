@@ -23,6 +23,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.ui.component.LastWhileVisible
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
@@ -32,6 +33,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookModalBottomSheet
 import com.kurobello.tallybook.core.ui.component.TallybookModalDialog
 import com.kurobello.tallybook.core.ui.component.rememberDismissGuard
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoEffect
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoStep
@@ -72,12 +74,14 @@ internal fun AddMovimientoSheet(
     )
 
 @Composable
+@Suppress("LongParameterList")
 private fun AddMovimientoSheet(
     visible: Boolean,
     uiState: AddMovimientoUiState,
     actions: AddMovimientoActions,
     callbacks: ModalBottomSheetCallbacks,
     modifier: Modifier = Modifier,
+    categoryCreation: CategoryPickerCreation? = null,
 ) {
   val dismissGuard =
       rememberDismissGuard(
@@ -104,6 +108,7 @@ private fun AddMovimientoSheet(
       uiState = uiState,
       actions = actions,
       onAddCategoria = categoryPicker.onOpen,
+      categoryCreation = categoryCreation,
       callbacks =
           callbacks.copy(
               onDismissRequest = dismissGuard::requestDismiss,
@@ -116,14 +121,12 @@ private fun AddMovimientoSheet(
       modifier = modifier,
   )
   // The form hosts its own picker; this one serves the dialog and the review step.
-  CategoryPickerSheet(
+  MovimientoCategoryPickerSheet(
       visible = categoryPicker.isVisible && uiState.step != AddMovimientoStep.FORM,
-      categorias = uiState.categorias,
-      selectedIds = uiState.categoriaIds.realCategoriaIds(),
+      uiState = uiState,
       onSelectionChange = actions::onCategoriasChanged,
-      onDismiss = categoryPicker.onDismiss,
-      onBack = categoryPicker.onDismiss,
-      excludedIds = PICKER_EXCLUDED_CATEGORY_IDS,
+      picker = categoryPicker,
+      creation = categoryCreation,
   )
   TallybookConfirmationDialog(
       visible = dismissGuard.isConfirmationVisible,
@@ -191,6 +194,7 @@ private fun MovimientoReviewSheet(
     uiState: AddMovimientoUiState,
     actions: AddMovimientoActions,
     onAddCategoria: () -> Unit,
+    categoryCreation: CategoryPickerCreation?,
     callbacks: ModalBottomSheetCallbacks,
     modifier: Modifier = Modifier,
 ) {
@@ -215,8 +219,9 @@ private fun MovimientoReviewSheet(
         transitionSpec = { stepTransition(animated = visible, fadeMillis = fadeMillis) },
         label = "add movimiento step",
     ) { current ->
-      if (current == AddMovimientoStep.FORM) MovimientoForm(uiState = shown, actions = actions)
-      else SummaryStepContent(shown, actions, onAddCategoria)
+      if (current == AddMovimientoStep.FORM) {
+        MovimientoForm(uiState = shown, actions = actions, categoryCreation = categoryCreation)
+      } else SummaryStepContent(shown, actions, onAddCategoria)
     }
   }
 }
@@ -280,21 +285,36 @@ private fun SummaryStepContent(
 }
 
 @Composable
+@Suppress("LongParameterList")
 internal fun AddMovimientoSheetRoute(
     visible: Boolean,
     onDismiss: () -> Unit,
     onHidden: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: AddMovimientoViewModel = koinViewModel(),
+    quickCategoryViewModel: QuickCategoryViewModel =
+        rememberQuickCategoryViewModel(QUICK_CATEGORY_ADD_KEY),
 ) {
   val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+  val quickCategoryState by quickCategoryViewModel.uiState.collectAsStateWithLifecycle()
   AddMovimientoSavedEffect(effects = viewModel.effects, onSaved = onDismiss)
+  QuickCategorySelectionEffect(
+      effects = quickCategoryViewModel.effects,
+      selection =
+          CategoryPickerSelection(
+              selectedIds = uiState.categoriaIds.realCategoriaIds(),
+              max = MAX_CATEGORIAS_POR_MOVIMIENTO,
+              onSelectionChange = viewModel::onCategoriasChanged,
+          ),
+      catalog = uiState.categorias,
+  )
   AddMovimientoSheet(
       visible = visible,
       uiState = uiState,
       actions = viewModel,
       callbacks = ModalBottomSheetCallbacks(onDismiss = onDismiss, onHidden = onHidden),
       modifier = modifier,
+      categoryCreation = CategoryPickerCreation(quickCategoryState, quickCategoryViewModel),
   )
 }
 

@@ -72,6 +72,10 @@ internal open class SearchTestActions : SearchActions {
     events += "remove-category:$id"
   }
 
+  override fun onShowCategory(id: String) {
+    events += "show-category:$id"
+  }
+
   override fun onRetry() {
     events += "retry"
   }

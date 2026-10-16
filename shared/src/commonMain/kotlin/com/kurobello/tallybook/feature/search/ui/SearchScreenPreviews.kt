@@ -136,6 +136,8 @@ private object SearchPreviewActions : SearchActions {
 
   override fun onRemoveCategoryFilter(id: String) = Unit
 
+  override fun onShowCategory(id: String) = Unit
+
   override fun onRetry() = Unit
 
   override fun onResume() = Unit

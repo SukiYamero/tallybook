@@ -12,6 +12,7 @@ import androidx.savedstate.SavedState
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.savedState
+import com.kurobello.tallybook.core.data.AppInfo
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
@@ -19,6 +20,8 @@ import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
+import com.kurobello.tallybook.core.data.export.MovimientoExportSharer
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -87,6 +90,12 @@ internal class PrimaryDeviceShell {
             }
           }
           single<TimeZoneProvider> { TimeZoneProvider { TimeZone.UTC } }
+          single<AppInfo> { AppInfo { "1.0" } }
+          single<MovimientoExportSharer> {
+            object : MovimientoExportSharer {
+              override suspend fun share(fileName: String, csv: String) = DataOutcome.Success(Unit)
+            }
+          }
           single<CoroutineDispatcher>(named(DispatcherQualifier.DEFAULT)) { Dispatchers.Default }
         },
     )
@@ -347,7 +356,7 @@ private class NavigationPreferences : AppPreferencesRepository {
       DataOutcome.Success(Unit)
 }
 
-private class NavigationCategories : CategoriaRepository {
+private class NavigationCategories : CategoriaRepository by UnsupportedCategoriaRepository {
   private val category = Categoria("food", "Food", null, CategoryIcon.UTENSILS, CategoryTint.AMBER)
 
   override fun observeAll(): Flow<DataOutcome<List<Categoria>>> =
@@ -361,4 +370,7 @@ private class NavigationCategories : CategoriaRepository {
 
   override suspend fun ensureSeeded(categorias: List<Categoria>): DataOutcome<Unit> =
       DataOutcome.Success(Unit)
+
+  override fun observeMovimientoCounts(moneda: Moneda): Flow<DataOutcome<Map<String, Long>>> =
+      MutableStateFlow(DataOutcome.Success(mapOf(category.id to 60L)))
 }

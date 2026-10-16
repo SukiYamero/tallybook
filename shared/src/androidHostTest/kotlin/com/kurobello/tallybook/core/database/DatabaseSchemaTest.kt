@@ -5,8 +5,10 @@ import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.data.toDomain
 import java.io.File
+import java.sql.SQLException
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
@@ -14,62 +16,119 @@ import kotlin.time.Instant
 class DatabaseSchemaTest {
 
   @Test
-  fun `migration from schema 1 preserves a legacy movimiento and derives created at from fecha`() {
-    val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    driver.execute(
-        null,
-        """
-        CREATE TABLE movimiento (
-            id TEXT NOT NULL PRIMARY KEY,
-            tipo TEXT NOT NULL,
-            monto_minor INTEGER NOT NULL,
-            monto_moneda TEXT NOT NULL,
-            fecha TEXT NOT NULL,
-            categoria_id TEXT NOT NULL,
-            descripcion TEXT
+  fun `migration from schema 1 preserves a legacy movimiento and derives created at from fecha`() =
+      withSnapshot(version = 1) { driver ->
+        driver.execute(
+            null,
+            """
+            INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, categoria_id, descripcion)
+            VALUES ('legacy', 'GASTO', 1_050, 'USD', '2026-09-03', 'cat_comida', 'almuerzo')
+            """
+                .trimIndent(),
+            0,
         )
-        """
-            .trimIndent(),
-        0,
-    )
-    driver.execute(null, "CREATE INDEX movimiento_fecha ON movimiento(fecha)", 0)
-    driver.execute(
-        null,
-        """
-        INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, categoria_id, descripcion)
-        VALUES ('legacy', 'GASTO', 1_050, 'USD', '2026-09-03', 'cat_comida', 'almuerzo')
-        """
-            .trimIndent(),
-        0,
-    )
 
-    TallybookDatabase.Schema.migrate(
-        driver,
-        oldVersion = 1,
-        newVersion = TallybookDatabase.Schema.version,
-    )
+        TallybookDatabase.Schema.migrate(
+            driver,
+            oldVersion = 1,
+            newVersion = TallybookDatabase.Schema.version,
+        )
 
-    val row =
-        TallybookDatabase(driver).movimientoQueries.selectMovimientoById("legacy").executeAsOne()
-    assertEquals("legacy", row.id)
-    assertEquals("GASTO", row.tipo)
-    assertEquals(1_050L, row.monto_minor)
-    assertEquals("USD", row.monto_moneda)
-    assertEquals("2026-09-03", row.fecha)
-    assertEquals(listOf("cat_comida"), row.toDomain().categoriaIds)
-    assertEquals("almuerzo", row.descripcion)
-    assertEquals(Instant.parse("2026-09-03T00:00:00Z").toString(), row.created_at)
-  }
+        val row =
+            TallybookDatabase(driver)
+                .movimientoQueries
+                .selectMovimientoById("legacy")
+                .executeAsOne()
+        assertEquals("legacy", row.id)
+        assertEquals("GASTO", row.tipo)
+        assertEquals(1_050L, row.monto_minor)
+        assertEquals("USD", row.monto_moneda)
+        assertEquals("2026-09-03", row.fecha)
+        assertEquals(listOf("cat_comida"), row.toDomain().categoriaIds)
+        assertEquals("almuerzo", row.descripcion)
+        assertEquals(Instant.parse("2026-09-03T00:00:00Z").toString(), row.created_at)
+      }
 
   @Test
-  fun `migration from schema 2 moves every categoria into the join table and rebuilds movimiento`() {
-    val snapshot = File("src/commonMain/sqldelight/databases/2.db")
-    assertTrue(snapshot.exists(), "schema 2 snapshot not found at ${snapshot.absolutePath}")
-    val file = File.createTempFile("tallybook-v2", ".db")
-    try {
-      snapshot.copyTo(file, overwrite = true)
-      val driver = JdbcSqliteDriver("jdbc:sqlite:${file.absolutePath}")
-      try {
+  fun `migration from schema 3 keeps every row and gives categorias the seeded defaults`() =
+      withSnapshot(version = 3) { driver ->
+        listOf(
+                "('cat_comida', 'Comida', NULL, 'utensils', 'amber')",
+                "('cat_cafe', 'Café', 'cat_comida', 'coffee', 'amber')",
+                "('cat_otros', 'Otros', NULL, 'circle-dashed', 'neutral')",
+            )
+            .forEach { values ->
+              driver.execute(
+                  null,
+                  "INSERT INTO categoria(id, nombre, padre_id, icono, color) VALUES $values",
+                  0,
+              )
+            }
+        listOf(
+                "('multi', 'GASTO', 2500, 'COP', '2026-10-02', 'almuerzo', '2026-10-02T12:00:00Z')",
+                "('usd', 'INGRESO', 900, 'USD', '2026-10-01', NULL, '2026-10-01T12:00:00Z')",
+            )
+            .forEach { values ->
+              driver.execute(
+                  null,
+                  "INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, descripcion, " +
+                      "created_at) VALUES $values",
+                  0,
+              )
+            }
+        listOf("('multi', 'cat_cafe', 0)", "('multi', 'cat_otros', 1)", "('usd', 'cat_comida', 0)")
+            .forEach { values ->
+              driver.execute(
+                  null,
+                  "INSERT INTO movimiento_categoria(movimiento_id, categoria_id, posicion) " +
+                      "VALUES $values",
+                  0,
+              )
+            }
+
+        TallybookDatabase.Schema.migrate(driver, oldVersion = 3, newVersion = 4)
+
+        val database = TallybookDatabase(driver)
+        assertEquals(
+            listOf(
+                Categoria("cat_comida", "Comida", null, "utensils", "amber", null, "sistema", 0),
+                Categoria("cat_cafe", "Café", "cat_comida", "coffee", "amber", null, "sistema", 0),
+                Categoria(
+                    "cat_otros",
+                    "Otros",
+                    null,
+                    "circle-dashed",
+                    "neutral",
+                    null,
+                    "sistema",
+                    0,
+                ),
+            ),
+            database.categoriaQueries.selectAllCategorias().executeAsList(),
+        )
+        assertEquals(
+            mapOf("multi" to listOf("cat_cafe", "cat_otros"), "usd" to listOf("cat_comida")),
+            database.movimientoQueries.selectAllMovimientos().executeAsList().associate {
+              it.id to it.toDomain().categoriaIds
+            },
+        )
+        assertEquals(freshSchema(), driver.schemaObjects())
+        assertFailsWith<SQLException> {
+          driver.execute(
+              null,
+              "INSERT INTO categoria(id, nombre, padre_id, icono, color, origen) " +
+                  "VALUES ('x', 'X', NULL, 'tag', 'neutral', 'otro')",
+              0,
+          )
+        }
+        assertFailsWith<SQLException> {
+          driver.execute(null, "UPDATE categoria SET oculta = 2 WHERE id = 'cat_comida'", 0)
+        }
+      }
+
+  @Test
+  fun `migration from schema 2 moves every categoria into the join table and rebuilds movimiento`() =
+      withSnapshot(version = 2) { driver ->
         val v2Rows =
             listOf(
                 Triple("cafe", "cat_comida", "2026-09-03"),
@@ -154,13 +213,7 @@ class DatabaseSchemaTest {
                 "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
             ),
         )
-      } finally {
-        driver.close()
       }
-    } finally {
-      file.delete()
-    }
-  }
 
   private fun SqlDriver.queryStrings(sql: String): List<String> =
       executeQuery(
@@ -174,6 +227,39 @@ class DatabaseSchemaTest {
               0,
           )
           .value
+
+  private fun withSnapshot(version: Int, block: (SqlDriver) -> Unit) {
+    val snapshot = File("src/commonMain/sqldelight/databases/$version.db")
+    assertTrue(snapshot.exists(), "schema $version snapshot not found at ${snapshot.absolutePath}")
+    val file = File.createTempFile("tallybook-v$version", ".db")
+    try {
+      snapshot.copyTo(file, overwrite = true)
+      val driver = JdbcSqliteDriver("jdbc:sqlite:${file.absolutePath}")
+      try {
+        block(driver)
+      } finally {
+        driver.close()
+      }
+    } finally {
+      file.delete()
+    }
+  }
+
+  private fun freshSchema(): List<String> {
+    val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+    try {
+      TallybookDatabase.Schema.create(driver)
+      return driver.schemaObjects()
+    } finally {
+      driver.close()
+    }
+  }
+
+  private fun SqlDriver.schemaObjects(): List<String> =
+      queryStrings(
+          "SELECT type || ' ' || name || ' ' || tbl_name || ' ' || COALESCE(sql, '') " +
+              "FROM sqlite_master ORDER BY type, name"
+      )
 
   private fun inMemoryDatabase(): TallybookDatabase {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)

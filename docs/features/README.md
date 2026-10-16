@@ -11,6 +11,7 @@ accepted scope, integration details and verification boundaries.
 | Manage movimientos and Undo | DONE | [Manage movimientos and Undo](manage-movimientos.md) |
 | Profile and preferences | DONE | [Profile and preferences](profile.md) |
 | Smart entry and multiple categories | DONE | [Add movimiento](add-movimiento.md) |
+| Custom categories | DONE | [Custom categories](custom-categories.md) |
 
 ## Status rules
 

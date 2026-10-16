@@ -108,7 +108,7 @@ class LocalDataBootstrapperTest {
 
   private class FakeCategoriaRepository(
       private val seedResult: DataOutcome<Unit>,
-  ) : CategoriaRepository {
+  ) : CategoriaRepository by UnsupportedCategoriaRepository {
     var seedCalls = 0
     val seededCategorias = mutableListOf<List<Categoria>>()
 

@@ -22,11 +22,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.ui.category.CategoryChip
+import com.kurobello.tallybook.core.ui.category.categoryGroups
 import com.kurobello.tallybook.core.ui.category.toImageVector
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
@@ -36,9 +38,12 @@ import com.kurobello.tallybook.core.ui.component.TallybookSearchField
 import com.kurobello.tallybook.core.ui.component.TallybookSectionHeading
 import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
 import com.kurobello.tallybook.core.ui.component.TallybookText
+import com.kurobello.tallybook.core.ui.component.TallybookTextButton
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.category_new_title
+import tallybook.shared.generated.resources.category_picker_create
 import tallybook.shared.generated.resources.category_picker_selected_label
 import tallybook.shared.generated.resources.category_picker_title
 import tallybook.shared.generated.resources.category_tag_remove
@@ -47,13 +52,15 @@ import tallybook.shared.generated.resources.no_categories_found
 import tallybook.shared.generated.resources.search_categories
 
 internal const val CATEGORY_PICKER_SELECTED_TAG = "category_picker_selected"
+internal const val CATEGORY_PICKER_OFFER_CREATE_TAG = "category_picker_offer_create"
 
 /**
  * One level of tags grouped by family, so no tap ever navigates. Tags toggle through
  * [CategoriaSelection][com.kurobello.tallybook.core.model.CategoriaSelection], so a parent and its
  * children never coexist and [max] is respected, and every change is reported live through
  * [onSelectionChange]. The selection is also listed under the search field as removable tags.
- * "Done" closes the sheet.
+ * "Done" closes the sheet. With [creation], a search without results offers creating the typed name
+ * in a pane of this same sheet; Back from that pane returns to the results with the query kept.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -70,6 +77,7 @@ internal fun CategoryPickerSheet(
     onShown: () -> Unit = {},
     paneTitle: String? = null,
     onBack: (() -> Unit)? = null,
+    creation: CategoryPickerCreation? = null,
 ) {
   CategoryPickerHost(
       selection = CategoryPickerSelection(selectedIds, max, onSelectionChange),
@@ -78,6 +86,7 @@ internal fun CategoryPickerSheet(
               visible = visible,
               categorias = categorias,
               excludedIds = excludedIds,
+              creation = creation,
           ),
       sheet =
           CategoryPickerSheetHooks(
@@ -95,6 +104,7 @@ private data class CategoryPickerOptions(
     val visible: Boolean,
     val categorias: List<Categoria>,
     val excludedIds: Set<String>,
+    val creation: CategoryPickerCreation?,
 )
 
 private data class CategoryPickerSheetHooks(
@@ -128,13 +138,20 @@ private fun CategoryPickerHost(
   val isSearching = query.isNotBlank()
   val groups =
       remember(options.categorias, options.excludedIds, query) {
-        categoryPickerGroups(options.categorias, options.excludedIds, query)
+        categoryGroups(options.categorias, options.excludedIds, query)
       }
   val selected =
       remember(options.categorias, selection.selectedIds) {
         selectedCategorias(options.categorias, selection.selectedIds)
       }
   val resolvedPaneTitle = paneTitle ?: stringResource(Res.string.category_picker_title)
+  val focusManager = LocalFocusManager.current
+  val creation = options.creation
+  val draft = creation?.state?.draft
+  val closeCreation: () -> Unit = {
+    focusManager.clearFocus(force = true)
+    creation?.actions?.onClose()
+  }
   val contentState =
       CategoryPickerContentState(
           query = query,
@@ -161,23 +178,54 @@ private fun CategoryPickerHost(
               shownContentHeightPx = height
             }
           },
+          onCreate =
+              creation?.let { offered ->
+                { nombre ->
+                  focusManager.clearFocus(force = true)
+                  offered.actions.onStart(nombre)
+                }
+              },
       )
 
   TallybookModalBottomSheet(
       visible = options.visible,
-      paneTitle = resolvedPaneTitle,
-      callbacks =
-          ModalBottomSheetCallbacks(
-              onDismiss = sheet.onDismiss,
-              onHidden = sheet.onHidden,
-              onShown = sheet.onShown,
-              onBack = sheet.onBack,
-          ),
+      paneTitle =
+          if (draft == null) resolvedPaneTitle else stringResource(Res.string.category_new_title),
+      callbacks = sheet.sheetCallbacks(creation, closeCreation),
       layout = ModalBottomSheetLayout(modifier = sheet.modifier),
   ) {
-    CategoryPickerContent(state = contentState, callbacks = callbacks)
+    if (creation != null && draft != null) {
+      CategoryPickerCreationPane(
+          draft = draft,
+          saveFailed = creation.state.saveFailed,
+          actions = creation.actions,
+          onBack = closeCreation,
+      )
+    } else {
+      CategoryPickerContent(state = contentState, callbacks = callbacks)
+    }
   }
 }
+
+private fun CategoryPickerSheetHooks.sheetCallbacks(
+    creation: CategoryPickerCreation?,
+    closeCreation: () -> Unit,
+): ModalBottomSheetCallbacks =
+    ModalBottomSheetCallbacks(
+        onDismiss = onDismiss,
+        // Hiding ends the creation pane however the sheet closed, so a reopen starts on the
+        // results, and the pane stays in place while the sheet animates out.
+        onHidden = {
+          creation?.actions?.onClose()
+          onHidden()
+        },
+        onShown = onShown,
+        onBack =
+            if (creation == null) onBack
+            else {
+              { if (creation.state.draft != null) closeCreation() else (onBack ?: onDismiss)() }
+            },
+    )
 
 private data class CategoryPickerContentState(
     val query: String,
@@ -202,6 +250,7 @@ private data class CategoryPickerContentCallbacks(
     val onCategoryClick: (Categoria) -> Unit,
     val onDone: () -> Unit,
     val onShownContentHeightChanged: (Int) -> Unit,
+    val onCreate: ((String) -> Unit)?,
 )
 
 @Composable
@@ -225,7 +274,11 @@ private fun CategoryPickerContent(
     if (state.selected.isNotEmpty()) {
       CategoryPickerSelected(state = state, onRemove = callbacks.onCategoryClick)
     }
-    CategoryPickerResults(state = state, onCategoryClick = callbacks.onCategoryClick)
+    CategoryPickerResults(
+        state = state,
+        onCategoryClick = callbacks.onCategoryClick,
+        onCreate = callbacks.onCreate,
+    )
     CategoryPickerFooter(selection = state.selection, onDone = callbacks.onDone)
   }
 }
@@ -277,13 +330,10 @@ private fun CategoryPickerSelected(
 private fun CategoryPickerResults(
     state: CategoryPickerContentState,
     onCategoryClick: (Categoria) -> Unit,
+    onCreate: ((String) -> Unit)?,
 ) {
   if (state.groups.isEmpty() && state.isSearching) {
-    TallybookText(
-        text = stringResource(Res.string.no_categories_found),
-        modifier = Modifier.padding(vertical = TallybookTheme.spacing.space24),
-        style = TallybookTheme.typography.body,
-    )
+    CategoryPickerNoResults(query = state.query, onCreate = onCreate)
   } else {
     LazyColumn(
         modifier =
@@ -310,6 +360,28 @@ private fun CategoryPickerResults(
             }
           }
         }
+      }
+    }
+  }
+}
+
+@Composable
+private fun CategoryPickerNoResults(query: String, onCreate: ((String) -> Unit)?) {
+  val nombre = query.trim()
+  Column(
+      modifier = Modifier.padding(vertical = TallybookTheme.spacing.space24),
+      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+  ) {
+    TallybookText(
+        text = stringResource(Res.string.no_categories_found),
+        style = TallybookTheme.typography.body,
+    )
+    if (onCreate != null && nombre.isNotEmpty()) {
+      TallybookTextButton(
+          onClick = { onCreate(nombre) },
+          modifier = Modifier.testTag(CATEGORY_PICKER_OFFER_CREATE_TAG),
+      ) {
+        TallybookText(stringResource(Res.string.category_picker_create, nombre))
       }
     }
   }

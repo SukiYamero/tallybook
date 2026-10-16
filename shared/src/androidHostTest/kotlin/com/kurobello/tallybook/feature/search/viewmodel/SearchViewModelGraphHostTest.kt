@@ -15,6 +15,7 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
+import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
@@ -87,7 +88,12 @@ internal class SearchViewModelGraphHostTest {
         )
     val preferences = AppPreferencesRepositoryImpl(factory.create())
     val movimientos = MovimientoRepositoryImpl(database, dispatcher)
-    val categorias = CategoriaRepositoryImpl(database, dispatcher)
+    val categorias =
+        CategoriaRepositoryImpl(
+            database,
+            dispatcher,
+            IdGenerator { error("Not used by this test") },
+        )
     val owners = mutableListOf<SearchRegistryOwner>()
     val context = koinApplication {
       modules(

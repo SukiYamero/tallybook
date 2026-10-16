@@ -57,7 +57,7 @@ internal fun LanguageOptionsPreview() {
 @Composable
 private fun ProfilePreview(uiState: ProfileUiState, dark: Boolean) {
   TallybookTheme(darkTheme = dark) {
-    ProfileScreen(uiState, PreviewProfileActions, TallybookTheme.spacing.space0)
+    ProfileScreen(uiState, PreviewProfileActions, {}, TallybookTheme.spacing.space0)
   }
 }
 

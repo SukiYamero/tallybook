@@ -33,7 +33,7 @@ internal object TallybookDimensions {
   val iconButtonContainerSize = minimumTouchTarget
   val iconButtonIconSize = iconMedium
   val fieldMinimumHeight = minimumTouchTarget
-  val movimientoFormMaximumHeight = 600.dp
+  val sheetFormMaximumHeight = 600.dp
   val fieldHorizontalPadding = TallybookSpacing.space12
   val fieldVerticalPadding = TallybookSpacing.space12
   val fieldLabelSpacing = TallybookSpacing.space10
@@ -50,8 +50,13 @@ internal object TallybookDimensions {
   val filterTagVisualHeight = 28.dp
   val categoryTagVisualHeight = 36.dp
   val categoryTagRemoveTargetWidth = 44.dp
+  val categoryIconOptionVisualSize = TallybookSpacing.space40
+  val categoryOptionSelectedBorderWidth = 2.dp
   val voiceDictationButton = 56.dp
   val categoryPickerResultsMaximumHeight = 420.dp
+  val categorySheetFormMinimumHeight = categoryPickerResultsMaximumHeight
+  val categoryDetailsMinimumHeight = 180.dp
+  val categoryDetailsActionSpacing = TallybookSpacing.space32
   val yearMenuMaximumWidth = 128.dp
   val segmentedControlMinimumHeight = minimumTouchTarget
   val movementSummaryIcon = iconSmall

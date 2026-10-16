@@ -3,6 +3,7 @@ package com.kurobello.tallybook
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -76,7 +77,7 @@ private class DisplayPreferences : AppPreferencesRepository {
   override suspend fun setAppLocale(appLocale: AppLocale?) = unused()
 }
 
-private class DisplayCategorias : CategoriaRepository {
+private class DisplayCategorias : CategoriaRepository by UnsupportedCategoriaRepository {
   val localized = mutableListOf<List<Categoria>>()
 
   override suspend fun localizeSeeded(categorias: List<Categoria>): DataOutcome<Unit> {

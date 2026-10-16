@@ -45,6 +45,7 @@ enum class CategoryIcon(val storageKey: String) {
   SOFA("sofa"),
   SPARKLES("sparkles"),
   STETHOSCOPE("stethoscope"),
+  TAG("tag"),
   TICKET("ticket"),
   TRENDING_UP("trending-up"),
   TV("tv"),

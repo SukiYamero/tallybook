@@ -4,6 +4,7 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.CategoriaDraft
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.DataOutcome
@@ -106,6 +107,39 @@ class CategorySeedTest {
     }
   }
 
+  @Test
+  fun `localize seeded never renames a custom row even when a seed shares its id`() = runTest {
+    val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+    TallybookDatabase.Schema.create(driver)
+    try {
+      val database = TallybookDatabase(driver)
+      val repository =
+          CategoriaRepositoryImpl(
+              database,
+              StandardTestDispatcher(testScheduler),
+              IdGenerator { "cat_gym" },
+          )
+      repository.ensureSeeded(seedCategorias())
+      repository.create(
+          CategoriaDraft("Gym", CategoryIcon.DUMBBELL, CategoryTint.NEUTRAL, descripcion = null)
+      )
+      val localized =
+          seedCategorias().map { if (it.id == "cat_comida") it.copy(nombre = "Food") else it } +
+              seedCategorias().first().copy(id = "cat_gym", nombre = "Renamed")
+
+      assertEquals(DataOutcome.Success(Unit), repository.localizeSeeded(localized))
+
+      val names =
+          database.categoriaQueries.selectAllCategorias().executeAsList().associate {
+            it.id to it.nombre
+          }
+      assertEquals("Gym", names.getValue("cat_gym"))
+      assertEquals("Food", names.getValue("cat_comida"))
+    } finally {
+      driver.close()
+    }
+  }
+
   private fun seedCategorias(): List<Categoria> =
       CategorySeedCatalog.categories.map { seed ->
         Categoria(
@@ -125,7 +159,14 @@ class CategorySeedTest {
     TallybookDatabase.Schema.create(driver)
     try {
       val database = TallybookDatabase(driver)
-      block(database, CategoriaRepositoryImpl(database, dispatcher))
+      block(
+          database,
+          CategoriaRepositoryImpl(
+              database,
+              dispatcher,
+              IdGenerator { error("Not used by this test") },
+          ),
+      )
     } finally {
       driver.close()
     }

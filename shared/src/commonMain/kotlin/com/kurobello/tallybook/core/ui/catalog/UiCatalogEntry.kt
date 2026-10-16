@@ -44,6 +44,7 @@ import tallybook.shared.generated.resources.ui_catalog_state_submitting
 
 internal fun LazyListScope.catalogEntryComponents(fixtures: UiCatalogFixtures) {
   catalogTagComponents()
+  catalogCategoryForm()
   catalogControlSection(
       "pending-treatment",
       { stringResource(Res.string.ui_catalog_pending_treatment) },

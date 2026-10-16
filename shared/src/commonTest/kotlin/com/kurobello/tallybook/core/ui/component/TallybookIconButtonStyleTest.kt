@@ -30,4 +30,22 @@ class TallybookIconButtonStyleTest {
     assertEquals(tokens.disabledContent, brand.disabledContent)
     assertNotEquals(neutral.container, brand.container)
   }
+
+  @Test
+  fun ghostStyleDrawsOnlyTheNeutralIcon() {
+    val tokens =
+        TallybookIconButtonColorTokens(
+            neutralContainer = Color.White,
+            neutralContent = Color.DarkGray,
+            brandContainer = Color.Green,
+            brandContent = Color.Black,
+            disabledContainer = Color.LightGray,
+            disabledContent = Color.Gray,
+        )
+
+    val ghost = resolveTallybookIconButtonColors(TallybookIconButtonStyle.Ghost, tokens)
+
+    assertEquals(Color.Transparent, ghost.container)
+    assertEquals(tokens.neutralContent, ghost.content)
+  }
 }

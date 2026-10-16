@@ -7,6 +7,7 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -245,6 +246,42 @@ class SearchViewModelTest {
   }
 
   @Test
+  fun showCategoryResetsQueryAndFiltersToThatCategoryAndClosesTheOpenSession() = runTest {
+    val fixture = SearchFixture(this)
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+    val applied = requireNotNull(vm.onOpenFilters())
+    vm.onFilterDraftChanged(
+        applied,
+        vm.uiState.value.filters.copy(
+            preset = SearchDatePreset.Last7Days,
+            tipo = TipoMovimiento.INGRESO,
+            categoryIds = setOf("other"),
+        ),
+    )
+    vm.onApplyFilters(applied)
+    vm.onFiltersHidden(applied)
+    vm.onQueryChanged("cafe")
+    val editing = requireNotNull(vm.onOpenFilters())
+    fixture.clock.instant = Instant.parse("2026-10-07T12:00:00Z")
+
+    vm.onShowCategory("cat_comida")
+    runCurrent()
+
+    assertEquals("", vm.uiState.value.rawQuery)
+    assertEquals(
+        SearchFilters.initial(LocalDate(2026, 10, 7)).copy(categoryIds = setOf("cat_comida")),
+        vm.uiState.value.filters,
+    )
+    assertIs<SearchFilterSession.Closing>(vm.uiState.value.filterSession)
+    vm.onApplyFilters(editing)
+    assertEquals(setOf("cat_comida"), vm.uiState.value.filters.categoryIds)
+    vm.onFiltersHidden(editing)
+    assertFalse(vm.hasActiveFilterSession)
+  }
+
+  @Test
   fun categoryFailureSurfacesWhilePreferencesAndMovementsAreSilent() = runTest {
     val fixture = SearchFixture(this)
     fixture.preferences.source.value = null
@@ -476,7 +513,7 @@ private class SearchPreferences : AppPreferencesRepository {
   override suspend fun setMonedaPrincipal(moneda: Moneda) = DataOutcome.Success(Unit)
 }
 
-private class SearchCategorias : CategoriaRepository {
+private class SearchCategorias : CategoriaRepository by UnsupportedCategoriaRepository {
   val source = MutableStateFlow<DataOutcome<List<Categoria>>?>(DataOutcome.Success(emptyList()))
 
   override fun observeAll() = source.filterNotNull()

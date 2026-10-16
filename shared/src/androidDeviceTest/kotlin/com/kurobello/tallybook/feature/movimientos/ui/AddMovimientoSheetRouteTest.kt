@@ -9,10 +9,13 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
+import com.kurobello.tallybook.core.data.CategorySeedCatalog
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
+import com.kurobello.tallybook.core.data.entry.CategoryAppearanceSuggester
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
@@ -35,6 +38,7 @@ import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoRepositories
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoEntryEngine
@@ -71,6 +75,7 @@ class AddMovimientoSheetRouteTest {
               visible = true,
               onDismiss = { dismissCount += 1 },
               viewModel = viewModel,
+              quickCategoryViewModel = quickCategoryViewModel(scope),
           )
         }
       }
@@ -109,6 +114,7 @@ class AddMovimientoSheetRouteTest {
               onDismiss = { visible = false },
               onHidden = { hidden += 1 },
               viewModel = viewModel,
+              quickCategoryViewModel = quickCategoryViewModel(scope),
           )
         }
       }
@@ -146,6 +152,17 @@ class AddMovimientoSheetRouteTest {
           scope = scope,
       )
 
+  private fun quickCategoryViewModel(scope: CoroutineScope) =
+      QuickCategoryViewModel(
+          categoriaRepository = FakeCategoriaRepository(),
+          suggester =
+              CategoryAppearanceSuggester(
+                  CategoryKeywordDictionary.builtIn,
+                  CategorySeedCatalog.categories,
+              ),
+          scope = scope,
+      )
+
   private object FixedDeviceLocale : DeviceLocaleProvider {
     override fun currentLanguageTag(): String = "es-CO"
   }
@@ -167,7 +184,7 @@ class AddMovimientoSheetRouteTest {
         DataOutcome.Success(Unit)
   }
 
-  private class FakeCategoriaRepository : CategoriaRepository {
+  private class FakeCategoriaRepository : CategoriaRepository by UnsupportedCategoriaRepository {
     override fun observeAll(): Flow<DataOutcome<List<Categoria>>> =
         MutableStateFlow(DataOutcome.Success(listOf(category)))
 

@@ -21,6 +21,7 @@ internal fun ProfileRoute(
     bottomBarClearance: Dp,
     modals: PrimaryModalCoordinator,
     active: Boolean,
+    onOpenCategories: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
   val viewModel: ProfileViewModel = koinViewModel()
@@ -40,7 +41,7 @@ internal fun ProfileRoute(
           }
         }
       }
-  ProfileScreen(uiState, actions, bottomBarClearance, modifier)
+  ProfileScreen(uiState, actions, onOpenCategories, bottomBarClearance, modifier)
 }
 
 private class ProfileSheetController(

@@ -57,6 +57,7 @@ private val MANAGEMENT_CONTENT_DETENTS = listOf("loading", "load-failed", "missi
 internal fun ManageMovimientoContent(
     session: MovimientoManagementSession,
     actions: ManageMovimientoSheetActions,
+    categoryCreation: CategoryPickerCreation? = null,
 ) {
   val origin = session.token
   val title = stringResource(Res.string.movimiento_edit_title)
@@ -77,7 +78,7 @@ internal fun ManageMovimientoContent(
               activeContentDetentIdentifier = detent,
           ),
   ) {
-    ManagementSheetBody(session, actions, title)
+    ManagementSheetBody(session, actions, title, categoryCreation)
   }
   ManagementConfirmations(session, actions)
 }
@@ -95,10 +96,11 @@ private fun ManagementSheetBody(
     session: MovimientoManagementSession,
     actions: ManageMovimientoSheetActions,
     title: String,
+    categoryCreation: CategoryPickerCreation?,
 ) {
   val interactionEnabled = session.phase != MovimientoManagementPhase.Closing
   if (session.form != null) {
-    ManagementEditContent(session, actions, title)
+    ManagementEditContent(session, actions, title, categoryCreation)
   } else {
     ManagementReadContent(
         session.phase,
@@ -115,6 +117,7 @@ private fun ManagementEditContent(
     session: MovimientoManagementSession,
     actions: ManageMovimientoSheetActions,
     title: String,
+    categoryCreation: CategoryPickerCreation?,
 ) {
   val interactionEnabled = session.canInteractWithEditor
   val presentation =
@@ -143,6 +146,7 @@ private fun ManagementEditContent(
       },
       supportingContent = { ManagementEditError(session.error) },
       footerContent = { ManagementEditFooter(session, actions, presentation) },
+      categoryCreation = categoryCreation,
   )
 }
 

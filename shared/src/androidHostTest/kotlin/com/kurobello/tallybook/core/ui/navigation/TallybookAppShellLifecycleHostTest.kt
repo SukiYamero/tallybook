@@ -36,6 +36,7 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -182,6 +183,23 @@ internal class TallybookAppShellLifecycleHostTest {
           controller.pause().stop().destroy()
         }
       }
+
+  @Test
+  fun `Categories over Profile restores from the parceled saved state`() = runTest {
+    withShell {
+      val first = create()
+      first.select(Profile)
+      first.navigation.value = first.navigation.value.openSecondary(Categories)
+      first.settle()
+      val saved = first.saveAndParcel()
+      first.close()
+      val restored = create(saved).navigation.value
+      assertEquals(Profile, restored.selected)
+      assertEquals(Categories, restored.secondary)
+      assertEquals(listOf(Home, Profile, Categories), restored.displayedKeys)
+      assertEquals(listOf(Home, Profile), restored.back().displayedKeys)
+    }
+  }
 
   @Test
   fun `removing actual History entry clears it once while Home survives`() = runTest {
@@ -404,7 +422,8 @@ private class ShellHarness(
               }
               Search,
               Profile,
-              UiCatalog -> Unit
+              UiCatalog,
+              Categories -> Unit
             }
             SideEffect {
               owners[destination] = owner
@@ -634,7 +653,7 @@ private class ShellPreferences : AppPreferencesRepository {
       DataOutcome.Success(Unit)
 }
 
-private class ShellCategories : CategoriaRepository {
+private class ShellCategories : CategoriaRepository by UnsupportedCategoriaRepository {
   override fun observeAll(): Flow<DataOutcome<List<Categoria>>> =
       MutableStateFlow(DataOutcome.Success(emptyList()))
 

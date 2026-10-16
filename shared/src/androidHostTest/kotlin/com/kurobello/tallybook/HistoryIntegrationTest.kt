@@ -376,7 +376,12 @@ class HistoryIntegrationTest {
             fixture.dispatcher,
         )
     private val preferences = AppPreferencesRepositoryImpl(factory.create())
-    val categorias = CategoriaRepositoryImpl(database, fixture.dispatcher)
+    val categorias =
+        CategoriaRepositoryImpl(
+            database,
+            fixture.dispatcher,
+            IdGenerator { error("Not used by this test") },
+        )
     val movimientos = MovimientoRepositoryImpl(database, fixture.dispatcher)
     private var nextId = "unset"
     private val owners = mutableListOf<GraphOwner>()

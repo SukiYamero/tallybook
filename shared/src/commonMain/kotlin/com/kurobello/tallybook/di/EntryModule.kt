@@ -1,5 +1,7 @@
 package com.kurobello.tallybook.di
 
+import com.kurobello.tallybook.core.data.CategorySeedCatalog
+import com.kurobello.tallybook.core.data.entry.CategoryAppearanceSuggester
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
@@ -12,6 +14,7 @@ internal val entryModule = module {
   single { MovimientoPhraseParser() }
   single { CategoryKeywordDictionary.builtIn }
   single { CategorySuggester(get()) }
+  single { CategoryAppearanceSuggester(get(), CategorySeedCatalog.categories) }
   single {
     MovimientoEntryEngine(
         parser = get(),

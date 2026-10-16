@@ -7,14 +7,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavBackStack
@@ -25,6 +21,7 @@ import com.kurobello.tallybook.core.ui.catalog.UiCatalogRoute
 import com.kurobello.tallybook.core.ui.layout.TallybookAppShell
 import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSession
 import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSessionLifecycle
+import com.kurobello.tallybook.feature.categories.ui.CategoriesRoute
 import com.kurobello.tallybook.feature.history.ui.HistoryRoute
 import com.kurobello.tallybook.feature.home.HomeRoute
 import com.kurobello.tallybook.feature.movimientos.ui.AddMovimientoSheetRoute
@@ -48,61 +45,29 @@ fun TallybookNavHost(
   val modals =
       remember(sheetSession, navigation) {
         PrimaryModalCoordinator(sheetSession) {
-          navigation.value.selected == Search && !navigation.value.catalogOpen
+          navigation.value.selected == Search && navigation.value.secondary == null
         }
       }
   val management = rememberManageMovimientoViewModel(modals)
   val managementState by management.uiState.collectAsStateWithLifecycle()
-  val openManagement = rememberOpenMovimiento(modals)
-  var nextFocusToken by remember { mutableLongStateOf(0L) }
-  var focusToken by remember { mutableStateOf<Long?>(null) }
-  val openSearch: () -> Unit = {
-    if (modals.canNavigate) {
-      navigation.value = navigation.value.select(Search)
-      focusToken = ++nextFocusToken
-    }
-  }
-  val openCreation: () -> Unit = { modals.tryOpenCreation() }
-  val select: (Destination) -> Unit = { destination ->
-    if (modals.canNavigate) {
-      if (destination != Search) focusToken = null
-      navigation.value = navigation.value.select(destination)
-    }
-  }
-  val openCatalog =
-      developmentCatalogAction(developmentToolsEnabled, modals) {
-        focusToken = null
-        navigation.value = navigation.value.openCatalog()
+  val navigator =
+      remember(navigation, modals, developmentToolsEnabled) {
+        PrimaryNavigator(navigation, modals, developmentToolsEnabled)
       }
+  val openManagement = rememberOpenMovimiento(modals)
   PrimaryShell(
       state = navigation.value,
-      onAdd = openCreation,
-      onSelect = select,
+      onAdd = navigator::openCreation,
+      onSelect = navigator::select,
       overlay = { clearance ->
         MovimientoFeedbackRoute(managementState, management, modals, clearance)
       },
   ) { clearance ->
-    PrimaryNavigationDisplay(
-        navigation,
-        clearance,
-        openCatalog,
-        modals,
-        openCreation,
-        openSearch,
-        openManagement,
-        focusToken,
-        { token -> if (focusToken == token) focusToken = null },
-    )
+    PrimaryNavigationDisplay(navigator, clearance, openManagement)
   }
   AddMovimientoSessionRoute(sheetSession)
   ManageMovimientoRoute(managementState, management)
 }
-
-private fun developmentCatalogAction(
-    enabled: Boolean,
-    modals: PrimaryModalCoordinator,
-    onOpen: () -> Unit,
-): (() -> Unit)? = if (enabled) ({ if (modals.canNavigate) onOpen() }) else null
 
 @Composable
 private fun PrimaryShell(
@@ -115,7 +80,7 @@ private fun PrimaryShell(
   TallybookAppShell(
       overlay = overlay,
       bottomBar =
-          if (state.catalogOpen) null
+          if (state.secondary != null) null
           else
               ({
                 TallybookBottomNavigation(
@@ -128,65 +93,74 @@ private fun PrimaryShell(
   )
 }
 
-@Suppress("LongParameterList")
 @Composable
 private fun PrimaryNavigationDisplay(
-    navigation: MutableState<PrimaryNavigationState>,
+    navigator: PrimaryNavigator,
     clearance: Dp,
-    openCatalog: (() -> Unit)?,
-    modals: PrimaryModalCoordinator,
-    openCreation: () -> Unit,
-    openSearch: () -> Unit,
     openManagement: (String) -> Unit,
-    focusToken: Long?,
-    acknowledgeFocus: (Long) -> Unit,
 ) {
-  val state = navigation.value
+  val state = navigator.state
   val entries =
       rememberPrimaryEntries(state) { destination ->
         NavEntry(destination, contentKey = primaryContentKey(destination)) {
-          when (destination) {
-            Home ->
-                HomeRoute(
-                    onAddMovimiento = openCreation,
-                    bottomBarClearance = clearance,
-                    onOpenCatalog = openCatalog,
-                    onSearch = openSearch,
-                    onOpenMovimiento = openManagement,
-                )
-            History -> HistoryRoute(openCreation, clearance, onOpenMovimiento = openManagement)
-            Search ->
-                SearchRoute(
-                    onAdd = openCreation,
-                    onOpenMovimiento = openManagement,
-                    bottomBarClearance = clearance,
-                    modals = modals,
-                    focusRequest = focusToken,
-                    onFocusAcknowledged = acknowledgeFocus,
-                    active = state.selected == Search && !state.catalogOpen,
-                )
-            Profile ->
-                ProfileRoute(
-                    bottomBarClearance = clearance,
-                    modals = modals,
-                    active = state.selected == Profile && !state.catalogOpen,
-                )
-            UiCatalog -> UiCatalogRoute()
-          }
+          PrimaryRoute(destination, navigator, clearance, openManagement)
         }
       }
   NavDisplay(
       entries = state.displayedKeys.map { entries[state.retainedKeys.indexOf(it)] },
-      onBack = {
-        if (modals.canNavigate) {
-          acknowledgeFocus(focusToken ?: -1L)
-          navigation.value = navigation.value.back()
-        }
-      },
+      onBack = navigator::back,
       transitionSpec = { navigationContentTransform() },
       popTransitionSpec = { navigationContentTransform() },
       predictivePopTransitionSpec = { navigationContentTransform() },
   )
+}
+
+@Composable
+private fun PrimaryRoute(
+    destination: Destination,
+    navigator: PrimaryNavigator,
+    clearance: Dp,
+    openManagement: (String) -> Unit,
+) {
+  val state = navigator.state
+  when (destination) {
+    Home ->
+        HomeRoute(
+            onAddMovimiento = navigator::openCreation,
+            bottomBarClearance = clearance,
+            onOpenCatalog = navigator.openCatalog,
+            onSearch = navigator::openSearch,
+            onOpenMovimiento = openManagement,
+        )
+    History -> HistoryRoute(navigator::openCreation, clearance, onOpenMovimiento = openManagement)
+    Search ->
+        SearchRoute(
+            onAdd = navigator::openCreation,
+            onOpenMovimiento = openManagement,
+            bottomBarClearance = clearance,
+            modals = navigator.modals,
+            focusRequest = navigator.focusRequest,
+            onFocusAcknowledged = navigator::acknowledgeFocus,
+            categoryRequest = navigator.categoryRequest,
+            onCategoryRequestHandled = navigator::acknowledgeCategory,
+            active = state.selected == Search && state.secondary == null,
+        )
+    Profile ->
+        ProfileRoute(
+            bottomBarClearance = clearance,
+            modals = navigator.modals,
+            active = state.selected == Profile && state.secondary == null,
+            onOpenCategories = navigator::openCategories,
+        )
+    UiCatalog -> UiCatalogRoute()
+    Categories ->
+        CategoriesRoute(
+            modals = navigator.modals,
+            active = state.secondary == Categories,
+            onBack = navigator::back,
+            onShowCategory = navigator::showCategory,
+        )
+  }
 }
 
 @Composable
@@ -218,6 +192,7 @@ internal fun primaryContentKey(destination: Destination): String =
       Search -> "primary-search"
       Profile -> "primary-profile"
       UiCatalog -> "ui-catalog"
+      Categories -> "secondary-categories"
     }
 
 internal fun destinationBackStackSerializer(): KSerializer<NavBackStack<Destination>> =

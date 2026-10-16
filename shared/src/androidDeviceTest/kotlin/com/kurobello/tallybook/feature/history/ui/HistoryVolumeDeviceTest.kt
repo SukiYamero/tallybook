@@ -31,6 +31,7 @@ import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
@@ -225,7 +226,12 @@ class HistoryVolumeDeviceTest {
         )
     private val preferences = AppPreferencesRepositoryImpl(factory.create())
     private val movimientos = MovimientoRepositoryImpl(database, Dispatchers.IO)
-    private val categorias = CategoriaRepositoryImpl(database, Dispatchers.IO)
+    private val categorias =
+        CategoriaRepositoryImpl(
+            database,
+            Dispatchers.IO,
+            IdGenerator { error("Not used by this test") },
+        )
     private val scopeJob = SupervisorJob()
     private val scope = CoroutineScope(scopeJob + Dispatchers.Main.immediate)
     private val store = ViewModelStore()

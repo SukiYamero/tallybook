@@ -15,6 +15,9 @@ internal interface SearchActions {
 
   fun onRemoveCategoryFilter(id: String)
 
+  /** Resets the query and filters to All history, every type and only [id]. */
+  fun onShowCategory(id: String)
+
   fun onRetry()
 
   fun onResume()

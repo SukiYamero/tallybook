@@ -65,7 +65,12 @@ class FirstMovimientoIntegrationTest {
         try {
           firstPreferencesFactory = PreferencesDataStoreFactory(preferencesPath, dispatcher)
           val preferences = AppPreferencesRepositoryImpl(firstPreferencesFactory.create())
-          val categorias = CategoriaRepositoryImpl(database, dispatcher)
+          val categorias =
+              CategoriaRepositoryImpl(
+                  database,
+                  dispatcher,
+                  IdGenerator { error("Not used by this test") },
+              )
           val movimientos = MovimientoRepositoryImpl(database, dispatcher)
           val bootstrapper =
               LocalDataBootstrapper(
@@ -171,7 +176,11 @@ class FirstMovimientoIntegrationTest {
           val recreatedPreferences =
               AppPreferencesRepositoryImpl(recreatedPreferencesFactory.create())
           val recreatedCategorias =
-              CategoriaRepositoryImpl(TallybookDatabase(databaseDriver), dispatcher)
+              CategoriaRepositoryImpl(
+                  TallybookDatabase(databaseDriver),
+                  dispatcher,
+                  IdGenerator { error("Not used by this test") },
+              )
           val recreatedMovimientos =
               MovimientoRepositoryImpl(TallybookDatabase(databaseDriver), dispatcher)
 
@@ -210,7 +219,12 @@ class FirstMovimientoIntegrationTest {
 
         try {
           val preferences = AppPreferencesRepositoryImpl(preferencesFactory.create())
-          val categorias = CategoriaRepositoryImpl(database, dispatcher)
+          val categorias =
+              CategoriaRepositoryImpl(
+                  database,
+                  dispatcher,
+                  IdGenerator { error("Not used by this test") },
+              )
           val movimientos = MovimientoRepositoryImpl(database, dispatcher)
           val bootstrapper =
               LocalDataBootstrapper(

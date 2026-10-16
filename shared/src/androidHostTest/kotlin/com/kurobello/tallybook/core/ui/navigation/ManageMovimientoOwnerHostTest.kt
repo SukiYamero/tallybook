@@ -15,6 +15,7 @@ import androidx.savedstate.compose.LocalSavedStateRegistryOwner
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
+import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.TimeZoneProvider
@@ -183,7 +184,13 @@ private class ManagementOwnerSuite(val scope: TestScope) {
           viewModelModule,
           module {
             single<MovimientoRepository> { repository }
-            single<CategoriaRepository> { CategoriaRepositoryImpl(database, dispatcher) }
+            single<CategoriaRepository> {
+              CategoriaRepositoryImpl(
+                  database,
+                  dispatcher,
+                  IdGenerator { error("Not used by this test") },
+              )
+            }
             single<Clock> {
               object : Clock {
                 override fun now() = Instant.parse("2026-09-15T12:00:00Z")

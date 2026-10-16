@@ -56,6 +56,7 @@ class CategoryPresentationTest {
             CategoryIcon.SOFA to "sofa",
             CategoryIcon.SPARKLES to "sparkles",
             CategoryIcon.STETHOSCOPE to "stethoscope",
+            CategoryIcon.TAG to "tag",
             CategoryIcon.TICKET to "ticket",
             CategoryIcon.TRENDING_UP to "trending-up",
             CategoryIcon.TV to "tv",

@@ -1,9 +1,12 @@
 package com.kurobello.tallybook.feature.movimientos.ui
 
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.CategoriaOrigen
 import com.kurobello.tallybook.core.model.CategoriaSelection
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.ui.category.categoryGroups
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -18,7 +21,7 @@ class CategoryPickerGroupsTest {
             listOf("other"),
             listOf("movies"),
         ),
-        ids(categoryPickerGroups(catalog, emptySet(), query = "")),
+        ids(categoryGroups(catalog, emptySet(), query = "")),
     )
   }
 
@@ -26,7 +29,7 @@ class CategoryPickerGroupsTest {
   fun excludedCategoriesLeaveTheirFamily() {
     assertEquals(
         listOf(listOf("food", "groceries"), listOf("transport", "gas", "taxi"), listOf("movies")),
-        ids(categoryPickerGroups(catalog, setOf("other"), query = "")),
+        ids(categoryGroups(catalog, setOf("other"), query = "")),
     )
   }
 
@@ -39,7 +42,7 @@ class CategoryPickerGroupsTest {
             listOf("other"),
             listOf("movies"),
         ),
-        ids(categoryPickerGroups(catalog, setOf("food"), query = "")),
+        ids(categoryGroups(catalog, setOf("food"), query = "")),
     )
   }
 
@@ -47,7 +50,7 @@ class CategoryPickerGroupsTest {
   fun searchShowsParentsAndChildrenInOneFlatBlockInFamilyOrder() {
     assertEquals(
         listOf(listOf("groceries", "transport", "gas", "movies")),
-        ids(categoryPickerGroups(catalog, emptySet(), query = "s")),
+        ids(categoryGroups(catalog, emptySet(), query = "s")),
     )
   }
 
@@ -55,13 +58,13 @@ class CategoryPickerGroupsTest {
   fun searchIgnoresExcludedCategories() {
     assertEquals(
         emptyList(),
-        ids(categoryPickerGroups(catalog, setOf("other"), query = "other")),
+        ids(categoryGroups(catalog, setOf("other"), query = "other")),
     )
   }
 
   @Test
   fun searchWithoutMatchesHasNoBlocks() {
-    assertEquals(emptyList(), ids(categoryPickerGroups(catalog, emptySet(), query = "zzz")))
+    assertEquals(emptyList(), ids(categoryGroups(catalog, emptySet(), query = "zzz")))
   }
 
   @Test
@@ -81,6 +84,54 @@ class CategoryPickerGroupsTest {
     assertEquals(listOf("movies", "transport"), withParent)
   }
 
+  @Test
+  fun customCategoriesFormOneBlockSortedByNameBeforeThePredefinedFamilies() {
+    val withCustom = listOf(food, groceries, zumba, other, abaco, yoga)
+
+    assertEquals(
+        listOf(listOf("abaco", "yoga", "zumba"), listOf("food", "groceries"), listOf("other")),
+        ids(categoryGroups(withCustom, emptySet(), query = "")),
+    )
+  }
+
+  @Test
+  fun searchKeepsOneFlatBlockWithTheCustomMatchesFirst() {
+    val withCustom = listOf(food, groceries, other, yoga)
+
+    assertEquals(
+        listOf(listOf("yoga", "food", "groceries", "other")),
+        ids(categoryGroups(withCustom, emptySet(), query = "o")),
+    )
+  }
+
+  @Test
+  fun hiddenCategoriesAndOtrosAreExcludedUnlessAlreadySelected() {
+    val hiddenMovies = movies.copy(oculta = true)
+    val hiddenYoga = yoga.copy(oculta = true)
+    val otros = categoria(CATEGORIA_OTROS_ID, "Otros")
+    val withHidden = listOf(food, groceries, otros, hiddenMovies, hiddenYoga)
+
+    val excluded = pickerExcludedCategoryIds(withHidden, selectedIds = listOf(hiddenYoga.id))
+
+    assertEquals(setOf(CATEGORIA_OTROS_ID, hiddenMovies.id), excluded)
+    assertEquals(
+        listOf(listOf("yoga"), listOf("food", "groceries")),
+        ids(categoryGroups(withHidden, excluded, query = "")),
+    )
+  }
+
+  @Test
+  fun aHiddenParentStillListsItsVisibleChildren() {
+    val hiddenFood = food.copy(oculta = true)
+
+    val excluded = pickerExcludedCategoryIds(listOf(hiddenFood, groceries), emptyList())
+
+    assertEquals(
+        listOf(listOf("groceries")),
+        ids(categoryGroups(listOf(hiddenFood, groceries), excluded, query = "")),
+    )
+  }
+
   private fun ids(groups: List<List<Categoria>>) = groups.map { group -> group.map { it.id } }
 
   private companion object {
@@ -92,8 +143,21 @@ class CategoryPickerGroupsTest {
     val other = categoria("other", "Other")
     val movies = categoria("movies", "Movies")
     val catalog = listOf(food, transport, groceries, gas, taxi, other, movies)
+    val yoga = custom("yoga", "Yoga")
+    val zumba = custom("zumba", "Zumba")
+    val abaco = custom("abaco", "Ábaco")
 
     fun categoria(id: String, nombre: String, padreId: String? = null) =
         Categoria(id, nombre, padreId, CategoryIcon.UTENSILS, CategoryTint.AMBER)
+
+    fun custom(id: String, nombre: String) =
+        Categoria(
+            id,
+            nombre,
+            padreId = null,
+            icono = CategoryIcon.TAG,
+            color = CategoryTint.NEUTRAL,
+            origen = CategoriaOrigen.USUARIO,
+        )
   }
 }
