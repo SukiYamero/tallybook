@@ -47,8 +47,8 @@ internal const val ETIQUETA_PICKER_OFFER_CREATE_TAG = "etiqueta_picker_offer_cre
  * Multi-select tag picker: a search field, the selected tags as removable tags under it, every
  * matching tag as a toggle and a "Done (n)" action that closes. Each toggle reports the whole new
  * selection through [onSelectionChange]; additions stop at [max] and a hint explains why. A search
- * without results offers creating the trimmed query through [onCreate] in one tap; the caller
- * creates and selects it.
+ * without results offers creating the trimmed query through [onCreate] in one tap, also at [max];
+ * the caller creates it and selects it only while the limit allows.
  */
 @Composable
 @Suppress("LongParameterList")

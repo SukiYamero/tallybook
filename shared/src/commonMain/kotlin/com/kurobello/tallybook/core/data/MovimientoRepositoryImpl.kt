@@ -213,7 +213,6 @@ internal class MovimientoRepositoryImpl(
                         rows.map { row ->
                           currentCoroutineContext().ensureActive()
                           CategoryHistoryRow(
-                              movimientoId = row.movimiento_id,
                               titulo = row.titulo,
                               categoriaId = row.categoria_id,
                               createdAt = Instant.parse(row.created_at),

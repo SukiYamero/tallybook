@@ -574,9 +574,7 @@ class AddMovimientoEntryFlowTest {
     clock.instant = ADD_TEST_NOW + 1.days
     movimientos.history.value =
         DataOutcome.Success(
-            listOf(
-                CategoryHistoryRow("m1", "Gasté 20.000 ayer", "cat_comida", ADD_TEST_NOW - 1.days)
-            )
+            listOf(CategoryHistoryRow("Gasté 20.000 ayer", "cat_comida", ADD_TEST_NOW - 1.days))
         )
     runCurrent()
     advanceTimeBy(250)
@@ -606,9 +604,7 @@ class AddMovimientoEntryFlowTest {
 
     movimientos.history.value =
         DataOutcome.Success(
-            listOf(
-                CategoryHistoryRow("m1", "Aceite 30 mil", "cat_supermercado", ADD_TEST_NOW - 1.days)
-            )
+            listOf(CategoryHistoryRow("Aceite 30 mil", "cat_supermercado", ADD_TEST_NOW - 1.days))
         )
     runCurrent()
     viewModel.onDiscardChanges()
@@ -695,9 +691,8 @@ class AddMovimientoEntryFlowTest {
     val movimientos = AddFakeMovimientos()
     movimientos.history.value =
         DataOutcome.Success(
-            List(3) {
-              CategoryHistoryRow("m$it", "cine", "cat_comida", ADD_TEST_NOW - (it + 1).days)
-            } + CategoryHistoryRow("c", "cine", "cat_cine", ADD_TEST_NOW - 4.days)
+            List(3) { CategoryHistoryRow("cine", "cat_comida", ADD_TEST_NOW - (it + 1).days) } +
+                CategoryHistoryRow("cine", "cat_cine", ADD_TEST_NOW - 4.days)
         )
     val viewModel = entryViewModel(movimientos = movimientos)
 
@@ -712,7 +707,7 @@ class AddMovimientoEntryFlowTest {
     val movimientos = AddFakeMovimientos()
     movimientos.history.value =
         DataOutcome.Success(
-            List(3) { CategoryHistoryRow("m$it", "cine", "cat_cine", ADD_TEST_NOW - (it + 1).days) }
+            List(3) { CategoryHistoryRow("cine", "cat_cine", ADD_TEST_NOW - (it + 1).days) }
         )
     val viewModel = entryViewModel(movimientos = movimientos)
 

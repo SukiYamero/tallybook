@@ -554,16 +554,14 @@ class MovimientoRepositoryTest {
       assertEquals(DataOutcome.Success(Unit), repository.insert(row))
       testScheduler.runCurrent()
       assertEquals(
-          DataOutcome.Success(listOf(CategoryHistoryRow("one", "cafe", "cat_cafe", row.createdAt))),
+          DataOutcome.Success(listOf(CategoryHistoryRow("cafe", "cat_cafe", row.createdAt))),
           emissions.last(),
       )
 
       repository.update("one", row.changes().copy(categoriaId = "cat_restaurante"))
       testScheduler.runCurrent()
       assertEquals(
-          DataOutcome.Success(
-              listOf(CategoryHistoryRow("one", "cafe", "cat_restaurante", row.createdAt))
-          ),
+          DataOutcome.Success(listOf(CategoryHistoryRow("cafe", "cat_restaurante", row.createdAt))),
           emissions.last(),
       )
       collector.cancel()
