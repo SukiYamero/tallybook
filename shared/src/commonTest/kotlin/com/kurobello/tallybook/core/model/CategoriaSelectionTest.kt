@@ -187,6 +187,19 @@ class CategoriaSelectionTest {
     assertEquals(full, reconcile(full, full + "pets"))
   }
 
+  @Test
+  fun reconcileSwapsOneCategoryForAnotherAtTheLimit() {
+    assertEquals(
+        listOf("food", "leisure", "health", "home", "gifts", "pets"),
+        reconcile(full, full - "transport" + "pets"),
+    )
+  }
+
+  @Test
+  fun reconcileSwapsEveryCategoryWhenTheTargetSharesNone() {
+    assertEquals(listOf("pets"), reconcile(listOf("food"), listOf("pets")))
+  }
+
   private fun reconcile(current: List<String>, target: List<String>): List<String> =
       CategoriaSelection.reconcile(current, target, catalog)
 

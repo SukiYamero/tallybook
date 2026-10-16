@@ -27,8 +27,9 @@ object CategoriaSelection {
       if (id in current && current.size > 1) current - id else current
 
   /**
-   * Moves [current] toward [target] through [add] and then [remove], so every rule above still
-   * applies to a selection reported as a whole list. Ids outside [catalog] and the Otros fallback
+   * Moves [current] toward [target] by removing first and adding after, so a swap at [limit]
+   * succeeds. Every rule above still applies to a selection reported as a whole list: removals may
+   * only empty the selection when an addition follows. Ids outside [catalog] and the Otros fallback
    * are never added.
    */
   fun reconcile(
@@ -38,11 +39,14 @@ object CategoriaSelection {
       limit: Int = MAX_CATEGORIAS_POR_MOVIMIENTO,
   ): List<String> {
     val known = catalog.mapTo(mutableSetOf(), Categoria::id) - CATEGORIA_OTROS_ID
-    val added =
-        target
-            .filter { it in known && it !in current }
-            .fold(current) { selection, id -> add(selection, id, catalog, limit) }
-    return current.filterNot { it in target }.fold(added) { selection, id -> remove(selection, id) }
+    val additions = target.filter { it in known && it !in current }
+    val removed =
+        current
+            .filterNot { it in target }
+            .fold(current) { selection, id ->
+              if (additions.isEmpty()) remove(selection, id) else selection - id
+            }
+    return additions.fold(removed) { selection, id -> add(selection, id, catalog, limit) }
   }
 
   /** Drops the Otros fallback as soon as a real category is present and removes duplicates. */
