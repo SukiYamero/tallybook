@@ -23,8 +23,10 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 
 - **Android automated device checks and Search scale** — The 2,000-row isolated scale fixture is prepared
   and compiled but unexecuted; dataset authorization and a usable runner remain prerequisites.
-  The Xiaomi UI runner stalled before assertions (0/20 completed) and was stopped after bounded
-  diagnosis. Prioritize runner repair before retrying, then execute the agreed bounded scale check
+  The Xiaomi UI runner stalls before the first assertion because MIUI rejects the test APK's
+  `ComponentActivity` launch (`ActivityTaskManager: Abort background activity starts`); enabling
+  MIUI's "USB debugging (Security settings)" developer option on the device is the expected
+  prerequisite. Prioritize runner repair before retrying, then execute the agreed bounded scale check
   with correctness, latency, responsiveness and subscription/allocation evidence. Existing manual
   Android evidence and precise limits live in [Search](features/search.md#verification-boundaries).
   Smart entry fixtures (sentence dialog, review, form), management sheet fixtures, custom categories
