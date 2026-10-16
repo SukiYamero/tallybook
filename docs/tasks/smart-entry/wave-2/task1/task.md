@@ -57,6 +57,20 @@ Update the feature documentation.
 - Koin: provide `MovimientoPhraseParser`, `CategoryKeywordDictionary`, `CategorySuggester` and the new
   ViewModel dependencies; extend `RepositoryModulesTest`/graph tests.
 
+## Carried from wave 1
+
+- Pass the ViewModel's captured civil today to both step composables and remove the
+  `deviceToday()` default from `MovimientoPhraseStep`/`MovimientoSummaryStep`; UI must not read the
+  clock on its own.
+- The selected category chip in the summary must not be announced as disabled: keep it enabled
+  with selected semantics (tapping it opens the picker in the form flow or does nothing visible).
+- Remove the unused `ui_catalog_smart_entry` string from the four locales.
+- UI Catalog and preview samples: use `CATEGORIA_OTROS_ID` with `CIRCLE_DASHED`/`NEUTRAL` for the
+  pending sample and localized seed names instead of hardcoded English labels.
+- The steps have no outer horizontal padding; the sheet applies `screenHorizontal` like
+  `MovimientoForm`. Add a test tag to the phrase input.
+- Swap task2's private `"cat_otros"` literal for `CATEGORIA_OTROS_ID`.
+
 ## Docs
 
 Rewrite the Interaction and Ownership sections of `docs/features/add-movimiento.md` for the new flow;
