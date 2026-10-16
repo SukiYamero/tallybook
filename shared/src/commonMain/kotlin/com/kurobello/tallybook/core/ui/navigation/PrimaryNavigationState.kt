@@ -8,11 +8,13 @@ internal data class PrimaryNavigationState(
     val historyVisited: Boolean = false,
     val catalogOpen: Boolean = false,
     val searchVisited: Boolean = false,
+    val profileVisited: Boolean = false,
 ) {
   init {
-    require(selected == Home || selected == History || selected == Search)
+    require(selected in primaryDestinations)
     require(selected != History || historyVisited)
     require(selected != Search || searchVisited)
+    require(selected != Profile || profileVisited)
   }
 
   val retainedKeys: List<Destination>
@@ -20,26 +22,27 @@ internal data class PrimaryNavigationState(
       add(Home)
       if (historyVisited) add(History)
       if (searchVisited) add(Search)
+      if (profileVisited) add(Profile)
       if (catalogOpen) add(UiCatalog)
     }
 
   val displayedKeys: List<Destination>
     get() = buildList {
       add(Home)
-      if (selected == History) add(History)
-      if (selected == Search) add(Search)
+      if (selected != Home) add(selected)
       if (catalogOpen) add(UiCatalog)
     }
 
   fun select(destination: Destination): PrimaryNavigationState =
       when {
-        destination != Home && destination != History && destination != Search -> this
+        destination !in primaryDestinations -> this
         destination == selected && !catalogOpen -> this
         else ->
             copy(
                 selected = destination,
                 historyVisited = historyVisited || destination == History,
                 searchVisited = searchVisited || destination == Search,
+                profileVisited = profileVisited || destination == Profile,
                 catalogOpen = false,
             )
       }
@@ -49,15 +52,18 @@ internal data class PrimaryNavigationState(
   fun back(): PrimaryNavigationState =
       when {
         catalogOpen -> copy(catalogOpen = false)
-        selected == History || selected == Search -> copy(selected = Home)
+        selected != Home -> copy(selected = Home)
         else -> this
       }
 }
+
+private val primaryDestinations: Set<Destination> = setOf(Home, History, Search, Profile)
 
 internal fun initialPrimaryNavigation(start: Destination): PrimaryNavigationState =
     when (start) {
       Home -> PrimaryNavigationState()
       History -> PrimaryNavigationState(History, historyVisited = true)
       Search -> PrimaryNavigationState(Search, searchVisited = true)
+      Profile -> PrimaryNavigationState(Profile, profileVisited = true)
       UiCatalog -> PrimaryNavigationState(catalogOpen = true)
     }

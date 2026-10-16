@@ -70,7 +70,15 @@ al portar, agregar CLP y DOP a la tabla de mapeo.
 **Mecanismo** (portado de moneta, `src/lib/i18n/regionCurrency.ts` + `detectLocale.ts`): se lee el
 locale del sistema una sola vez; idioma y región salen del mismo tag (`es-CO` → idioma `es`, región
 `CO`); la región mapea a moneda por tabla fija (default `COP` si no matchea); el idioma determina los
-strings de la UI. No hay selector de moneda al inicio — es inferido, editable después a mano.
+strings de la UI. No hay selector de moneda al inicio — es inferido y se cambia después desde Perfil.
+Cambiar la moneda principal no convierte montos: cada movimiento conserva su `moneda`, y Home,
+Historial, Búsqueda y el default de un movimiento nuevo pasan a usar la moneda elegida.
+
+El idioma sigue al dispositivo salvo que se fije desde Perfil (`es`, `es-AR`, `en`, `pt-BR`). Los
+nombres de las categorías predefinidas siguen el idioma activo; la moneda inferida no cambia con él.
+
+La exportación CSV desde Perfil incluye todos los movimientos de todas las monedas, con el monto sin
+signo (el tipo indica la dirección) y la moneda de cada fila. Compartir el archivo no modifica datos.
 
 Home recent movimientos use the primary currency before applying the six-row limit, ordered by
 `fecha DESC, created_at DESC, id DESC`. Newer foreign-currency rows cannot hide eligible movements.
@@ -176,7 +184,8 @@ Search is a separate destination over the primary currency. Its implementation c
 
 ## Tema
 
-Tema claro y oscuro — de dónde salen los colores/tokens concretos, ver `docs/stack.md`.
+Sistema (default), claro u oscuro, elegido en Perfil y aplicado también a las barras del sistema.
+De dónde salen los colores/tokens concretos: ver `docs/stack.md`.
 
 ## Alcance del MVP
 

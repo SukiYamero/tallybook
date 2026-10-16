@@ -19,3 +19,8 @@ VALUES (?, ?, ?, ?, ?);
 selectAllCategorias:
 SELECT *
 FROM categoria;
+
+updateCategoriaNombre:
+UPDATE categoria
+SET nombre = :nombre
+WHERE id = :id;

@@ -25,7 +25,7 @@ guides composition; its sample data, chart and eye control do not enable additio
   restoration is outside the current contract.
 - The shell owns one creation session. Its store lives until the sheet finishes hiding; originating
   session identity guards delayed callbacks. The existing creation flow is shared by Home/History.
-- Profile remains a reserved destination. Text search and non-date filters belong to the separate
+- Text search and non-date filters belong to the separate
   [Search delivery](search.md); shared row actions belong to movimiento management. Charts remain
   outside the delivered scope.
 

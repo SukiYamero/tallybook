@@ -11,4 +11,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object Search : Destination
 
+@Serializable data object Profile : Destination
+
 @Serializable data object UiCatalog : Destination

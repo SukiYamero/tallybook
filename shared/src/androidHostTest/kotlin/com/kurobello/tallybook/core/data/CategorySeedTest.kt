@@ -66,6 +66,26 @@ class CategorySeedTest {
     }
   }
 
+  @Test
+  fun `localize seeded renames existing rows only and skips unchanged names`() = runTest {
+    withRepository(StandardTestDispatcher(testScheduler)) { database, repository ->
+      repository.ensureSeeded(seedCategorias())
+      val english =
+          seedCategorias().map { if (it.id == "cat_comida") it.copy(nombre = "Food") else it } +
+              seedCategorias().first().copy(id = "cat_missing", nombre = "Missing")
+      var notifications = 0
+      database.categoriaQueries.selectAllCategorias().addListener { notifications++ }
+
+      assertEquals(DataOutcome.Success(Unit), repository.localizeSeeded(english))
+      assertEquals(DataOutcome.Success(Unit), repository.localizeSeeded(english))
+
+      val rows = database.categoriaQueries.selectAllCategorias().executeAsList()
+      assertEquals(58, rows.size)
+      assertEquals("Food", rows.first { it.id == "cat_comida" }.nombre)
+      assertEquals(1, notifications)
+    }
+  }
+
   private fun seedCategorias(): List<Categoria> =
       CategorySeedCatalog.categories.map { seed ->
         Categoria(

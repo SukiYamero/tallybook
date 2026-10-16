@@ -64,6 +64,9 @@ internal class ManagementCategorias : CategoriaRepository {
 
   override suspend fun getAll(): DataOutcome<List<Categoria>> = values.value
 
+  override suspend fun localizeSeeded(categorias: List<Categoria>): DataOutcome<Unit> =
+      DataOutcome.Success(Unit)
+
   override suspend fun ensureSeeded(categorias: List<Categoria>): DataOutcome<Unit> =
       DataOutcome.Success(Unit)
 }

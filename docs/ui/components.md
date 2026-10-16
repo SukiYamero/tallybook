@@ -65,7 +65,7 @@ Existing and future bottom sheets use these shared headings and the standard def
 | `BalanceCardSkeleton` | A pending Home balance summary | Matches the existing card's typography, spacing, surfaces and income/expense mini-cards; placeholder text has no semantics. |
 | `MovimientoRow` | A compact movement item in a list | Optional `onClick` opens the stored row ID through the caller; placeholders remain non-interactive. Shared card amounts and skeletons use the size14 token. |
 | `MovimientoRowSkeleton` | A pending movement row | Shares the current row's avatar size, spacing, surface and responsive amount layout. Placeholder height represents a typical two-line row. |
-| `TallybookBottomNavigation` | Stable primary destinations and the centered Add movimiento action | Reserved destinations remain non-interactive until their screens exist. |
+| `TallybookBottomNavigation` | Stable primary destinations and the centered Add movimiento action | A `null` selection callback renders a non-interactive bar for catalogs and fixtures. |
 | `TallybookNavHost` | Connecting approved routes to shared navigation UI | It owns route composition, not feature business logic. |
 
 ## Reference environment

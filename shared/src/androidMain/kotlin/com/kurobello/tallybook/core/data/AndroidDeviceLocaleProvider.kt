@@ -1,7 +1,9 @@
 package com.kurobello.tallybook.core.data
 
-import android.os.LocaleList
+import android.content.res.Resources
 
 class AndroidDeviceLocaleProvider : DeviceLocaleProvider {
-  override fun currentLanguageTag(): String = LocaleList.getDefault().get(0).toLanguageTag()
+  // The process default follows the in-app language; region inference needs the device's own.
+  override fun currentLanguageTag(): String =
+      Resources.getSystem().configuration.locales.get(0).toLanguageTag()
 }

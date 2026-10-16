@@ -17,22 +17,22 @@ internal class PrimaryModalCoordinatorTest {
     val controller = FilterController()
     coordinator.attach(controller)
     assertTrue(coordinator.canNavigate)
-    assertTrue(coordinator.tryOpenFilters())
+    assertTrue(coordinator.tryOpenDestinationModal(controller))
     assertFalse(coordinator.tryOpenCreation())
     assertFalse(coordinator.canNavigate)
     controller.closing = true
-    assertFalse(coordinator.tryOpenFilters())
+    assertFalse(coordinator.tryOpenDestinationModal(controller))
     controller.active = false
     controller.closing = false
     assertTrue(coordinator.tryOpenCreation())
     creation.dismiss()
-    assertFalse(coordinator.tryOpenFilters())
+    assertFalse(coordinator.tryOpenDestinationModal(controller))
     assertFalse(coordinator.canNavigate)
     creation.onSheetHidden(creation.token)
     assertTrue(coordinator.canNavigate)
     selectedSearch = false
-    assertFalse(coordinator.tryOpenFilters())
     coordinator.detach(controller)
+    assertFalse(coordinator.tryOpenDestinationModal(controller))
     assertTrue(coordinator.canNavigate)
   }
 
@@ -46,9 +46,10 @@ internal class PrimaryModalCoordinatorTest {
     coordinator.attach(old)
     coordinator.attach(current)
     coordinator.detach(old)
-    assertFalse(coordinator.tryOpenFilters())
+    assertFalse(coordinator.tryOpenDestinationModal(old))
+    assertFalse(coordinator.tryOpenDestinationModal(current))
     current.ready = true
-    assertTrue(coordinator.tryOpenFilters())
+    assertTrue(coordinator.tryOpenDestinationModal(current))
     assertFalse(coordinator.canNavigate)
   }
 
@@ -80,17 +81,17 @@ internal class PrimaryModalCoordinatorTest {
     assertFalse(coordinator.tryOpenManagement("movement"))
     val filters = FilterController()
     coordinator.attach(filters)
-    assertTrue(coordinator.tryOpenFilters())
+    assertTrue(coordinator.tryOpenDestinationModal(filters))
     assertFalse(coordinator.tryOpenManagement("movement"))
     filters.active = false
     management.restoring = true
-    assertFalse(coordinator.tryOpenFilters())
+    assertFalse(coordinator.tryOpenDestinationModal(filters))
     management.restoring = false
     val replacement = ManagementController()
     coordinator.attachManagement(replacement)
     coordinator.detachManagement(management)
     assertTrue(coordinator.tryOpenManagement("movement"))
-    assertFalse(coordinator.tryOpenFilters())
+    assertFalse(coordinator.tryOpenDestinationModal(filters))
   }
 
   @Test
@@ -121,6 +122,24 @@ internal class PrimaryModalCoordinatorTest {
     assertEquals(1, deliveries)
   }
 
+  @Test
+  fun anyDestinationModalPausesFeedbackAndWaitsForUndoRestoration() {
+    val creation = AddMovimientoSheetSession()
+    val coordinator = PrimaryModalCoordinator(creation) { false }
+    val management = ManagementController()
+    coordinator.attachManagement(management)
+    val profileSheet = FilterController()
+    coordinator.attach(profileSheet)
+    management.restoring = true
+    assertFalse(coordinator.tryOpenDestinationModal(profileSheet))
+    management.restoring = false
+    assertTrue(coordinator.tryOpenDestinationModal(profileSheet))
+    assertFalse(coordinator.canNavigate)
+    assertFalse(coordinator.dispatchFeedback(true) {})
+    profileSheet.active = false
+    assertTrue(coordinator.canNavigate)
+  }
+
   private class ManagementController : MovimientoManagementController {
     var active = false
     var restoring = false
@@ -137,7 +156,7 @@ internal class PrimaryModalCoordinatorTest {
     }
   }
 
-  private class FilterController : SearchFilterController {
+  private class FilterController : DestinationModalController {
     var ready = true
     var active = false
     var closing = false

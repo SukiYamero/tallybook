@@ -1,10 +1,12 @@
 package com.kurobello.tallybook.core.data
 
+import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.ThemeMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.coroutines.flow.Flow
@@ -94,6 +96,12 @@ class LocalDataBootstrapperTest {
       return initializeResult
     }
 
+    override suspend fun setThemeMode(themeMode: ThemeMode): DataOutcome<Unit> =
+        DataOutcome.Success(Unit)
+
+    override suspend fun setAppLocale(appLocale: AppLocale?): DataOutcome<Unit> =
+        DataOutcome.Success(Unit)
+
     override suspend fun setMonedaPrincipal(moneda: Moneda): DataOutcome<Unit> =
         DataOutcome.Success(Unit)
   }
@@ -108,6 +116,9 @@ class LocalDataBootstrapperTest {
         flowOf(DataOutcome.Success(emptyList()))
 
     override suspend fun getAll(): DataOutcome<List<Categoria>> = DataOutcome.Success(emptyList())
+
+    override suspend fun localizeSeeded(categorias: List<Categoria>): DataOutcome<Unit> =
+        DataOutcome.Success(Unit)
 
     override suspend fun ensureSeeded(categorias: List<Categoria>): DataOutcome<Unit> {
       seedCalls += 1

@@ -32,6 +32,7 @@ import com.kurobello.tallybook.feature.movimientos.ui.ManageMovimientoRoute
 import com.kurobello.tallybook.feature.movimientos.ui.MovimientoFeedbackRoute
 import com.kurobello.tallybook.feature.movimientos.ui.rememberOpenMovimiento
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
+import com.kurobello.tallybook.feature.profile.ui.ProfileRoute
 import com.kurobello.tallybook.feature.search.ui.SearchRoute
 import kotlinx.serialization.KSerializer
 import org.koin.compose.viewmodel.koinViewModel
@@ -164,6 +165,12 @@ private fun PrimaryNavigationDisplay(
                     onFocusAcknowledged = acknowledgeFocus,
                     active = state.selected == Search && !state.catalogOpen,
                 )
+            Profile ->
+                ProfileRoute(
+                    bottomBarClearance = clearance,
+                    modals = modals,
+                    active = state.selected == Profile && !state.catalogOpen,
+                )
             UiCatalog -> UiCatalogRoute()
           }
         }
@@ -209,6 +216,7 @@ internal fun primaryContentKey(destination: Destination): String =
       Home -> "primary-home"
       History -> "primary-history"
       Search -> "primary-search"
+      Profile -> "primary-profile"
       UiCatalog -> "ui-catalog"
     }
 

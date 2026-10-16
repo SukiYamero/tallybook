@@ -1,5 +1,6 @@
 package com.kurobello.tallybook
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -7,12 +8,16 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.ui.component.TallybookLoadingState
 import com.kurobello.tallybook.core.ui.component.TallybookViewportOverlayHost
+import com.kurobello.tallybook.core.ui.locale.ProvideAppLocale
 import com.kurobello.tallybook.core.ui.navigation.Destination
 import com.kurobello.tallybook.core.ui.navigation.Home
 import com.kurobello.tallybook.core.ui.navigation.TallybookNavHost
@@ -26,24 +31,45 @@ import tallybook.shared.generated.resources.retry
 import tallybook.shared.generated.resources.startup_error_body
 import tallybook.shared.generated.resources.startup_error_title
 
+/** [onThemeModeChanged] lets the platform entry align system chrome with the in-app theme. */
 @Composable
 fun App(
     launchMode: AppLaunchMode = AppLaunchMode.Standard,
     developmentToolsEnabled: Boolean = false,
+    onThemeModeChanged: (ThemeMode) -> Unit = {},
 ) {
-  TallybookTheme {
-    TallybookViewportOverlayHost {
-      val viewModel: AppStartupViewModel = koinViewModel()
-      val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-      AppStartupContent(
-          uiState = uiState,
-          launchMode = launchMode,
-          developmentToolsEnabled = developmentToolsEnabled,
-          onRetry = viewModel::onRetry,
-      )
+  val display: AppDisplayViewModel = koinViewModel()
+  val settings by display.settings.collectAsStateWithLifecycle()
+  val resolved = settings
+  if (resolved == null) {
+    TallybookTheme {}
+    return
+  }
+  val currentOnThemeModeChanged by rememberUpdatedState(onThemeModeChanged)
+  LaunchedEffect(resolved.themeMode) { currentOnThemeModeChanged(resolved.themeMode) }
+  ProvideAppLocale(resolved.appLocale?.languageTag) {
+    LaunchedEffect(resolved.appLocale) { display.onLocaleApplied() }
+    TallybookTheme(darkTheme = resolved.themeMode.isDark(isSystemInDarkTheme())) {
+      TallybookViewportOverlayHost {
+        val viewModel: AppStartupViewModel = koinViewModel()
+        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+        AppStartupContent(
+            uiState = uiState,
+            launchMode = launchMode,
+            developmentToolsEnabled = developmentToolsEnabled,
+            onRetry = viewModel::onRetry,
+        )
+      }
     }
   }
 }
+
+private fun ThemeMode.isDark(systemDark: Boolean): Boolean =
+    when (this) {
+      ThemeMode.SYSTEM -> systemDark
+      ThemeMode.LIGHT -> false
+      ThemeMode.DARK -> true
+    }
 
 @Composable
 private fun AppStartupContent(

@@ -72,4 +72,23 @@ internal class PrimaryNavigationTest {
     assertEquals(Search, restored.back().selected)
     assertEquals("primary-search", primaryContentKey(Search))
   }
+
+  @Test
+  fun profileRetainsItsOwnerRestoresAndBackReturnsHome() {
+    val profile = PrimaryNavigationState().select(Search).select(Profile)
+    assertEquals(listOf(Home, Search, Profile), profile.retainedKeys)
+    assertEquals(listOf(Home, Profile), profile.displayedKeys)
+    assertSame(profile, profile.select(Profile))
+    assertEquals(profile, profile.openCatalog().back())
+    val home = profile.back()
+    assertEquals(Home, home.selected)
+    assertEquals(listOf(Home, Search, Profile), home.retainedKeys)
+    val restored =
+        Json.decodeFromString<PrimaryNavigationState>(
+            Json.encodeToString(PrimaryNavigationState.serializer(), profile)
+        )
+    assertEquals(profile, restored)
+    assertEquals(profile, initialPrimaryNavigation(Profile).select(Search).select(Profile))
+    assertEquals("primary-profile", primaryContentKey(Profile))
+  }
 }

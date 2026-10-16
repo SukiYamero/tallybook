@@ -5,6 +5,7 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
@@ -21,6 +22,7 @@ import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -401,6 +403,12 @@ class AddMovimientoViewModelTest {
     override suspend fun initialize(monedaPrincipal: Moneda): DataOutcome<Unit> =
         DataOutcome.Success(Unit)
 
+    override suspend fun setThemeMode(themeMode: ThemeMode): DataOutcome<Unit> =
+        DataOutcome.Success(Unit)
+
+    override suspend fun setAppLocale(appLocale: AppLocale?): DataOutcome<Unit> =
+        DataOutcome.Success(Unit)
+
     override suspend fun setMonedaPrincipal(moneda: Moneda): DataOutcome<Unit> =
         DataOutcome.Success(Unit)
   }
@@ -412,6 +420,9 @@ class AddMovimientoViewModelTest {
     override fun observeAll(): Flow<DataOutcome<List<Categoria>>> = values
 
     override suspend fun getAll(): DataOutcome<List<Categoria>> = values.value
+
+    override suspend fun localizeSeeded(categorias: List<Categoria>): DataOutcome<Unit> =
+        DataOutcome.Success(Unit)
 
     override suspend fun ensureSeeded(categorias: List<Categoria>): DataOutcome<Unit> =
         DataOutcome.Success(Unit)

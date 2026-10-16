@@ -43,6 +43,23 @@ internal class CategoriaRepositoryImpl(
           }
         }
       }
+
+  override suspend fun localizeSeeded(categorias: List<Categoria>): DataOutcome<Unit> =
+      runLocalDataOperation(dispatcher) {
+        val stored =
+            database.categoriaQueries.selectAllCategorias().executeAsList().associate {
+              it.id to it.nombre
+            }
+        val renamed = categorias.filter { it.id in stored && stored[it.id] != it.nombre }
+        // Any write notifies every category observer, so an unchanged language must not write.
+        if (renamed.isNotEmpty()) {
+          database.transaction {
+            renamed.forEach {
+              database.categoriaQueries.updateCategoriaNombre(nombre = it.nombre, id = it.id)
+            }
+          }
+        }
+      }
 }
 
 private fun com.kurobello.tallybook.core.database.Categoria.toDomain(): Categoria =

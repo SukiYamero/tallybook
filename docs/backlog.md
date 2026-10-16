@@ -8,7 +8,10 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
   iPhone runtime validation remains pending and was explicitly deferred for History. Confirm the
   authorized connected iPhone and developer services, then run the app from Xcode using the existing
   shared `TEAM_ID`. Validate Home/History/Search, filters, creation, lifecycle and safe areas,
-  including management scene teardown, edit/delete/Undo and VoiceOver action-window usability.
+  including management scene teardown, edit/delete/Undo and VoiceOver action-window usability, and
+  Profile: theme with status-bar style, in-app language switch (`AppleLanguages`; the subtree reset returns to Home and drops retained
+  screen state — hoist navigation state if that is not acceptable) and
+  CSV share sheet presentation.
   Precise management evidence lives in [Manage movimientos](features/manage-movimientos.md#verification-boundaries).
   Compilation does not establish runtime behavior; follow the physical-device policy in `AGENTS.md`.
 
@@ -38,6 +41,11 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
   `Dispatchers.Default`). Mover el test a `commonTest` requiere reescribir esa aserción.
 
 ## Baja
+
+- **Profile polish** — A Dark/Light override on the opposite system theme shows default status-bar
+  icons until the first composed frame; language options do not expose their locale to TalkBack;
+  the Android export share step has no automated test (the `FileProvider` lives in `androidApp`).
+  TalkBack and enlarged-text passes on Profile are pending. See [Profile](features/profile.md).
 
 - **Unified Custom date-range picker** — Deferred by the user. Replace Search's two labeled date
   controls with a reusable range selector when prioritized. Existing API and compilation evidence,

@@ -5,11 +5,13 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategorySeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
+import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.ThemeMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.coroutines.CompletableDeferred
@@ -94,6 +96,12 @@ class AppStartupViewModelTest {
       initializeCalls += 1
     }
 
+    override suspend fun setThemeMode(themeMode: ThemeMode): DataOutcome<Unit> =
+        DataOutcome.Success(Unit)
+
+    override suspend fun setAppLocale(appLocale: AppLocale?): DataOutcome<Unit> =
+        DataOutcome.Success(Unit)
+
     override suspend fun setMonedaPrincipal(moneda: Moneda): DataOutcome<Unit> =
         DataOutcome.Success(Unit)
   }
@@ -113,6 +121,9 @@ class AppStartupViewModelTest {
     override fun observeAll(): Flow<DataOutcome<List<Categoria>>> = emptyFlow()
 
     override suspend fun getAll(): DataOutcome<List<Categoria>> = DataOutcome.Success(emptyList())
+
+    override suspend fun localizeSeeded(categorias: List<Categoria>): DataOutcome<Unit> =
+        DataOutcome.Success(Unit)
 
     override suspend fun ensureSeeded(categorias: List<Categoria>): DataOutcome<Unit> =
         DataOutcome.Success(Unit)

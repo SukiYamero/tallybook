@@ -6,6 +6,7 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
@@ -23,6 +24,7 @@ import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.model.map
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
@@ -464,6 +466,12 @@ private class SearchPreferences : AppPreferencesRepository {
 
   override suspend fun initialize(monedaPrincipal: Moneda) = DataOutcome.Success(Unit)
 
+  override suspend fun setThemeMode(themeMode: ThemeMode): DataOutcome<Unit> =
+      DataOutcome.Success(Unit)
+
+  override suspend fun setAppLocale(appLocale: AppLocale?): DataOutcome<Unit> =
+      DataOutcome.Success(Unit)
+
   override suspend fun setMonedaPrincipal(moneda: Moneda) = DataOutcome.Success(Unit)
 }
 
@@ -473,6 +481,9 @@ private class SearchCategorias : CategoriaRepository {
   override fun observeAll() = source.filterNotNull()
 
   override suspend fun getAll() = DataOutcome.Success(emptyList<Categoria>())
+
+  override suspend fun localizeSeeded(categorias: List<Categoria>): DataOutcome<Unit> =
+      DataOutcome.Success(Unit)
 
   override suspend fun ensureSeeded(categorias: List<Categoria>) = DataOutcome.Success(Unit)
 }

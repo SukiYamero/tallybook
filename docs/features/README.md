@@ -9,6 +9,7 @@ accepted scope, integration details and verification boundaries.
 | History | DONE | [History](history.md) |
 | Search and filters | DONE | [Search and filters](search.md) |
 | Manage movimientos and Undo | DONE | [Manage movimientos and Undo](manage-movimientos.md) |
+| Profile and preferences | DONE | [Profile and preferences](profile.md) |
 
 ## Status rules
 

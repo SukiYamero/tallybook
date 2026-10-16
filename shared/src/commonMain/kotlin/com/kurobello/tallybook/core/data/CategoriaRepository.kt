@@ -11,4 +11,10 @@ interface CategoriaRepository {
   suspend fun getAll(): DataOutcome<List<Categoria>>
 
   suspend fun ensureSeeded(categorias: List<Categoria>): DataOutcome<Unit>
+
+  /**
+   * Rewrites the stored names of existing rows to the given seed names. Seed names are persisted at
+   * seeding time, so they must follow later app-language changes.
+   */
+  suspend fun localizeSeeded(categorias: List<Categoria>): DataOutcome<Unit>
 }

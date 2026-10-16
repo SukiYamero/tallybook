@@ -8,6 +8,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -44,6 +45,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookSurface
 import com.kurobello.tallybook.core.ui.component.TallybookSurfaceStyle
 import com.kurobello.tallybook.core.ui.component.rememberTallybookTapFeedback
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.navigation_add_movement
@@ -77,37 +79,13 @@ internal fun TallybookBottomNavigation(
                 .padding(horizontal = TallybookTheme.spacing.space12),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-      BottomNavigationIcon(
-          icon = Lucide.House,
-          label = stringResource(Res.string.navigation_home),
-          selected = selectedDestination == Home,
-          onClick = onSelectDestination?.let { { it(Home) } },
-          modifier = Modifier.weight(1f),
-      )
-      BottomNavigationIcon(
-          icon = Lucide.History,
-          label = stringResource(Res.string.navigation_history),
-          selected = selectedDestination == History,
-          onClick = onSelectDestination?.let { { it(History) } },
-          modifier = Modifier.weight(1f),
-      )
+      leadingTabs.forEach { PrimaryDestinationIcon(it, selectedDestination, onSelectDestination) }
       BottomNavigationAdd(
           label = stringResource(Res.string.navigation_add_movement),
           onClick = onAddMovement,
           modifier = Modifier.weight(1f),
       )
-      BottomNavigationIcon(
-          icon = Lucide.Search,
-          label = stringResource(Res.string.navigation_search),
-          selected = selectedDestination == Search,
-          onClick = onSelectDestination?.let { { it(Search) } },
-          modifier = Modifier.weight(1f),
-      )
-      BottomNavigationIcon(
-          icon = Lucide.User,
-          label = stringResource(Res.string.navigation_profile),
-          modifier = Modifier.weight(1f),
-      )
+      trailingTabs.forEach { PrimaryDestinationIcon(it, selectedDestination, onSelectDestination) }
     }
     Spacer(
         modifier =
@@ -116,6 +94,39 @@ internal fun TallybookBottomNavigation(
     )
   }
 }
+
+@Composable
+private fun RowScope.PrimaryDestinationIcon(
+    tab: PrimaryTab,
+    selectedDestination: Destination?,
+    onSelectDestination: ((Destination) -> Unit)?,
+) {
+  BottomNavigationIcon(
+      icon = tab.icon,
+      label = stringResource(tab.label),
+      selected = selectedDestination == tab.destination,
+      onClick = onSelectDestination?.let { { it(tab.destination) } },
+      modifier = Modifier.weight(1f),
+  )
+}
+
+private class PrimaryTab(
+    val destination: Destination,
+    val icon: ImageVector,
+    val label: StringResource,
+)
+
+private val leadingTabs =
+    listOf(
+        PrimaryTab(Home, Lucide.House, Res.string.navigation_home),
+        PrimaryTab(History, Lucide.History, Res.string.navigation_history),
+    )
+
+private val trailingTabs =
+    listOf(
+        PrimaryTab(Search, Lucide.Search, Res.string.navigation_search),
+        PrimaryTab(Profile, Lucide.User, Res.string.navigation_profile),
+    )
 
 @Composable
 private fun BottomNavigationIcon(

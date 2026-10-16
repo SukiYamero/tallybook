@@ -2,11 +2,13 @@ package com.kurobello.tallybook.core.data
 
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.ThemeMode
 import java.nio.file.Files
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
@@ -128,6 +130,66 @@ class AppPreferencesRepositoryTest {
 
       val failure = assertIs<DataOutcome.Failure>(repository.preferences.first())
       assertIs<DataError.Local>(failure.error)
+    } finally {
+      factory.close()
+      directory.toFile().deleteRecursively()
+    }
+  }
+
+  @Test
+  fun `theme and app locale round trip and a null locale follows the device again`() = runTest {
+    val directory = createTempDirectory("tallybook-preferences-")
+    val factory =
+        PreferencesDataStoreFactory(
+            pathProvider = TestPreferencesPathProvider(directory.toString()),
+            dispatcher = StandardTestDispatcher(testScheduler),
+        )
+    val repository = AppPreferencesRepositoryImpl(factory.create())
+
+    try {
+      repository.initialize(Moneda.COP)
+      assertEquals(DataOutcome.Success(Unit), repository.setThemeMode(ThemeMode.DARK))
+      assertEquals(DataOutcome.Success(Unit), repository.setAppLocale(AppLocale.ES_AR))
+      assertEquals(
+          DataOutcome.Success(
+              AppPreferencesState.Ready(AppPreferences(Moneda.COP, ThemeMode.DARK, AppLocale.ES_AR))
+          ),
+          repository.preferences.first(),
+      )
+      repository.setAppLocale(null)
+      assertEquals(
+          DataOutcome.Success(
+              AppPreferencesState.Ready(AppPreferences(Moneda.COP, ThemeMode.DARK, null))
+          ),
+          repository.preferences.first(),
+      )
+    } finally {
+      factory.close()
+      directory.toFile().deleteRecursively()
+    }
+  }
+
+  @Test
+  fun `unknown display values fall back without hiding the currency`() = runTest {
+    val directory = createTempDirectory("tallybook-preferences-")
+    val factory =
+        PreferencesDataStoreFactory(
+            pathProvider = TestPreferencesPathProvider(directory.toString()),
+            dispatcher = StandardTestDispatcher(testScheduler),
+        )
+    val dataStore = factory.create()
+    val repository = AppPreferencesRepositoryImpl(dataStore)
+
+    try {
+      repository.initialize(Moneda.COP)
+      dataStore.edit {
+        it[stringPreferencesKey("theme_mode")] = "SEPIA"
+        it[stringPreferencesKey("app_locale")] = "fr-FR"
+      }
+      assertEquals(
+          DataOutcome.Success(AppPreferencesState.Ready(AppPreferences(Moneda.COP))),
+          repository.preferences.first(),
+      )
     } finally {
       factory.close()
       directory.toFile().deleteRecursively()

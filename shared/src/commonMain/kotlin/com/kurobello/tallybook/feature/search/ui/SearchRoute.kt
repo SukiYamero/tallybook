@@ -26,8 +26,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.kurobello.tallybook.core.ui.navigation.DestinationModalController
 import com.kurobello.tallybook.core.ui.navigation.PrimaryModalCoordinator
-import com.kurobello.tallybook.core.ui.navigation.SearchFilterController
 import com.kurobello.tallybook.feature.search.viewmodel.SearchActions
 import com.kurobello.tallybook.feature.search.viewmodel.SearchFilterSession
 import com.kurobello.tallybook.feature.search.viewmodel.SearchFilterSessionId
@@ -67,7 +67,7 @@ internal fun SearchRoute(
   var returnFilterFocus by remember { mutableStateOf<SearchFilterSessionId?>(null) }
   val controller =
       remember(viewModel) {
-        object : SearchFilterController {
+        object : DestinationModalController {
           override val hasActiveSession: Boolean
             get() = viewModel.hasActiveFilterSession
 
@@ -117,7 +117,7 @@ internal fun SearchRoute(
       onAdd = onAdd,
       onOpenMovimiento = onOpenMovimiento,
       onOpenFilters = {
-        if (modals.tryOpenFilters()) {
+        if (modals.tryOpenDestinationModal(controller)) {
           keyboard?.hide()
           focusManager.clearFocus()
         }

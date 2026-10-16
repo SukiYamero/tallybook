@@ -5,7 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSession
 
-internal interface SearchFilterController {
+internal interface DestinationModalController {
   val hasActiveSession: Boolean
 
   fun open(): Boolean
@@ -22,7 +22,7 @@ internal class PrimaryModalCoordinator(
     private val creation: AddMovimientoSheetSession,
     private val isSearchSelected: () -> Boolean,
 ) {
-  private var filters: SearchFilterController? by mutableStateOf(null)
+  private var destinationModal: DestinationModalController? by mutableStateOf(null)
 
   private var management: MovimientoManagementController? by mutableStateOf(null)
 
@@ -51,15 +51,15 @@ internal class PrimaryModalCoordinator(
   val canNavigate: Boolean
     get() =
         !creation.hasBeenOpened &&
-            !(filters?.hasActiveSession ?: isSearchSelected()) &&
+            !(destinationModal?.hasActiveSession ?: isSearchSelected()) &&
             management?.hasActiveSession != true
 
-  fun attach(controller: SearchFilterController) {
-    filters = controller
+  fun attach(controller: DestinationModalController) {
+    destinationModal = controller
   }
 
-  fun detach(controller: SearchFilterController) {
-    if (filters === controller) filters = null
+  fun detach(controller: DestinationModalController) {
+    if (destinationModal === controller) destinationModal = null
   }
 
   fun tryOpenCreation(): Boolean {
@@ -68,8 +68,8 @@ internal class PrimaryModalCoordinator(
     return true
   }
 
-  fun tryOpenFilters(): Boolean {
-    if (!canStartModal || !isSearchSelected()) return false
-    return filters?.open() ?: false
+  fun tryOpenDestinationModal(controller: DestinationModalController): Boolean {
+    if (!canStartModal || destinationModal !== controller) return false
+    return controller.open()
   }
 }

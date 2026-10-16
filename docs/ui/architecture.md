@@ -424,11 +424,11 @@ The approved order and ownership are:
 | History | Primary destination | Frequent | Enabled; retained period and scroll |
 | Add movement | Contextual action | Frequent | Opens the existing movement sheet |
 | Search | Primary destination | Frequent | Enabled; retained query, filters and scroll |
-| Profile | Secondary surface | Occasional | Reserved icon; inert until the surface exists |
+| Profile | Primary destination | Occasional | Enabled; preferences and the account/data slot |
 
 The bar uses icons without visible labels. Every icon still has a localized accessibility description.
-Unavailable positions expose neither click nor selection semantics. The centered Add movement action
-opens the shared creation session; Home, History and Search expose selected tab semantics.
+The centered Add movement action opens the shared creation session; Home, History, Search and Profile
+expose selected tab semantics.
 
 `TallybookAppShell` measures the persistent bar before composing primary content and publishes its
 actual occupied clearance, including its sole bottom safe inset. Home and History use the screen
@@ -441,8 +441,8 @@ History is visited lazily and retained when hidden. Official saveable and ViewMo
 hoisted above the active display, in that order, with stable content keys and parent creation extras.
 Snapshotting extras for each parent lifetime prevents Activity Intent Bundles from resetting stores.
 Tabs select existing entries; History root Back selects Home, Home root delegates platform exit, and
-Search root Back selects Home; catalog Back returns to the previous primary. Home search opens Search
-with a one-time focus intent. Profile remains inert.
+Search and Profile root Back select Home; catalog Back returns to the previous primary. Home search
+opens Search with a one-time focus intent.
 
 Home/History repository observations use five-second subscription sharing. Feature routes revalidate
 before lifecycle collection. `RetainedLoadState<Content, Failure>` is the shared snapshot contract:
@@ -593,8 +593,8 @@ toggle or fourth annual scope. Search is a separate destination.
 ## Remaining product decisions
 
 The bottom navigation pattern, ordered positions, and centered placement of `Create movimiento` are
-decided. Home, History and Search are enabled. Profile remains a visual reservation without actions
-until its separate feature is implemented.
+decided, and every destination is enabled. Profile grows only through the evaluated preference list in
+its feature document; account and backup surfaces plug into its data section.
 
 ## Search presentation
 
@@ -748,8 +748,9 @@ ownership is scene-based and clears the child on active-scene disposal. Financia
 jobs and feedback tokens never enter saved state or preferences. A fresh process/scene starts closed.
 Host tests establish the actual owner/provider seam; physical iOS teardown is a separate runtime check.
 
-`PrimaryModalCoordinator` admits creation, filters and management through their existing controllers,
-including loading, confirmations, submission and Closing. Primary navigation waits while a modal
+`PrimaryModalCoordinator` admits creation, management and the active destination's modal (Search
+filters, Profile option sheets) through one controller each, including loading, confirmations, submission
+and Closing. Primary navigation waits while a modal
 owns the window. During Undo restoration, tabs can change but all new modal sessions wait.
 Callbacks carry origin/token/revision; delayed callbacks cannot close a new session, duplicate feedback
 or consume a claimed restore. Read jobs are cancelled and late generations rejected.

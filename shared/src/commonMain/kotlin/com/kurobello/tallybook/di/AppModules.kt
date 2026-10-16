@@ -6,6 +6,8 @@ val appModules =
         timeModule,
         localeModule,
         preferencesModule,
+        exportModule,
+        appInfoModule,
         databaseDriverModule,
         databaseModule,
         repositoryModule,
