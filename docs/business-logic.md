@@ -230,11 +230,15 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
 - From the movimiento picker, a search without results offers a non-intrusive action to create a
   category with the typed name; the quick form shows name and icon, with tint and description behind
   "More options", and the created category becomes selected.
-- Profile links to a dedicated Categories screen: search, the user's categories (editable), the
-  predefined ones (read-only, grouped by parent), each with its movimiento count; tapping a category
-  opens Search filtered by it. Unused predefined categories can be hidden from pickers without being
-  deleted.
-- Deleting a custom category that has movimientos is an open product decision.
+- Profile links to a dedicated Categories screen that shows chips, like the picker: search, the
+  user's categories first, then the predefined ones grouped by parent, each with its movimiento count
+  in the primary currency. Tapping a chip opens its sheet: the editor for a custom category, a
+  read-only view for a predefined one. Both offer hide/show and "View movements", which opens Search
+  filtered by that category; the custom editor also offers delete.
+- Any category except Otros can be hidden. Hidden categories leave the movimiento pickers and
+  suggestions but stay on existing movimientos, History and Search, and remain filterable.
+- A custom category is deleted only while no movimiento in any currency uses it; when in use, the
+  sheet offers hiding it instead, and no movimiento is rewritten.
 
 ## Tracking and History
 
