@@ -13,7 +13,7 @@ accepted scope, integration details and verification boundaries.
 | Smart entry | DONE | [Add movimiento](add-movimiento.md) |
 | Custom categories | DONE | [Custom categories](custom-categories.md) |
 | Movimiento title and day-grouped Search | DONE | [Movimiento title](movimiento-title.md) |
-| Single category and tags | IN_PROGRESS | [Tags](tags.md) |
+| Single category and tags | DONE | [Tags](tags.md) |
 
 ## Status rules
 

@@ -53,7 +53,14 @@ the repository and the Tags screen ViewModel, sentence tag
 detection and ownership, the tag limit, tag creation from the movimiento picker including a failed
 create, the Tags screen ViewModel, Search tag filters and the CSV Tags column.
 
-Not covered: the device tests for the Category and Tags sections, the category picker's pinned
-current row and initial scroll, the tag picker, the Tags screen and its navigation, the Search tag filter and the UI catalog compile but have not run (tracked in the
-[backlog](../backlog.md)). The upgrade install over the previous build on the Xiaomi and the physical
-acceptance of the main flows are pending, as are iOS runtime, TalkBack and enlarged-text passes.
+On the Xiaomi, an upgrade install over a schema-5 database with 30 movimientos migrated to schema 6
+with every movimiento kept, the three multi-category ones keeping their first category and every
+other field unchanged. Manual checks covered the category switch and pinned "Selected:" row with its
+initial scroll, the "Tags" header with its optional marker, the tag picker and tag sheet with the
+keyboard open (search, no-results create action and description stay visible), tag creation from the
+picker and a saved tag description; the user accepted the delivered flows on that device.
+
+Not covered: the device tests for the Category and Tags sections, the category picker, the tag
+picker, the Tags screen and its navigation, the Search tag filter and the UI catalog compile but have
+not run, because MIUI blocks the instrumentation activity launch (tracked in the
+[backlog](../backlog.md)). iOS runtime, TalkBack and enlarged-text passes are pending.
