@@ -14,7 +14,7 @@ Also expose the bounded history read the engine learns from.
   non-letters, drop stop words of all supported languages (`de, del, en, el, la, los, las, un, una,
   para, por, con, y, of, the, on, for, at, and, a, no, na, do, da, em, com, pra`…), basic plural
   reduction (`hoteles → hotel`, `reservaciones → reservacion`, `cafés → cafe`, `tickets → ticket`).
-  Coordinate with task1 if `normalizeSearchText` moves package.
+  `normalizeSearchText` stays in `core.ui.text` during this wave.
 - The dictionary is Kotlin data in `commonMain` (no JSON asset): entries of normalized phrase or word,
   target seeded category ID, weight (`STRONG` for unambiguous words, phrases and brands; `WEAK` for
   ambiguous words) and optional language set. It covers all seeded categories in
