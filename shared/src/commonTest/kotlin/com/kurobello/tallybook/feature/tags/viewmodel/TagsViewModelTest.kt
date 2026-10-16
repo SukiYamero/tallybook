@@ -6,7 +6,6 @@ import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
-import com.kurobello.tallybook.core.model.CategoriaRules
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.ETIQUETA_DESCRIPCION_MAX
@@ -207,7 +206,9 @@ class TagsViewModelTest {
     vm.onNombreChanged("   ")
     assertEquals(TagNombreError.BLANK, vm.uiState.value.sheet?.visibleNombreError)
     assertFalse(vm.uiState.value.sheet?.canSave == true)
-    vm.onNombreChanged("x".repeat(CategoriaRules.NOMBRE_MAX + 1))
+    vm.onNombreChanged("x".repeat(30))
+    assertNull(vm.uiState.value.sheet?.visibleNombreError)
+    vm.onNombreChanged("x".repeat(31))
     assertEquals(TagNombreError.TOO_LONG, vm.uiState.value.sheet?.visibleNombreError)
     assertFalse(vm.uiState.value.sheet?.canSave == true)
     vm.onSaveSheet()

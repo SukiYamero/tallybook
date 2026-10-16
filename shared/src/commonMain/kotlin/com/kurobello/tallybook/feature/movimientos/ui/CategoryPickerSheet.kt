@@ -33,6 +33,7 @@ import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
 import com.kurobello.tallybook.core.ui.component.PickerSearchState
 import com.kurobello.tallybook.core.ui.component.TallybookModalBottomSheet
+import com.kurobello.tallybook.core.ui.component.TallybookSearchEmptyState
 import com.kurobello.tallybook.core.ui.component.TallybookSearchField
 import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
 import com.kurobello.tallybook.core.ui.component.TallybookText
@@ -340,21 +341,20 @@ private fun CategoryPickerResults(
 @Composable
 private fun CategoryPickerNoResults(query: String, onCreate: ((String) -> Unit)?) {
   val nombre = query.trim()
-  Column(
-      modifier = Modifier.padding(vertical = TallybookTheme.spacing.space24),
-      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
-  ) {
-    TallybookText(
-        text = stringResource(Res.string.no_categories_found),
-        style = TallybookTheme.typography.body,
-    )
-    if (onCreate != null && nombre.isNotEmpty()) {
-      TallybookTextButton(
-          onClick = { onCreate(nombre) },
-          modifier = Modifier.testTag(CATEGORY_PICKER_OFFER_CREATE_TAG),
-      ) {
-        TallybookText(stringResource(Res.string.category_picker_create, nombre))
-      }
-    }
-  }
+  TallybookSearchEmptyState(
+      message = stringResource(Res.string.no_categories_found),
+      modifier = Modifier.fillMaxWidth(),
+      action =
+          if (onCreate == null || nombre.isEmpty()) null
+          else {
+            {
+              TallybookTextButton(
+                  onClick = { onCreate(nombre) },
+                  modifier = Modifier.testTag(CATEGORY_PICKER_OFFER_CREATE_TAG),
+              ) {
+                TallybookText(stringResource(Res.string.category_picker_create, nombre))
+              }
+            }
+          },
+  )
 }

@@ -41,7 +41,7 @@ Confirmed with the user:
 ## Proposed defaults (flag to the user if an implementer disagrees)
 
 - `MAX_ETIQUETAS_POR_MOVIMIENTO = 6` (reuses the existing UI limit behavior).
-- Tag name: trimmed, 1..40 characters (`CategoriaRules.NOMBRE_MAX`), unique among tags by the same
+- Tag name: trimmed, 1..30 characters (`CategoriaRules.NOMBRE_MAX`), unique among tags by the same
   `nombreKey()` normalization; a tag may share a name with a categoría. No description, icon, tint or
   hidden flag.
 - Creating a duplicate tag name offers the existing tag; renaming to a duplicate shows an inline error.

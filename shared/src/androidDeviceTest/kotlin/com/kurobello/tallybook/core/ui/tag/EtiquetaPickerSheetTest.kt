@@ -121,7 +121,7 @@ class EtiquetaPickerSheetTest {
   }
 
   @Test
-  fun aSearchWithoutResultsOffersCreatingTheTrimmedName() {
+  fun aSearchWithoutResultsOffersACenteredCreateActionForTheTrimmedName() {
     show()
 
     composeRule.onNode(hasSetTextAction()).performTextInput("  Gym ")
@@ -129,7 +129,9 @@ class EtiquetaPickerSheetTest {
     val results = composeRule.onNodeWithTag(ETIQUETA_PICKER_RESULTS_TAG).boundsInRoot()
     val create = composeRule.onNodeWithTag(ETIQUETA_PICKER_OFFER_CREATE_TAG)
     create.assert(hasText(string(Res.string.tag_picker_create, "Gym")))
-    assertEquals(results.width, create.boundsInRoot().width, absoluteTolerance = 1f)
+    val createBounds = create.boundsInRoot()
+    assertTrue(createBounds.width < results.width)
+    assertEquals(results.center.x, createBounds.center.x, absoluteTolerance = 1f)
     create.performClick()
 
     composeRule.runOnIdle { assertEquals(listOf("Gym"), created) }

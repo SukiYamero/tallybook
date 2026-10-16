@@ -85,33 +85,34 @@ class CategoriaRepositoryTest {
       }
 
   @Test
-  fun `create and update reject an invalid nombre or descripcion without writing`() = runTest {
-    withRepository { _, repository ->
-      val custom = repository.create(draft("Gym")).savedCategoria()
-      val invalid =
-          listOf(
-              draft("   "),
-              draft("x".repeat(CategoriaRules.NOMBRE_MAX + 1)),
-              draft("Pilates", descripcion = "x".repeat(CategoriaRules.DESCRIPCION_MAX + 1)),
-          )
-
-      invalid.forEach { candidate ->
-        assertInvalid(repository.create(candidate))
-        assertInvalid(repository.update(custom.id, candidate))
-      }
-      assertEquals(listOf(custom), repository.getAll().rows())
-      assertIs<CategoriaWrite.Saved>(
-          repository
-              .create(
-                  draft(
-                      " ${"x".repeat(CategoriaRules.NOMBRE_MAX)} ",
-                      descripcion = "x".repeat(CategoriaRules.DESCRIPCION_MAX),
-                  )
+  fun `create and update reject a blank or over 30 character nombre or a long descripcion`() =
+      runTest {
+        withRepository { _, repository ->
+          val custom = repository.create(draft("Gym")).savedCategoria()
+          val invalid =
+              listOf(
+                  draft("   "),
+                  draft("x".repeat(31)),
+                  draft("Pilates", descripcion = "x".repeat(CategoriaRules.DESCRIPCION_MAX + 1)),
               )
-              .successData()
-      )
-    }
-  }
+
+          invalid.forEach { candidate ->
+            assertInvalid(repository.create(candidate))
+            assertInvalid(repository.update(custom.id, candidate))
+          }
+          assertEquals(listOf(custom), repository.getAll().rows())
+          assertIs<CategoriaWrite.Saved>(
+              repository
+                  .create(
+                      draft(
+                          " ${"x".repeat(30)} ",
+                          descripcion = "x".repeat(CategoriaRules.DESCRIPCION_MAX),
+                      )
+                  )
+                  .successData()
+          )
+        }
+      }
 
   @Test
   fun `update renames a custom categoria and rejects seeded or unknown targets`() = runTest {

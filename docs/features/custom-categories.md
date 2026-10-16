@@ -23,7 +23,7 @@ Profile, and hide the ones they do not use. Product rules live in
   A duplicate name in the editor offers "Open <name>", which swaps the sheet to that category.
 - **Category form** (`CategoryForm`): the name suggests the icon and tint from the smart-entry
   dictionary until the user picks either by hand; tint options preview the current icon in each tint.
-  Inputs cap at 40 (name) and 340 (description) characters. The full editor and the compact
+  Inputs cap at 30 (name) and 340 (description) characters. The full editor and the compact
   quick-create pane share `TallybookSheetForm`, the same keyboard handling as the movimiento form:
   the focused field stays above the keyboard, the footer gives way while it is open, and closing it
   keeps the scroll position (a body that fits at rest returns to the top).

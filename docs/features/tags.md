@@ -14,7 +14,7 @@ entry flow are described in [Add movimiento](add-movimiento.md); visual ownershi
   movimiento count in the primary currency; a search shows the matches or a no-results message. A
   failed load shows a message with Retry.
 - **Tag sheet**: the add action opens a new-tag sheet prefilled with the current search; tapping a
-  chip opens the edit sheet. The name caps at 40 characters, and the blank-name error waits until the
+  chip opens the edit sheet. The name caps at 30 characters, and the blank-name error waits until the
   user edits. Under it, an optional multi-line description shows an `n/140` counter and an inline
   error past 140 characters; either error blocks saving, and saving an edit without changes closes
   without writing. A duplicate name on create offers "Open <name>", which swaps the sheet to that

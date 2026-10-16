@@ -247,7 +247,7 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
 
 ### Tags
 
-- A tag name is trimmed, up to 40 characters and unique among tags ignoring case and supported
+- A tag name is trimmed, up to 30 characters and unique among tags ignoring case and supported
   accents. A tag may have an optional description of up to 140 characters, edited from its sheet in
   the Tags screen; quick creation from the picker sets only the name. Creating a name that already exists offers the existing tag instead of a duplicate;
   renaming to an existing name is rejected with an inline error. Tag names are not translated.
@@ -262,7 +262,7 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
 
 ### Custom categories
 
-- The user creates root categories with a required name (trimmed, up to 40 characters, unique among
+- The user creates root categories with a required name (trimmed, up to 30 characters, unique among
   all categories ignoring case and supported accents), an icon preselected by default and suggested
   from the name, an optional tint (suggested with the icon) and an optional description of up to 340
   characters. Custom names are not translated.

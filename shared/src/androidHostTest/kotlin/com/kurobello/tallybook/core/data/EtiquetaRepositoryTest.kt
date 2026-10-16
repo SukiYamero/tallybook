@@ -2,7 +2,6 @@ package com.kurobello.tallybook.core.data
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.TallybookDatabase
-import com.kurobello.tallybook.core.model.CategoriaRules
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.ETIQUETA_DESCRIPCION_MAX
@@ -56,18 +55,16 @@ class EtiquetaRepositoryTest {
       }
 
   @Test
-  fun `create and update reject a blank or too long name without writing`() = runTest {
+  fun `create and update reject a blank or over 30 character name without writing`() = runTest {
     withRepository { _, repository ->
       val empresa = repository.create("Empresa").saved()
 
-      listOf("   ", "x".repeat(CategoriaRules.NOMBRE_MAX + 1)).forEach { nombre ->
+      listOf("   ", "x".repeat(31)).forEach { nombre ->
         assertInvalid(repository.create(nombre))
         assertInvalid(repository.update(empresa.id, nombre, descripcion = null))
       }
       assertEquals(listOf(empresa), repository.getAll().successData())
-      assertIs<EtiquetaWrite.Saved>(
-          repository.create(" ${"x".repeat(CategoriaRules.NOMBRE_MAX)} ").successData()
-      )
+      assertIs<EtiquetaWrite.Saved>(repository.create(" ${"x".repeat(30)} ").successData())
     }
   }
 

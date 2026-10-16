@@ -21,6 +21,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookIconButtonDefaults
 import com.kurobello.tallybook.core.ui.component.TallybookIconButtonStyle
 import com.kurobello.tallybook.core.ui.component.TallybookLoadingState
 import com.kurobello.tallybook.core.ui.component.TallybookScreenHeader
+import com.kurobello.tallybook.core.ui.component.TallybookSearchEmptyState
 import com.kurobello.tallybook.core.ui.component.TallybookSearchField
 import com.kurobello.tallybook.core.ui.component.TallybookSectionHeading
 import com.kurobello.tallybook.core.ui.component.TallybookText
@@ -125,7 +126,10 @@ private fun LazyListScope.browse(content: CategoriesContent.Browse, onOpen: (Str
 private fun LazyListScope.search(content: CategoriesContent.Search, onOpen: (String) -> Unit) {
   if (content.matches.isEmpty()) {
     item(key = "search-empty") {
-      SecondaryText(stringResource(Res.string.categories_search_empty, content.query))
+      TallybookSearchEmptyState(
+          message = stringResource(Res.string.categories_search_empty, content.query),
+          modifier = Modifier.fillMaxWidth(),
+      )
     }
   } else {
     item(key = "matches") { CategoryChipBlock(content.matches, onOpen) }

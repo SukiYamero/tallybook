@@ -128,9 +128,11 @@ class CategoryDraftStateTest {
   }
 
   @Test
-  fun nameLongerThanTheLimitAfterTrimmingIsTooLong() {
-    val draft = CategoryDraftState(nombre = "a".repeat(CategoriaRules.NOMBRE_MAX + 1))
+  fun nameOfThirtyCharactersAfterTrimmingIsValidAndThirtyOneIsTooLong() {
+    val longest = CategoryDraftState(nombre = " ${"a".repeat(30)} ")
+    val draft = CategoryDraftState(nombre = "a".repeat(31))
 
+    assertNull(longest.nombreError)
     assertEquals(CategoryNombreError.TOO_LONG, draft.nombreError)
     assertEquals(CategoryNombreError.TOO_LONG, draft.visibleNombreError)
     assertFalse(draft.canSave)

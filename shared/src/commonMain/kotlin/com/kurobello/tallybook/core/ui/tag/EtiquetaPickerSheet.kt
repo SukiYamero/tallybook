@@ -20,9 +20,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.composables.icons.lucide.Hash
@@ -32,8 +29,8 @@ import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
 import com.kurobello.tallybook.core.ui.component.PickerSearchState
-import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookModalBottomSheet
+import com.kurobello.tallybook.core.ui.component.TallybookSearchEmptyState
 import com.kurobello.tallybook.core.ui.component.TallybookSearchField
 import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
 import com.kurobello.tallybook.core.ui.component.TallybookText
@@ -276,33 +273,26 @@ private fun EtiquetaPickerNoResults(
     onCreate: (String) -> Unit,
 ) {
   val nombre = query.trim()
-  Column(
-      modifier = Modifier.fillMaxWidth().padding(top = TallybookTheme.spacing.space16),
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
-  ) {
-    TallybookText(
-        text = stringResource(Res.string.tags_search_empty, nombre),
-        color = TallybookTheme.colors.foreground.secondary,
-        style = TallybookTheme.typography.body.copy(textAlign = TextAlign.Center),
-    )
-    if (nombre.isNotEmpty()) {
-      TallybookButton(
-          onClick = { onCreate(nombre) },
-          modifier = Modifier.testTag(ETIQUETA_PICKER_OFFER_CREATE_TAG),
-      ) {
-        TallybookText(stringResource(Res.string.tag_picker_create, nombre))
-      }
-    }
-    if (nombre.isNotEmpty() && nombre == failedCreateNombre) {
-      TallybookText(
-          text = stringResource(Res.string.tag_save_error),
-          color = TallybookTheme.colors.status.danger.base,
-          modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-          style = TallybookTheme.typography.body.copy(textAlign = TextAlign.Center),
-      )
-    }
-  }
+  TallybookSearchEmptyState(
+      message = stringResource(Res.string.tags_search_empty, nombre),
+      modifier = Modifier.fillMaxWidth(),
+      error =
+          stringResource(Res.string.tag_save_error).takeIf {
+            nombre.isNotEmpty() && nombre == failedCreateNombre
+          },
+      action =
+          if (nombre.isEmpty()) null
+          else {
+            {
+              TallybookTextButton(
+                  onClick = { onCreate(nombre) },
+                  modifier = Modifier.testTag(ETIQUETA_PICKER_OFFER_CREATE_TAG),
+              ) {
+                TallybookText(stringResource(Res.string.tag_picker_create, nombre))
+              }
+            }
+          },
+  )
 }
 
 private val previewPickerEtiquetas =
