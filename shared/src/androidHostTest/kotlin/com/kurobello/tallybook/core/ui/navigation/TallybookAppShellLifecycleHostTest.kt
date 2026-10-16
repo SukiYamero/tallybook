@@ -185,6 +185,23 @@ internal class TallybookAppShellLifecycleHostTest {
       }
 
   @Test
+  fun `Categories over Profile restores from the parceled saved state`() = runTest {
+    withShell {
+      val first = create()
+      first.select(Profile)
+      first.navigation.value = first.navigation.value.openSecondary(Categories)
+      first.settle()
+      val saved = first.saveAndParcel()
+      first.close()
+      val restored = create(saved).navigation.value
+      assertEquals(Profile, restored.selected)
+      assertEquals(Categories, restored.secondary)
+      assertEquals(listOf(Home, Profile, Categories), restored.displayedKeys)
+      assertEquals(listOf(Home, Profile), restored.back().displayedKeys)
+    }
+  }
+
+  @Test
   fun `removing actual History entry clears it once while Home survives`() = runTest {
     withShell {
       val fixture = create()
@@ -405,7 +422,8 @@ private class ShellHarness(
               }
               Search,
               Profile,
-              UiCatalog -> Unit
+              UiCatalog,
+              Categories -> Unit
             }
             SideEffect {
               owners[destination] = owner

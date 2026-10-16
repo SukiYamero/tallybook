@@ -1,11 +1,16 @@
 package com.kurobello.tallybook.feature.profile.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
@@ -15,15 +20,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
+import com.composables.icons.lucide.ChevronRight
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Smartphone
+import com.composables.icons.lucide.Tags
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessageContent
@@ -36,6 +46,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookSelectionField
 import com.kurobello.tallybook.core.ui.component.TallybookSurface
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
+import com.kurobello.tallybook.core.ui.component.rememberTallybookTapFeedback
 import com.kurobello.tallybook.core.ui.layout.TallybookScreenFrame
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.profile.viewmodel.ProfileActions
@@ -47,6 +58,8 @@ import com.kurobello.tallybook.feature.profile.viewmodel.ProfileUiState
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.navigation_profile
+import tallybook.shared.generated.resources.profile_categories_body
+import tallybook.shared.generated.resources.profile_categories_label
 import tallybook.shared.generated.resources.profile_currency_label
 import tallybook.shared.generated.resources.profile_currency_note
 import tallybook.shared.generated.resources.profile_currency_unavailable
@@ -72,6 +85,7 @@ import tallybook.shared.generated.resources.retry
 internal fun ProfileScreen(
     uiState: ProfileUiState,
     actions: ProfileActions,
+    onOpenCategories: () -> Unit,
     bottomBarClearance: Dp,
     modifier: Modifier = Modifier,
 ) {
@@ -98,6 +112,7 @@ internal fun ProfileScreen(
       )
       ProfileSection(stringResource(Res.string.profile_section_data)) {
         LocalDataCard()
+        CategoriesCard(onOpenCategories)
         ExportCard(uiState.export, actions)
       }
       ProfileSection(stringResource(Res.string.profile_section_preferences)) {
@@ -136,6 +151,54 @@ private fun LocalDataCard() {
       CardText(
           stringResource(Res.string.profile_local_title),
           stringResource(Res.string.profile_local_body),
+      )
+    }
+  }
+}
+
+@Composable
+private fun CategoriesCard(onClick: () -> Unit) {
+  val interactionSource = remember { MutableInteractionSource() }
+  val isPressed by interactionSource.collectIsPressedAsState()
+  val tapFeedback = rememberTallybookTapFeedback()
+  TallybookSurface(
+      modifier =
+          Modifier.fillMaxWidth()
+              .defaultMinSize(minHeight = TallybookTheme.dimensions.minimumTouchTarget)
+              .clickable(
+                  interactionSource = interactionSource,
+                  indication = null,
+                  role = Role.Button,
+                  onClick = {
+                    tapFeedback.trigger()
+                    onClick()
+                  },
+              ),
+      isPressed = isPressed,
+      hasTapFeedback = tapFeedback.isActive,
+  ) {
+    Row(
+        modifier = Modifier.padding(TallybookTheme.spacing.space16),
+        horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Image(
+          imageVector = Lucide.Tags,
+          contentDescription = null,
+          modifier = Modifier.size(TallybookTheme.dimensions.iconLarge),
+          colorFilter = ColorFilter.tint(TallybookTheme.colors.brand.primary),
+      )
+      Box(modifier = Modifier.weight(1f)) {
+        CardText(
+            stringResource(Res.string.profile_categories_label),
+            stringResource(Res.string.profile_categories_body),
+        )
+      }
+      Image(
+          imageVector = Lucide.ChevronRight,
+          contentDescription = null,
+          modifier = Modifier.size(TallybookTheme.dimensions.fieldIconSize),
+          colorFilter = ColorFilter.tint(TallybookTheme.colors.foreground.tertiary),
       )
     }
   }

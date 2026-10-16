@@ -134,6 +134,22 @@ internal class SearchViewModel(
     it.copy(filters = it.filters.copy(categoryIds = it.filters.categoryIds - id))
   }
 
+  override fun onShowCategory(id: String) {
+    if (id.isBlank()) return
+    onQueryChanged("")
+    val today = dateProvider.today()
+    changeInputs {
+      val session = it.session
+      it.copy(
+          today = today,
+          filters = SearchFilters.initial(today).copy(categoryIds = setOf(id)),
+          session =
+              if (session is SearchFilterSession.Editing) session.cancel(session.sessionId)
+              else session,
+      )
+    }
+  }
+
   override fun onRetry() = changeInputs { it.copy(reload = it.reload + 1) }
 
   override fun onResume() {
