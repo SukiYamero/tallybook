@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -24,9 +25,11 @@ internal data class MovimientoSentenceUi(
     val detected: PhrasePreviewUi,
     val today: LocalDate,
     val moneda: Moneda,
-    val categorias: List<Categoria>,
-    val categoriasArePending: Boolean,
+    val categoria: Categoria?,
+    val categoriaIsPending: Boolean,
     val suggestions: List<Categoria>,
+    val etiquetas: List<Etiqueta>,
+    val etiquetasLoad: EtiquetasLoad,
     val isEnabled: Boolean,
     val actionsEnabled: Boolean,
 ) {
@@ -41,8 +44,10 @@ internal data class MovimientoSummaryUi(
     val amountNeedsReview: Boolean,
     val titulo: String,
     val descripcion: String,
-    val categorias: List<Categoria>,
-    val categoriasArePending: Boolean,
+    val categoria: Categoria?,
+    val categoriaIsPending: Boolean,
     val suggestions: List<Categoria>,
+    val etiquetas: List<Etiqueta>,
+    val etiquetasLoad: EtiquetasLoad,
     val isSubmitting: Boolean,
 )

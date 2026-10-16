@@ -19,6 +19,7 @@ import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.data.entry.CategoryAppearanceSuggester
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
+import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
@@ -148,6 +149,7 @@ class AddMovimientoSheetRouteTest {
               MovimientoEntryEngine(
                   parser = MovimientoPhraseParser(),
                   suggester = CategorySuggester(CategoryKeywordDictionary.builtIn),
+                  etiquetaMatcher = EtiquetaMatcher(),
                   localeProvider = FixedDeviceLocale,
                   computationDispatcher = Dispatchers.Default,
               ),

@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Movimiento
 import kotlinx.datetime.LocalDate
 
@@ -9,6 +10,8 @@ internal data class EditMovimientoUiState(
     val draft: MovimientoDraft,
     override val categorias: List<Categoria>,
     override val maxSelectableDate: LocalDate,
+    override val etiquetas: List<Etiqueta> = emptyList(),
+    override val etiquetasLoad: EtiquetasLoad = EtiquetasLoad.LOADING,
     override val isLoading: Boolean = false,
     override val isSubmitting: Boolean = false,
     override val submitAttempted: Boolean = false,

@@ -64,9 +64,10 @@ private fun SummaryStepPreview(
         summary = summary(rememberMovimientoEntrySamples()),
         callbacks =
             MovimientoSummaryCallbacks(
-                onRemoveCategoria = {},
-                onAddCategoria = {},
+                onDeselectCategoria = {},
+                onChooseCategoria = {},
                 onSuggestion = {},
+                etiquetas = MovimientoEtiquetasCallbacks(onAdd = {}, onRemove = {}, onRetry = {}),
                 onDescripcionChange = {},
                 onEdit = {},
                 onSave = {},

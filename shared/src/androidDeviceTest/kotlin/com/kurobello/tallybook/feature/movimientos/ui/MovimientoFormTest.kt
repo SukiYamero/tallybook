@@ -23,13 +23,16 @@ import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoUiState
+import com.kurobello.tallybook.feature.movimientos.viewmodel.EtiquetasLoad
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormError
 import kotlin.test.assertEquals
+import kotlin.time.Instant
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -42,8 +45,8 @@ import org.junit.Test
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.amount_overflow
 import tallybook.shared.generated.resources.amount_required
+import tallybook.shared.generated.resources.category_picker_single_title
 import tallybook.shared.generated.resources.category_required
-import tallybook.shared.generated.resources.category_tag_add_description
 import tallybook.shared.generated.resources.category_tag_remove
 import tallybook.shared.generated.resources.date
 import tallybook.shared.generated.resources.description_optional
@@ -54,7 +57,12 @@ import tallybook.shared.generated.resources.movimiento_pending_label
 import tallybook.shared.generated.resources.movimiento_preferences_error
 import tallybook.shared.generated.resources.movimiento_save_error
 import tallybook.shared.generated.resources.retry
+import tallybook.shared.generated.resources.save_expense
 import tallybook.shared.generated.resources.save_income
+import tallybook.shared.generated.resources.tag_add_description
+import tallybook.shared.generated.resources.tag_picker_title
+import tallybook.shared.generated.resources.tag_remove
+import tallybook.shared.generated.resources.tags_unavailable
 
 @OptIn(ExperimentalResourceApi::class)
 class MovimientoFormTest {
@@ -115,7 +123,7 @@ class MovimientoFormTest {
 
   @Test
   fun openingTheCategoryPickerClearsFocusFromThePreviousTextField() {
-    val addLabel = localizedString(Res.string.category_tag_add_description)
+    val addLabel = localizedString(Res.string.category_picker_single_title)
 
     composeRule.setContent {
       TallybookTheme { MovimientoForm(state(categoriaId = category.id), RecordingActions()) }
@@ -185,7 +193,7 @@ class MovimientoFormTest {
     }
     composeRule.onNodeWithContentDescription(amountPrompt).assertIsFocused()
     composeRule
-        .onNodeWithContentDescription(localizedString(Res.string.category_tag_add_description))
+        .onNodeWithContentDescription(localizedString(Res.string.category_picker_single_title))
         .performClick()
     InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
     composeRule.waitForIdle()
@@ -230,7 +238,7 @@ class MovimientoFormTest {
     composeRule.setContent { TallybookTheme { MovimientoForm(state(), actions) } }
 
     composeRule
-        .onNodeWithContentDescription(localizedString(Res.string.category_tag_add_description))
+        .onNodeWithContentDescription(localizedString(Res.string.category_picker_single_title))
         .performClick()
     composeRule.onNodeWithText(otros.nombre).assertDoesNotExist()
     composeRule.onNodeWithText(child.nombre).performClick()
@@ -240,7 +248,7 @@ class MovimientoFormTest {
   }
 
   @Test
-  fun theSelectedCategoryCannotBeRemovedButCanBeSwitchedFromTheAddTag() {
+  fun theEditorCategoryCannotBeRemovedButCanBeSwitchedFromChoose() {
     composeRule.setContent {
       TallybookTheme { MovimientoForm(state(categoriaId = category.id), RecordingActions()) }
     }
@@ -252,8 +260,83 @@ class MovimientoFormTest {
         )
         .assertDoesNotExist()
     composeRule
-        .onNodeWithContentDescription(localizedString(Res.string.category_tag_add_description))
+        .onNodeWithContentDescription(localizedString(Res.string.category_picker_single_title))
         .assertIsDisplayed()
+  }
+
+  @Test
+  fun aCreationFormLetsTheUserDeselectTheCategory() {
+    var deselects = 0
+    composeRule.setContent {
+      TallybookTheme {
+        MovimientoForm(
+            uiState = state(categoriaId = category.id),
+            actions = RecordingActions(),
+            onDeselectCategoria = { deselects++ },
+        )
+      }
+    }
+
+    composeRule
+        .onNodeWithContentDescription(
+            localizedString(Res.string.category_tag_remove, category.nombre)
+        )
+        .performClick()
+
+    composeRule.runOnIdle { assertEquals(1, deselects) }
+  }
+
+  @Test
+  fun tagsSitBelowTheCategoryAndOpenTheTagPicker() {
+    val actions = RecordingActions()
+    composeRule.setContent {
+      TallybookTheme {
+        MovimientoForm(state(categoriaId = category.id, etiquetaIds = listOf(work.id)), actions)
+      }
+    }
+
+    composeRule
+        .onNodeWithContentDescription(localizedString(Res.string.tag_remove, work.nombre))
+        .performScrollTo()
+        .performClick()
+    composeRule
+        .onNodeWithContentDescription(localizedString(Res.string.tag_add_description))
+        .performScrollTo()
+        .performClick()
+
+    composeRule.onNodeWithText(localizedString(Res.string.tag_picker_title)).assertExists()
+    composeRule.onNodeWithText(trip.nombre).assertExists()
+    composeRule.runOnIdle { assertEquals(listOf(work.id), actions.removedEtiquetas) }
+  }
+
+  @Test
+  fun anUnavailableTagsCatalogOnlyAffectsTheTagsSection() {
+    val actions = RecordingActions()
+    composeRule.setContent {
+      TallybookTheme {
+        MovimientoForm(
+            state(
+                amountInput = "10",
+                categoriaId = category.id,
+                etiquetasLoad = EtiquetasLoad.UNAVAILABLE,
+            ),
+            actions,
+        )
+      }
+    }
+
+    composeRule
+        .onNodeWithText(localizedString(Res.string.tags_unavailable))
+        .performScrollTo()
+        .assertIsDisplayed()
+    composeRule.onNodeWithText(localizedString(Res.string.retry)).performScrollTo().performClick()
+    composeRule
+        .onNodeWithContentDescription(localizedString(Res.string.save_expense))
+        .assertIsEnabled()
+    composeRule.runOnIdle {
+      assertEquals(1, actions.etiquetaRetryCount)
+      assertEquals(0, actions.retryCount)
+    }
   }
 
   @Test
@@ -397,6 +480,8 @@ class MovimientoFormTest {
             icono = CategoryIcon.CIRCLE_DASHED,
             color = CategoryTint.NEUTRAL,
         )
+    val work = Etiqueta("work", "Empresa", Instant.parse("2026-01-01T00:00:00Z"))
+    val trip = Etiqueta("trip", "Viaje Chile", Instant.parse("2026-01-01T00:00:00Z"))
 
     fun state(
         tipo: TipoMovimiento = TipoMovimiento.GASTO,
@@ -407,6 +492,8 @@ class MovimientoFormTest {
         descripcion: String = "",
         submitAttempted: Boolean = false,
         error: MovimientoFormError? = null,
+        etiquetaIds: List<String> = emptyList(),
+        etiquetasLoad: EtiquetasLoad = EtiquetasLoad.READY,
     ) =
         AddMovimientoUiState(
             tipo = tipo,
@@ -421,6 +508,9 @@ class MovimientoFormTest {
             isSubmitting = false,
             submitAttempted = submitAttempted,
             error = error,
+            etiquetaIds = etiquetaIds,
+            etiquetas = listOf(work, trip),
+            etiquetasLoad = etiquetasLoad,
         )
   }
 
@@ -432,6 +522,8 @@ class MovimientoFormTest {
     var amount = ""
     var descripcion = ""
     var retryCount = 0
+    var etiquetaRetryCount = 0
+    val removedEtiquetas = mutableListOf<String>()
 
     override fun onTipoChanged(tipo: TipoMovimiento) {
       this.tipo = tipo
@@ -447,6 +539,18 @@ class MovimientoFormTest {
     override fun onCategoriaSelected(id: String) = Unit
 
     override fun onCategoriaCleared() = Unit
+
+    override fun onEtiquetasChanged(ids: List<String>) = Unit
+
+    override fun onEtiquetaRemoved(id: String) {
+      removedEtiquetas += id
+    }
+
+    override fun onCreateEtiqueta(nombre: String) = Unit
+
+    override fun onRetryEtiquetas() {
+      etiquetaRetryCount += 1
+    }
 
     override fun onTituloChanged(value: String) = Unit
 

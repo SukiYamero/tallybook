@@ -43,6 +43,7 @@ internal class ManageMovimientoViewModel(
   private var readGeneration = 0L
   private var readJob: Job? = null
   private var categoryJob: Job? = null
+  private var etiquetaJob: Job? = null
   private var pendingFeedback: PendingMovimientoFeedback? = null
 
   val uiState: StateFlow<ManageMovimientoUiState>
@@ -53,6 +54,7 @@ internal class ManageMovimientoViewModel(
     val session = MovimientoManagementSession(token = ++nextToken, movimientoId = id)
     uiState.update { it.copy(session = session) }
     loadCategories(session.token)
+    loadEtiquetas(session.token)
     loadMovimiento(session.token)
     return true
   }
@@ -89,6 +91,29 @@ internal class ManageMovimientoViewModel(
   override fun onCategoriaSelected(id: String) {
     val catalog = uiState.value.session?.categorias ?: return
     if (isSelectableCategoria(id, catalog)) updateDraft { copy(categoriaId = id) }
+  }
+
+  override fun onEtiquetasChanged(ids: List<String>) {
+    if (uiState.value.session?.etiquetasLoad != EtiquetasLoad.READY) return
+    updateDraft { copy(etiquetaIds = ids.toEtiquetaSelection()) }
+  }
+
+  override fun onEtiquetaRemoved(id: String) = updateDraft { copy(etiquetaIds = etiquetaIds - id) }
+
+  override fun onCreateEtiqueta(nombre: String) {
+    val session = uiState.value.session?.takeIf { it.canModifyDraft } ?: return
+    coroutineScope.launch {
+      val outcome = etiquetaRepository.create(nombre)
+      if (outcome is DataOutcome.Success && uiState.value.session?.token == session.token) {
+        updateDraft { copy(etiquetaIds = etiquetaIds.withCreated(outcome.data)) }
+      }
+    }
+  }
+
+  override fun onRetryEtiquetas() {
+    val session = uiState.value.session ?: return
+    if (session.canInteract && session.etiquetasLoad == EtiquetasLoad.UNAVAILABLE)
+        loadEtiquetas(session.token)
   }
 
   override fun onCancelEdit() {
@@ -394,6 +419,24 @@ internal class ManageMovimientoViewModel(
     }
   }
 
+  private fun loadEtiquetas(token: Long) {
+    etiquetaJob?.cancel()
+    updateSession(token) { copy(etiquetasLoad = EtiquetasLoad.LOADING) }
+    etiquetaJob = coroutineScope.launch {
+      etiquetaRepository.observeAll().collect { result ->
+        updateSession(token) {
+          if (phase == MovimientoManagementPhase.Closing) this
+          else
+              when (result) {
+                is DataOutcome.Success ->
+                    copy(etiquetas = result.data, etiquetasLoad = EtiquetasLoad.READY)
+                is DataOutcome.Failure -> copy(etiquetasLoad = EtiquetasLoad.UNAVAILABLE)
+              }
+        }
+      }
+    }
+  }
+
   private fun close(token: Long, feedback: PendingMovimientoFeedback? = null) {
     pendingFeedback = feedback
     readJob?.cancel()
@@ -429,6 +472,7 @@ internal class ManageMovimientoViewModel(
   private fun stopReads() {
     readJob?.cancel()
     categoryJob?.cancel()
+    etiquetaJob?.cancel()
     ++readGeneration
   }
 }

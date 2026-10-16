@@ -73,6 +73,14 @@ private object PreviewAddMovimientoActions : AddMovimientoActions {
 
   override fun onCategoriaCleared() = Unit
 
+  override fun onEtiquetasChanged(ids: List<String>) = Unit
+
+  override fun onEtiquetaRemoved(id: String) = Unit
+
+  override fun onCreateEtiqueta(nombre: String) = Unit
+
+  override fun onRetryEtiquetas() = Unit
+
   override fun onTituloChanged(value: String) = Unit
 
   override fun onDescripcionChanged(value: String) = Unit

@@ -24,7 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
-import com.kurobello.tallybook.core.ui.category.CategoryTagField
+import com.kurobello.tallybook.core.ui.category.CategorySingleField
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookButtonDefaults
 import com.kurobello.tallybook.core.ui.component.TallybookProgressIndicator
@@ -57,9 +57,10 @@ import tallybook.shared.generated.resources.movimiento_summary_title_quote
 private const val REVIEW_HEIGHT_FRACTION = 0.72f
 
 internal data class MovimientoSummaryCallbacks(
-    val onRemoveCategoria: (Categoria) -> Unit,
-    val onAddCategoria: () -> Unit,
+    val onDeselectCategoria: () -> Unit,
+    val onChooseCategoria: () -> Unit,
     val onSuggestion: (Categoria) -> Unit,
+    val etiquetas: MovimientoEtiquetasCallbacks,
     val onDescripcionChange: (String) -> Unit,
     val onEdit: () -> Unit,
     val onSave: () -> Unit,
@@ -120,15 +121,7 @@ internal fun MovimientoSummaryStep(
           modifier = Modifier.centerFocusedInputIn(scrollState, viewport),
           enabled = !summary.isSubmitting,
       )
-      CategoryTagField(
-          categorias = summary.categorias,
-          onRemove = callbacks.onRemoveCategoria,
-          onAdd = callbacks.onAddCategoria,
-          pending = summary.categoriasArePending,
-          suggestions = summary.suggestions,
-          onSuggestion = callbacks.onSuggestion,
-          enabled = !summary.isSubmitting,
-      )
+      SummarySelection(summary, callbacks)
       messageContent()
       // The sheet does not move with the keyboard, so the body needs its height as scroll room.
       Spacer(Modifier.height(TallybookTheme.spacing.space32 + imeBottom))
@@ -139,6 +132,26 @@ internal fun MovimientoSummaryStep(
         onSave = callbacks.onSave,
     )
   }
+}
+
+@Composable
+private fun SummarySelection(summary: MovimientoSummaryUi, callbacks: MovimientoSummaryCallbacks) {
+  CategorySingleField(
+      categoria = summary.categoria,
+      deselectable = true,
+      onChoose = callbacks.onChooseCategoria,
+      onSuggestion = callbacks.onSuggestion,
+      onDeselect = callbacks.onDeselectCategoria,
+      pending = summary.categoriaIsPending,
+      suggestions = summary.suggestions,
+      enabled = !summary.isSubmitting,
+  )
+  MovimientoEtiquetasField(
+      etiquetas = summary.etiquetas,
+      load = summary.etiquetasLoad,
+      callbacks = callbacks.etiquetas,
+      enabled = !summary.isSubmitting,
+  )
 }
 
 @Composable

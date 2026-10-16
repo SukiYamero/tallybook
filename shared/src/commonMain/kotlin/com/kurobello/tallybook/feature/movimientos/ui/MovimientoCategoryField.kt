@@ -9,7 +9,7 @@ import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
-import com.kurobello.tallybook.core.ui.category.CategoryTagField
+import com.kurobello.tallybook.core.ui.category.CategorySingleField
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormState
@@ -18,18 +18,25 @@ import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_required
 import tallybook.shared.generated.resources.unknown_category
 
+/**
+ * The form's single category. A null [onDeselect] keeps the category fixed, as the editor of an
+ * existing movimiento requires; creation passes one to fall back to the pending Otros.
+ */
 @Composable
-internal fun MovimientoCategoriesField(
+@Suppress("LongParameterList")
+internal fun MovimientoCategoryField(
     uiState: MovimientoFormState,
-    onOpen: () -> Unit,
+    onChoose: () -> Unit,
+    onSuggestion: (Categoria) -> Unit,
+    onDeselect: (() -> Unit)?,
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
-  val ids = listOfNotNull(uiState.displayedCategoriaId)
+  val id = uiState.displayedCategoriaId
   val unknownName = stringResource(Res.string.unknown_category)
-  val categorias =
-      remember(ids, uiState.categorias, unknownName) {
-        ids.map { id ->
+  val categoria =
+      remember(id, uiState.categorias, unknownName) {
+        id?.let {
           uiState.categorias.firstOrNull { it.id == id } ?: unknownCategoria(id, unknownName)
         }
       }
@@ -37,12 +44,14 @@ internal fun MovimientoCategoriesField(
       modifier = modifier,
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
   ) {
-    CategoryTagField(
-        categorias = categorias,
-        // The field never offers removal on its only tag; switching goes through the picker.
-        onRemove = {},
-        onAdd = onOpen,
-        pending = CATEGORIA_OTROS_ID in ids,
+    CategorySingleField(
+        categoria = categoria,
+        deselectable = onDeselect != null,
+        onChoose = onChoose,
+        onSuggestion = onSuggestion,
+        onDeselect = onDeselect ?: {},
+        pending = id == CATEGORIA_OTROS_ID,
+        suggestions = uiState.suggestions,
         enabled = enabled,
     )
     if (uiState.isCategoriaMissing) {

@@ -14,6 +14,7 @@ import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Moneda
@@ -60,6 +61,7 @@ internal class AddMovimientoViewModel(
 
   private val coroutineScope = scope ?: viewModelScope
   private val retryLoadRequests = MutableStateFlow(0)
+  private val retryEtiquetaRequests = MutableStateFlow(0)
   private val preferredLocale = MutableStateFlow<AppLocale?>(null)
   private val initialDraft =
       MovimientoDraft(
@@ -122,6 +124,7 @@ internal class AddMovimientoViewModel(
           }
     }
     coroutineScope.launch { observeSuggestionIndex() }
+    coroutineScope.launch { observeEtiquetas() }
   }
 
   override fun onTipoChanged(tipo: TipoMovimiento) {
@@ -142,6 +145,29 @@ internal class AddMovimientoViewModel(
 
   override fun onCategoriaCleared() {
     updateFields { categoriaId?.let { withCategoria(null, removed = it) } ?: this }
+  }
+
+  override fun onEtiquetasChanged(ids: List<String>) {
+    updateFields {
+      if (etiquetasLoad == EtiquetasLoad.READY) withEtiquetas(ids.toEtiquetaSelection()) else this
+    }
+  }
+
+  override fun onEtiquetaRemoved(id: String) {
+    updateFields { if (id in etiquetaIds) withEtiquetas(etiquetaIds - id) else this }
+  }
+
+  override fun onCreateEtiqueta(nombre: String) {
+    coroutineScope.launch {
+      val outcome = repositories.etiquetas.create(nombre)
+      if (outcome is DataOutcome.Success) {
+        updateFields { withEtiquetas(etiquetaIds.withCreated(outcome.data)) }
+      }
+    }
+  }
+
+  override fun onRetryEtiquetas() {
+    retryEtiquetaRequests.update { it + 1 }
   }
 
   override fun onTituloChanged(value: String) {
@@ -191,6 +217,8 @@ internal class AddMovimientoViewModel(
               step = AddMovimientoStep.FORM,
               categoriaId = manualCategoriaId,
               categoriasEdited = categoriasEdited,
+              etiquetaIds = manualEtiquetaIds,
+              etiquetasEdited = etiquetasEdited,
           )
     }
   }
@@ -304,17 +332,22 @@ internal class AddMovimientoViewModel(
           suggestionQuery = null,
           dismissedSuggestionIds = emptySet(),
           categoriasEdited = false,
+          etiquetasEdited = false,
           amountNeedsReview = false,
           today = initialDraft.fecha,
           formOpenedFromSummary = false,
       )
 
-  // A category picked in the sentence dialog does not guard it: only a typed sentence is worth
-  // confirming.
+  // A category or tags picked in the sentence dialog do not guard it: only a typed sentence is
+  // worth confirming.
   private fun AddMovimientoUiState.withDirtyState(): AddMovimientoUiState {
     val draft = toDraft()
     val comparable =
-        if (step == AddMovimientoStep.PHRASE) draft.copy(categoriaId = initialDraft.categoriaId)
+        if (step == AddMovimientoStep.PHRASE)
+            draft.copy(
+                categoriaId = initialDraft.categoriaId,
+                etiquetaIds = initialDraft.etiquetaIds,
+            )
         else draft
     return copy(hasUnsavedChanges = phrase.isNotBlank() || comparable != initialDraft)
   }
@@ -346,7 +379,10 @@ internal class AddMovimientoViewModel(
     )
   }
 
-  // A category picked by hand is the only draft value a blank sentence leaves behind.
+  private fun AddMovimientoUiState.withEtiquetas(ids: List<String>): AddMovimientoUiState =
+      copy(etiquetaIds = ids, etiquetasEdited = true)
+
+  // A category and tags picked by hand are the only draft values a blank sentence leaves behind.
   private fun AddMovimientoUiState.withoutInterpretation(phrase: String): AddMovimientoUiState =
       copy(
           phrase = phrase,
@@ -359,10 +395,14 @@ internal class AddMovimientoViewModel(
           descripcion = initialDraft.descripcion,
           amountNeedsReview = false,
           categoriaId = manualCategoriaId,
+          etiquetaIds = manualEtiquetaIds,
       )
 
   private val AddMovimientoUiState.manualCategoriaId: String?
     get() = if (categoriasEdited) categoriaId else initialDraft.categoriaId
+
+  private val AddMovimientoUiState.manualEtiquetaIds: List<String>
+    get() = if (etiquetasEdited) etiquetaIds else initialDraft.etiquetaIds
 
   private fun AddMovimientoUiState.withDetection(
       interpretation: PhraseInterpretation,
@@ -378,6 +418,7 @@ internal class AddMovimientoViewModel(
           suggestionQuery = interpretation.query,
           categoriaId =
               if (categoriasEdited) categoriaId else interpretation.preselectedCategoriaId,
+          etiquetaIds = if (etiquetasEdited) etiquetaIds else interpretation.etiquetaIds,
       )
 
   // Dismissals belong to the subject they were made for; a different sentence starts clean.
@@ -405,7 +446,13 @@ internal class AddMovimientoViewModel(
       PhraseContext(moneda, entryEngine.resolveLocale(preferredLocale.value), today)
 
   private fun interpret(state: AddMovimientoUiState, text: String, today: LocalDate) =
-      entryEngine.interpret(text, state.phraseContext(today), suggestionIndex, state.candidates())
+      entryEngine.interpret(
+          text,
+          state.phraseContext(today),
+          suggestionIndex,
+          state.candidates(),
+          state.etiquetas,
+      )
 
   private fun refreshPreview(debounce: Boolean) {
     previewJob?.cancel()
@@ -420,6 +467,7 @@ internal class AddMovimientoViewModel(
               snapshot.phraseContext(snapshot.today),
               suggestionIndex,
               snapshot.candidates(),
+              snapshot.etiquetas,
           )
       uiState.update { current ->
         if (current.step == AddMovimientoStep.PHRASE && current.phrase.trim() == text) {
@@ -430,6 +478,26 @@ internal class AddMovimientoViewModel(
         }
       }
     }
+  }
+
+  private suspend fun observeEtiquetas() {
+    retryEtiquetaRequests
+        .loadStates { repositories.etiquetas.observeAll() }
+        .collect { state ->
+          uiState.update { current ->
+            when (state) {
+              LoadState.Loading -> current.copy(etiquetasLoad = EtiquetasLoad.LOADING)
+              is LoadState.Value ->
+                  when (val outcome = state.outcome) {
+                    is DataOutcome.Success ->
+                        current.copy(etiquetas = outcome.data, etiquetasLoad = EtiquetasLoad.READY)
+                    is DataOutcome.Failure ->
+                        current.copy(etiquetasLoad = EtiquetasLoad.UNAVAILABLE)
+                  }
+            }
+          }
+          refreshPreview(debounce = false)
+        }
   }
 
   private suspend fun observeSuggestionIndex() {
@@ -497,7 +565,7 @@ private fun AddMovimientoUiState.toMovimientoOrNull(
           titulo = titulo.normalizeOptionalText(),
           descripcion = descripcion.normalizeOptionalText(),
           createdAt = createdAt,
-          etiquetaIds = etiquetaIds,
+          etiquetaIds = selectedEtiquetas.map(Etiqueta::id),
       )
 }
 
@@ -507,24 +575,22 @@ private sealed interface LoadState<out T> {
   data class Value<T>(val outcome: DataOutcome<T>) : LoadState<T>
 }
 
-@OptIn(ExperimentalCoroutinesApi::class)
 private fun AddMovimientoRepositories.preferenceLoadStates(
     retryRequests: Flow<Int>
-): Flow<LoadState<AppPreferencesState>> = retryRequests.flatMapLatest {
-  preferences.preferences
-      .map<DataOutcome<AppPreferencesState>, LoadState<AppPreferencesState>> { LoadState.Value(it) }
-      .onStart { emit(LoadState.Loading) }
-}
+): Flow<LoadState<AppPreferencesState>> = retryRequests.loadStates { preferences.preferences }
 
-@OptIn(ExperimentalCoroutinesApi::class)
 private fun AddMovimientoRepositories.categoriaLoadStates(
     retryRequests: Flow<Int>
-): Flow<LoadState<List<Categoria>>> = retryRequests.flatMapLatest {
-  categorias
-      .observeAll()
-      .map<DataOutcome<List<Categoria>>, LoadState<List<Categoria>>> { LoadState.Value(it) }
-      .onStart { emit(LoadState.Loading) }
-}
+): Flow<LoadState<List<Categoria>>> = retryRequests.loadStates { categorias.observeAll() }
+
+/** Restarts [source] on every retry request, reporting Loading until it emits. */
+@OptIn(ExperimentalCoroutinesApi::class)
+private fun <T> Flow<Int>.loadStates(source: () -> Flow<DataOutcome<T>>): Flow<LoadState<T>> =
+    flatMapLatest {
+      source()
+          .map<DataOutcome<T>, LoadState<T>> { LoadState.Value(it) }
+          .onStart { emit(LoadState.Loading) }
+    }
 
 private data class LoadSnapshot(
     val moneda: Moneda?,

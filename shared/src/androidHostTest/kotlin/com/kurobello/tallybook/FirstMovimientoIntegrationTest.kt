@@ -14,6 +14,7 @@ import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
+import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.AppPreferences
@@ -291,7 +292,7 @@ class FirstMovimientoIntegrationTest {
           second.onPhraseContinue()
 
           assertEquals("cat_supermercado", second.uiState.value.categoriaId)
-          assertEquals(Money(1_500_000, Moneda.COP), second.uiState.value.summary?.monto)
+          assertEquals(Money(1_500_000, Moneda.COP), second.uiState.value.summary.monto)
 
           second.onDiscardChanges()
           second.onPhraseChanged("Gasté 5.000 en algo raro")
@@ -326,6 +327,7 @@ class FirstMovimientoIntegrationTest {
               MovimientoEntryEngine(
                   parser = MovimientoPhraseParser(),
                   suggester = CategorySuggester(CategoryKeywordDictionary.builtIn),
+                  etiquetaMatcher = EtiquetaMatcher(),
                   localeProvider = FixedDeviceLocaleProvider("es-CO"),
                   computationDispatcher = dispatcher,
               ),

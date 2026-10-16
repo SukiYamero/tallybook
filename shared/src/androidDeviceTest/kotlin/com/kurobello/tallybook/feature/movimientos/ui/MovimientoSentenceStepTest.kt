@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -22,6 +23,7 @@ import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.movimiento.signedMovimientoAmountText
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import com.kurobello.tallybook.feature.movimientos.viewmodel.EtiquetasLoad
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSentenceUi
 import kotlin.test.assertEquals
 import kotlinx.coroutines.runBlocking
@@ -33,7 +35,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.category_tag_add_description
+import tallybook.shared.generated.resources.category_picker_single_title
 import tallybook.shared.generated.resources.category_tag_remove
 import tallybook.shared.generated.resources.expense
 import tallybook.shared.generated.resources.movimiento_amount_not_detected
@@ -45,6 +47,10 @@ import tallybook.shared.generated.resources.movimiento_relative_today
 import tallybook.shared.generated.resources.movimiento_relative_yesterday
 import tallybook.shared.generated.resources.movimiento_voice_coming_soon
 import tallybook.shared.generated.resources.movimiento_voice_title
+import tallybook.shared.generated.resources.retry
+import tallybook.shared.generated.resources.tag_add_description
+import tallybook.shared.generated.resources.tag_remove
+import tallybook.shared.generated.resources.tags_unavailable
 
 private val SHORT_DIALOG_HEIGHT = 300.dp
 
@@ -55,9 +61,12 @@ class MovimientoSentenceStepTest {
   private val samples = testEntrySamples()
   private var continues = 0
   private var manualFills = 0
-  private val removed = mutableListOf<String>()
+  private var deselects = 0
   private val suggested = mutableListOf<String>()
-  private var addRequests = 0
+  private var chooseRequests = 0
+  private val removedTags = mutableListOf<String>()
+  private var tagAddRequests = 0
+  private var tagRetries = 0
 
   @Before
   fun setUp() {
@@ -96,7 +105,10 @@ class MovimientoSentenceStepTest {
 
     composeRule.onNodeWithText(string(Res.string.movimiento_detected_label)).assertDoesNotExist()
     composeRule
-        .onNodeWithContentDescription(string(Res.string.category_tag_add_description))
+        .onNodeWithContentDescription(string(Res.string.category_picker_single_title))
+        .assertDoesNotExist()
+    composeRule
+        .onNodeWithContentDescription(string(Res.string.tag_add_description))
         .assertDoesNotExist()
   }
 
@@ -110,7 +122,10 @@ class MovimientoSentenceStepTest {
     composeRule.onNodeWithText(string(Res.string.expense)).assertIsDisplayed()
     composeRule.onNodeWithText(string(Res.string.movimiento_relative_today)).assertIsDisplayed()
     composeRule
-        .onNodeWithContentDescription(string(Res.string.category_tag_add_description))
+        .onNodeWithContentDescription(string(Res.string.category_picker_single_title))
+        .assertIsDisplayed()
+    composeRule
+        .onNodeWithContentDescription(string(Res.string.tag_add_description))
         .assertIsDisplayed()
   }
 
@@ -145,36 +160,61 @@ class MovimientoSentenceStepTest {
   }
 
   @Test
-  fun completeSentenceShowsTheDateTheTagAndItsSuggestions() {
+  fun aDimmedSuggestionStaysClickableAndSwitchesTheCategory() {
     show(samples.completeSentence)
 
     composeRule.onNodeWithText(string(Res.string.movimiento_relative_yesterday)).assertIsDisplayed()
     composeRule.onNodeWithText(samples.cinema.nombre).assertIsDisplayed()
-    composeRule.onNodeWithText(samples.food.nombre).performClick()
+    composeRule
+        .onNodeWithText(samples.food.nombre)
+        .assertHasClickAction()
+        .assertIsEnabled()
+        .performClick()
     composeRule.runOnIdle { assertEquals(listOf(samples.food.id), suggested) }
   }
 
   @Test
-  fun theOnlyTagOffersNoRemovalAndAddOpensThePicker() {
+  fun theSelectedCategoryCanBeDeselectedAndChooseOpensThePicker() {
     show(samples.completeSentence)
 
     composeRule
         .onNodeWithContentDescription(string(Res.string.category_tag_remove, samples.cinema.nombre))
-        .assertDoesNotExist()
-    composeRule
-        .onNodeWithContentDescription(string(Res.string.category_tag_add_description))
         .performClick()
-    composeRule.runOnIdle { assertEquals(1, addRequests) }
+    composeRule
+        .onNodeWithContentDescription(string(Res.string.category_picker_single_title))
+        .performClick()
+    composeRule.runOnIdle {
+      assertEquals(1, deselects)
+      assertEquals(1, chooseRequests)
+    }
   }
 
   @Test
-  fun aSecondTagCanBeRemoved() {
-    show(samples.completeSentence.copy(categorias = listOf(samples.cinema, samples.food)))
+  fun detectedTagsCanBeRemovedAndAddOpensTheTagPicker() {
+    show(samples.completeSentence)
 
+    composeRule.onNodeWithText(samples.business.nombre).assertIsDisplayed()
     composeRule
-        .onNodeWithContentDescription(string(Res.string.category_tag_remove, samples.food.nombre))
+        .onNodeWithContentDescription(string(Res.string.tag_remove, samples.business.nombre))
         .performClick()
-    composeRule.runOnIdle { assertEquals(listOf(samples.food.id), removed) }
+    composeRule.onNodeWithContentDescription(string(Res.string.tag_add_description)).performClick()
+    composeRule.runOnIdle {
+      assertEquals(listOf(samples.business.id), removedTags)
+      assertEquals(1, tagAddRequests)
+    }
+  }
+
+  @Test
+  fun anUnavailableTagsCatalogOffersRetryInTheTagsSectionOnly() {
+    show(samples.completeSentence.copy(etiquetasLoad = EtiquetasLoad.UNAVAILABLE))
+
+    composeRule.onNodeWithText(string(Res.string.tags_unavailable)).assertIsDisplayed()
+    composeRule.onNodeWithText(string(Res.string.retry)).performClick()
+    composeRule
+        .onNodeWithContentDescription(string(Res.string.tag_add_description))
+        .assertDoesNotExist()
+    composeRule.onNodeWithText(string(Res.string.movimiento_phrase_continue)).assertIsEnabled()
+    composeRule.runOnIdle { assertEquals(1, tagRetries) }
   }
 
   @Test
@@ -218,9 +258,15 @@ class MovimientoSentenceStepTest {
                     onTextChange = { text = it },
                     onContinue = { continues++ },
                     onFillManually = { manualFills++ },
-                    onRemoveCategoria = { removed += it.id },
-                    onAddCategoria = { addRequests++ },
+                    onDeselectCategoria = { deselects++ },
+                    onChooseCategoria = { chooseRequests++ },
                     onSuggestion = { suggested += it.id },
+                    etiquetas =
+                        MovimientoEtiquetasCallbacks(
+                            onAdd = { tagAddRequests++ },
+                            onRemove = { removedTags += it.id },
+                            onRetry = { tagRetries++ },
+                        ),
                 ),
             modifier = Modifier.heightIn(max = maxHeight),
         )

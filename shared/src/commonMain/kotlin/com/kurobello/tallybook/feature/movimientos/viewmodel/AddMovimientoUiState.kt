@@ -2,6 +2,7 @@ package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlinx.datetime.LocalDate
@@ -29,15 +30,18 @@ internal data class AddMovimientoUiState(
     override val submitAttempted: Boolean,
     override val error: MovimientoFormError?,
     override val etiquetaIds: List<String> = emptyList(),
+    override val etiquetas: List<Etiqueta> = emptyList(),
+    override val etiquetasLoad: EtiquetasLoad = EtiquetasLoad.LOADING,
     val hasUnsavedChanges: Boolean = false,
     val step: AddMovimientoStep = AddMovimientoStep.PHRASE,
     val phrase: String = "",
     val preview: PhrasePreviewUi? = null,
     val suggestionQuery: SuggestionQuery? = null,
-    val suggestions: List<Categoria> = emptyList(),
+    override val suggestions: List<Categoria> = emptyList(),
     val dismissedSuggestionIds: Set<String> = emptySet(),
-    // While false the sentence owns the category; the first manual change takes it over.
+    // While false the sentence owns the category or the tags; the first manual change takes over.
     val categoriasEdited: Boolean = false,
+    val etiquetasEdited: Boolean = false,
     val amountNeedsReview: Boolean = false,
     val today: LocalDate = fecha,
     val formOpenedFromSummary: Boolean = false,
@@ -57,10 +61,10 @@ internal data class AddMovimientoUiState(
   override val displayedCategoriaId: String?
     get() = effectiveCategoriaId
 
-  val effectiveCategorias: List<Categoria>
-    get() = listOfNotNull(categorias.firstOrNull { it.id == effectiveCategoriaId })
+  val effectiveCategoria: Categoria?
+    get() = categorias.firstOrNull { it.id == effectiveCategoriaId }
 
-  val categoriasArePending: Boolean
+  val categoriaIsPending: Boolean
     get() = effectiveCategoriaId == CATEGORIA_OTROS_ID
 
   val canSubmit: Boolean
@@ -96,9 +100,11 @@ internal data class AddMovimientoUiState(
             detected = detected,
             today = today,
             moneda = moneda,
-            categorias = effectiveCategorias,
-            categoriasArePending = categoriasArePending,
+            categoria = effectiveCategoria,
+            categoriaIsPending = categoriaIsPending,
             suggestions = suggestions,
+            etiquetas = selectedEtiquetas,
+            etiquetasLoad = etiquetasLoad,
             isEnabled = !isSubmitting,
             actionsEnabled = !isLoading && loadError == null,
         )
@@ -114,9 +120,11 @@ internal data class AddMovimientoUiState(
             amountNeedsReview = amountNeedsReview,
             titulo = titulo,
             descripcion = descripcion,
-            categorias = effectiveCategorias,
-            categoriasArePending = categoriasArePending,
+            categoria = effectiveCategoria,
+            categoriaIsPending = categoriaIsPending,
             suggestions = suggestions,
+            etiquetas = selectedEtiquetas,
+            etiquetasLoad = etiquetasLoad,
             isSubmitting = isSubmitting,
         )
 

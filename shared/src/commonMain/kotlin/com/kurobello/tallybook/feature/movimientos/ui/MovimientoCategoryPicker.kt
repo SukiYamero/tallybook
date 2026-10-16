@@ -17,8 +17,11 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreOwner
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.ui.tag.EtiquetaPickerSheet
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryEffect
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
+import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormState
 import kotlinx.coroutines.flow.Flow
 import org.koin.compose.viewmodel.koinViewModel
@@ -26,19 +29,18 @@ import org.koin.compose.viewmodel.koinViewModel
 // Otros is the fallback for "no category", so choosing it explicitly would defeat the pending flag.
 internal val PICKER_EXCLUDED_CATEGORY_IDS: Set<String> = setOf(CATEGORIA_OTROS_ID)
 
-internal data class MovimientoCategoryPickerState(
+/** Whether a picker sheet a movimiento surface hosts is open; opening drops the keyboard. */
+internal data class MovimientoPickerState(
     val isVisible: Boolean,
     val onOpen: () -> Unit,
     val onDismiss: () -> Unit,
 )
 
 @Composable
-internal fun rememberMovimientoCategoryPicker(
-    interactionEnabled: Boolean
-): MovimientoCategoryPickerState {
+internal fun rememberMovimientoPicker(interactionEnabled: Boolean): MovimientoPickerState {
   var isVisible by rememberSaveable { mutableStateOf(false) }
   val focusManager = LocalFocusManager.current
-  return MovimientoCategoryPickerState(
+  return MovimientoPickerState(
       isVisible = isVisible,
       onOpen = {
         if (interactionEnabled) {
@@ -67,7 +69,7 @@ internal fun MovimientoCategoryPickerSheet(
     visible: Boolean,
     uiState: MovimientoFormState,
     onSelect: (String) -> Unit,
-    picker: MovimientoCategoryPickerState,
+    picker: MovimientoPickerState,
     creation: CategoryPickerCreation?,
 ) {
   val selectedId = uiState.categoriaId.realCategoriaId()
@@ -80,6 +82,28 @@ internal fun MovimientoCategoryPickerSheet(
       onBack = picker.onDismiss,
       excludedIds = pickerExcludedCategoryIds(uiState.categorias, selectedId),
       creation = creation,
+  )
+}
+
+/**
+ * The tag picker every movimiento surface opens. It only sees tags the catalog still has, so a
+ * deleted tag never comes back through a toggle.
+ */
+@Composable
+internal fun MovimientoEtiquetaPickerSheet(
+    visible: Boolean,
+    uiState: MovimientoFormState,
+    actions: MovimientoFormActions,
+    picker: MovimientoPickerState,
+) {
+  EtiquetaPickerSheet(
+      visible = visible,
+      etiquetas = uiState.etiquetas,
+      selectedIds = uiState.selectedEtiquetas.map(Etiqueta::id),
+      onSelectionChange = actions::onEtiquetasChanged,
+      onCreate = actions::onCreateEtiqueta,
+      onDismiss = picker.onDismiss,
+      onBack = picker.onDismiss,
   )
 }
 

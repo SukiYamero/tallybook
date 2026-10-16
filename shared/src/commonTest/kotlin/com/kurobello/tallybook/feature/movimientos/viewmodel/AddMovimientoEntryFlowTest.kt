@@ -46,8 +46,8 @@ class AddMovimientoEntryFlowTest {
     assertEquals(LocalDate(2026, 9, 14), summary.fecha)
     assertEquals("Gasté 20.000 en cine ayer", summary.titulo)
     assertEquals("", summary.descripcion)
-    assertEquals(listOf("cat_cine"), summary.categorias.map { it.id })
-    assertFalse(summary.categoriasArePending)
+    assertEquals("cat_cine", summary.categoria?.id)
+    assertFalse(summary.categoriaIsPending)
     assertFalse(summary.amountNeedsReview)
   }
 
@@ -108,8 +108,8 @@ class AddMovimientoEntryFlowTest {
     val state = viewModel.uiState.value
     val summary = state.summary
     assertNull(state.categoriaId)
-    assertTrue(summary.categoriasArePending)
-    assertEquals(listOf(CATEGORIA_OTROS_ID), summary.categorias.map { it.id })
+    assertTrue(summary.categoriaIsPending)
+    assertEquals(CATEGORIA_OTROS_ID, summary.categoria?.id)
     assertEquals(
         setOf("cat_supermercado", "cat_transporte"),
         summary.suggestions.map { it.id }.toSet(),
@@ -144,7 +144,7 @@ class AddMovimientoEntryFlowTest {
     viewModel.onCategoriaCleared()
 
     assertNull(viewModel.uiState.value.categoriaId)
-    assertTrue(viewModel.uiState.value.categoriasArePending)
+    assertTrue(viewModel.uiState.value.categoriaIsPending)
     assertEquals(setOf("cat_cine"), viewModel.uiState.value.dismissedSuggestionIds)
     assertTrue(viewModel.uiState.value.suggestions.none { it.id == "cat_cine" })
 
@@ -239,7 +239,7 @@ class AddMovimientoEntryFlowTest {
     val viewModel = entryViewModel(movimientos = movimientos)
     viewModel.onPhraseChanged("Gasté 5.000 en algo raro")
     viewModel.onPhraseContinue()
-    assertTrue(viewModel.uiState.value.summary.categoriasArePending)
+    assertTrue(viewModel.uiState.value.summary.categoriaIsPending)
 
     viewModel.onSubmit()
     runCurrent()

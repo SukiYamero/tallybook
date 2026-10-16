@@ -18,6 +18,7 @@ import com.kurobello.tallybook.core.ui.category.CategoryAvatar
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoRow
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.ui.MovimientoEntrySamples
+import com.kurobello.tallybook.feature.movimientos.ui.MovimientoEtiquetasCallbacks
 import com.kurobello.tallybook.feature.movimientos.ui.MovimientoSentenceCallbacks
 import com.kurobello.tallybook.feature.movimientos.ui.MovimientoSentenceStep
 import com.kurobello.tallybook.feature.movimientos.ui.MovimientoSummaryCallbacks
@@ -111,9 +112,10 @@ private fun CatalogSentenceStep(sentence: MovimientoSentenceUi) {
               onTextChange = { current = it },
               onContinue = {},
               onFillManually = {},
-              onRemoveCategoria = {},
-              onAddCategoria = {},
+              onDeselectCategoria = {},
+              onChooseCategoria = {},
               onSuggestion = {},
+              etiquetas = MovimientoEtiquetasCallbacks(onAdd = {}, onRemove = {}, onRetry = {}),
           ),
   )
 }
@@ -158,13 +160,19 @@ private fun CatalogSummarySample(label: String, summary: MovimientoSummaryUi) {
         summary = current,
         callbacks =
             MovimientoSummaryCallbacks(
-                onRemoveCategoria = {
-                  current = current.withCategorias(listOf(CATEGORIA_OTROS_ID), catalog)
+                onDeselectCategoria = {
+                  current = current.withCategoria(CATEGORIA_OTROS_ID, catalog)
                 },
-                onAddCategoria = {},
-                onSuggestion = { chosen ->
-                  current = current.withCategorias(listOf(chosen.id), catalog)
-                },
+                onChooseCategoria = {},
+                onSuggestion = { chosen -> current = current.withCategoria(chosen.id, catalog) },
+                etiquetas =
+                    MovimientoEtiquetasCallbacks(
+                        onAdd = {},
+                        onRemove = { removed ->
+                          current = current.copy(etiquetas = current.etiquetas - removed)
+                        },
+                        onRetry = {},
+                    ),
                 onDescripcionChange = { current = current.copy(descripcion = it) },
                 onEdit = {},
                 onSave = {},
@@ -174,14 +182,12 @@ private fun CatalogSummarySample(label: String, summary: MovimientoSummaryUi) {
   }
 }
 
-private fun MovimientoSummaryUi.withCategorias(
-    ids: List<String>,
+private fun MovimientoSummaryUi.withCategoria(
+    id: String,
     catalog: List<Categoria>,
-): MovimientoSummaryUi {
-  val selected = ids.mapNotNull { id -> catalog.firstOrNull { it.id == id } }
-  return copy(
-      categorias = selected,
-      categoriasArePending = selected.singleOrNull()?.id == CATEGORIA_OTROS_ID,
-      suggestions = catalog.filter { it.id != CATEGORIA_OTROS_ID && it.id !in ids },
-  )
-}
+): MovimientoSummaryUi =
+    copy(
+        categoria = catalog.firstOrNull { it.id == id },
+        categoriaIsPending = id == CATEGORIA_OTROS_ID,
+        suggestions = catalog.filter { it.id != CATEGORIA_OTROS_ID && it.id != id },
+    )
