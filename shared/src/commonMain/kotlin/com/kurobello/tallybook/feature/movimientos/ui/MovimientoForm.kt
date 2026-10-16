@@ -14,6 +14,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
+import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
+import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.ui.component.TallybookProgressIndicator
 import com.kurobello.tallybook.core.ui.component.TallybookSheetForm
 import com.kurobello.tallybook.core.ui.component.TallybookText
@@ -31,11 +33,13 @@ import tallybook.shared.generated.resources.amount_not_positive
 import tallybook.shared.generated.resources.amount_overflow
 import tallybook.shared.generated.resources.amount_required
 import tallybook.shared.generated.resources.amount_too_many_decimals
+import tallybook.shared.generated.resources.description_optional
 import tallybook.shared.generated.resources.loading
 import tallybook.shared.generated.resources.movimiento_categories_error
 import tallybook.shared.generated.resources.movimiento_preferences_error
 import tallybook.shared.generated.resources.movimiento_save_error
 import tallybook.shared.generated.resources.retry
+import tallybook.shared.generated.resources.title_optional
 
 internal data class MovimientoFormPresentation(
     val title: String,
@@ -91,11 +95,22 @@ internal fun MovimientoForm(
         onOpenCategory = categoryPicker.onOpen,
         fieldFocus = fieldFocus.copy(amountModifier = Modifier.revealWhenFocused()),
     )
-    MovimientoDescriptionField(
-        uiState,
-        actions::onDescripcionChanged,
-        Modifier.revealWhenFocused(),
-        interactionEnabled && !uiState.isSubmitting,
+    val textEnabled = interactionEnabled && !uiState.isSubmitting
+    MovimientoOptionalTextField(
+        value = uiState.titulo,
+        label = stringResource(Res.string.title_optional),
+        maxLength = MOVIMIENTO_TITLE_MAX_LENGTH,
+        onValueChange = actions::onTituloChanged,
+        modifier = Modifier.revealWhenFocused(),
+        enabled = textEnabled,
+    )
+    MovimientoOptionalTextField(
+        value = uiState.descripcion,
+        label = stringResource(Res.string.description_optional),
+        maxLength = MOVIMIENTO_DESCRIPTION_MAX_LENGTH,
+        onValueChange = actions::onDescripcionChanged,
+        modifier = Modifier.revealWhenFocused(),
+        enabled = textEnabled,
     )
     supportingContent?.invoke()
     MovimientoFormErrorMessage(

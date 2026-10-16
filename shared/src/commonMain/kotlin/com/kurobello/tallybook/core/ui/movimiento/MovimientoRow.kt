@@ -34,8 +34,8 @@ fun MovimientoRow(
       categoria = categoria,
       text =
           MovimientoRowText(
-              categoryLabel,
-              movimiento.descripcion?.takeIf(String::isNotBlank),
+              movimiento.rowTitle(categoryLabel),
+              movimiento.rowDescription,
               categoryLabel,
           ),
       modifier = modifier,
@@ -77,6 +77,7 @@ private fun previewMovimiento(tipo: TipoMovimiento) =
         monto = Money(128_500, Moneda.COP),
         fecha = LocalDate(2026, 9, 15),
         categoriaIds = listOf(previewMovimientoCategoria().id),
+        titulo = null,
         descripcion = null,
         createdAt = Instant.fromEpochMilliseconds(1_757_894_400_000),
     )

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -49,6 +50,8 @@ import com.kurobello.tallybook.core.ui.component.TallybookSearchField
 import com.kurobello.tallybook.core.ui.component.TallybookSkeletonLine
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
+import com.kurobello.tallybook.core.ui.date.CivilDayHeader
+import com.kurobello.tallybook.core.ui.date.fullCivilDate
 import com.kurobello.tallybook.core.ui.layout.TallybookScreenFrame
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoRowSkeleton
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -184,13 +187,19 @@ internal fun SearchScreen(
           SearchEmpty(content, uiState.rawQuery, actions, onAdd, onOpenFilters)
         }
       }
-      items(
-          content?.rows.orEmpty(),
-          key = { "search-row:${it.id}" },
-          contentType = { "movement" },
-      ) {
-        SearchResultRow(it, onClick = onOpenMovimiento?.let { open -> { open(it.movimiento.id) } })
-      }
+      searchResultGroups(content?.groups.orEmpty(), onOpenMovimiento)
+    }
+  }
+}
+
+private fun LazyListScope.searchResultGroups(
+    groups: List<SearchDayGroupUi>,
+    onOpenMovimiento: ((String) -> Unit)?,
+) {
+  groups.forEach { group ->
+    item(key = group.key, contentType = "date") { CivilDayHeader(group.fecha) }
+    items(group.rows, key = { "search-row:${it.id}" }, contentType = { "movement" }) {
+      SearchResultRow(it, onClick = onOpenMovimiento?.let { open -> { open(it.movimiento.id) } })
     }
   }
 }
@@ -291,8 +300,8 @@ private fun SearchAppliedChips(state: SearchUiState, actions: SearchActions) {
               if (state.filters.preset == SearchDatePreset.Custom)
                   stringResource(
                       Res.string.search_date_range_value,
-                      searchFullDate(state.filters.customStart),
-                      searchFullDate(state.filters.customEnd),
+                      fullCivilDate(state.filters.customStart),
+                      fullCivilDate(state.filters.customEnd),
                   )
               else searchPresetLabel(state.filters.preset)
           TallybookFilterTag(

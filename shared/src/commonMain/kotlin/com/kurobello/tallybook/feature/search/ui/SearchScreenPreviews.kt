@@ -101,6 +101,7 @@ private fun searchPreviewState(): SearchUiState {
           date,
           listOf("food"),
           "Morning coffee",
+          "Oat latte to go",
           Instant.parse("2026-10-06T12:00:00Z"),
       )
   val years = SearchCurrencyYears(Moneda.USD, listOf(2026))

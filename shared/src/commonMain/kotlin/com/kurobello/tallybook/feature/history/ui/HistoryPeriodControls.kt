@@ -11,16 +11,14 @@ import com.kurobello.tallybook.core.ui.component.TallybookSegmentOption
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentedControl
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentedControlStyle
 import com.kurobello.tallybook.core.ui.component.TallybookYearMenu
+import com.kurobello.tallybook.core.ui.date.fullCivilDate
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryActions
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryScope
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryUiState
-import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.stringArrayResource
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.calendar_date_content_description
-import tallybook.shared.generated.resources.date_chip_value
 import tallybook.shared.generated.resources.date_picker_months
 import tallybook.shared.generated.resources.date_picker_months_short
 import tallybook.shared.generated.resources.date_picker_weekday_names
@@ -130,28 +128,11 @@ private fun historyScopeLabel(scope: HistoryScope): String =
     )
 
 @Composable
-internal fun historyDateSubtitle(date: LocalDate): String =
-    stringResource(
-        Res.string.date_chip_value,
-        date.day,
-        stringArrayResource(Res.array.date_picker_months)[date.month.ordinal],
-    )
-
-@Composable
-internal fun historyFullDate(date: LocalDate): String =
-    stringResource(
-        Res.string.calendar_date_content_description,
-        date.day,
-        stringArrayResource(Res.array.date_picker_months)[date.month.ordinal],
-        date.year,
-    )
-
-@Composable
 private fun historyPeriodDescription(period: MovimientoDateRange): String =
-    if (period.start == period.end) historyFullDate(period.start)
+    if (period.start == period.end) fullCivilDate(period.start)
     else
         stringResource(
             Res.string.history_range_description,
-            historyFullDate(period.start),
-            historyFullDate(period.end),
+            fullCivilDate(period.start),
+            fullCivilDate(period.end),
         )

@@ -351,6 +351,7 @@ class HistoryRepositoryTest {
             "COP",
             date,
             null,
+            null,
             "2026-09-15T12:00:00Z",
         )
         database.movimientoQueries.insertMovimientoCategoria("invalid", "food", 0)
@@ -382,6 +383,7 @@ class HistoryRepositoryTest {
                 "COP",
                 date,
                 null,
+                null,
                 "2026-09-15T12:00:00Z",
             )
             database.movimientoQueries.insertMovimientoCategoria("invalid", "food", 0)
@@ -409,6 +411,7 @@ class HistoryRepositoryTest {
               -1,
               "COP",
               "2026-99-99",
+              null,
               null,
               "not-an-instant",
           )
@@ -444,6 +447,7 @@ class HistoryRepositoryTest {
               0,
               "COP",
               "2026-09-15",
+              null,
               null,
               "2026-09-15T12:00:00Z",
           )
@@ -482,6 +486,7 @@ class HistoryRepositoryTest {
                   "COP",
                   "2026-09-$day",
                   "Lunch",
+                  null,
                   "2026-09-15T12:00:00Z",
               )
               database.movimientoQueries.insertMovimientoCategoria(
@@ -498,6 +503,7 @@ class HistoryRepositoryTest {
                   "USD",
                   "2026-09-15",
                   null,
+                  null,
                   "2026-09-15T12:00:00Z",
               )
               database.movimientoQueries.insertMovimientoCategoria("usd-$index", "food", 0)
@@ -507,6 +513,7 @@ class HistoryRepositoryTest {
                   100,
                   "COP",
                   if (index % 2 == 0) "2026-08-31" else "2026-10-01",
+                  null,
                   null,
                   "2026-09-15T12:00:00Z",
               )
@@ -655,7 +662,8 @@ class HistoryRepositoryTest {
           monto = Money(100, moneda),
           fecha = LocalDate.parse(fecha),
           categoriaIds = listOf("food"),
-          descripcion = "Lunch",
+          titulo = "Lunch",
+          descripcion = null,
           createdAt = Instant.parse(createdAt),
       )
 

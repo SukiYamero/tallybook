@@ -28,6 +28,7 @@ internal val searchTestMovement =
         searchTestToday,
         listOf("food"),
         "Morning coffee",
+        null,
         Instant.parse("2026-10-06T12:00:00Z"),
     )
 internal val searchTestResults =

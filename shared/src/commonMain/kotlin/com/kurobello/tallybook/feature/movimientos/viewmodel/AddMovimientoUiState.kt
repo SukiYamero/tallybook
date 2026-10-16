@@ -22,6 +22,7 @@ internal data class AddMovimientoUiState(
     override val moneda: Moneda,
     override val categorias: List<Categoria>,
     override val categoriaIds: List<String>,
+    override val titulo: String,
     override val descripcion: String,
     override val isLoading: Boolean,
     override val isSubmitting: Boolean,
@@ -113,6 +114,7 @@ internal data class AddMovimientoUiState(
             fecha = fecha,
             monto = (amountResult as? AmountInputResult.Valid)?.money,
             amountNeedsReview = amountNeedsReview,
+            titulo = titulo,
             descripcion = descripcion,
             categorias = effectiveCategorias,
             categoriasArePending = categoriasArePending,
@@ -128,6 +130,7 @@ internal data class MovimientoDraft(
     val amountInput: String,
     val fecha: LocalDate,
     val categoriaIds: List<String>,
+    val titulo: String,
     val descripcion: String,
 )
 
@@ -137,5 +140,6 @@ internal fun AddMovimientoUiState.toDraft(): MovimientoDraft =
         amountInput = amountInput,
         fecha = fecha,
         categoriaIds = categoriaIds,
+        titulo = titulo,
         descripcion = descripcion,
     )

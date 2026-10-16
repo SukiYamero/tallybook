@@ -4,7 +4,7 @@ import kotlin.time.Instant
 
 data class CategoryHistoryRow(
     val movimientoId: String,
-    val descripcion: String,
+    val titulo: String,
     val categoriaId: String,
     val createdAt: Instant,
 )

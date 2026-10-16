@@ -139,6 +139,7 @@ class HomePresentationTest {
             LocalDate(2026, 10, 6),
             listOf("salary"),
             null,
+            null,
             Instant.parse("2026-10-06T12:00:00Z"),
         )
     val ready =

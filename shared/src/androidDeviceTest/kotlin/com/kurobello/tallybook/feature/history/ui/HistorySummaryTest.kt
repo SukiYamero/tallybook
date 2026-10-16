@@ -47,8 +47,8 @@ class HistorySummaryTest {
 
     composeRule.onNodeWithText(periodLabel).assertExists()
     composeRule.onNodeWithText(homeLabel).assertDoesNotExist()
-    composeRule.onNodeWithText("$\u00A0+10.000,00").assertExists()
-    composeRule.onNodeWithText("$\u00A0-2.500,00").assertExists()
+    composeRule.onNodeWithText("+$\u00A010.000,00").assertExists()
+    composeRule.onNodeWithText("-$\u00A02.500,00").assertExists()
     composeRule.onNodeWithText("$\u00A07.500,00").assertExists()
     composeRule.onNodeWithText("$\u00A010.000,00").assertDoesNotExist()
     composeRule.onNodeWithText("$\u00A02.500,00").assertDoesNotExist()
@@ -56,8 +56,8 @@ class HistorySummaryTest {
     composeRule.runOnIdle {
       period.value = RetainedLoadState.Failed(HistoryFailure.CalculationOverflow, content)
     }
-    composeRule.onNodeWithText("$\u00A0+10.000,00").assertExists()
-    composeRule.onNodeWithText("$\u00A0-2.500,00").assertExists()
+    composeRule.onNodeWithText("+$\u00A010.000,00").assertExists()
+    composeRule.onNodeWithText("-$\u00A02.500,00").assertExists()
     composeRule.onNodeWithText("$\u00A07.500,00").assertExists()
     composeRule.onNodeWithText(error).assertExists()
     composeRule.onNodeWithText(stale).assertExists()
@@ -69,8 +69,8 @@ class HistorySummaryTest {
     }
     composeRule.onNodeWithText(periodLabel).assertExists()
     composeRule.onNodeWithText(error).assertExists()
-    composeRule.onNodeWithText("$\u00A0+10.000,00").assertDoesNotExist()
-    composeRule.onNodeWithText("$\u00A0-2.500,00").assertDoesNotExist()
+    composeRule.onNodeWithText("+$\u00A010.000,00").assertDoesNotExist()
+    composeRule.onNodeWithText("-$\u00A02.500,00").assertDoesNotExist()
     composeRule.onNodeWithText("$\u00A07.500,00").assertDoesNotExist()
     composeRule.onNodeWithText(Money(0, Moneda.COP).format()).assertDoesNotExist()
     composeRule.onNodeWithText(stale).assertDoesNotExist()

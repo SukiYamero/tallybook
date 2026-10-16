@@ -309,5 +309,6 @@ private fun row(id: String, date: LocalDate, moneda: Moneda) =
         date,
         listOf("missing"),
         null,
+        null,
         Instant.parse("2026-10-05T00:00:00Z"),
     )

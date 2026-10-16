@@ -180,6 +180,7 @@ internal class NavigationMovimientos : MovimientoRepository {
                 LocalDate(2026, 10, 5),
                 listOf("food"),
                 "Item $index",
+                null,
                 Instant.parse("2026-10-05T12:00:00Z"),
             )
           }
@@ -298,6 +299,7 @@ internal class NavigationMovimientos : MovimientoRepository {
             monto = changes.monto,
             fecha = changes.fecha,
             categoriaIds = changes.categoriaIds,
+            titulo = changes.titulo,
             descripcion = changes.descripcion,
         )
     val values = rows.value.map { if (it.id == id) updated else it }

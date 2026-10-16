@@ -172,6 +172,7 @@ internal fun HomePopulatedPreview() {
               ),
           fecha = kotlinx.datetime.LocalDate(2026, 9, 15),
           categoriaIds = listOf(categoria.id),
+          titulo = null,
           descripcion = null,
           createdAt = kotlin.time.Instant.parse("2026-09-15T00:00:00Z"),
       )

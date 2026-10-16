@@ -6,9 +6,11 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -22,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
+import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.ui.category.CategoryTagField
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookButtonDefaults
@@ -29,6 +32,9 @@ import com.kurobello.tallybook.core.ui.component.TallybookProgressIndicator
 import com.kurobello.tallybook.core.ui.component.TallybookSectionHeading
 import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
 import com.kurobello.tallybook.core.ui.component.TallybookText
+import com.kurobello.tallybook.core.ui.component.captureScrollableInputViewport
+import com.kurobello.tallybook.core.ui.component.centerFocusedInputIn
+import com.kurobello.tallybook.core.ui.component.rememberScrollableInputViewport
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoBadgeSize
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoTypeBadge
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -38,14 +44,15 @@ import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.amount
 import tallybook.shared.generated.resources.date
+import tallybook.shared.generated.resources.description_optional
 import tallybook.shared.generated.resources.loading
 import tallybook.shared.generated.resources.movement_type
-import tallybook.shared.generated.resources.movimiento_summary_description_label
-import tallybook.shared.generated.resources.movimiento_summary_description_quote
 import tallybook.shared.generated.resources.movimiento_summary_edit
 import tallybook.shared.generated.resources.movimiento_summary_save
 import tallybook.shared.generated.resources.movimiento_summary_subtitle
 import tallybook.shared.generated.resources.movimiento_summary_title
+import tallybook.shared.generated.resources.movimiento_summary_title_label
+import tallybook.shared.generated.resources.movimiento_summary_title_quote
 
 // The review sheet opens tall instead of hugging its content, so it reads as a confirmation step.
 private const val REVIEW_HEIGHT_FRACTION = 0.72f
@@ -54,6 +61,7 @@ internal data class MovimientoSummaryCallbacks(
     val onRemoveCategoria: (Categoria) -> Unit,
     val onAddCategoria: () -> Unit,
     val onSuggestion: (Categoria) -> Unit,
+    val onDescripcionChange: (String) -> Unit,
     val onEdit: () -> Unit,
     val onSave: () -> Unit,
 )
@@ -77,31 +85,42 @@ internal fun MovimientoSummaryStep(
     modifier: Modifier = Modifier,
     messageContent: @Composable () -> Unit = {},
 ) {
+  val scrollState = rememberScrollState()
+  val viewport = rememberScrollableInputViewport()
+  val density = LocalDensity.current
+  val imeBottom = with(density) { WindowInsets.ime.getBottom(density).toDp() }
   Column(
       modifier = modifier.fillMaxWidth(),
       verticalArrangement = Arrangement.SpaceBetween,
   ) {
     Column(
         modifier =
-            Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()),
+            Modifier.fillMaxWidth()
+                .weight(1f, fill = false)
+                .verticalScroll(scrollState)
+                .captureScrollableInputViewport(viewport),
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space24),
     ) {
       SummaryHeader()
       SummaryTipoAndDate(summary, today)
       SummarySection(stringResource(Res.string.amount)) { SummaryAmount(summary) }
-      if (summary.descripcion.isNotBlank()) {
-        SummarySection(stringResource(Res.string.movimiento_summary_description_label)) {
+      if (summary.titulo.isNotBlank()) {
+        SummarySection(stringResource(Res.string.movimiento_summary_title_label)) {
           TallybookText(
-              text =
-                  stringResource(
-                      Res.string.movimiento_summary_description_quote,
-                      summary.descripcion,
-                  ),
+              text = stringResource(Res.string.movimiento_summary_title_quote, summary.titulo),
               color = TallybookTheme.colors.foreground.secondary,
               style = TallybookTheme.typography.body,
           )
         }
       }
+      MovimientoOptionalTextField(
+          value = summary.descripcion,
+          label = stringResource(Res.string.description_optional),
+          maxLength = MOVIMIENTO_DESCRIPTION_MAX_LENGTH,
+          onValueChange = callbacks.onDescripcionChange,
+          modifier = Modifier.centerFocusedInputIn(scrollState, viewport),
+          enabled = !summary.isSubmitting,
+      )
       CategoryTagField(
           categorias = summary.categorias,
           max = MAX_CATEGORIAS_POR_MOVIMIENTO,
@@ -113,7 +132,8 @@ internal fun MovimientoSummaryStep(
           enabled = !summary.isSubmitting,
       )
       messageContent()
-      Spacer(Modifier.height(TallybookTheme.spacing.space32))
+      // The sheet does not move with the keyboard, so the body needs its height as scroll room.
+      Spacer(Modifier.height(TallybookTheme.spacing.space32 + imeBottom))
     }
     SummaryFooter(
         isSubmitting = summary.isSubmitting,

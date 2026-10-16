@@ -1,10 +1,13 @@
 package com.kurobello.tallybook.feature.search.ui
 
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -25,9 +28,12 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.getPluralString
 import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.getStringArray
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.calendar_date_content_description
+import tallybook.shared.generated.resources.date_picker_months
 import tallybook.shared.generated.resources.retry
 import tallybook.shared.generated.resources.search_adjust_filters
 import tallybook.shared.generated.resources.search_clear_query
@@ -44,6 +50,15 @@ import tallybook.shared.generated.resources.search_remove_filter
 import tallybook.shared.generated.resources.search_searching
 import tallybook.shared.generated.resources.search_updating
 import tallybook.shared.generated.resources.unknown_category
+
+private fun fullDate(date: LocalDate): String = runBlocking {
+  getString(
+      Res.string.calendar_date_content_description,
+      date.day,
+      getStringArray(Res.array.date_picker_months)[date.month.ordinal],
+      date.year,
+  )
+}
 
 class SearchScreenTest {
   @get:Rule val composeRule = createComposeRule()
@@ -65,6 +80,28 @@ class SearchScreenTest {
     }
     composeRule.onNodeWithText("Morning coffee").performScrollTo().performClick()
     composeRule.runOnIdle { assertEquals(searchTestMovement.id, opened) }
+  }
+
+  @Test
+  fun resultsAreGroupedUnderOneHeadingPerDayWithoutDatesInTheRows() {
+    val older =
+        searchTestMovement.copy(id = "older", titulo = "Cine", fecha = LocalDate(2026, 9, 30))
+    val results =
+        searchTestResults.copy(
+            rows =
+                searchTestResults.rows +
+                    SearchResultRowUi(older, searchTestCategory, "Cine", "Food")
+        )
+    val state = searchTestState.copy(results = RetainedLoadState.Ready(results))
+    composeRule.setContent {
+      TallybookTheme { SearchScreen(state, SearchTestActions(), {}, {}, 0.dp) }
+    }
+
+    for (date in listOf(searchTestToday, older.fecha)) {
+      val header = fullDate(date)
+      composeRule.onNode(hasText(header) and isHeading()).performScrollTo().assertIsDisplayed()
+      composeRule.onAllNodes(hasText(header, substring = true)).assertCountEquals(1)
+    }
   }
 
   @Test

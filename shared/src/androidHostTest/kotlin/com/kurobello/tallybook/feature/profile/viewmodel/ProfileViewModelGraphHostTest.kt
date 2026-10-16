@@ -135,6 +135,7 @@ private val LABELS =
         "Type",
         "Category",
         "Parent",
+        "Title",
         "Description",
         "Amount",
         "Currency",

@@ -8,6 +8,7 @@ import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.model.CategoriaSelection
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
+import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
@@ -74,6 +75,10 @@ internal class ManageMovimientoViewModel(
   override fun onAmountChanged(value: String) = updateDraft { copy(amountInput = value) }
 
   override fun onFechaChanged(value: LocalDate) = updateDraft { copy(fecha = value) }
+
+  override fun onTituloChanged(value: String) = updateDraft {
+    copy(titulo = value.take(MOVIMIENTO_TITLE_MAX_LENGTH))
+  }
 
   override fun onDescripcionChanged(value: String) = updateDraft {
     copy(descripcion = value.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH))
@@ -439,12 +444,26 @@ internal fun Money.toAmountInput(): String {
 }
 
 internal fun Movimiento.toDraft() =
-    MovimientoDraft(tipo, monto.toAmountInput(), fecha, categoriaIds, descripcion.orEmpty())
+    MovimientoDraft(
+        tipo,
+        monto.toAmountInput(),
+        fecha,
+        categoriaIds,
+        titulo.orEmpty(),
+        descripcion.orEmpty(),
+    )
 
 private fun Movimiento.toChanges() =
-    MovimientoChanges(tipo, monto, fecha, categoriaIds, descripcion.normalizeDescriptionOrNull())
+    MovimientoChanges(
+        tipo,
+        monto,
+        fecha,
+        categoriaIds,
+        titulo.normalizeOptionalTextOrNull(),
+        descripcion.normalizeOptionalTextOrNull(),
+    )
 
-private fun String?.normalizeDescriptionOrNull(): String? = this?.normalizeDescription()
+private fun String?.normalizeOptionalTextOrNull(): String? = this?.normalizeOptionalText()
 
 private fun EditMovimientoUiState.toChangesOrNull(): MovimientoChanges? {
   val amount = (parseAmountInput(amountInput, moneda) as? AmountInputResult.Valid)?.money
@@ -458,7 +477,8 @@ private fun EditMovimientoUiState.toChangesOrNull(): MovimientoChanges? {
             it,
             fecha,
             categoriaIds,
-            descripcion.normalizeDescription(),
+            titulo.normalizeOptionalText(),
+            descripcion.normalizeOptionalText(),
         )
       }
 }

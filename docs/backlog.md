@@ -8,7 +8,7 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
   iPhone runtime validation remains pending and was explicitly deferred for History. Confirm the
   authorized connected iPhone and developer services, then run the app from Xcode using the existing
   shared `TEAM_ID`. Validate Home/History/Search, filters, creation (sentence dialog keyboard
-  placement, review sheet, multi-select picker), lifecycle and safe areas,
+  placement, review sheet with its description field, multi-select picker), lifecycle and safe areas,
   including management scene teardown, edit/delete/Undo and VoiceOver action-window usability, and
   Profile: theme with status-bar style, the Categories screen (chips, category sheets, keyboard
   scrolling in the category form) and quick-create from the picker, in-app language switch (`AppleLanguages`; the subtree reset returns to Home and drops retained
@@ -27,7 +27,8 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
   Android evidence and precise limits live in [Search](features/search.md#verification-boundaries).
   Smart entry fixtures (sentence dialog, review, tag field, multi-select picker), management sheet
   fixtures and custom categories fixtures (category form, Categories screen and sheets, quick-create,
-  Profile → Categories navigation, sheet-form keyboard scrolling) also compile but remain
+  Profile → Categories navigation, sheet-form keyboard scrolling) and movimiento title fixtures
+  (summary description field, Search day headings, signed amounts) also compile but remain
   unexecuted after a bounded stalled-runner retry; execute them after runner repair, preserving their Back, reread-height and IME assertions.
 
 - **Management accessibility on Android** — Verify TalkBack announcements/focus and enlarged-text

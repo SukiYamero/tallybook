@@ -164,12 +164,12 @@ class HistoryProjectionTest {
   }
 
   @Test
-  fun nonblankDescriptionIsTheTitleAndNullOrBlankDescriptionsUseCategory() {
+  fun nonblankTituloIsTheTitleAndNullOrBlankTitulosUseCategory() {
     val rows =
         listOf(
-            movimiento("described", descripcion = "  Lunch with Ana  "),
-            movimiento("absent", descripcion = null),
-            movimiento("blank", descripcion = " \n\t "),
+            movimiento("described", titulo = "  Lunch with Ana  "),
+            movimiento("absent", titulo = null),
+            movimiento("blank", titulo = " \n\t "),
         )
     val content =
         assertIs<HistoryProjection.Content>(
@@ -184,10 +184,10 @@ class HistoryProjectionTest {
   }
 
   @Test
-  fun missingCategoryUsesTheSuppliedLocalizedLabelAndKeepsDescriptionAndMoney() {
+  fun missingCategoryUsesTheSuppliedLocalizedLabelAndKeepsTituloAndMoney() {
     val rows =
         listOf(
-            movimiento("described", descripcion = "Bus", categoriaId = "missing"),
+            movimiento("described", titulo = "Bus", categoriaId = "missing"),
             movimiento("fallback", categoriaId = "missing"),
         )
     val content =
@@ -358,7 +358,7 @@ class HistoryProjectionTest {
       amount: Long = 100,
       moneda: Moneda = Moneda.COP,
       fecha: LocalDate = LocalDate(2026, 9, 15),
-      descripcion: String? = null,
+      titulo: String? = null,
       categoriaId: String = "food",
   ): Movimiento =
       Movimiento(
@@ -367,7 +367,8 @@ class HistoryProjectionTest {
           Money(amount, moneda),
           fecha,
           listOf(categoriaId),
-          descripcion,
+          titulo,
+          null,
           Instant.parse("2026-09-15T12:00:00Z"),
       )
 

@@ -8,7 +8,8 @@ CREATE TABLE movimiento (
     monto_moneda TEXT NOT NULL,
     fecha TEXT NOT NULL,
     descripcion TEXT,
-    created_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00Z'
+    created_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00Z',
+    titulo TEXT
 );
 
 -- The stable recent order matches this index so SQLite can scan it without a temporary sort; date-range
@@ -44,8 +45,8 @@ SELECT
 FROM movimiento;
 
 insertMovimiento:
-INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, descripcion, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?);
+INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, titulo, descripcion, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 
 insertMovimientoCategoria:
 INSERT INTO movimiento_categoria(movimiento_id, categoria_id, posicion)
@@ -79,11 +80,11 @@ LIMIT ?;
 -- The limit counts movimientos, not (movimiento, categoria) rows, so a multi-category movimiento
 -- cannot push older history out of the window.
 selectCategoryHistory:
-SELECT recent.id AS movimiento_id, recent.descripcion, movimiento_categoria.categoria_id, recent.created_at
+SELECT recent.id AS movimiento_id, recent.titulo, movimiento_categoria.categoria_id, recent.created_at
 FROM (
-    SELECT id, descripcion, created_at
+    SELECT id, titulo, created_at
     FROM movimiento
-    WHERE descripcion IS NOT NULL AND trim(descripcion) <> ''
+    WHERE titulo IS NOT NULL AND trim(titulo) <> ''
     ORDER BY created_at DESC, id DESC
     LIMIT ?
 ) AS recent
@@ -135,7 +136,7 @@ ORDER BY fecha DESC, created_at DESC, id DESC;
 
 updateMovimiento:
 UPDATE movimiento
-SET tipo = ?, monto_minor = ?, fecha = ?, descripcion = ?
+SET tipo = ?, monto_minor = ?, fecha = ?, titulo = ?, descripcion = ?
 WHERE id = ?;
 
 deleteMovimientoCategorias:

@@ -4,6 +4,7 @@ import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -43,7 +44,8 @@ class AddMovimientoEntryFlowTest {
     assertEquals(TipoMovimiento.GASTO, summary.tipo)
     assertEquals(Money(2_000_000, Moneda.COP), summary.monto)
     assertEquals(LocalDate(2026, 9, 14), summary.fecha)
-    assertEquals("Gasté 20.000 en cine ayer", summary.descripcion)
+    assertEquals("Gasté 20.000 en cine ayer", summary.titulo)
+    assertEquals("", summary.descripcion)
     assertEquals(listOf("cat_cine"), summary.categorias.map { it.id })
     assertFalse(summary.categoriasArePending)
     assertFalse(summary.amountNeedsReview)
@@ -230,7 +232,7 @@ class AddMovimientoEntryFlowTest {
     val state = viewModel.uiState.value
     assertEquals(TipoMovimiento.GASTO, state.tipo)
     assertEquals(listOf("cat_cine"), state.categoriaIds)
-    assertEquals("Gasté 20.000 en cine", state.descripcion)
+    assertEquals("Gasté 20.000 en cine", state.titulo)
   }
 
   @Test
@@ -246,8 +248,52 @@ class AddMovimientoEntryFlowTest {
 
     val saved = movimientos.inserted.single()
     assertEquals(listOf(CATEGORIA_OTROS_ID), saved.categoriaIds)
-    assertEquals("Gasté 5.000 en algo raro", saved.descripcion)
+    assertEquals("Gasté 5.000 en algo raro", saved.titulo)
+    assertNull(saved.descripcion)
     assertEquals(AddMovimientoEffect.Saved, viewModel.effects.first())
+  }
+
+  @Test
+  fun aSummaryDescriptionSurvivesBackAndContinueAndIsSavedNextToTheTitle() = runTest {
+    val movimientos = AddFakeMovimientos()
+    val viewModel = entryViewModel(movimientos = movimientos)
+    viewModel.onPhraseChanged("Gasté 20.000 en cine")
+    viewModel.onPhraseContinue()
+    viewModel.onDescripcionChanged("  Estreno   con Ana ")
+    viewModel.onStepBack()
+    viewModel.onPhraseChanged("Gasté 25.000 en cine")
+    viewModel.onPhraseContinue()
+
+    viewModel.onSubmit()
+    runCurrent()
+
+    val saved = movimientos.inserted.single()
+    assertEquals("Gasté 25.000 en cine", saved.titulo)
+    assertEquals("Estreno con Ana", saved.descripcion)
+  }
+
+  @Test
+  fun theFormTitleIsCappedAtTheTitleLimit() = runTest {
+    val viewModel = entryViewModel()
+    viewModel.onFillManually()
+
+    viewModel.onTituloChanged("a".repeat(MOVIMIENTO_TITLE_MAX_LENGTH + 5))
+
+    assertEquals(MOVIMIENTO_TITLE_MAX_LENGTH, viewModel.uiState.value.titulo.length)
+  }
+
+  @Test
+  fun aManualEntryWithoutATitleSavesNoTitle() = runTest {
+    val movimientos = AddFakeMovimientos()
+    val viewModel = entryViewModel(movimientos = movimientos)
+    viewModel.onFillManually()
+    viewModel.onAmountChanged("5000")
+    viewModel.onTituloChanged("   ")
+
+    viewModel.onSubmit()
+    runCurrent()
+
+    assertNull(movimientos.inserted.single().titulo)
   }
 
   @Test
@@ -320,6 +366,7 @@ class AddMovimientoEntryFlowTest {
     assertEquals(AddMovimientoStep.FORM, state.step)
     assertEquals(TipoMovimiento.GASTO, state.tipo)
     assertEquals("", state.amountInput)
+    assertEquals("", state.titulo)
     assertEquals("", state.descripcion)
     assertEquals("", state.phrase)
     assertEquals(state.today, state.fecha)
@@ -600,6 +647,7 @@ class AddMovimientoEntryFlowTest {
     assertFalse(state.hasUnsavedChanges)
     assertEquals(TipoMovimiento.GASTO, state.tipo)
     assertEquals("", state.amountInput)
+    assertEquals("", state.titulo)
     assertEquals("", state.descripcion)
     assertEquals(state.today, state.fecha)
     assertFalse(state.amountNeedsReview)

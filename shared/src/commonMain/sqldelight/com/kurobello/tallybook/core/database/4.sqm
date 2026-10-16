@@ -1,0 +1,40 @@
+-- The table is rebuilt instead of altered so the migrated DDL matches a fresh install exactly. The view
+-- goes first: renaming a table rewrites the views that reference it.
+DROP VIEW movimiento_con_categorias;
+
+ALTER TABLE movimiento RENAME TO movimiento_legacy;
+
+CREATE TABLE movimiento (
+    id TEXT NOT NULL PRIMARY KEY,
+    tipo TEXT NOT NULL,
+    monto_minor INTEGER NOT NULL,
+    monto_moneda TEXT NOT NULL,
+    fecha TEXT NOT NULL,
+    descripcion TEXT,
+    created_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00Z',
+    titulo TEXT
+);
+
+-- Until this version descripcion held the sentence typed in the entry phrase, which is now the title.
+INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, titulo, descripcion, created_at)
+SELECT id, tipo, monto_minor, monto_moneda, fecha, descripcion, NULL, created_at
+FROM movimiento_legacy;
+
+DROP INDEX movimiento_recent;
+
+DROP TABLE movimiento_legacy;
+
+CREATE INDEX movimiento_recent ON movimiento(fecha DESC, created_at DESC, id DESC);
+
+CREATE VIEW movimiento_con_categorias AS
+SELECT
+    movimiento.*,
+    COALESCE(
+        (
+            SELECT group_concat(movimiento_categoria.posicion || char(31) || movimiento_categoria.categoria_id, char(30))
+            FROM movimiento_categoria
+            WHERE movimiento_categoria.movimiento_id = movimiento.id
+        ),
+        ''
+    ) AS categoria_ids
+FROM movimiento;

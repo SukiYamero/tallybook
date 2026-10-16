@@ -19,6 +19,10 @@ internal data class SearchResultsUi(
 ) {
   val count: Int
     get() = rows.size
+
+  // Rows arrive newest day first, so grouping keeps that order and only days with results exist.
+  val groups: List<SearchDayGroupUi> =
+      rows.groupBy { it.movimiento.fecha }.map { (fecha, rows) -> SearchDayGroupUi(fecha, rows) }
 }
 
 internal data class SearchResultRowUi(

@@ -54,8 +54,8 @@ class BalanceCardLayoutTest {
 
     listOf(1f, 1.3f).forEach { scale ->
       composeRule.runOnIdle { fontScale.value = scale }
-      val income = composeRule.onNodeWithText("$\u00A0+50.000,00")
-      val expense = composeRule.onNodeWithText("$\u00A0-2.000.000,00")
+      val income = composeRule.onNodeWithText("+$\u00A050.000,00")
+      val expense = composeRule.onNodeWithText("-$\u00A02.000.000,00")
       val incomeTitle = composeRule.onNodeWithText(incomeLabel)
       val expenseTitle = composeRule.onNodeWithText(expenseLabel)
       assertFullLine(income)

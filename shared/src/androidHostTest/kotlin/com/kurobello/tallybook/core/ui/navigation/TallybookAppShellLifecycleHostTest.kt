@@ -595,6 +595,7 @@ private class ShellMovimientos : MovimientoRepository {
             monto = changes.monto,
             fecha = changes.fecha,
             categoriaIds = changes.categoriaIds,
+            titulo = changes.titulo,
             descripcion = changes.descripcion,
         )
     val values = rows.value.map { if (it.id == id) updated else it }
@@ -673,6 +674,7 @@ private fun shellRow(id: String, date: LocalDate) =
         Money(125, Moneda.USD),
         date,
         listOf("missing"),
+        null,
         null,
         Instant.parse("2026-10-05T12:00:00Z"),
     )

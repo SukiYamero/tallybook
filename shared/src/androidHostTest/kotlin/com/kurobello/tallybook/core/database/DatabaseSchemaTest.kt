@@ -45,8 +45,53 @@ class DatabaseSchemaTest {
         assertEquals("USD", row.monto_moneda)
         assertEquals("2026-09-03", row.fecha)
         assertEquals(listOf("cat_comida"), row.toDomain().categoriaIds)
-        assertEquals("almuerzo", row.descripcion)
+        assertEquals("almuerzo", row.titulo)
+        assertNull(row.descripcion)
         assertEquals(Instant.parse("2026-09-03T00:00:00Z").toString(), row.created_at)
+      }
+
+  @Test
+  fun `migration from schema 4 moves the typed sentence into titulo and keeps every row`() =
+      withSnapshot(version = 4) { driver ->
+        listOf(
+                "('phrase', 'GASTO', 2500, 'COP', '2026-10-02', 'Gasté 25 en cine', " +
+                    "'2026-10-02T12:00:00Z')",
+                "('manual', 'INGRESO', 900, 'COP', '2026-10-01', NULL, '2026-10-01T12:00:00Z')",
+            )
+            .forEach { values ->
+              driver.execute(
+                  null,
+                  "INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, descripcion, " +
+                      "created_at) VALUES $values",
+                  0,
+              )
+            }
+        listOf(
+                "('phrase', 'cat_cine', 0)",
+                "('phrase', 'cat_otros', 1)",
+                "('manual', 'cat_sueldo', 0)",
+            )
+            .forEach { values ->
+              driver.execute(
+                  null,
+                  "INSERT INTO movimiento_categoria(movimiento_id, categoria_id, posicion) " +
+                      "VALUES $values",
+                  0,
+              )
+            }
+
+        TallybookDatabase.Schema.migrate(driver, oldVersion = 4, newVersion = 5)
+
+        val migrated =
+            TallybookDatabase(driver).movimientoQueries.selectAllMovimientos().executeAsList().map {
+              it.toDomain()
+            }
+        assertEquals(listOf("phrase", "manual"), migrated.map { it.id })
+        assertEquals(listOf("Gasté 25 en cine", null), migrated.map { it.titulo })
+        assertEquals(listOf(null, null), migrated.map { it.descripcion })
+        assertEquals(listOf("cat_cine", "cat_otros"), migrated.first().categoriaIds)
+        assertEquals(Instant.parse("2026-10-02T12:00:00Z"), migrated.first().createdAt)
+        assertEquals(freshSchema(), driver.schemaObjects())
       }
 
   @Test
@@ -86,7 +131,11 @@ class DatabaseSchemaTest {
               )
             }
 
-        TallybookDatabase.Schema.migrate(driver, oldVersion = 3, newVersion = 4)
+        TallybookDatabase.Schema.migrate(
+            driver,
+            oldVersion = 3,
+            newVersion = TallybookDatabase.Schema.version,
+        )
 
         val database = TallybookDatabase(driver)
         assertEquals(
@@ -147,7 +196,11 @@ class DatabaseSchemaTest {
           )
         }
 
-        TallybookDatabase.Schema.migrate(driver, oldVersion = 2, newVersion = 3)
+        TallybookDatabase.Schema.migrate(
+            driver,
+            oldVersion = 2,
+            newVersion = TallybookDatabase.Schema.version,
+        )
 
         val queries = TallybookDatabase(driver).movimientoQueries
         val migrated = queries.selectAllMovimientos().executeAsList().map { it.toDomain() }
@@ -166,7 +219,8 @@ class DatabaseSchemaTest {
             migrated.associate { it.id to it.categoriaIds },
         )
         val cafe = migrated.single { it.id == "cafe" }
-        assertEquals("almuerzo", cafe.descripcion)
+        assertEquals("almuerzo", cafe.titulo)
+        assertNull(cafe.descripcion)
         assertEquals(1_000L, cafe.monto.minorUnits)
         assertEquals(Instant.parse("2026-09-03T12:00:00Z"), cafe.createdAt)
         assertEquals(
@@ -184,6 +238,7 @@ class DatabaseSchemaTest {
                 "fecha",
                 "descripcion",
                 "created_at",
+                "titulo",
             ),
             driver.queryStrings("SELECT name FROM pragma_table_info('movimiento')"),
         )
@@ -274,6 +329,7 @@ class DatabaseSchemaTest {
       moneda: String = "COP",
       fecha: String = "2026-09-03",
       categoriaIds: List<String> = listOf("cat1"),
+      titulo: String? = null,
       descripcion: String? = null,
       createdAt: String = "2026-09-03T12:00:00Z",
   ) {
@@ -284,6 +340,7 @@ class DatabaseSchemaTest {
           monto_minor = montoMinor,
           monto_moneda = moneda,
           fecha = fecha,
+          titulo = titulo,
           descripcion = descripcion,
           created_at = createdAt,
       )
@@ -304,7 +361,8 @@ class DatabaseSchemaTest {
         moneda = "USD",
         fecha = "2026-09-03",
         categoriaIds = listOf("cat_comida"),
-        descripcion = "almuerzo",
+        titulo = "almuerzo",
+        descripcion = "con Ana",
     )
     val row = db.movimientoQueries.selectMovimientoById("mov1").executeAsOne()
 
@@ -313,12 +371,13 @@ class DatabaseSchemaTest {
     assertEquals("USD", row.monto_moneda)
     assertEquals("2026-09-03", row.fecha)
     assertEquals(listOf("cat_comida"), row.toDomain().categoriaIds)
-    assertEquals("almuerzo", row.descripcion)
+    assertEquals("almuerzo", row.titulo)
+    assertEquals("con Ana", row.descripcion)
     assertEquals("2026-09-03T12:00:00Z", row.created_at)
   }
 
   @Test
-  fun `descripcion is the only optional movimiento field`() {
+  fun `titulo and descripcion are the only optional movimiento fields`() {
     val db = inMemoryDatabase()
 
     db.insert(
@@ -328,7 +387,9 @@ class DatabaseSchemaTest {
         categoriaIds = listOf("cat_sueldo"),
     )
 
-    assertNull(db.movimientoQueries.selectMovimientoById("mov1").executeAsOne().descripcion)
+    val row = db.movimientoQueries.selectMovimientoById("mov1").executeAsOne()
+    assertNull(row.titulo)
+    assertNull(row.descripcion)
   }
 
   @Test

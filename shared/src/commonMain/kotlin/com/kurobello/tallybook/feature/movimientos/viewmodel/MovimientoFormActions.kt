@@ -16,6 +16,8 @@ internal interface MovimientoFormActions {
 
   fun onCategoriaRemoved(id: String)
 
+  fun onTituloChanged(value: String)
+
   fun onDescripcionChanged(value: String)
 
   fun onRetryLoad()

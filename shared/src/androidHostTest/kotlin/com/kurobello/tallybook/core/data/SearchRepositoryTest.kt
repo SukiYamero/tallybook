@@ -280,6 +280,7 @@ class SearchRepositoryTest {
                   "COP",
                   "2026-09-15",
                   null,
+                  null,
                   "2026-09-15T12:00:00Z",
               )
               database.movimientoQueries.insertMovimientoCategoria("transaction-$index", "food", 0)
@@ -289,6 +290,7 @@ class SearchRepositoryTest {
                   100,
                   "COP",
                   "2023-01-01",
+                  null,
                   null,
                   "2026-09-15T12:00:00Z",
               )
@@ -431,6 +433,7 @@ class SearchRepositoryTest {
               "COP",
               "2026-09-15",
               null,
+              null,
               "2026-09-15T12:00:00Z",
           )
           database.movimientoQueries.insertMovimientoCategoria("invalid", "food", 0)
@@ -450,6 +453,7 @@ class SearchRepositoryTest {
               100,
               "COP",
               "02026-09-15",
+              null,
               null,
               "2026-09-15T12:00:00Z",
           )
@@ -705,6 +709,7 @@ class SearchRepositoryTest {
           LocalDate.parse(fecha),
           categoryIds,
           "Lunch",
+          null,
           Instant.parse(createdAt),
       )
 

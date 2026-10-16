@@ -107,6 +107,7 @@
         <item>lunes</item><item>martes</item><item>miércoles</item><item>jueves</item><item>viernes</item><item>sábado</item><item>domingo</item>
     </string-array>
     <string name="category">Categoría</string>
+    <string name="title_optional">Título (opcional)</string>
     <string name="description_optional">Descripción (opcional)</string>
     <string name="save_expense">Guardar gasto</string>
     <string name="save_income">Guardar ingreso</string>
@@ -218,7 +219,7 @@
         <item quantity="other">%1$d movimientos</item>
     </plurals>
     <string name="search_title">Buscar movimientos</string>
-    <string name="search_placeholder">Descripción o categoría</string>
+    <string name="search_placeholder">Título, descripción o categoría</string>
     <string name="search_filters">Filtros</string>
     <string name="search_filters_active">Filtros activos</string>
     <string name="search_filters_inactive">Sin filtros</string>
@@ -318,6 +319,7 @@
     <string name="csv_header_type">Tipo</string>
     <string name="csv_header_category">Categoría</string>
     <string name="csv_header_parent_category">Categoría principal</string>
+    <string name="csv_header_title">Título</string>
     <string name="csv_header_description">Descripción</string>
     <string name="csv_header_amount">Monto</string>
     <string name="csv_header_currency">Moneda</string>
@@ -331,12 +333,12 @@
     <string name="movimiento_amount_not_detected">No detectamos el monto</string>
     <string name="movimiento_summary_amount_missing_hint">Tocá Editar movimiento para agregarlo.</string>
     <string name="movimiento_summary_amount_review">Encontramos varios montos y elegimos el mayor. Revisalo antes de guardar.</string>
-    <string name="movimiento_summary_description_quote">“%1$s”</string>
+    <string name="movimiento_summary_title_quote">“%1$s”</string>
     <string name="movimiento_summary_edit">Editar movimiento</string>
     <string name="movimiento_summary_save">Guardar</string>
     <string name="movimiento_summary_title">Revisá antes de guardar</string>
     <string name="movimiento_summary_subtitle">Esto entendimos. Ajustá lo que haga falta.</string>
-    <string name="movimiento_summary_description_label">Descripción</string>
+    <string name="movimiento_summary_title_label">Título</string>
     <string name="movimiento_detected_label">Detectado</string>
     <plurals name="movimiento_row_extra_categories">
         <item quantity="one">%1$d categoría más</item>

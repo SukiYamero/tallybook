@@ -12,6 +12,7 @@ internal interface MovimientoFormState {
   val moneda: Moneda
   val categorias: List<Categoria>
   val categoriaIds: List<String>
+  val titulo: String
   val descripcion: String
   val isLoading: Boolean
   val isSubmitting: Boolean

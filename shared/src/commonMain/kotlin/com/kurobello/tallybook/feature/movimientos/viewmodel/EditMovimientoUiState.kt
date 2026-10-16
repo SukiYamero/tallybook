@@ -30,6 +30,9 @@ internal data class EditMovimientoUiState(
   override val categoriaIds
     get() = draft.categoriaIds
 
+  override val titulo
+    get() = draft.titulo
+
   override val descripcion
     get() = draft.descripcion
 

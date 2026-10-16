@@ -67,6 +67,7 @@ private fun SummaryStepPreview(
                 onRemoveCategoria = {},
                 onAddCategoria = {},
                 onSuggestion = {},
+                onDescripcionChange = {},
                 onEdit = {},
                 onSave = {},
             ),

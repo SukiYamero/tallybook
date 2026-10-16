@@ -21,6 +21,7 @@ internal fun DatabaseMovimiento.toDomain(): Movimiento {
       monto = Money(monto_minor, Moneda.valueOf(monto_moneda)),
       fecha = LocalDate.parse(fecha),
       categoriaIds = categoriaIds,
+      titulo = titulo,
       descripcion = descripcion,
       createdAt = Instant.parse(created_at),
   )

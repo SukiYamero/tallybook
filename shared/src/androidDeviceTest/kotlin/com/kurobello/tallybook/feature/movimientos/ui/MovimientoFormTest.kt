@@ -430,6 +430,7 @@ class MovimientoFormTest {
         amountInput: String = "",
         categoriaIds: List<String> = emptyList(),
         categorias: List<Categoria> = listOf(category, child, other, otros),
+        titulo: String = "",
         descripcion: String = "",
         submitAttempted: Boolean = false,
         error: MovimientoFormError? = null,
@@ -441,6 +442,7 @@ class MovimientoFormTest {
             moneda = Moneda.COP,
             categorias = categorias,
             categoriaIds = categoriaIds,
+            titulo = titulo,
             descripcion = descripcion,
             isLoading = false,
             isSubmitting = false,
@@ -472,6 +474,8 @@ class MovimientoFormTest {
     override fun onCategoriasChanged(ids: List<String>) = Unit
 
     override fun onCategoriaRemoved(id: String) = Unit
+
+    override fun onTituloChanged(value: String) = Unit
 
     override fun onDescripcionChanged(value: String) {
       descripcion = value

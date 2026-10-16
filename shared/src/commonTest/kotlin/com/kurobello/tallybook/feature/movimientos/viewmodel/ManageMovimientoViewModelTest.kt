@@ -2,6 +2,7 @@ package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
@@ -77,7 +78,7 @@ class ManageMovimientoViewModelTest {
     f.viewModel.open("movement")
     runCurrent()
     assertEquals("12.34", f.viewModel.uiState.value.session?.form?.amountInput)
-    assertEquals("Lunch", f.viewModel.uiState.value.session?.form?.descripcion)
+    assertEquals("Lunch", f.viewModel.uiState.value.session?.form?.titulo)
     f.repository.readResult = managementFailure()
     f.viewModel.onCancelEdit()
     runCurrent()
@@ -108,7 +109,7 @@ class ManageMovimientoViewModelTest {
     f.viewModel.open("movement")
     runCurrent()
     f.viewModel.onAmountChanged("012.340".dropLast(1))
-    f.viewModel.onDescripcionChanged("  Lunch  ")
+    f.viewModel.onTituloChanged("  Lunch  ")
     f.repository.current = null
     f.viewModel.onSubmit()
     runCurrent()
@@ -211,6 +212,51 @@ class ManageMovimientoViewModelTest {
     assertEquals(1, f.repository.updates)
     f.repository.updateGate?.complete(Unit)
     runCurrent()
+  }
+
+  @Test
+  fun editingTheTitleMarksTheDraftUnsavedAndSavesTheNormalizedTitle() = runTest {
+    val f = ManageMovimientoFixture(backgroundScope)
+    f.viewModel.open("movement")
+    runCurrent()
+    assertEquals("Lunch", f.viewModel.uiState.value.session?.form?.titulo)
+
+    f.viewModel.onTituloChanged("  Lunch   with Ana ")
+    assertTrue(f.viewModel.uiState.value.session?.hasUnsavedChanges == true)
+    f.viewModel.onDescripcionChanged("Team offsite")
+    f.viewModel.onSubmit()
+    runCurrent()
+
+    assertEquals("Lunch with Ana", f.repository.changes?.titulo)
+    assertEquals("Team offsite", f.repository.changes?.descripcion)
+  }
+
+  @Test
+  fun theEditedTitleIsCappedAtTheTitleLimit() = runTest {
+    val f = ManageMovimientoFixture(backgroundScope)
+    f.viewModel.open("movement")
+    runCurrent()
+
+    f.viewModel.onTituloChanged("a".repeat(MOVIMIENTO_TITLE_MAX_LENGTH + 5))
+
+    assertEquals(
+        MOVIMIENTO_TITLE_MAX_LENGTH,
+        f.viewModel.uiState.value.session?.form?.titulo?.length,
+    )
+  }
+
+  @Test
+  fun clearingTheTitleSavesNoTitle() = runTest {
+    val f = ManageMovimientoFixture(backgroundScope)
+    f.viewModel.open("movement")
+    runCurrent()
+
+    f.viewModel.onTituloChanged("")
+    f.viewModel.onSubmit()
+    runCurrent()
+
+    assertEquals(1, f.repository.updates)
+    assertNull(f.repository.changes?.titulo)
   }
 
   @Test

@@ -197,7 +197,7 @@ class HistoryIntegrationTest {
       assertEquals(
           DataOutcome.Success(Unit),
           graph.movimientos.insert(
-              row("missing", TODAY, category = "later-category", description = null)
+              row("missing", TODAY, category = "later-category", title = null)
           ),
       )
       runCurrent()
@@ -280,7 +280,7 @@ class HistoryIntegrationTest {
           val form = graph.form("retry")
           form.viewModel.onAmountChanged("10,50")
           form.viewModel.onCategoriasChanged(listOf("cat_comida"))
-          form.viewModel.onDescripcionChanged("Lunch")
+          form.viewModel.onTituloChanged("Lunch")
           graph.driver.failWrites = true
           form.viewModel.onSubmit()
           runCurrent()
@@ -288,7 +288,7 @@ class HistoryIntegrationTest {
           assertEquals("10,50", form.viewModel.uiState.value.amountInput)
           assertEquals(TODAY, form.viewModel.uiState.value.fecha)
           assertEquals(listOf("cat_comida"), form.viewModel.uiState.value.categoriaIds)
-          assertEquals("Lunch", form.viewModel.uiState.value.descripcion)
+          assertEquals("Lunch", form.viewModel.uiState.value.titulo)
           assertEquals(emptyList(), form.effects)
           assertEquals(0, graph.period.movementCount)
           graph.driver.failWrites = false
@@ -475,7 +475,7 @@ class HistoryIntegrationTest {
             listOf(if (type == TipoMovimiento.INGRESO) "cat_ingresos" else "cat_comida")
         )
         onFechaChanged(date)
-        onDescripcionChanged("Description $id")
+        onTituloChanged("Title $id")
         onSubmit()
       }
       fixture.test.runCurrent()
@@ -588,16 +588,17 @@ class HistoryIntegrationTest {
         date: LocalDate,
         currency: Moneda = Moneda.COP,
         category: String = "cat_comida",
-        description: String? = "Fixture row",
+        title: String? = "Fixture row",
     ) =
         Movimiento(
-            id,
-            TipoMovimiento.GASTO,
-            Money(100, currency),
-            date,
-            listOf(category),
-            description,
-            Instant.parse("2026-09-20T12:00:00Z"),
+            id = id,
+            tipo = TipoMovimiento.GASTO,
+            monto = Money(100, currency),
+            fecha = date,
+            categoriaIds = listOf(category),
+            titulo = title,
+            descripcion = null,
+            createdAt = Instant.parse("2026-09-20T12:00:00Z"),
         )
 
     fun <T> assertSuccess(outcome: DataOutcome<T>): T =
