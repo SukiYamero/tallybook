@@ -44,7 +44,7 @@ entry flow are described in [Add movimiento](add-movimiento.md); visual ownershi
 
 ## Verification boundaries
 
-The current tree passes the 765 shared host tests with zero failures,
+The current tree passes the 767 shared host tests with zero failures,
 `verifyCommonMainTallybookDatabaseMigration`, the Android debug APK, Native compilation, Detekt and
 ktfmtCheck. Host tests cover the schema 5 → 6 migration (0, 1 and 3 linked categories per
 movimiento), the tag repository rules, an integration test through the real repositories (create with

@@ -139,6 +139,26 @@ class CategoryDraftStateTest {
   }
 
   @Test
+  fun editingAStoredNameLongerThanTheLimitKeepsItAndShowsTheErrorAtOnce() {
+    val nombre = "a".repeat(CategoriaRules.NOMBRE_MAX + 5)
+    val stored =
+        Categoria(
+            id = "custom-1",
+            nombre = nombre,
+            padreId = null,
+            icono = CategoryIcon.BOOK,
+            color = CategoryTint.ROSE,
+            origen = CategoriaOrigen.USUARIO,
+        )
+
+    val draft = CategoryDraftState.forEdit(stored)
+
+    assertEquals(nombre, draft.nombre)
+    assertEquals(CategoryNombreError.TOO_LONG, draft.visibleNombreError)
+    assertFalse(draft.canSave)
+  }
+
+  @Test
   fun editingTheNameClearsTheDuplicateThatBlockedSaving() {
     val existing =
         Categoria("cat_gimnasio", "Gimnasio", "cat_salud", CategoryIcon.DUMBBELL, CategoryTint.ROSE)

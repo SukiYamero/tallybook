@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.composables.icons.lucide.Hash
 import com.composables.icons.lucide.Lucide
+import com.kurobello.tallybook.core.model.CategoriaRules
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
@@ -42,6 +43,7 @@ import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.clear_search
 import tallybook.shared.generated.resources.search_tags
+import tallybook.shared.generated.resources.tag_name_too_long
 import tallybook.shared.generated.resources.tag_picker_create
 import tallybook.shared.generated.resources.tag_picker_done
 import tallybook.shared.generated.resources.tag_picker_empty_hint
@@ -60,7 +62,8 @@ internal const val ETIQUETA_PICKER_RESULTS_TAG = "etiqueta_picker_results"
  * selected tags as removable tags under it and every matching tag as a toggle. Each toggle reports
  * the whole new selection through [onSelectionChange]; additions stop at [max] and a hint explains
  * why. A search without results offers creating the trimmed query through [onCreate] in one tap,
- * also at [max]; the caller creates it and selects it only while the limit allows. While the query
+ * also at [max]; the caller creates it and selects it only while the limit allows. A query over the
+ * tag name limit shows that limit instead, since creating it would always fail. While the query
  * still names [failedCreateNombre], the offer explains that creating it failed.
  */
 @Composable
@@ -273,15 +276,19 @@ private fun EtiquetaPickerNoResults(
     onCreate: (String) -> Unit,
 ) {
   val nombre = query.trim()
+  val tooLong = nombre.length > CategoriaRules.NOMBRE_MAX
   TallybookSearchEmptyState(
       message = stringResource(Res.string.tags_search_empty, nombre),
       modifier = Modifier.fillMaxWidth(),
       error =
-          stringResource(Res.string.tag_save_error).takeIf {
-            nombre.isNotEmpty() && nombre == failedCreateNombre
+          when {
+            tooLong -> stringResource(Res.string.tag_name_too_long, CategoriaRules.NOMBRE_MAX)
+            nombre.isNotEmpty() && nombre == failedCreateNombre ->
+                stringResource(Res.string.tag_save_error)
+            else -> null
           },
       action =
-          if (nombre.isEmpty()) null
+          if (nombre.isEmpty() || tooLong) null
           else {
             {
               TallybookTextButton(

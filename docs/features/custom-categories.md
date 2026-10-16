@@ -27,8 +27,8 @@ Profile, and hide the ones they do not use. Product rules live in
   quick-create pane share `TallybookSheetForm`, the same keyboard handling as the movimiento form:
   the focused field stays above the keyboard, the footer gives way while it is open, and closing it
   keeps the scroll position (a body that fits at rest returns to the top).
-- **Quick-create**: a picker search without results offers "Create “<query>”", which switches the
-  picker sheet to the compact form (name and icon; tint and description behind "More options"). The
+- **Quick-create**: a picker search without results offers "Create category “<query>”", which
+  switches the picker sheet to the compact form (name and icon; tint and description behind "More options"). The
   created category becomes the movimiento's category and the picker closes; a duplicate offers
   "Use <name>", showing a hidden category again first.
 

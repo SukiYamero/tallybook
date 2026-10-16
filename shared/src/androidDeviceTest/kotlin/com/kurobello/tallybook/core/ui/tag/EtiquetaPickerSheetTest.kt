@@ -19,8 +19,10 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
+import com.kurobello.tallybook.core.model.CategoriaRules
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.ui.theme.TallybookDimensions
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -36,6 +38,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.tag_name_too_long
 import tallybook.shared.generated.resources.tag_picker_create
 import tallybook.shared.generated.resources.tag_picker_done
 import tallybook.shared.generated.resources.tag_picker_empty_hint
@@ -135,6 +138,23 @@ class EtiquetaPickerSheetTest {
     create.performClick()
 
     composeRule.runOnIdle { assertEquals(listOf("Gym"), created) }
+  }
+
+  @Test
+  fun aSearchLongerThanTheNameLimitExplainsTheLimitInsteadOfOfferingCreate() {
+    show()
+
+    composeRule
+        .onNode(hasSetTextAction())
+        .performTextInput(" ${"x".repeat(CategoriaRules.NOMBRE_MAX + 1)} ")
+    composeRule
+        .onNodeWithText(string(Res.string.tag_name_too_long, CategoriaRules.NOMBRE_MAX))
+        .assertExists()
+    composeRule.onNodeWithTag(ETIQUETA_PICKER_OFFER_CREATE_TAG).assertDoesNotExist()
+
+    composeRule.onNode(hasSetTextAction()).performTextClearance()
+    composeRule.onNode(hasSetTextAction()).performTextInput("x".repeat(CategoriaRules.NOMBRE_MAX))
+    composeRule.onNodeWithTag(ETIQUETA_PICKER_OFFER_CREATE_TAG).assertExists()
   }
 
   @Test

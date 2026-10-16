@@ -48,8 +48,8 @@ Creation moves through three steps; business rules for each live in
   the Otros fallback; removing a suggested category dismisses it for the same subject, and the
   dismissals reset when Continue runs for a different subject.
 - Tags section: each selected tag has a ×, and "+ Add" opens the multi-select tag picker until six
-  are selected. A picker search without results offers creating the typed name; the new tag is
-  selected while the limit allows, and a failed create shows the tag save error under that offer
+  are selected. A picker search without results offers creating the typed name (or shows the name
+  limit when it is longer); the new tag is selected while the limit allows, and a failed create shows the tag save error under that offer
   while the query still names it. An unavailable tag catalog replaces only this section with a retry,
   and the movimiento still saves without tags.
 - Validation focus follows the initial submit attempt, not live error changes, so correcting amount

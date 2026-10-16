@@ -49,11 +49,12 @@ covers the search field and results.
 - Move "Listo (n)" to the title row as a header action (text button aligned end), so it stays
   reachable while the keyboard is open; remove the bottom button. The limit hint stays under the
   search/selected area.
-- Empty states inside the fixed area, vertically centered:
+- Empty states at the top of the fixed area, right under the search, so the keyboard never covers
+  them:
   - No tags at all and no query: tag icon, `tags_empty`-style title and a one-line hint to type a
     name to create the first one (new key `tag_picker_empty_hint`).
-  - Query without results: the "no tags match" text plus a create action sized to its label
-    `tag_picker_create` (not a small text button). Keep the `failedCreateNombre` error under it.
+  - Query without results: the "no tags match" text plus a text create action sized to its label
+    `tag_picker_create` (`TallybookSearchEmptyState`). Keep the `failedCreateNombre` error under it.
 - Apply the same "Done stays visible" check to nothing else; the category picker closes on tap.
 
 ## 4. Tag description (optional, max 140)

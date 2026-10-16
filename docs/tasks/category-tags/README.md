@@ -136,7 +136,7 @@ named category key's structure (format args, plural form).
 | --- | --- | --- |
 | `csv_header_tags` (**Stage 1 / task1**) | `csv_header_category` | Tags |
 | `movimiento_category_section` | — | Categoría |
-| `movimiento_tags_section` | — | Tags · opcional |
+| `movimiento_tags_section` | — | Tags |
 | `tag_add`, `tag_add_description` | `category_tag_add*` | Agregar / Agregar tag |
 | `tag_remove` | `category_tag_remove` | Quitar %1$s |
 | `tag_picker_title` | `category_picker_title` | Elige tags |
@@ -145,7 +145,7 @@ named category key's structure (format args, plural form).
 | `tag_picker_done` | `category_picker_done` | Listo (%1$d) |
 | `category_picker_single_title` | `category_picker_title` | Elige una categoría |
 | `tags_unavailable` | `movimiento_categories_error` | — |
-| `profile_tags_label`, `profile_tags_body` | `profile_categories_*` | Tags / Agrupa movimientos de distintas categorías, como “Empresa”. |
+| `profile_tags_label`, `profile_tags_body` | `profile_categories_*` | Tags / Agrupa movimientos de distintas categorías, como “Gastos cubiertos”. |
 | `tags_title`, `tags_empty`, `tags_search_empty`, `tags_load_error` | `categories_*` | — |
 | `tag_new_title`, `tag_edit_title`, `tag_open` | `category_new_title`, `category_edit_title`, `category_open` | — |
 | `tag_name_label`, `tag_name_placeholder`, `tag_name_blank`, `tag_name_too_long` | `category_form_name_*` | — |

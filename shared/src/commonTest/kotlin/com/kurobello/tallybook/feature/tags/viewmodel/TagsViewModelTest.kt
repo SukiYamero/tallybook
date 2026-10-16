@@ -6,6 +6,7 @@ import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
+import com.kurobello.tallybook.core.model.CategoriaRules
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.ETIQUETA_DESCRIPCION_MAX
@@ -193,6 +194,21 @@ class TagsViewModelTest {
     vm.onNombreChanged("empresa 2")
     assertNull(vm.uiState.value.sheet?.duplicate)
     assertTrue(vm.uiState.value.sheet?.canSave == true)
+  }
+
+  @Test
+  fun openingAStoredNameLongerThanTheLimitKeepsItAndShowsTheErrorAtOnce() = runTest {
+    val legacy = Etiqueta("t_legacy", "x".repeat(CategoriaRules.NOMBRE_MAX + 5), CREATED_AT)
+    val fixture = TagsFixture(this, initial = listOf(legacy))
+    val vm = fixture.create()
+    runCurrent()
+
+    vm.onOpenSheet(TagSheetRequest.Open(legacy.id))
+
+    val sheet = assertNotNull(vm.uiState.value.sheet)
+    assertEquals(legacy.nombre, sheet.nombre)
+    assertEquals(TagNombreError.TOO_LONG, sheet.visibleNombreError)
+    assertFalse(sheet.canSave)
   }
 
   @Test
