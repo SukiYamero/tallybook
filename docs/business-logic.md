@@ -197,8 +197,10 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
 - Filtering by a parent includes the parent and all its children. Filtering by a child includes only
   that child. Roll-up never goes upward.
 - Children keep their parent's tint, so the family stays recognizable; parents and children have
-  the same visual weight in chips. The hierarchy is shown only in the picker, where a parent heads
-  its group of children.
+  the same visual weight in chips. The hierarchy is shown as grouped families on a single level in
+  the picker and in the Search filters: each family is a block with the parent first and its
+  children after, every tag toggles with one tap and nothing drills in. Searching flattens the
+  blocks into one list of matches.
 
 ### Multiple categories per movimiento
 
@@ -212,8 +214,9 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
   categories, with the same roll-up, and text search matches any of its category names.
 - Every category surface (sentence dialog, summary, form and editor) uses the same tag field:
   medium tags, a remove action on each except the last, an "Add" tag that opens a multi-select
-  picker, and no counter; the Add tag disappears at six. The picker disables the last selected
-  category, with a short hint, because a movimiento keeps at least one. CSV exports every category
+  picker, and no counter; the Add tag disappears at six. The picker lists the selection under its
+  search field as removable tags, disables the last selected category, with a short hint, because a
+  movimiento keeps at least one, and applies a parent/child replacement as soon as the tag is tapped. CSV exports every category
   name of a movimiento joined by " · " and, in the parent column, the top-level name at the same
   position (a root category repeats its own name).
 

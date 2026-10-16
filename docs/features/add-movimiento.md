@@ -1,6 +1,6 @@
 # Add movimiento
 
-The shared Android/iOS entry flow starts in a top-anchored modal dialog and continues in one modal
+The shared Android/iOS entry flow starts in a vertically centered modal dialog and continues in one modal
 bottom sheet, both built from Tallybook components. Domain rules remain defined in
 [business-logic.md](../business-logic.md); visual ownership and tokens remain in
 [UI architecture](../ui/architecture.md).
@@ -24,8 +24,11 @@ Creation moves through three steps; business rules for each live in
   showing. The body scrolls the input, the Detected card, the "or" divider with the voice placeholder
   and "Fill manually", which opens the empty form, discarding anything an earlier Continue derived but
   keeping tags picked by hand. Continue and Fill manually wait for the initial data to load; a load
-  failure shows the existing retry message. The dialog keeps its position when the keyboard opens and
-  scrolls inside the height left over.
+  failure shows the existing retry message. The dialog opens vertically centered and that top edge is kept: the
+  Detected card and the suggestions grow it downward with an animated size change, so it never jumps.
+  When the keyboard opens the dialog moves up only as far as its bottom needs to stay above it, with
+  Continue still visible, scrolls inside the height left over, and returns to the captured top when the
+  keyboard closes. Scrim taps and Back dismiss as before.
 - **Review (sheet)**: opens tall rather than hugging its content. A title and one-line subtitle
   lead labeled sections: Type and Date as large badges side by side, Amount (a missing one reads "not detected", with a hint to use Edit movimiento), the quoted
   Description and the Categories tag field with suggestions, each section `space24` apart. Edit movimiento (left) opens the form with the same
@@ -69,9 +72,9 @@ Creation moves through three steps; business rules for each live in
   The session releases the ViewModel only when the surface that was showing at close reports hidden.
 - `TallybookDismissGuard` and `TallybookConfirmationDialog` are domain-neutral reusable primitives.
   `TallybookModalBottomSheet` owns detents, motion and bottom safe-area policy;
-  `TallybookModalDialog` owns the top anchor.
-- The multi-select picker, generic tree/search/drill-in and Search roll-up are shared by creation and
-  editing.
+  `TallybookModalDialog` owns the vertical placement (`DialogVerticalPlacement`: centered at first, captured top, minimum shift above the keyboard).
+- The multi-select picker (one level of family blocks, a selected section and flat search) and the
+  Search roll-up are shared by creation and editing.
 
 ## Layout integration
 
