@@ -32,10 +32,12 @@ import kotlin.test.assertTrue
 import kotlin.time.Instant
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
+import org.jetbrains.compose.resources.getPluralString
 import org.jetbrains.compose.resources.getString
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.movimiento_row_extra_categories
 import tallybook.shared.generated.resources.unknown_category
 
 class MovimientoComponentsTest {
@@ -154,6 +156,41 @@ class MovimientoComponentsTest {
         composeRule.onNodeWithText(amount, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
     assertTrue(!titleBounds.overlaps(amountBounds))
     composeRule.onNodeWithContentDescription(description, substring = true).assertHasNoClickAction()
+  }
+
+  @Test
+  fun rowWithSeveralCategoriesShowsTheFirstOneAndACount() {
+    composeRule.setContent {
+      TallybookTheme {
+        MovimientoRow(
+            movimiento(TipoMovimiento.GASTO, 100)
+                .copy(categoriaIds = listOf("cat_comida", "cat_cine", "cat_salud")),
+            comida,
+        )
+      }
+    }
+
+    composeRule.onNodeWithText("Comida").assertExists()
+    composeRule.onNodeWithText("+2", useUnmergedTree = true).assertExists()
+    val extraLabel = runBlocking {
+      getPluralString(Res.plurals.movimiento_row_extra_categories, 2, 2)
+    }
+    composeRule.onNodeWithContentDescription(extraLabel, substring = true).assertExists()
+  }
+
+  @Test
+  fun rowWithOneCategoryShowsNoCount() {
+    composeRule.setContent {
+      TallybookTheme {
+        MovimientoRow(
+            movimiento(TipoMovimiento.GASTO, 100).copy(categoriaIds = listOf("cat_comida")),
+            comida,
+        )
+      }
+    }
+
+    composeRule.onNodeWithText("+0", useUnmergedTree = true).assertDoesNotExist()
+    composeRule.onNodeWithText("+1", useUnmergedTree = true).assertDoesNotExist()
   }
 
   private fun movimiento(tipo: TipoMovimiento, minorUnits: Long) =

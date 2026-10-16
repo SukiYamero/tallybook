@@ -336,6 +336,10 @@
     <string name="movimiento_summary_description_quote">“%1$s”</string>
     <string name="movimiento_summary_edit">Edit movement</string>
     <string name="movimiento_summary_save">Save</string>
+    <plurals name="movimiento_row_extra_categories">
+        <item quantity="one">%1$d more category</item>
+        <item quantity="other">%1$d more categories</item>
+    </plurals>
     <string name="category_tag_field_label">Categories</string>
     <string name="category_tag_field_counter_description">%1$d of %2$d categories</string>
     <string name="category_tag_field_suggestions">Suggestions</string>
