@@ -31,6 +31,7 @@ import com.kurobello.tallybook.feature.movimientos.ui.rememberOpenMovimiento
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
 import com.kurobello.tallybook.feature.profile.ui.ProfileRoute
 import com.kurobello.tallybook.feature.search.ui.SearchRoute
+import com.kurobello.tallybook.feature.tags.ui.TagsRoute
 import kotlinx.serialization.KSerializer
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -150,7 +151,7 @@ private fun PrimaryRoute(
             bottomBarClearance = clearance,
             modals = navigator.modals,
             active = state.selected == Profile && state.secondary == null,
-            onOpenCategories = navigator::openCategories,
+            onOpenSecondary = navigator::openSecondary,
         )
     UiCatalog -> UiCatalogRoute()
     Categories ->
@@ -159,6 +160,13 @@ private fun PrimaryRoute(
             active = state.secondary == Categories,
             onBack = navigator::back,
             onShowCategory = { id -> navigator.showSearchFilter(categoryIds = setOf(id)) },
+        )
+    Tags ->
+        TagsRoute(
+            modals = navigator.modals,
+            active = state.secondary == Tags,
+            onBack = navigator::back,
+            onShowTag = { id -> navigator.showSearchFilter(etiquetaIds = setOf(id)) },
         )
   }
 }
@@ -193,6 +201,7 @@ internal fun primaryContentKey(destination: Destination): String =
       Profile -> "primary-profile"
       UiCatalog -> "ui-catalog"
       Categories -> "secondary-categories"
+      Tags -> "secondary-tags"
     }
 
 internal fun destinationBackStackSerializer(): KSerializer<NavBackStack<Destination>> =

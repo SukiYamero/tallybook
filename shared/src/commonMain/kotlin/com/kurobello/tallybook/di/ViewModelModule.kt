@@ -16,6 +16,7 @@ import com.kurobello.tallybook.feature.profile.viewmodel.ProfileViewModel
 import com.kurobello.tallybook.feature.search.viewmodel.SearchDateProvider
 import com.kurobello.tallybook.feature.search.viewmodel.SearchRepositories
 import com.kurobello.tallybook.feature.search.viewmodel.SearchViewModel
+import com.kurobello.tallybook.feature.tags.viewmodel.TagsViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
@@ -89,4 +90,5 @@ internal val viewModelModule = module {
     )
   }
   viewModel { CategoriesViewModel(categorias = get(), preferences = get(), suggester = get()) }
+  viewModel { TagsViewModel(etiquetas = get(), preferences = get()) }
 }

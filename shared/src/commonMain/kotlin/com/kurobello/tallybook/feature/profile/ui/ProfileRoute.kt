@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kurobello.tallybook.core.ui.navigation.Destination
 import com.kurobello.tallybook.core.ui.navigation.DestinationModalController
 import com.kurobello.tallybook.core.ui.navigation.PrimaryModalCoordinator
 import com.kurobello.tallybook.feature.profile.viewmodel.ProfileActions
@@ -21,7 +22,7 @@ internal fun ProfileRoute(
     bottomBarClearance: Dp,
     modals: PrimaryModalCoordinator,
     active: Boolean,
-    onOpenCategories: () -> Unit,
+    onOpenSecondary: (Destination) -> Unit,
     modifier: Modifier = Modifier,
 ) {
   val viewModel: ProfileViewModel = koinViewModel()
@@ -41,7 +42,7 @@ internal fun ProfileRoute(
           }
         }
       }
-  ProfileScreen(uiState, actions, onOpenCategories, bottomBarClearance, modifier)
+  ProfileScreen(uiState, actions, onOpenSecondary, bottomBarClearance, modifier)
 }
 
 private class ProfileSheetController(

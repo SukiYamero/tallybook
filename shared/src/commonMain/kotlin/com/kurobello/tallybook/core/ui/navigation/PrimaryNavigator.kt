@@ -55,8 +55,8 @@ internal class PrimaryNavigator(
     }
   }
 
-  fun openCategories() {
-    navigate { openSecondary(Categories) }
+  fun openSecondary(destination: Destination) {
+    navigate { openSecondary(destination) }
   }
 
   fun back() {

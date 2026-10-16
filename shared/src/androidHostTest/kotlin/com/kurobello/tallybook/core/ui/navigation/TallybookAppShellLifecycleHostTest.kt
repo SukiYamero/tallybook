@@ -426,7 +426,8 @@ private class ShellHarness(
               Search,
               Profile,
               UiCatalog,
-              Categories -> Unit
+              Categories,
+              Tags -> Unit
             }
             SideEffect {
               owners[destination] = owner
