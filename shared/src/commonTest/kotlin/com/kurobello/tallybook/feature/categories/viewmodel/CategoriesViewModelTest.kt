@@ -267,9 +267,9 @@ class CategoriesViewModelTest {
   }
 
   @Test
-  fun aCategoryUsedInAnyMonedaOffersHidingInsteadWithTheTotalCount() = runTest {
+  fun aCategoryInUseOffersHidingInsteadWithItsMovimientoCount() = runTest {
     val fixture = CategoriesFixture(this)
-    fixture.categorias.counts[Moneda.USD] = mapOf("zz" to 2L)
+    fixture.categorias.movimientoCounts["zz"] = 2L
     val vm = fixture.create()
     val effects = fixture.collectEffects(vm)
     runCurrent()
@@ -371,6 +371,7 @@ private val CATEGORIAS =
 private class FakeCategorias : CategoriaRepository by UnsupportedCategoriaRepository {
   val all = MutableStateFlow<DataOutcome<List<Categoria>>>(DataOutcome.Success(CATEGORIAS))
   val counts = mutableMapOf<Moneda, Map<String, Long>>()
+  val movimientoCounts = mutableMapOf<String, Long>()
   private val countRevision = MutableStateFlow(0)
   val created = mutableListOf<CategoriaDraft>()
   val updated = mutableListOf<Pair<String, String>>()
@@ -385,6 +386,9 @@ private class FakeCategorias : CategoriaRepository by UnsupportedCategoriaReposi
       countRevision.map {
         DataOutcome.Success(counts[moneda].orEmpty())
       }
+
+  override suspend fun countMovimientos(id: String): DataOutcome<Long> =
+      DataOutcome.Success(movimientoCounts[id] ?: 0L)
 
   override suspend fun create(draft: CategoriaDraft): DataOutcome<CategoriaWrite> =
       write(null, draft) {

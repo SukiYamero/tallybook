@@ -2,6 +2,7 @@ package com.kurobello.tallybook.core.data
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
+import com.kurobello.tallybook.core.database.CategoriaQueries
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
@@ -82,7 +83,7 @@ internal class CategoriaRepositoryImpl(
         }
     return runLocalDataOperation(dispatcher) {
       database.transactionWithResult {
-        val duplicate = findDuplicate(clean.nombre, excludingId = null)
+        val duplicate = queries.findDuplicate(clean.nombre, excludingId = null)
         if (duplicate != null) {
           CategoriaWrite.Duplicate(duplicate)
         } else {
@@ -118,7 +119,7 @@ internal class CategoriaRepositoryImpl(
     return runLocalDataOperation(dispatcher) {
           database.transactionWithResult {
             val current = queries.selectCategoriaById(id).executeAsOneOrNull()?.toDomain()
-            val duplicate = current?.let { findDuplicate(clean.nombre, excludingId = id) }
+            val duplicate = current?.let { queries.findDuplicate(clean.nombre, excludingId = id) }
             when {
               current == null -> DataOutcome.Failure(unknownCategoria(id))
               current.origen != CategoriaOrigen.USUARIO ->
@@ -201,6 +202,9 @@ internal class CategoriaRepositoryImpl(
           }
           .flatten()
 
+  override suspend fun countMovimientos(id: String): DataOutcome<Long> =
+      runLocalDataOperation(dispatcher) { queries.countMovimientosForCategoria(id).executeAsOne() }
+
   override fun observeMovimientoCounts(moneda: Moneda): Flow<DataOutcome<Map<String, Long>>> =
       queries
           .countMovimientosPorCategoria(moneda.name)
@@ -208,15 +212,6 @@ internal class CategoriaRepositoryImpl(
           .mapToList(dispatcher)
           .map { rows -> rows.associate { it.categoria_id to it.movimiento_count } }
           .asLocalDataOutcome()
-
-  private fun findDuplicate(nombre: String, excludingId: String?): Categoria? {
-    val key = CategoriaRules.nombreKey(nombre)
-    return queries
-        .selectAllCategorias()
-        .executeAsList()
-        .firstOrNull { it.id != excludingId && CategoriaRules.nombreKey(it.nombre) == key }
-        ?.toDomain()
-  }
 }
 
 private fun normalize(draft: CategoriaDraft): DataOutcome<CategoriaDraft> {
@@ -235,6 +230,14 @@ private fun normalize(draft: CategoriaDraft): DataOutcome<CategoriaDraft> {
   } else {
     DataOutcome.Success(draft.copy(nombre = nombre, descripcion = descripcion))
   }
+}
+
+private fun CategoriaQueries.findDuplicate(nombre: String, excludingId: String?): Categoria? {
+  val key = CategoriaRules.nombreKey(nombre)
+  return selectAllCategorias()
+      .executeAsList()
+      .firstOrNull { it.id != excludingId && CategoriaRules.nombreKey(it.nombre) == key }
+      ?.toDomain()
 }
 
 private fun unknownCategoria(id: String) = DataError.InvalidInput("Unknown categoria $id")

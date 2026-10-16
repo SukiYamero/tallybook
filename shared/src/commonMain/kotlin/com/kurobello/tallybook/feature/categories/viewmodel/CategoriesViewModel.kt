@@ -27,7 +27,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -179,7 +178,7 @@ internal class CategoriesViewModel(
     val categoria = editor.editing ?: return
     updateEditor { it.copy(deletion = CategoryDeletion.Checking, error = null) }
     coroutineScope.launch {
-      when (val counted = movimientoCount(categoria.id)) {
+      when (val counted = categorias.countMovimientos(categoria.id)) {
         is DataOutcome.Failure ->
             updateEditor { it.copy(deletion = null, error = CategoryEditorError.DELETE) }
         is DataOutcome.Success ->
@@ -279,18 +278,6 @@ internal class CategoriesViewModel(
         )
       }
     }
-  }
-
-  /** Every moneda, because a categoria used only by another moneda still cannot be deleted. */
-  private suspend fun movimientoCount(id: String): DataOutcome<Long> {
-    var total = 0L
-    for (moneda in Moneda.entries) {
-      when (val counts = categorias.observeMovimientoCounts(moneda).first()) {
-        is DataOutcome.Failure -> return counts
-        is DataOutcome.Success -> total += counts.data[id] ?: 0L
-      }
-    }
-    return DataOutcome.Success(total)
   }
 
   private fun updateDraft(transform: (CategoryDraftState) -> CategoryDraftState) = updateEditor {

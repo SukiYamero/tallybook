@@ -182,6 +182,8 @@ class CategoriaRepositoryTest {
           database.insertMovimiento("usd", Moneda.USD, listOf(used.id))
           database.insertMovimiento("cop", Moneda.COP, listOf(comida.id, used.id))
 
+          assertEquals(DataOutcome.Success(0L), repository.countMovimientos(unused.id))
+          assertEquals(DataOutcome.Success(2L), repository.countMovimientos(used.id))
           assertEquals(DataOutcome.Success(CategoriaDelete.Deleted), repository.delete(unused.id))
           assertEquals(DataOutcome.Success(CategoriaDelete.InUse(2)), repository.delete(used.id))
           assertInvalid(repository.delete(comida.id))

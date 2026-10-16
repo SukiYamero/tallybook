@@ -32,6 +32,8 @@ internal object UnsupportedCategoriaRepository : CategoriaRepository {
 
   override suspend fun delete(id: String): DataOutcome<CategoriaDelete> = unsupported()
 
+  override suspend fun countMovimientos(id: String): DataOutcome<Long> = unsupported()
+
   override fun observeMovimientoCounts(moneda: Moneda): Flow<DataOutcome<Map<String, Long>>> =
       unsupported()
 

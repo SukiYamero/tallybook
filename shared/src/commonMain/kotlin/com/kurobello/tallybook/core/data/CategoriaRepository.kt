@@ -39,6 +39,9 @@ interface CategoriaRepository {
   /** Custom categorias only; one referenced by any movimiento returns [CategoriaDelete.InUse]. */
   suspend fun delete(id: String): DataOutcome<CategoriaDelete>
 
+  /** Movimientos in any moneda that carry [id] itself, the count [delete] refuses on. */
+  suspend fun countMovimientos(id: String): DataOutcome<Long>
+
   /**
    * Distinct movimientos in [moneda] per categoria, a parent including its children's. Categorias
    * without movimientos are absent from the map.
