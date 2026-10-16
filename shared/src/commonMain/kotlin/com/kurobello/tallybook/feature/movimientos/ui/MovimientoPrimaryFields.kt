@@ -108,8 +108,9 @@ private fun MovimientoCategoryField(
     focusRequester: FocusRequester,
     enabled: Boolean,
 ) {
-  val selectedCategoria = uiState.categorias.firstOrNull { it.id == uiState.selectedCategoriaId }
-  val isPending = uiState.selectedCategoriaId == CATEGORIA_OTROS_ID
+  val displayedId = uiState.displayedCategoriaId
+  val selectedCategoria = uiState.categorias.firstOrNull { it.id == displayedId }
+  val isPending = displayedId == CATEGORIA_OTROS_ID
   val message =
       when {
         uiState.isCategoriaMissing ->
@@ -122,9 +123,7 @@ private fun MovimientoCategoryField(
       label = stringResource(Res.string.category),
       value =
           selectedCategoria?.nombre
-              ?: stringResource(Res.string.unknown_category).takeIf {
-                uiState.selectedCategoriaId != null
-              },
+              ?: stringResource(Res.string.unknown_category).takeIf { displayedId != null },
       placeholder = stringResource(Res.string.category_required),
       onClick = onOpen,
       modifier = Modifier.focusRequester(focusRequester),

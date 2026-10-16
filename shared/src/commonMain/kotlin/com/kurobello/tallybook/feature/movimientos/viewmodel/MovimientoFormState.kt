@@ -19,6 +19,11 @@ internal interface MovimientoFormState {
   val error: MovimientoFormError?
   val amountError: AmountInputError?
   val isCategoriaMissing: Boolean
+
+  /** The category the form presents, which may be a fallback for an empty selection. */
+  val displayedCategoriaId: String?
+    get() = selectedCategoriaId
+
   val maxSelectableDate: LocalDate?
     get() = null
 

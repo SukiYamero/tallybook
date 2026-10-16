@@ -111,7 +111,8 @@ internal class MovimientoEntryEngine(
           limit = RANKING_LIMIT,
       )
 
-  // Without a verb the sentence has no direction; an income category on top is the only hint.
+  // Without a verb the sentence has no direction; a confident income category is the only hint.
+  // Anything weaker must not imply it, because the income boost would then promote it to confident.
   private fun impliedTipo(
       subject: String,
       index: CategorySuggestionIndex,
@@ -121,6 +122,7 @@ internal class MovimientoEntryEngine(
         index
             .suggest(subject, null, candidates.availableIds, candidates.excludedIds, limit = 1)
             .firstOrNull()
+            ?.takeIf { it.confidence == SuggestionConfidence.HIGH }
     return if (top?.categoriaId in incomeCategoryIds) TipoMovimiento.INGRESO
     else TipoMovimiento.GASTO
   }

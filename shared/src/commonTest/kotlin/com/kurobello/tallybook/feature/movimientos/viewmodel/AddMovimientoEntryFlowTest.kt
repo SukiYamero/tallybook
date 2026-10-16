@@ -7,6 +7,7 @@ import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import kotlin.coroutines.CoroutineContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -14,9 +15,12 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.days
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -43,6 +47,16 @@ class AddMovimientoEntryFlowTest {
     assertEquals("cat_cine", summary.categoria.id)
     assertFalse(summary.categoriaIsPending)
     assertFalse(summary.amountNeedsReview)
+  }
+
+  @Test
+  fun aWeakIncomeSuggestionDoesNotImplyIngreso() = runTest {
+    val viewModel = entryViewModel()
+
+    viewModel.onPhraseChanged("Regalo 50 mil")
+    viewModel.onPhraseContinue()
+
+    assertEquals(TipoMovimiento.GASTO, viewModel.uiState.value.tipo)
   }
 
   @Test
@@ -119,7 +133,7 @@ class AddMovimientoEntryFlowTest {
   }
 
   @Test
-  fun replacingAPreselectedSuggestionFromTheFormDismissesItForTheDraft() = runTest {
+  fun aDismissedSuggestionStaysDismissedOnlyForTheSameSubject() = runTest {
     val viewModel = entryViewModel()
     viewModel.onPhraseChanged("Gasté 20.000 en cine")
     viewModel.onPhraseContinue()
@@ -133,8 +147,32 @@ class AddMovimientoEntryFlowTest {
     viewModel.onStepBack()
     viewModel.onPhraseContinue()
 
+    assertEquals(setOf("cat_cine"), viewModel.uiState.value.dismissedSuggestionIds)
     assertTrue(viewModel.uiState.value.selectedCategoriaId != "cat_cine")
     assertTrue(viewModel.uiState.value.suggestions.none { it.id == "cat_cine" })
+
+    viewModel.onStepBack()
+    viewModel.onPhraseChanged("Gasté 15.000 en la película")
+    viewModel.onPhraseContinue()
+
+    assertTrue(viewModel.uiState.value.dismissedSuggestionIds.isEmpty())
+    assertEquals("cat_cine", viewModel.uiState.value.selectedCategoriaId)
+  }
+
+  @Test
+  fun continuingAgainReplacesTheValuesDerivedFromTheEarlierSentence() = runTest {
+    val viewModel = entryViewModel()
+    viewModel.onPhraseChanged("Sueldo 3 millones")
+    viewModel.onPhraseContinue()
+    viewModel.onStepBack()
+
+    viewModel.onPhraseChanged("Gasté 20.000 en cine")
+    viewModel.onPhraseContinue()
+
+    val state = viewModel.uiState.value
+    assertEquals(TipoMovimiento.GASTO, state.tipo)
+    assertEquals("cat_cine", state.selectedCategoriaId)
+    assertEquals("Gasté 20.000 en cine", state.descripcion)
   }
 
   @Test
@@ -211,6 +249,42 @@ class AddMovimientoEntryFlowTest {
   }
 
   @Test
+  fun fillingManuallyAfterContinueOpensAnEmptyForm() = runTest {
+    val viewModel = entryViewModel()
+    viewModel.onPhraseChanged("Sueldo 3 millones ayer")
+    viewModel.onPhraseContinue()
+    viewModel.onCategoriaSelected("cat_comida")
+    assertEquals(TipoMovimiento.INGRESO, viewModel.uiState.value.tipo)
+
+    viewModel.onFillManually()
+
+    val state = viewModel.uiState.value
+    assertEquals(AddMovimientoStep.FORM, state.step)
+    assertEquals(TipoMovimiento.GASTO, state.tipo)
+    assertEquals("", state.amountInput)
+    assertEquals("", state.descripcion)
+    assertEquals("", state.phrase)
+    assertEquals(state.today, state.fecha)
+    assertNull(state.selectedCategoriaId)
+    assertEquals(CATEGORIA_OTROS_ID, state.displayedCategoriaId)
+    assertTrue(state.suggestions.isEmpty())
+    assertTrue(state.dismissedSuggestionIds.isEmpty())
+    assertFalse(state.amountNeedsReview)
+    assertFalse(state.hasUnsavedChanges)
+    assertNull(state.stepBackTarget)
+  }
+
+  @Test
+  fun theCategoryFieldFallsBackToOtrosUntilACategoryIsChosen() = runTest {
+    val viewModel = entryViewModel()
+    assertEquals(CATEGORIA_OTROS_ID, viewModel.uiState.value.displayedCategoriaId)
+
+    viewModel.onCategoriaSelected("cat_comida")
+
+    assertEquals("cat_comida", viewModel.uiState.value.displayedCategoriaId)
+  }
+
+  @Test
   fun aPhraseAloneCountsAsUnsavedAndDiscardRestoresTheEntry() = runTest {
     val viewModel = entryViewModel()
     assertFalse(viewModel.uiState.value.hasUnsavedChanges)
@@ -252,6 +326,53 @@ class AddMovimientoEntryFlowTest {
 
     viewModel.onPhraseChanged("")
     assertNull(viewModel.uiState.value.preview)
+  }
+
+  @Test
+  fun aPreviewResultFromEarlierInputNeverReplacesTheLatestOne() = runTest {
+    val computation = HeldDispatcher()
+    val viewModel = entryViewModel(computationDispatcher = computation)
+    computation.releaseAll()
+
+    viewModel.onPhraseChanged("Gasté 20.000")
+    advanceTimeBy(250)
+    runCurrent()
+    viewModel.onPhraseChanged("Gasté 30.000")
+    computation.releaseAll()
+    runCurrent()
+
+    assertNull(viewModel.uiState.value.preview)
+
+    advanceTimeBy(250)
+    runCurrent()
+    computation.releaseAll()
+    runCurrent()
+
+    assertEquals(Money(3_000_000, Moneda.COP), assertNotNull(viewModel.uiState.value.preview).monto)
+  }
+
+  @Test
+  fun thePreviewDoesNotRunOutsideTheSentenceStep() = runTest {
+    val clock = AddFixedClock(ADD_TEST_NOW)
+    val movimientos = AddFakeMovimientos()
+    val viewModel = entryViewModel(movimientos = movimientos, clock = clock)
+    viewModel.onPhraseChanged("Gasté 20.000 ayer")
+    advanceTimeBy(250)
+    runCurrent()
+    viewModel.onPhraseContinue()
+    val summaryState = viewModel.uiState.value
+
+    clock.instant = ADD_TEST_NOW + 1.days
+    movimientos.history.value =
+        DataOutcome.Success(
+            listOf(CategoryHistoryRow("Gasté 20.000 ayer", "cat_comida", ADD_TEST_NOW - 1.days))
+        )
+    runCurrent()
+    advanceTimeBy(250)
+    runCurrent()
+
+    assertEquals(summaryState.today, viewModel.uiState.value.today)
+    assertEquals(summaryState.preview, viewModel.uiState.value.preview)
   }
 
   @Test
@@ -300,13 +421,30 @@ class AddMovimientoEntryFlowTest {
   private fun TestScope.entryViewModel(
       movimientos: AddFakeMovimientos = AddFakeMovimientos(),
       timeZone: TimeZone = TimeZone.UTC,
+      clock: AddFixedClock = AddFixedClock(ADD_TEST_NOW),
+      computationDispatcher: CoroutineDispatcher = UnconfinedTestDispatcher(),
   ): AddMovimientoViewModel =
       createAddViewModel(
               movimientoRepository = movimientos,
               categoriaRepository = AddFakeCategorias(DataOutcome.Success(addSeedCategorias())),
               preferencesRepository = addPreferences(Moneda.COP),
+              clock = clock,
               timeZone = timeZone,
+              computationDispatcher = computationDispatcher,
               scope = backgroundScope,
           )
           .also { runCurrent() }
+}
+
+// Work dispatched to it only runs when the test releases it, which holds a computation mid-flight.
+private class HeldDispatcher : CoroutineDispatcher() {
+  private val pending = ArrayDeque<Runnable>()
+
+  override fun dispatch(context: CoroutineContext, block: Runnable) {
+    pending.addLast(block)
+  }
+
+  fun releaseAll() {
+    while (pending.isNotEmpty()) pending.removeFirst().run()
+  }
 }

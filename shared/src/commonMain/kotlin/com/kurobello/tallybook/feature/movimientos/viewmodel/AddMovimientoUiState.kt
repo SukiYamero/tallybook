@@ -49,6 +49,9 @@ internal data class AddMovimientoUiState(
   val effectiveCategoriaId: String?
     get() = selectedCategoriaId?.takeIf(::isLoaded) ?: CATEGORIA_OTROS_ID.takeIf(::isLoaded)
 
+  override val displayedCategoriaId: String?
+    get() = effectiveCategoriaId
+
   val canSubmit: Boolean
     get() =
         amountResult is AmountInputResult.Valid &&

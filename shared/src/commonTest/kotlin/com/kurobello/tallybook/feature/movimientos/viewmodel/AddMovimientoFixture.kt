@@ -32,6 +32,7 @@ import com.kurobello.tallybook.core.model.ThemeMode
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -49,6 +50,7 @@ internal fun createAddViewModel(
     preferencesRepository: AppPreferencesRepository = AddFakePreferences(),
     clock: Clock = AddFixedClock(ADD_TEST_NOW),
     timeZone: TimeZone = TimeZone.UTC,
+    computationDispatcher: CoroutineDispatcher = UnconfinedTestDispatcher(),
     scope: CoroutineScope,
 ): AddMovimientoViewModel =
     AddMovimientoViewModel(
@@ -66,7 +68,7 @@ internal fun createAddViewModel(
                 parser = MovimientoPhraseParser(),
                 suggester = CategorySuggester(CategoryKeywordDictionary.builtIn),
                 localeProvider = AddFixedLocale,
-                computationDispatcher = UnconfinedTestDispatcher(),
+                computationDispatcher = computationDispatcher,
             ),
         scope = scope,
     )
@@ -231,6 +233,6 @@ internal class AddSuspendedMovimientos : AddFakeMovimientos() {
   }
 }
 
-internal class AddFixedClock(private val instant: Instant) : Clock {
+internal class AddFixedClock(var instant: Instant) : Clock {
   override fun now(): Instant = instant
 }

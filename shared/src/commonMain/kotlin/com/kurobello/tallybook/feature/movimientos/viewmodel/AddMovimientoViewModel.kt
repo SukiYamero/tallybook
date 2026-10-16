@@ -154,12 +154,22 @@ internal class AddMovimientoViewModel(
     previewJob?.cancel()
     val today = captureToday()
     val text = uiState.value.phrase.trim()
-    val interpretation = interpret(uiState.value, text, today)
+    var state = uiState.value
+    var interpretation = interpret(state, text, today)
+    // Dismissals belong to the subject they were made for; a different sentence starts clean.
+    if (
+        state.dismissedSuggestionIds.isNotEmpty() &&
+            interpretation.query.subject != suggestionQuery?.subject
+    ) {
+      state = state.copy(dismissedSuggestionIds = emptySet())
+      interpretation = interpret(state, text, today)
+    }
     suggestionQuery = interpretation.query
     updateFields {
       val parsed = interpretation.parsed
       copy(
           step = AddMovimientoStep.SUMMARY,
+          dismissedSuggestionIds = state.dismissedSuggestionIds,
           tipo = interpretation.tipo,
           amountInput = parsed.monto?.toAmountInput().orEmpty(),
           fecha = parsed.fecha ?: today,
@@ -176,14 +186,8 @@ internal class AddMovimientoViewModel(
 
   override fun onFillManually() {
     previewJob?.cancel()
-    updateFields {
-      copy(
-          step = AddMovimientoStep.FORM,
-          formOpenedFromSummary = false,
-          phrase = "",
-          preview = null,
-      )
-    }
+    suggestionQuery = null
+    updateFields { withInitialEntry().copy(step = AddMovimientoStep.FORM) }
   }
 
   override fun onEditMovimiento() {
@@ -213,24 +217,14 @@ internal class AddMovimientoViewModel(
     previewJob?.cancel()
     suggestionQuery = null
     uiState.update { current ->
-      current.copy(
-          tipo = initialDraft.tipo,
-          amountInput = initialDraft.amountInput,
-          fecha = initialDraft.fecha,
-          selectedCategoriaId = initialDraft.selectedCategoriaId,
-          descripcion = initialDraft.descripcion,
-          submitAttempted = false,
-          error = current.error?.takeUnless { it == MovimientoFormError.SAVE_FAILED },
-          hasUnsavedChanges = false,
-          step = AddMovimientoStep.PHRASE,
-          phrase = "",
-          preview = null,
-          suggestions = emptyList(),
-          dismissedSuggestionIds = emptySet(),
-          amountNeedsReview = false,
-          today = initialDraft.fecha,
-          formOpenedFromSummary = false,
-      )
+      current
+          .withInitialEntry()
+          .copy(
+              error = current.error?.takeUnless { it == MovimientoFormError.SAVE_FAILED },
+              hasUnsavedChanges = false,
+              step = AddMovimientoStep.PHRASE,
+              suggestions = emptyList(),
+          )
     }
   }
 
@@ -291,6 +285,22 @@ internal class AddMovimientoViewModel(
     }
   }
 
+  private fun AddMovimientoUiState.withInitialEntry(): AddMovimientoUiState =
+      copy(
+          tipo = initialDraft.tipo,
+          amountInput = initialDraft.amountInput,
+          fecha = initialDraft.fecha,
+          selectedCategoriaId = initialDraft.selectedCategoriaId,
+          descripcion = initialDraft.descripcion,
+          submitAttempted = false,
+          phrase = "",
+          preview = null,
+          dismissedSuggestionIds = emptySet(),
+          amountNeedsReview = false,
+          today = initialDraft.fecha,
+          formOpenedFromSummary = false,
+      )
+
   private fun AddMovimientoUiState.withDirtyState(): AddMovimientoUiState =
       copy(hasUnsavedChanges = phrase.isNotBlank() || toDraft() != initialDraft)
 
@@ -331,21 +341,20 @@ internal class AddMovimientoViewModel(
   private fun refreshPreview(debounce: Boolean) {
     previewJob?.cancel()
     val text = uiState.value.phrase.trim()
-    if (text.isEmpty()) return
+    if (uiState.value.step != AddMovimientoStep.PHRASE || text.isEmpty()) return
     previewJob = coroutineScope.launch {
       if (debounce) delay(PREVIEW_DEBOUNCE_MILLIS)
       val snapshot = uiState.value
-      val today = captureToday()
       val interpretation =
           entryEngine.interpretOffMain(
               text,
-              snapshot.phraseContext(today),
+              snapshot.phraseContext(snapshot.today),
               suggestionIndex,
               snapshot.candidates(),
           )
       uiState.update { current ->
-        if (current.phrase.trim() == text) {
-          current.copy(preview = interpretation.toPreview(current.categorias), today = today)
+        if (current.step == AddMovimientoStep.PHRASE && current.phrase.trim() == text) {
+          current.copy(preview = interpretation.toPreview(current.categorias))
         } else {
           current
         }
