@@ -11,22 +11,17 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -58,19 +53,14 @@ import tallybook.shared.generated.resources.discard_changes_confirm
 import tallybook.shared.generated.resources.discard_changes_message
 import tallybook.shared.generated.resources.discard_changes_title
 
-// A detent's captured height caps the sheet while it is idle, so content that grows after its step
-// settled (the keyboard lifting the sentence step, a save error under the summary) gets its own
-// detent instead of being clipped by the height measured before it appeared.
+// One detent per step lets the sheet animate between step heights; growth inside a step (keyboard,
+// error message) is tracked by the sheet itself.
 private val STEP_DETENTS: Map<AddMovimientoStep, String> =
     mapOf(
         AddMovimientoStep.PHRASE to "add-movimiento-phrase",
         AddMovimientoStep.SUMMARY to "add-movimiento-summary",
         AddMovimientoStep.FORM to "add-movimiento-form",
     )
-private const val PHRASE_KEYBOARD_DETENT = "add-movimiento-phrase-keyboard"
-private const val SUMMARY_ERROR_DETENT = "add-movimiento-summary-error"
-private val CONTENT_DETENTS =
-    STEP_DETENTS.values.toList() + PHRASE_KEYBOARD_DETENT + SUMMARY_ERROR_DETENT
 
 @Composable
 internal fun AddMovimientoSheet(
@@ -96,7 +86,6 @@ private fun AddMovimientoSheet(
     callbacks: ModalBottomSheetCallbacks,
     modifier: Modifier = Modifier,
 ) {
-  var isPhraseKeyboardVisible by remember { mutableStateOf(false) }
   val fadeMillis = TallybookTheme.motion.fadeMillis
   val dismissGuard =
       rememberDismissGuard(
@@ -119,8 +108,8 @@ private fun AddMovimientoSheet(
       layout =
           ModalBottomSheetLayout(
               modifier = modifier,
-              contentDetentIdentifiers = CONTENT_DETENTS,
-              activeContentDetentIdentifier = addMovimientoDetent(uiState, isPhraseKeyboardVisible),
+              contentDetentIdentifiers = STEP_DETENTS.values.toList(),
+              activeContentDetentIdentifier = STEP_DETENTS.getValue(uiState.step),
           ),
   ) {
     AnimatedContent(
@@ -129,8 +118,7 @@ private fun AddMovimientoSheet(
         label = "add movimiento step",
     ) { step ->
       when (step) {
-        AddMovimientoStep.PHRASE ->
-            PhraseStepContent(uiState, actions) { isPhraseKeyboardVisible = it }
+        AddMovimientoStep.PHRASE -> PhraseStepContent(uiState, actions)
         AddMovimientoStep.SUMMARY -> SummaryStepContent(uiState, actions)
         AddMovimientoStep.FORM -> MovimientoForm(uiState = uiState, actions = actions)
       }
@@ -150,16 +138,6 @@ private fun AddMovimientoSheet(
   )
 }
 
-private fun addMovimientoDetent(
-    uiState: AddMovimientoUiState,
-    isPhraseKeyboardVisible: Boolean,
-): String =
-    when {
-      uiState.step == AddMovimientoStep.PHRASE && isPhraseKeyboardVisible -> PHRASE_KEYBOARD_DETENT
-      uiState.step == AddMovimientoStep.SUMMARY && uiState.error != null -> SUMMARY_ERROR_DETENT
-      else -> STEP_DETENTS.getValue(uiState.step)
-    }
-
 // The size snaps so the sheet's own detent animation is the only height motion: an animated size
 // would still be growing when the detent settles and its capture would cap the content early. A
 // discard resets the step while the sheet leaves, and animating that reset would flash content.
@@ -171,23 +149,10 @@ private fun stepTransition(animated: Boolean, fadeMillis: Int): ContentTransform
     )
 
 @Composable
-private fun PhraseStepContent(
-    uiState: AddMovimientoUiState,
-    actions: AddMovimientoActions,
-    onKeyboardVisibleChange: (Boolean) -> Unit,
-) {
+private fun PhraseStepContent(uiState: AddMovimientoUiState, actions: AddMovimientoActions) {
   val focusManager = LocalFocusManager.current
   val focusRequester = remember { FocusRequester() }
-  val liftsWithKeyboard = needsManualInputReveal
-  val isKeyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
-  val currentOnKeyboardVisibleChange by rememberUpdatedState(onKeyboardVisibleChange)
-  LaunchedEffect(isKeyboardVisible, liftsWithKeyboard) {
-    currentOnKeyboardVisibleChange(isKeyboardVisible && liftsWithKeyboard)
-  }
-  DisposableEffect(Unit) { onDispose { currentOnKeyboardVisibleChange(false) } }
-  StepColumn(
-      modifier = if (liftsWithKeyboard) Modifier.imePadding() else Modifier,
-  ) {
+  StepColumn(modifier = if (needsManualInputReveal) Modifier.imePadding() else Modifier) {
     MovimientoPhraseStep(
         text = uiState.phrase,
         preview = uiState.preview ?: PhrasePreviewUi.Empty,

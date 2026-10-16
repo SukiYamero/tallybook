@@ -54,8 +54,8 @@ import tallybook.shared.generated.resources.movimiento_phrase_placeholder
 
 internal const val PHRASE_INPUT_TAG = "movimiento_phrase_input"
 
-// The sheet caps its content at the height measured while idle, so the field and the preview row
-// keep a constant size and any overflow scrolls inside the body instead of pushing Continue away.
+// The field and the preview row keep a constant size so typing never resizes the sheet; overflow
+// scrolls inside the body instead of pushing Continue away.
 private const val PHRASE_VISIBLE_LINES = 3
 
 @Suppress("LongParameterList")
