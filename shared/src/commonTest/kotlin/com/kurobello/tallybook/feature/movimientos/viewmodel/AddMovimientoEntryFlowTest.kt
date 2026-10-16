@@ -135,13 +135,13 @@ class AddMovimientoEntryFlowTest {
   }
 
   @Test
-  fun removingASuggestedCategoryDismissesItOnlyForTheSameSubject() = runTest {
+  fun clearingASuggestedCategoryDismissesItOnlyForTheSameSubject() = runTest {
     val viewModel = entryViewModel()
     viewModel.onPhraseChanged("Gasté 20.000 en cine")
     viewModel.onPhraseContinue()
     assertEquals("cat_cine", viewModel.uiState.value.categoriaId)
 
-    viewModel.onCategoriaRemoved("cat_cine")
+    viewModel.onCategoriaCleared()
 
     assertNull(viewModel.uiState.value.categoriaId)
     assertTrue(viewModel.uiState.value.categoriasArePending)
@@ -164,14 +164,13 @@ class AddMovimientoEntryFlowTest {
   }
 
   @Test
-  fun removingTheCategoryFallsBackToTheOtrosPendingState() = runTest {
+  fun clearingTheCategoryFallsBackToTheOtrosPendingState() = runTest {
     val viewModel = entryViewModel()
-    viewModel.onCategoriasChanged(listOf("cat_comida"))
+    viewModel.onCategoriaSelected("cat_comida")
 
-    viewModel.onCategoriaRemoved("cat_salud")
     assertEquals("cat_comida", viewModel.uiState.value.categoriaId)
 
-    viewModel.onCategoriaRemoved("cat_comida")
+    viewModel.onCategoriaCleared()
 
     assertNull(viewModel.uiState.value.categoriaId)
     assertEquals(CATEGORIA_OTROS_ID, viewModel.uiState.value.displayedCategoriaId)
@@ -180,21 +179,22 @@ class AddMovimientoEntryFlowTest {
   @Test
   fun aNewPickReplacesTheCategoryAndUnknownOrOtrosPicksAreIgnored() = runTest {
     val viewModel = entryViewModel()
-    viewModel.onCategoriasChanged(listOf("cat_comida"))
+    viewModel.onCategoriaSelected("cat_comida")
 
-    viewModel.onCategoriasChanged(listOf("cat_comida", "cat_transporte"))
+    viewModel.onCategoriaSelected("cat_transporte")
     assertEquals("cat_transporte", viewModel.uiState.value.categoriaId)
 
-    viewModel.onCategoriasChanged(listOf("cat_transporte", "cat_unknown", CATEGORIA_OTROS_ID))
+    viewModel.onCategoriaSelected("cat_unknown")
+    viewModel.onCategoriaSelected(CATEGORIA_OTROS_ID)
     assertEquals("cat_transporte", viewModel.uiState.value.categoriaId)
   }
 
   @Test
   fun aChildPickReplacesItsParent() = runTest {
     val viewModel = entryViewModel()
-    viewModel.onCategoriasChanged(listOf("cat_comida"))
+    viewModel.onCategoriaSelected("cat_comida")
 
-    viewModel.onCategoriasChanged(listOf("cat_supermercado"))
+    viewModel.onCategoriaSelected("cat_supermercado")
 
     assertEquals("cat_supermercado", viewModel.uiState.value.categoriaId)
   }
@@ -207,8 +207,8 @@ class AddMovimientoEntryFlowTest {
     viewModel.onPhraseContinue()
     assertEquals(CATEGORIA_OTROS_ID, viewModel.uiState.value.displayedCategoriaId)
 
-    viewModel.onCategoriasChanged(listOf("cat_comida"))
-    viewModel.onCategoriasChanged(listOf("cat_comida", "cat_salud"))
+    viewModel.onCategoriaSelected("cat_comida")
+    viewModel.onCategoriaSelected("cat_salud")
     assertEquals("cat_salud", viewModel.uiState.value.displayedCategoriaId)
     viewModel.onSubmit()
     runCurrent()
@@ -355,7 +355,7 @@ class AddMovimientoEntryFlowTest {
     val viewModel = entryViewModel()
     viewModel.onPhraseChanged("Sueldo 3 millones ayer")
     viewModel.onPhraseContinue()
-    viewModel.onCategoriasChanged(listOf("cat_comida"))
+    viewModel.onCategoriaSelected("cat_comida")
     assertEquals(TipoMovimiento.INGRESO, viewModel.uiState.value.tipo)
 
     viewModel.onFillManually()
@@ -396,7 +396,7 @@ class AddMovimientoEntryFlowTest {
   @Test
   fun fillingManuallyKeepsTheCategoryPickedByHandInTheDialog() = runTest {
     val viewModel = entryViewModel()
-    viewModel.onCategoriasChanged(listOf("cat_salud"))
+    viewModel.onCategoriaSelected("cat_salud")
     viewModel.onPhraseChanged("Gasté 20.000 en cine")
     viewModel.onFillManually()
 
@@ -412,7 +412,7 @@ class AddMovimientoEntryFlowTest {
     val viewModel = entryViewModel()
     assertEquals(CATEGORIA_OTROS_ID, viewModel.uiState.value.displayedCategoriaId)
 
-    viewModel.onCategoriasChanged(listOf("cat_comida"))
+    viewModel.onCategoriaSelected("cat_comida")
 
     assertEquals("cat_comida", viewModel.uiState.value.displayedCategoriaId)
   }
@@ -478,7 +478,7 @@ class AddMovimientoEntryFlowTest {
     runCurrent()
     assertEquals("cat_sueldo", viewModel.uiState.value.categoriaId)
 
-    viewModel.onCategoriasChanged(listOf("cat_sueldo", "cat_salud"))
+    viewModel.onCategoriaSelected("cat_salud")
     viewModel.onPhraseChanged("Gasté 20.000 en cine")
     advanceTimeBy(250)
     runCurrent()
@@ -492,7 +492,7 @@ class AddMovimientoEntryFlowTest {
     val viewModel = entryViewModel()
     viewModel.onPhraseChanged("Gasté 20.000 en cine")
     viewModel.onPhraseContinue()
-    viewModel.onCategoriasChanged(listOf("cat_cine", "cat_comida"))
+    viewModel.onCategoriaSelected("cat_comida")
 
     viewModel.onStepBack()
 
@@ -507,7 +507,7 @@ class AddMovimientoEntryFlowTest {
   fun onlyASentenceMakesTheDialogDirty() = runTest {
     val viewModel = entryViewModel()
 
-    viewModel.onCategoriasChanged(listOf("cat_comida"))
+    viewModel.onCategoriaSelected("cat_comida")
     assertFalse(viewModel.uiState.value.hasUnsavedChanges)
 
     viewModel.onPhraseChanged("Gasté 20.000")
@@ -657,7 +657,7 @@ class AddMovimientoEntryFlowTest {
     val viewModel = entryViewModel()
     viewModel.onPhraseChanged("Gasté 20.000 en cine")
     viewModel.onPhraseContinue()
-    viewModel.onCategoriasChanged(listOf("cat_cine", "cat_comida"))
+    viewModel.onCategoriaSelected("cat_comida")
     viewModel.onStepBack()
 
     viewModel.onPhraseChanged("  ")

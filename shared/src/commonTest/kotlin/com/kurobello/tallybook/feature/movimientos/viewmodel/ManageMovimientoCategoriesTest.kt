@@ -33,7 +33,7 @@ class ManageMovimientoCategoriesTest {
   fun choosingAnotherCategoryReplacesItAndKeepsTheTags() = runTest {
     val f = fixture(stored = "food", tags = listOf("trip"))
 
-    f.viewModel.onCategoriasChanged(listOf("food", "home"))
+    f.viewModel.onCategoriaSelected("home")
     f.viewModel.onSubmit()
     runCurrent()
 
@@ -43,20 +43,10 @@ class ManageMovimientoCategoriesTest {
   }
 
   @Test
-  fun theCategoryCannotBeRemoved() = runTest {
-    val f = fixture(stored = "food")
-
-    f.viewModel.onCategoriaRemoved("food")
-    f.viewModel.onCategoriasChanged(emptyList())
-
-    assertEquals("food", f.form().categoriaId)
-  }
-
-  @Test
   fun aPendingMovimientoLeavesOtrosOnceARealCategoryIsChosen() = runTest {
     val f = fixture(stored = CATEGORIA_OTROS_ID, catalog = listOf("food", CATEGORIA_OTROS_ID))
 
-    f.viewModel.onCategoriasChanged(listOf("food"))
+    f.viewModel.onCategoriaSelected("food")
     f.viewModel.onSubmit()
     runCurrent()
 
@@ -67,7 +57,7 @@ class ManageMovimientoCategoriesTest {
   fun anUnavailableCatalogKeepsTheStoredCategoryValidButBlocksNewOnes() = runTest {
     val f = fixture(stored = "food", catalog = emptyList())
 
-    f.viewModel.onCategoriasChanged(listOf("food", "home"))
+    f.viewModel.onCategoriaSelected("home")
     assertEquals("food", f.form().categoriaId)
     f.viewModel.onAmountChanged("20.00")
     f.viewModel.onSubmit()

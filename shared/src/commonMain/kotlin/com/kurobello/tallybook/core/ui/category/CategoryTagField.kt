@@ -24,17 +24,15 @@ import tallybook.shared.generated.resources.category_tag_field_suggestions
 import tallybook.shared.generated.resources.movimiento_pending_label
 
 /**
- * The single category surface of the entry flow: a labeled list of [categorias] as tags. Each tag
- * can be removed except when it is the only one, and the Add tag disappears once [max] is reached.
- * [pending] marks the Otros fallback, shown as a neutral dashed tag without removal and labeled "to
- * complete" beside the field label. [suggestions] already selected are skipped and hidden while the
- * field is full.
+ * The category surface of the entry flow: a labeled list of [categorias] as tags. Each tag can be
+ * removed except when it is the only one. [pending] marks the Otros fallback, shown as a neutral
+ * dashed tag without removal and labeled "to complete" beside the field label. [suggestions]
+ * already selected are skipped.
  */
 @Composable
 @Suppress("LongParameterList")
 internal fun CategoryTagField(
     categorias: List<Categoria>,
-    max: Int,
     onRemove: (Categoria) -> Unit,
     onAdd: () -> Unit,
     modifier: Modifier = Modifier,
@@ -43,9 +41,8 @@ internal fun CategoryTagField(
     onSuggestion: (Categoria) -> Unit = {},
     enabled: Boolean = true,
 ) {
-  val isFull = categorias.size >= max
   val selectedIds = categorias.mapTo(mutableSetOf(), Categoria::id)
-  val offered = if (isFull) emptyList() else suggestions.filter { it.id !in selectedIds }
+  val offered = suggestions.filter { it.id !in selectedIds }
   Column(
       modifier = modifier.fillMaxWidth(),
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
@@ -66,7 +63,7 @@ internal fun CategoryTagField(
           )
         }
       }
-      if (!isFull) CategoryAddTag(onClick = onAdd, enabled = enabled)
+      CategoryAddTag(onClick = onAdd, enabled = enabled)
     }
     if (offered.isNotEmpty()) {
       CategoryTagFieldSuggestions(offered, onSuggestion, enabled)
@@ -121,8 +118,6 @@ private fun CategoryTagFieldSuggestions(
   }
 }
 
-private const val PREVIEW_MAX = 6
-
 private val previewCategories =
     listOf(
         Categoria("cat_cine", "Cine", null, CategoryIcon.FILM, CategoryTint.PURPLE),
@@ -147,14 +142,12 @@ private fun CategoryTagFieldPreviewMatrix() {
   Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space24)) {
     CategoryTagField(
         categorias = previewCategories.take(2),
-        max = PREVIEW_MAX,
         onRemove = {},
         onAdd = {},
         suggestions = previewCategories.drop(2).take(2),
     )
     CategoryTagField(
         categorias = listOf(previewOtros),
-        max = PREVIEW_MAX,
         onRemove = {},
         onAdd = {},
         pending = true,
@@ -162,7 +155,6 @@ private fun CategoryTagFieldPreviewMatrix() {
     )
     CategoryTagField(
         categorias = previewCategories,
-        max = PREVIEW_MAX,
         onRemove = {},
         onAdd = {},
     )

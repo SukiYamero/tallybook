@@ -23,7 +23,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import com.kurobello.tallybook.core.model.Categoria
-import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.ui.category.CategoryTagField
 import com.kurobello.tallybook.core.ui.component.TallybookButton
@@ -123,7 +122,6 @@ internal fun MovimientoSummaryStep(
       )
       CategoryTagField(
           categorias = summary.categorias,
-          max = MAX_CATEGORIAS_POR_MOVIMIENTO,
           onRemove = callbacks.onRemoveCategoria,
           onAdd = callbacks.onAddCategoria,
           pending = summary.categoriasArePending,

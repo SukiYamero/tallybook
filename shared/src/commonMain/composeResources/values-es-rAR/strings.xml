@@ -506,4 +506,56 @@
     <string name="ui_catalog_state_full">Completo</string>
     <string name="ui_catalog_state_duplicate">Duplicada</string>
     <string name="ui_catalog_state_ghost">Sin fondo</string>
+    <string name="movimiento_category_section">Categoría</string>
+    <string name="movimiento_tags_section">Tags · opcional</string>
+    <string name="category_choose">Elegir</string>
+    <string name="category_suggestion_replaces">Reemplaza a %1$s</string>
+    <string name="category_picker_single_title">Elegí una categoría</string>
+    <string name="tag_add">Agregar</string>
+    <string name="tag_add_description">Agregar tag</string>
+    <string name="tag_remove">Quitar %1$s</string>
+    <string name="tag_picker_title">Elegí tags</string>
+    <string name="tag_picker_create">Crear tag “%1$s”</string>
+    <string name="tag_picker_limit_reached">Llegaste al máximo de %1$d tags</string>
+    <string name="tag_picker_done">Listo (%1$d)</string>
+    <string name="search_tags">Buscar tags</string>
+    <string name="tags_unavailable">No pudimos cargar tus tags. Lo que escribiste sigue acá. Intentá cargarlos de nuevo.</string>
+    <string name="profile_tags_label">Tags</string>
+    <string name="profile_tags_body">Agrupá movimientos de distintas categorías, como “Empresa”.</string>
+    <string name="tags_title">Tags</string>
+    <string name="tags_empty">Creá tags para agrupar movimientos de distintas categorías a tu manera.</string>
+    <string name="tags_search_empty">No hay tags que coincidan con “%1$s”.</string>
+    <string name="tags_load_error">No pudimos cargar tus tags. Tus datos siguen guardados; intentá de nuevo.</string>
+    <string name="tag_new_title">Nuevo tag</string>
+    <string name="tag_edit_title">Editar tag</string>
+    <string name="tag_open">Abrir %1$s</string>
+    <string name="tag_name_label">Nombre</string>
+    <string name="tag_name_placeholder">Por ejemplo, Empresa</string>
+    <string name="tag_name_blank">Escribí un nombre para el tag</string>
+    <string name="tag_name_too_long">Usá hasta %1$d caracteres</string>
+    <string name="tag_save">Guardar</string>
+    <string name="tag_save_error">No pudimos guardar el tag. Lo que escribiste sigue acá para que lo intentés de nuevo.</string>
+    <string name="tag_created">Tag creado</string>
+    <string name="tag_updated">Tag actualizado</string>
+    <string name="tag_duplicate_message">Ya tenés un tag llamado “%1$s”.</string>
+    <string name="tag_duplicate_open">Abrir %1$s</string>
+    <plurals name="tag_movimiento_count">
+        <item quantity="one">%1$d movimiento</item>
+        <item quantity="other">%1$d movimientos</item>
+    </plurals>
+    <string name="tag_no_movimientos">Sin movimientos</string>
+    <plurals name="tag_view_movimientos_count">
+        <item quantity="one">Ver %1$d movimiento</item>
+        <item quantity="other">Ver %1$d movimientos</item>
+    </plurals>
+    <string name="tag_delete">Eliminar</string>
+    <string name="tag_delete_title">¿Eliminar “%1$s”?</string>
+    <plurals name="tag_delete_message">
+        <item quantity="one">Tu movimiento queda guardado; solo se le quita este tag.</item>
+        <item quantity="other">Tus %1$d movimientos quedan guardados; solo se les quita este tag.</item>
+    </plurals>
+    <string name="tag_delete_message_unused">Ningún movimiento lo usa, así que tus registros quedan igual.</string>
+    <string name="tag_deleted">Tag eliminado</string>
+    <string name="tag_delete_error">No pudimos eliminar el tag. Tus movimientos siguen guardados; intentá de nuevo.</string>
+    <string name="search_tags_label">Tags</string>
 </resources>

@@ -50,8 +50,8 @@ internal fun SearchRoute(
     modals: PrimaryModalCoordinator,
     focusRequest: Long?,
     onFocusAcknowledged: (Long) -> Unit,
-    categoryRequest: SearchCategoryRequest?,
-    onCategoryRequestHandled: (Long) -> Unit,
+    searchFilterRequest: SearchFilterRequest?,
+    onSearchFilterRequestHandled: (Long) -> Unit,
     active: Boolean,
     modifier: Modifier = Modifier,
     onOpenMovimiento: ((String) -> Unit)? = null,
@@ -105,7 +105,7 @@ internal fun SearchRoute(
     }
   }
   SearchEntryFocus(focusRequest, active, list, fieldFocus, onFocusAcknowledged)
-  SearchCategoryRequestEffect(categoryRequest, active, viewModel, onCategoryRequestHandled)
+  SearchFilterRequestEffect(searchFilterRequest, active, viewModel, onSearchFilterRequestHandled)
   LaunchedEffect(returnFilterFocus, active, state.value.filterSession) {
     if (!active) returnFilterFocus = null
     val origin = returnFilterFocus
@@ -162,8 +162,8 @@ private fun SearchEntryFocus(
 }
 
 @Composable
-private fun SearchCategoryRequestEffect(
-    request: SearchCategoryRequest?,
+private fun SearchFilterRequestEffect(
+    request: SearchFilterRequest?,
     active: Boolean,
     actions: SearchActions,
     onHandled: (Long) -> Unit,
@@ -171,7 +171,7 @@ private fun SearchCategoryRequestEffect(
   val latestHandled = rememberUpdatedState(onHandled)
   LaunchedEffect(request, active, actions) {
     if (request != null && active) {
-      actions.onShowCategory(request.categoryId)
+      request.categoryIds.firstOrNull()?.let(actions::onShowCategory)
       latestHandled.value(request.token)
     }
   }

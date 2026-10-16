@@ -220,11 +220,11 @@ class MovimientoFormTest {
 
   @Test
   fun childCategoriesAreSelectableAndOtrosIsNeverOffered() {
-    val selections = mutableListOf<List<String>>()
+    val selections = mutableListOf<String>()
     val actions =
         object : AddMovimientoActions by RecordingActions() {
-          override fun onCategoriasChanged(ids: List<String>) {
-            selections += ids
+          override fun onCategoriaSelected(id: String) {
+            selections += id
           }
         }
     composeRule.setContent { TallybookTheme { MovimientoForm(state(), actions) } }
@@ -233,10 +233,10 @@ class MovimientoFormTest {
         .onNodeWithContentDescription(localizedString(Res.string.category_tag_add_description))
         .performClick()
     composeRule.onNodeWithText(otros.nombre).assertDoesNotExist()
-    composeRule.onNodeWithText(category.nombre).performClick()
     composeRule.onNodeWithText(child.nombre).performClick()
 
-    composeRule.runOnIdle { assertEquals(listOf(listOf(child.id)), selections) }
+    composeRule.runOnIdle { assertEquals(listOf(child.id), selections) }
+    composeRule.onNodeWithText(child.nombre).assertDoesNotExist()
   }
 
   @Test
@@ -444,9 +444,9 @@ class MovimientoFormTest {
 
     override fun onFechaChanged(value: LocalDate) = Unit
 
-    override fun onCategoriasChanged(ids: List<String>) = Unit
+    override fun onCategoriaSelected(id: String) = Unit
 
-    override fun onCategoriaRemoved(id: String) = Unit
+    override fun onCategoriaCleared() = Unit
 
     override fun onTituloChanged(value: String) = Unit
 

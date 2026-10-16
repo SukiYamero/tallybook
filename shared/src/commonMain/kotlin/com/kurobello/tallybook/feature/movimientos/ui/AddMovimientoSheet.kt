@@ -23,7 +23,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.ui.component.LastWhileVisible
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
@@ -124,7 +123,7 @@ private fun AddMovimientoSheet(
   MovimientoCategoryPickerSheet(
       visible = categoryPicker.isVisible && uiState.step != AddMovimientoStep.FORM,
       uiState = uiState,
-      onSelectionChange = actions::onCategoriasChanged,
+      onSelect = actions::onCategoriaSelected,
       picker = categoryPicker,
       creation = categoryCreation,
   )
@@ -164,7 +163,7 @@ private fun MovimientoSentenceDialog(
             focusManager.clearFocus(force = true)
             actions.onFillManually()
           },
-          onRemoveCategoria = { actions.onCategoriaRemoved(it.id) },
+          onRemoveCategoria = { actions.onCategoriaCleared() },
           onAddCategoria = onAddCategoria,
           onSuggestion = { actions.onSuggestionSelected(it.id) },
       )
@@ -263,7 +262,7 @@ private fun SummaryStepContent(
       summary = uiState.summary,
       callbacks =
           MovimientoSummaryCallbacks(
-              onRemoveCategoria = { actions.onCategoriaRemoved(it.id) },
+              onRemoveCategoria = { actions.onCategoriaCleared() },
               onAddCategoria = onAddCategoria,
               onSuggestion = { actions.onSuggestionSelected(it.id) },
               onDescripcionChange = actions::onDescripcionChanged,
@@ -303,9 +302,8 @@ internal fun AddMovimientoSheetRoute(
       effects = quickCategoryViewModel.effects,
       selection =
           CategoryPickerSelection(
-              selectedIds = listOfNotNull(uiState.categoriaId).realCategoriaIds(),
-              max = MAX_CATEGORIAS_POR_MOVIMIENTO,
-              onSelectionChange = viewModel::onCategoriasChanged,
+              selectedId = uiState.categoriaId.realCategoriaId(),
+              onSelect = viewModel::onCategoriaSelected,
           ),
       catalog = uiState.categorias,
   )

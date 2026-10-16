@@ -128,7 +128,7 @@ internal fun MovimientoForm(
   MovimientoCategoryPickerSheet(
       visible = interactionEnabled && categoryPicker.isVisible,
       uiState = uiState,
-      onSelectionChange = actions::onCategoriasChanged,
+      onSelect = actions::onCategoriaSelected,
       picker = categoryPicker,
       creation = categoryCreation,
   )

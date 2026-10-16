@@ -86,13 +86,10 @@ internal class ManageMovimientoViewModel(
     copy(descripcion = value.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH))
   }
 
-  override fun onCategoriasChanged(ids: List<String>) {
+  override fun onCategoriaSelected(id: String) {
     val catalog = uiState.value.session?.categorias ?: return
-    updateDraft { copy(categoriaId = chosenCategoriaId(categoriaId, ids, catalog) ?: categoriaId) }
+    if (isSelectableCategoria(id, catalog)) updateDraft { copy(categoriaId = id) }
   }
-
-  // The editor always keeps one category: it changes only by choosing another one.
-  override fun onCategoriaRemoved(id: String) = Unit
 
   override fun onCancelEdit() {
     val session = uiState.value.session ?: return

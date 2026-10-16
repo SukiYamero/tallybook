@@ -3,7 +3,6 @@ package com.kurobello.tallybook.feature.movimientos.ui
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoriaOrigen
-import com.kurobello.tallybook.core.model.CategoriaSelection
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.ui.category.categoryGroups
@@ -68,23 +67,6 @@ class CategoryPickerGroupsTest {
   }
 
   @Test
-  fun selectedCategoriesKeepSelectionOrderAndSkipUnknownIds() {
-    assertEquals(
-        listOf("movies", "food"),
-        selectedCategorias(catalog, listOf("movies", "gone", "food")).map { it.id },
-    )
-  }
-
-  @Test
-  fun choosingAChildReplacesItsParentAndChoosingTheParentReplacesItsChildren() {
-    val withChild = CategoriaSelection.add(listOf("movies", "transport"), "gas", catalog)
-    assertEquals(listOf("movies", "gas"), withChild)
-
-    val withParent = CategoriaSelection.add(withChild, "transport", catalog)
-    assertEquals(listOf("movies", "transport"), withParent)
-  }
-
-  @Test
   fun customCategoriesFormOneBlockSortedByNameBeforeThePredefinedFamilies() {
     val withCustom = listOf(food, groceries, zumba, other, abaco, yoga)
 
@@ -111,7 +93,7 @@ class CategoryPickerGroupsTest {
     val otros = categoria(CATEGORIA_OTROS_ID, "Otros")
     val withHidden = listOf(food, groceries, otros, hiddenMovies, hiddenYoga)
 
-    val excluded = pickerExcludedCategoryIds(withHidden, selectedIds = listOf(hiddenYoga.id))
+    val excluded = pickerExcludedCategoryIds(withHidden, selectedId = hiddenYoga.id)
 
     assertEquals(setOf(CATEGORIA_OTROS_ID, hiddenMovies.id), excluded)
     assertEquals(
@@ -124,7 +106,7 @@ class CategoryPickerGroupsTest {
   fun aHiddenParentStillListsItsVisibleChildren() {
     val hiddenFood = food.copy(oculta = true)
 
-    val excluded = pickerExcludedCategoryIds(listOf(hiddenFood, groceries), emptyList())
+    val excluded = pickerExcludedCategoryIds(listOf(hiddenFood, groceries), selectedId = null)
 
     assertEquals(
         listOf(listOf("groceries")),

@@ -69,15 +69,19 @@ internal fun CategoryTag(
   }
 }
 
-/** Outlined tag with a leading plus that offers [categoria] as a choice to add. */
+/**
+ * Outlined tag with a leading plus that offers [categoria] as a choice to add. [dimmed] borrows the
+ * disabled look while staying clickable, for suggestions that would replace a current choice.
+ */
 @Composable
 internal fun CategorySuggestionTag(
     categoria: Categoria,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    dimmed: Boolean = false,
 ) {
-  val appearance = suggestedTagAppearance(categoria, enabled)
+  val appearance = suggestedTagAppearance(categoria, enabled = enabled && !dimmed)
   CategoryTagButton(
       onClick = onClick,
       enabled = enabled,
@@ -162,7 +166,7 @@ private fun suggestedTagAppearance(categoria: Categoria, enabled: Boolean): Cate
 }
 
 @Composable
-private fun addTagAppearance(enabled: Boolean): CategoryTagAppearance {
+internal fun addTagAppearance(enabled: Boolean): CategoryTagAppearance {
   val colors = TallybookTheme.colors
   val content = if (enabled) colors.foreground.secondary else colors.foreground.disabled
   return CategoryTagAppearance(

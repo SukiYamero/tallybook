@@ -22,7 +22,6 @@ import com.kurobello.tallybook.core.model.CategoriaWrite
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.DataOutcome
-import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
 import kotlin.test.assertEquals
@@ -44,7 +43,7 @@ class CategoryPickerQuickCreateTest {
   @get:Rule val composeRule = createComposeRule()
 
   @Test
-  fun aSearchWithoutResultsCreatesTheTypedCategoryAndSelectsIt() {
+  fun aSearchWithoutResultsCreatesTheTypedCategorySelectsItAndCloses() {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     val repository = PickerCategorias(listOf(food))
     val quickCategory =
@@ -57,7 +56,8 @@ class CategoryPickerQuickCreateTest {
                 ),
             scope = scope,
         )
-    var selected by mutableStateOf(listOf(food.id))
+    var selected by mutableStateOf<String?>(food.id)
+    var dismissals = 0
     try {
       composeRule.setContent {
         TallybookTheme {
@@ -65,18 +65,15 @@ class CategoryPickerQuickCreateTest {
           val quickState by quickCategory.uiState.collectAsState()
           QuickCategorySelectionEffect(
               effects = quickCategory.effects,
-              selection =
-                  CategoryPickerSelection(selected, MAX_CATEGORIAS_POR_MOVIMIENTO) {
-                    selected = it
-                  },
+              selection = CategoryPickerSelection(selected) { selected = it },
               catalog = catalog,
           )
           CategoryPickerSheet(
               visible = true,
               categorias = catalog,
-              selectedIds = selected,
-              onSelectionChange = { selected = it },
-              onDismiss = {},
+              selectedId = selected,
+              onSelect = { selected = it },
+              onDismiss = { dismissals++ },
               creation = CategoryPickerCreation(quickState, quickCategory),
           )
         }
@@ -87,11 +84,12 @@ class CategoryPickerQuickCreateTest {
       composeRule.onNodeWithTag(CATEGORY_PICKER_CREATION_TAG).assertExists()
       composeRule.onNodeWithTag(CATEGORY_PICKER_CREATE_TAG).performClick()
 
-      composeRule.waitUntil(5_000) { selected.size == 2 }
+      composeRule.waitUntil(5_000) { selected == GYM_ID }
       composeRule.onNodeWithTag(CATEGORY_PICKER_CREATION_TAG).assertDoesNotExist()
       composeRule.runOnIdle {
         assertEquals("Gym", repository.catalog.value.last().nombre)
-        assertEquals(listOf(food.id, GYM_ID), selected)
+        assertEquals(GYM_ID, selected)
+        assertEquals(1, dismissals)
       }
     } finally {
       scope.cancel()

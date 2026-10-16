@@ -111,47 +111,23 @@ class CategoryTagTest {
   }
 
   @Test
-  fun fieldShowsNoCounterAndOffersAddUntilTheLimit() {
+  fun fieldShowsNoCounterAndOffersAdd() {
     var adds = 0
     composeRule.setContent {
       TallybookTheme {
         CategoryTagField(
             categorias = listOf(cinema, food),
-            max = LIMIT,
             onRemove = {},
             onAdd = { adds++ },
         )
       }
     }
 
-    composeRule.onNodeWithText("2/$LIMIT").assertDoesNotExist()
+    composeRule.onNodeWithText("2/", substring = true).assertDoesNotExist()
     composeRule
         .onNodeWithContentDescription(string(Res.string.category_tag_add_description))
         .performClick()
     composeRule.runOnIdle { assertEquals(1, adds) }
-  }
-
-  @Test
-  fun fieldHidesAddAndSuggestionsAtTheLimit() {
-    composeRule.setContent {
-      TallybookTheme {
-        CategoryTagField(
-            categorias = listOf(cinema, food),
-            max = 2,
-            onRemove = {},
-            onAdd = {},
-            suggestions = listOf(transport),
-        )
-      }
-    }
-
-    composeRule
-        .onAllNodesWithContentDescription(string(Res.string.category_tag_add_description))
-        .assertCountEquals(0)
-    composeRule
-        .onNodeWithText(string(Res.string.category_tag_field_suggestions))
-        .assertDoesNotExist()
-    composeRule.onNodeWithText("Transport").assertDoesNotExist()
   }
 
   @Test
@@ -161,7 +137,6 @@ class CategoryTagTest {
       TallybookTheme {
         CategoryTagField(
             categorias = listOf(cinema, food),
-            max = LIMIT,
             onRemove = { removed = it },
             onAdd = {},
         )
@@ -177,9 +152,7 @@ class CategoryTagTest {
   @Test
   fun fieldWithASingleCategoryOffersNoRemoval() {
     composeRule.setContent {
-      TallybookTheme {
-        CategoryTagField(categorias = listOf(cinema), max = LIMIT, onRemove = {}, onAdd = {})
-      }
+      TallybookTheme { CategoryTagField(categorias = listOf(cinema), onRemove = {}, onAdd = {}) }
     }
 
     composeRule
@@ -194,7 +167,6 @@ class CategoryTagTest {
       TallybookTheme {
         CategoryTagField(
             categorias = listOf(cinema),
-            max = LIMIT,
             onRemove = {},
             onAdd = {},
             suggestions = listOf(cinema, food),
@@ -214,7 +186,6 @@ class CategoryTagTest {
       TallybookTheme {
         CategoryTagField(
             categorias = listOf(cinema),
-            max = LIMIT,
             onRemove = {},
             onAdd = {},
             pending = true,
@@ -230,9 +201,5 @@ class CategoryTagTest {
 
   private fun string(resource: StringResource, vararg args: Any): String = runBlocking {
     getString(resource, *args)
-  }
-
-  private companion object {
-    const val LIMIT = 6
   }
 }

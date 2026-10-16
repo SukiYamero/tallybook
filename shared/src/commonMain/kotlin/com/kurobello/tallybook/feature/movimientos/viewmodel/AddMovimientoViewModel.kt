@@ -136,15 +136,12 @@ internal class AddMovimientoViewModel(
     updateFields { copy(fecha = value) }
   }
 
-  override fun onCategoriasChanged(ids: List<String>) {
-    updateFields {
-      val chosen = chosenCategoriaId(categoriaId, ids, categorias)
-      withCategoria(chosen, removed = categoriaId.takeIf { chosen == null })
-    }
+  override fun onCategoriaSelected(id: String) {
+    updateFields { if (isSelectableCategoria(id, categorias)) withCategoria(id) else this }
   }
 
-  override fun onCategoriaRemoved(id: String) {
-    updateFields { if (id == categoriaId) withCategoria(null, removed = id) else this }
+  override fun onCategoriaCleared() {
+    updateFields { categoriaId?.let { withCategoria(null, removed = it) } ?: this }
   }
 
   override fun onTituloChanged(value: String) {

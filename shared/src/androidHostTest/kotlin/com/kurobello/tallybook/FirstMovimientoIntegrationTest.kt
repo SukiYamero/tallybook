@@ -126,7 +126,7 @@ class FirstMovimientoIntegrationTest {
           testScheduler.advanceUntilIdle()
           expenseForm.apply {
             onAmountChanged("10,50")
-            onCategoriasChanged(listOf("cat_comida"))
+            onCategoriaSelected("cat_comida")
             onSubmit()
           }
           testScheduler.advanceUntilIdle()
@@ -146,7 +146,7 @@ class FirstMovimientoIntegrationTest {
           incomeForm.apply {
             onTipoChanged(TipoMovimiento.INGRESO)
             onAmountChanged("20,00")
-            onCategoriasChanged(listOf("cat_ingresos"))
+            onCategoriaSelected("cat_ingresos")
             onSubmit()
           }
           testScheduler.advanceUntilIdle()

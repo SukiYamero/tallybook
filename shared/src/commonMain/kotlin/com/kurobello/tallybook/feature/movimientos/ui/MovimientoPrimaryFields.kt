@@ -43,7 +43,6 @@ internal fun MovimientoPrimaryFields(
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
     MovimientoCategoriesField(
         uiState = uiState,
-        actions = actions,
         onOpen = onOpenCategory,
         enabled = interactionEnabled && !uiState.isSubmitting && !uiState.isLoading,
     )

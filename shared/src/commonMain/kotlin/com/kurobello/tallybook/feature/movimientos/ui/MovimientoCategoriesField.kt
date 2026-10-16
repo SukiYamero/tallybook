@@ -9,11 +9,9 @@ import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
-import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.ui.category.CategoryTagField
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
-import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormState
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
@@ -23,7 +21,6 @@ import tallybook.shared.generated.resources.unknown_category
 @Composable
 internal fun MovimientoCategoriesField(
     uiState: MovimientoFormState,
-    actions: MovimientoFormActions,
     onOpen: () -> Unit,
     enabled: Boolean,
     modifier: Modifier = Modifier,
@@ -42,8 +39,8 @@ internal fun MovimientoCategoriesField(
   ) {
     CategoryTagField(
         categorias = categorias,
-        max = MAX_CATEGORIAS_POR_MOVIMIENTO,
-        onRemove = { actions.onCategoriaRemoved(it.id) },
+        // The field never offers removal on its only tag; switching goes through the picker.
+        onRemove = {},
         onAdd = onOpen,
         pending = CATEGORIA_OTROS_ID in ids,
         enabled = enabled,
@@ -58,7 +55,7 @@ internal fun MovimientoCategoriesField(
   }
 }
 
-// A stored category the catalog no longer lists stays visible, and removable, as a neutral tag.
+// A stored category the catalog no longer lists stays visible as a neutral tag.
 private fun unknownCategoria(id: String, name: String) =
     Categoria(
         id,

@@ -277,7 +277,7 @@ class HistoryIntegrationTest {
           graph.start()
           val form = graph.form("retry")
           form.viewModel.onAmountChanged("10,50")
-          form.viewModel.onCategoriasChanged(listOf("cat_comida"))
+          form.viewModel.onCategoriaSelected("cat_comida")
           form.viewModel.onTituloChanged("Lunch")
           graph.driver.failWrites = true
           form.viewModel.onSubmit()
@@ -480,9 +480,7 @@ class HistoryIntegrationTest {
       form.viewModel.apply {
         onTipoChanged(type)
         onAmountChanged(input)
-        onCategoriasChanged(
-            listOf(if (type == TipoMovimiento.INGRESO) "cat_ingresos" else "cat_comida")
-        )
+        onCategoriaSelected(if (type == TipoMovimiento.INGRESO) "cat_ingresos" else "cat_comida")
         onFechaChanged(date)
         onTituloChanged("Title $id")
         onSubmit()

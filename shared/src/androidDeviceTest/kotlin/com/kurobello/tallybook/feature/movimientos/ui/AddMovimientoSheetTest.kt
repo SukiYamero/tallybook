@@ -601,9 +601,9 @@ class AddMovimientoSheetTest {
 
     override fun onFechaChanged(value: LocalDate) = Unit
 
-    override fun onCategoriasChanged(ids: List<String>) = Unit
+    override fun onCategoriaSelected(id: String) = Unit
 
-    override fun onCategoriaRemoved(id: String) = Unit
+    override fun onCategoriaCleared() = Unit
 
     override fun onTituloChanged(value: String) = Unit
 

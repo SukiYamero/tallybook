@@ -84,7 +84,7 @@ class AddMovimientoSheetRouteTest {
 
       composeRule.runOnIdle {
         viewModel.onAmountChanged("1234")
-        viewModel.onCategoriasChanged(listOf(category.id))
+        viewModel.onCategoriaSelected(category.id)
       }
       composeRule.waitUntil(5_000) { viewModel.uiState.value.canSubmit }
       composeRule.runOnIdle {

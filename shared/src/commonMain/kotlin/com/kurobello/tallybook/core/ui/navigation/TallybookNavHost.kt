@@ -141,8 +141,8 @@ private fun PrimaryRoute(
             modals = navigator.modals,
             focusRequest = navigator.focusRequest,
             onFocusAcknowledged = navigator::acknowledgeFocus,
-            categoryRequest = navigator.categoryRequest,
-            onCategoryRequestHandled = navigator::acknowledgeCategory,
+            searchFilterRequest = navigator.searchFilterRequest,
+            onSearchFilterRequestHandled = navigator::acknowledgeSearchFilter,
             active = state.selected == Search && state.secondary == null,
         )
     Profile ->
@@ -158,7 +158,7 @@ private fun PrimaryRoute(
             modals = navigator.modals,
             active = state.secondary == Categories,
             onBack = navigator::back,
-            onShowCategory = navigator::showCategory,
+            onShowCategory = { id -> navigator.showSearchFilter(categoryIds = setOf(id)) },
         )
   }
 }

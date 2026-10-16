@@ -5,7 +5,6 @@ import kotlinx.datetime.LocalDate
 
 const val MOVIMIENTO_TITLE_MAX_LENGTH: Int = 180
 const val MOVIMIENTO_DESCRIPTION_MAX_LENGTH: Int = 180
-const val MAX_CATEGORIAS_POR_MOVIMIENTO: Int = 6
 const val MAX_ETIQUETAS_POR_MOVIMIENTO: Int = 6
 
 data class Movimiento(

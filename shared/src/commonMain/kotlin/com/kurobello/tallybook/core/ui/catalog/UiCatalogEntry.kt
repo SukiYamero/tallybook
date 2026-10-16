@@ -14,7 +14,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
-import com.kurobello.tallybook.core.model.CategoriaSelection
 import com.kurobello.tallybook.core.ui.category.CategoryAvatar
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoRow
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -159,20 +158,12 @@ private fun CatalogSummarySample(label: String, summary: MovimientoSummaryUi) {
         summary = current,
         callbacks =
             MovimientoSummaryCallbacks(
-                onRemoveCategoria = { removed ->
-                  current =
-                      current.withCategorias(
-                          CategoriaSelection.remove(current.ids, removed.id),
-                          catalog,
-                      )
+                onRemoveCategoria = {
+                  current = current.withCategorias(listOf(CATEGORIA_OTROS_ID), catalog)
                 },
                 onAddCategoria = {},
                 onSuggestion = { chosen ->
-                  current =
-                      current.withCategorias(
-                          CategoriaSelection.add(current.ids, chosen.id, catalog),
-                          catalog,
-                      )
+                  current = current.withCategorias(listOf(chosen.id), catalog)
                 },
                 onDescripcionChange = { current = current.copy(descripcion = it) },
                 onEdit = {},
@@ -182,9 +173,6 @@ private fun CatalogSummarySample(label: String, summary: MovimientoSummaryUi) {
     )
   }
 }
-
-private val MovimientoSummaryUi.ids: List<String>
-  get() = categorias.map { it.id }
 
 private fun MovimientoSummaryUi.withCategorias(
     ids: List<String>,

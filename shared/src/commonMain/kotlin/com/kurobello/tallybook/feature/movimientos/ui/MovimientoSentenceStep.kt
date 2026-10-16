@@ -24,7 +24,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.kurobello.tallybook.core.model.Categoria
-import com.kurobello.tallybook.core.model.MAX_CATEGORIAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -189,7 +188,6 @@ private fun DetectedArea(
       }
       CategoryTagField(
           categorias = sentence.categorias,
-          max = MAX_CATEGORIAS_POR_MOVIMIENTO,
           onRemove = callbacks.onRemoveCategoria,
           onAdd = callbacks.onAddCategoria,
           pending = sentence.categoriasArePending,

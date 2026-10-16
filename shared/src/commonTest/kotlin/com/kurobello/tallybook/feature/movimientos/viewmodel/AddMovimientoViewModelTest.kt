@@ -48,14 +48,14 @@ class AddMovimientoViewModelTest {
     val viewModel = createAddViewModel(categoriaRepository = categories, scope = backgroundScope)
 
     runCurrent()
-    viewModel.onCategoriasChanged(listOf("missing"))
+    viewModel.onCategoriaSelected("missing")
 
     assertEquals(null, viewModel.uiState.value.categoriaId)
     assertEquals(Moneda.USD, viewModel.uiState.value.moneda)
     assertEquals(listOf(category), viewModel.uiState.value.categorias)
     assertFalse(viewModel.uiState.value.isLoading)
 
-    viewModel.onCategoriasChanged(listOf(category.id))
+    viewModel.onCategoriaSelected(category.id)
 
     assertEquals(category.id, viewModel.uiState.value.categoriaId)
   }
@@ -74,7 +74,7 @@ class AddMovimientoViewModelTest {
 
     assertFalse(viewModel.uiState.value.canSubmit)
 
-    viewModel.onCategoriasChanged(listOf(category.id))
+    viewModel.onCategoriaSelected(category.id)
 
     assertTrue(viewModel.uiState.value.canSubmit)
   }
@@ -121,7 +121,7 @@ class AddMovimientoViewModelTest {
     assertEquals(AmountInputError.EMPTY, viewModel.uiState.value.amountError)
     assertTrue(viewModel.uiState.value.isCategoriaMissing)
     viewModel.onAmountChanged("0")
-    viewModel.onCategoriasChanged(listOf(category.id))
+    viewModel.onCategoriaSelected(category.id)
     viewModel.onSubmit()
     assertTrue(repository.inserted.isEmpty())
     assertEquals(AmountInputError.NOT_POSITIVE, viewModel.uiState.value.amountError)
@@ -157,7 +157,7 @@ class AddMovimientoViewModelTest {
     runCurrent()
     viewModel.onTipoChanged(TipoMovimiento.INGRESO)
     viewModel.onAmountChanged("12.34")
-    viewModel.onCategoriasChanged(listOf(category.id))
+    viewModel.onCategoriaSelected(category.id)
     viewModel.onDescripcionChanged("  Salary\n\t  September  ")
     viewModel.onSubmit()
     runCurrent()
@@ -365,6 +365,6 @@ class AddMovimientoViewModelTest {
 
   private fun populateValidFields(viewModel: AddMovimientoViewModel, category: Categoria) {
     viewModel.onAmountChanged("12.34")
-    viewModel.onCategoriasChanged(listOf(category.id))
+    viewModel.onCategoriaSelected(category.id)
   }
 }

@@ -34,16 +34,6 @@ internal interface MovimientoFormState {
     get() = false
 }
 
-/**
- * The one categoria a picker report means while pickers still report whole lists: the newest real
- * pick replaces the current one, and null means the report dropped the current one.
- */
-internal fun chosenCategoriaId(
-    current: String?,
-    reported: List<String>,
-    catalog: List<Categoria>,
-): String? {
-  val selectable = catalog.mapTo(mutableSetOf(), Categoria::id) - CATEGORIA_OTROS_ID
-  return reported.lastOrNull { it != current && it in selectable }
-      ?: current?.takeIf { it in reported }
-}
+/** Otros stands for "no category", so choosing it explicitly would hide a pending draft. */
+internal fun isSelectableCategoria(id: String, catalog: List<Categoria>): Boolean =
+    id != CATEGORIA_OTROS_ID && catalog.any { it.id == id }
