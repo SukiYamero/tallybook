@@ -37,7 +37,7 @@ Creation moves through three steps; business rules for each live in
 - **Form**: the complete form in the same sheet, with the tag field and the multi-select picker in
   place of a single category field. Save without a real category persists Otros; the field shows the
   pending style and, beside the "Categories" label, the "to complete" caption whenever the effective
-  selection is Otros. The picker never offers Otros and disables the last selected row with a hint.
+  selection is Otros. The picker never offers Otros and disables the last selected row without a hint, so the sheet height stays stable.
   Save with an invalid amount from the review opens the form with the field error and focus on it.
 - Back follows the path taken: form to review when the form came from the review, review to the
   dialog (text and draft kept), and otherwise the dismissal guard. Fill manually has no way back to

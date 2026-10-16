@@ -64,7 +64,7 @@ internal fun TallybookModalDialog(
         modifier =
             Modifier.fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
-                .padding(horizontal = TallybookTheme.dimensions.screenHorizontal)
+                .padding(horizontal = TallybookTheme.spacing.space12)
     ) {
       DialogPanel(
           modifier =
@@ -132,8 +132,8 @@ private fun TallybookModalDialogSurface(content: @Composable ColumnScope.() -> U
           ),
   ) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(TallybookTheme.spacing.space20),
-        verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16),
+        modifier = Modifier.fillMaxWidth().padding(TallybookTheme.spacing.space24),
+        verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space20),
         content = content,
     )
   }

@@ -15,7 +15,6 @@ import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_picker_done
-import tallybook.shared.generated.resources.category_picker_keep_one
 import tallybook.shared.generated.resources.category_picker_limit_reached
 
 internal const val CATEGORY_PICKER_DONE_TAG = "category_picker_done"
@@ -42,11 +41,10 @@ internal fun CategoryPickerFooter(selection: CategoryPickerSelection, onDone: ()
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
   ) {
     val hint =
-        when {
-          selection.selectedIds.size >= selection.max ->
-              stringResource(Res.string.category_picker_limit_reached, selection.max)
-          selection.selectedIds.size == 1 -> stringResource(Res.string.category_picker_keep_one)
-          else -> null
+        if (selection.selectedIds.size >= selection.max) {
+          stringResource(Res.string.category_picker_limit_reached, selection.max)
+        } else {
+          null
         }
     if (hint != null) {
       TallybookText(

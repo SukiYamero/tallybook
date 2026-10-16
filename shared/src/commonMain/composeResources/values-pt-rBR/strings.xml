@@ -349,7 +349,6 @@
     <string name="category_tag_remove">Remover %1$s</string>
     <string name="category_picker_done">Concluir (%1$d)</string>
     <string name="category_picker_limit_reached">Você atingiu o limite de %1$d categorias</string>
-    <string name="category_picker_keep_one">Pelo menos uma categoria precisa ficar selecionada</string>
     <string name="category_picker_title">Escolha as categorias</string>
     <string name="category_picker_selected_label">Selecionadas · toque para remover</string>
     <string name="movimiento_voice_or">ou</string>

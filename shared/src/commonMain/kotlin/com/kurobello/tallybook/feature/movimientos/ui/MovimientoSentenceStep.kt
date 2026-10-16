@@ -54,7 +54,7 @@ import tallybook.shared.generated.resources.movimiento_phrase_placeholder
 
 internal const val PHRASE_INPUT_TAG = "movimiento_phrase_input"
 
-private const val PHRASE_VISIBLE_LINES = 2
+private const val PHRASE_VISIBLE_LINES = 3
 
 internal data class MovimientoSentenceCallbacks(
     val onTextChange: (String) -> Unit,

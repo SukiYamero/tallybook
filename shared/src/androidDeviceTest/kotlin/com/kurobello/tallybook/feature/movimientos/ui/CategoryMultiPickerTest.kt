@@ -31,7 +31,6 @@ import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_picker_done
-import tallybook.shared.generated.resources.category_picker_keep_one
 import tallybook.shared.generated.resources.category_picker_limit_reached
 import tallybook.shared.generated.resources.category_picker_selected_label
 import tallybook.shared.generated.resources.category_tag_remove
@@ -62,11 +61,10 @@ class CategoryMultiPickerTest {
   }
 
   @Test
-  fun lastSelectedCategoryIsDisabledAndTheReasonIsShown() {
+  fun lastSelectedCategoryIsDisabled() {
     show(initial = listOf(leisure.id))
 
     composeRule.onCategoryOption(leisure.nombre).assertIsNotEnabled().assertIsSelected()
-    composeRule.onNodeWithText(string(Res.string.category_picker_keep_one)).assertExists()
 
     composeRule.onCategoryOption(leisure.nombre).performClick()
 
@@ -78,7 +76,6 @@ class CategoryMultiPickerTest {
     show(initial = listOf(leisure.id, health.id))
 
     composeRule.onCategoryOption(leisure.nombre).assertIsEnabled()
-    composeRule.onNodeWithText(string(Res.string.category_picker_keep_one)).assertDoesNotExist()
   }
 
   @Test
