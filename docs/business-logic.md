@@ -14,7 +14,7 @@ sincroniza cuentas bancarias reales.
 
 Un **movimiento** registra un gasto o un ingreso.
 
-- **Obligatorios**: tipo (gasto / ingreso), monto, fecha, categoría, moneda.
+- **Obligatorios**: tipo (gasto / ingreso), monto, fecha, moneda y de una a seis categorías.
 - **Opcionales**: descripción (por ahora el único campo opcional). `createdAt` es metadata técnica para
   ordenar de forma estable, no un campo solicitado al usuario.
 - La categoría es obligatoria en el dato, no en la interacción: si el usuario guarda una creación sin
@@ -26,12 +26,18 @@ Un **movimiento** registra un gasto o un ingreso.
 Creation starts from one sentence that describes the movimiento ("Gasté 20.000 en cine ayer"). The
 app derives the draft from it and the user confirms or refines it; the manual form stays available.
 
-- The entry opens with focus on the sentence input. Its placeholder is a localized example whose
-  amount is formatted for the primary currency. A secondary "fill manually" action opens the empty
-  form directly. The sentence respects the description length limit.
-- While typing, a live preview shows the detected values. Continue parses the sentence once and
-  writes tipo, monto, fecha, categoría and descripción into the draft, replacing earlier derived
-  values. Nothing is persisted until Save.
+- The entry is a centered modal dialog anchored near the top, so the keyboard never moves it. It
+  opens with focus on the sentence input, whose placeholder is a localized example with an amount
+  formatted for the primary currency. The sentence respects the description length limit.
+- Below the input, a "Detected" area always shows tipo and fecha (their defaults, gasto and today,
+  until the sentence says otherwise), the amount when found, and the categories as tags with an
+  "Add" tag. Values update while typing; nothing is persisted until Save.
+- Under the main action, an "or" divider introduces voice dictation. It is a non-functional
+  placeholder marked as coming soon. A secondary "fill manually" action opens the empty form.
+- Tapping outside or the Back gesture closes the dialog directly while the sentence is blank;
+  otherwise it asks to discard first. Continue parses the sentence once, writes tipo, monto, fecha,
+  categorías and descripción into the draft (replacing earlier derived values), closes the dialog
+  and opens the summary.
 - **Tipo**: expense and income verbs in every supported language decide it (`gasté`, `pagué`,
   `me cobraron` → gasto; `recibí`, `me pagaron`, `cobré`, `vendí` → ingreso). Without a verb, an
   income category suggestion selects ingreso; otherwise gasto.
@@ -44,14 +50,16 @@ app derives the draft from it and the user confirms or refines it; the manual fo
   included) and explicit day/month dates (day-first except in English). A day without month resolves
   to its most recent past occurrence. Future expressions are ignored and the date stays today.
 - **Descripción**: the trimmed sentence exactly as typed. Parsing never rewrites what the user wrote.
-- **Categoría**: the suggestion engine below runs on the sentence without its verb, amount, date and
-  stop words. A high-confidence result is preselected; other results appear as tappable suggestions.
-- After Continue, a compact summary shows tipo, fecha, a prominent amount, the description and the
-  category with its suggestions. Its two equal-level actions are Edit movimiento (left), which opens
-  the complete form with the same draft, and Save (right). Save with an invalid required value opens
-  the form with that field's error and focus instead of persisting. Back returns from the form to the
-  summary (when the form was reached through it) and from the summary to the sentence, preserving the
-  draft and the typed text.
+- **Categorías**: the suggestion engine below runs on the sentence without its verb, amount, date
+  and stop words. A high-confidence result is preselected; other results appear as tappable
+  suggestions that add a category.
+- The summary is a tall bottom sheet titled as a review-and-confirm step. Labeled sections show tipo
+  and fecha (prominent), the amount, the description and the categories with suggestions. Its two
+  equal-level actions, separated from the content by generous space, are Edit movimiento (left),
+  which opens the complete form with the same draft, and Save (right). Save with an invalid required
+  value opens the form with that field's error and focus instead of persisting. Back returns from
+  the form to the summary (when reached through it); Back from the summary reopens the sentence
+  dialog, preserving the draft and the typed text.
 - A non-empty sentence counts as an unsaved change for the existing dismissal guard. Editing an
   existing movimiento keeps opening the form directly.
 
@@ -78,7 +86,7 @@ the training data, so correcting a suggestion teaches the next one.
 Home, History and Search open the current persisted movimiento by ID. Missing records cannot be
 edited or deleted; failed reads require Retry before mutation actions become available.
 
-- Editing permits type, positive exact amount, civil date, category and optional description.
+- Editing permits type, positive exact amount, civil date, categories and optional description.
   Stored currency, ID and `createdAt` remain fixed. Amount input round-trips through the stored
   currency's scale and decimal separator without grouping or a currency symbol.
 - Creation's validation and description normalization also apply to editing. Civil today/timezone
@@ -142,7 +150,7 @@ Home recent movimientos use the primary currency before applying the six-row lim
 
 Lista predefinida portada de moneta — no se retipea acá para no tener una segunda copia que se
 desincronice; fuente real: `web/moneta/src/lib/schema.ts` (`CATEGORIAS_SEMILLA`). Las categorías
-personalizadas y varias categorías por movimiento son alcance aceptado en fases posteriores (abajo).
+personalizadas son alcance aceptado en una fase posterior (abajo).
 
 - 12 categorías padre, 58 en total (cada padre con 3–6 hijas). Estructura por entrada: `{id, nombre,
   padreId?, icono, color}`.
@@ -174,7 +182,7 @@ personalizadas y varias categorías por movimiento son alcance aceptado en fases
   the same visual weight in chips. The hierarchy is shown only in the picker, where a parent heads
   its group of children.
 
-### Multiple categories per movimiento (phase 2, accepted)
+### Multiple categories per movimiento
 
 - A movimiento has one to six categories. All are equal: there is no primary category, and the last
   one cannot be removed. Order is kept only for display; rows show the first one plus a count.
@@ -183,7 +191,10 @@ personalizadas y varias categorías por movimiento son alcance aceptado en fases
 - Totals per category count the full amount in every category of the movimiento, so they do not add
   up to the overall total; category charts must not present them as parts of a whole.
 - Choosing a real category removes the Otros fallback. Search matches a movimiento through any of its
-  categories, with the same roll-up.
+  categories, with the same roll-up, and text search matches any of its category names.
+- Every category surface (sentence dialog, summary, form and editor) uses the same tag field:
+  medium tags, a remove action on each except the last, an "Add" tag that opens a multi-select
+  picker, and an n/6 counter; the Add tag disappears at six. CSV exports all names of a movimiento.
 
 ### Custom categories (phase 3, accepted)
 

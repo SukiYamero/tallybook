@@ -19,8 +19,8 @@ In phase 1:
 - `cat_otros` fallback with the pending treatment in rows and the editor.
 - Children selectable in creation and editing; Search category filters roll up parent → children.
 
-Not in phase 1 (accepted, roadmap below): multiple categories, custom categories, Categories screen.
-No schema migration is needed: `cat_otros` is a seed row and history reads existing columns.
+Multiple categories (originally phase 2) joined this delivery in waves 4–5, with schema migration
+`2.sqm`. Not in this delivery (roadmap below): custom categories and the Categories screen.
 
 ## Shared contracts
 
@@ -85,7 +85,12 @@ the ViewModel.
   child selection support and Search roll-up.
 - **Wave 2** (depends on all of wave 1): [task1](wave-2/task1/task.md) ViewModel and sheet
   integration, docs.
-- **Wave 3**: [final review and device acceptance](wave-3/README.md).
+- **Wave 3**: [final review and device acceptance](wave-3/README.md) — done; device review led to
+  the redesign below.
+- **Wave 4** (parallel, two subagents): [tasks](wave-4/tasks.md) multi-category data · UI
+  foundations (tags, tag field, badges, modal dialog, voice placeholder, multi-select picker).
+- **Wave 5** (depends on wave 4): [task1](wave-5/task1/task.md) redesigned entry and multi-category
+  integration, then a final review and Xiaomi acceptance following wave 3's checklist.
 
 ## Execution
 
@@ -108,11 +113,6 @@ the ViewModel.
 
 ## Roadmap after phase 1
 
-- **Phase 2 — multiple categories (max 6)**: `movimiento_categoria` table and a migration that moves
-  `categoria_id` into it (table rebuild; Android 12 ships SQLite 3.32 without `DROP COLUMN`),
-  `CategoryTagField` (selected chips with remove, suggestion chips with add, "+ Add" opening a
-  multi-select picker), rows with "+N", Search/CSV/Undo adaptation. Coordinate the migration number
-  with any concurrent schema work (the Google + Drive branch).
 - **Phase 3 — custom categories**: creation from the picker's empty search and from a Categories
   screen linked in Profile, icon/tint suggestion reusing `CategoryKeywordDictionary`, movimiento
   counts, hiding predefined categories. Deletion with movimientos is still undecided.
