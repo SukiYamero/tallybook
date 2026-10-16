@@ -50,6 +50,9 @@ internal object TallybookDimensions {
   val filterTagVisualHeight = 28.dp
   val categoryTagVisualHeight = 36.dp
   val categoryTagRemoveTargetWidth = 44.dp
+  val categoryIconOptionVisualSize = TallybookSpacing.space40
+  val categoryTintSwatchVisualSize = TallybookSpacing.space32
+  val categoryOptionSelectedBorderWidth = 2.dp
   val voiceDictationButton = 56.dp
   val categoryPickerResultsMaximumHeight = 420.dp
   val yearMenuMaximumWidth = 128.dp
