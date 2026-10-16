@@ -27,11 +27,13 @@ Creation starts from one sentence that describes the movimiento ("Gasté 20.000 
 app derives the draft from it and the user confirms or refines it; the manual form stays available.
 
 - The entry is a centered modal dialog anchored near the top, so the keyboard never moves it. It
-  opens with focus on the sentence input, whose placeholder is a localized example with an amount
-  formatted for the primary currency. The sentence respects the description length limit.
-- Below the input, a "Detected" area always shows tipo and fecha (their defaults, gasto and today,
-  until the sentence says otherwise), the amount when found, and the categories as tags with an
-  "Add" tag. Values update while typing; nothing is persisted until Save. While the user has not
+  opens without focus or keyboard: the user sees the input, whose placeholder is a localized example
+  with an amount formatted for the primary currency, and taps it to type. The sentence respects the
+  description length limit.
+- Below the input, a "Detected" area appears once the sentence has text and goes away if it is
+  cleared. It shows tipo and fecha (their defaults, gasto and today, until the sentence says
+  otherwise), the amount when found (otherwise a note that it was not detected), and the categories
+  as tags with an "Add" tag. Values update while typing; nothing is persisted until Save. While the user has not
   touched the categories, the sentence owns them: the high-confidence category shows as a tag and
   the rest as tappable suggestions. The first manual add or remove hands the categories to the user,
   and later sentences or Continue no longer replace them.
@@ -54,7 +56,8 @@ app derives the draft from it and the user confirms or refines it; the manual fo
   multipliers (`k`, `mil`, `millón`/`millones`, regional slang such as `lucas` or `palos`) and basic
   number words. A separator followed by exactly three digits groups; any other separator is decimal.
   The amount is always in the primary currency. When several candidates remain, the largest one wins
-  and the summary flags the amount for review. No amount leaves the field empty and required.
+  and the summary flags the amount for review. No amount leaves the field empty and required; the
+  dialog and the summary say it was not detected, and the summary points to Edit movimiento.
 - **Fecha**: today, yesterday, the day before yesterday, a weekday (its most recent occurrence, today
   included) and explicit day/month dates (day-first except in English). A day without month resolves
   to its most recent past occurrence. Future expressions are ignored and the date stays today.
@@ -209,7 +212,7 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
   categories, with the same roll-up, and text search matches any of its category names.
 - Every category surface (sentence dialog, summary, form and editor) uses the same tag field:
   medium tags, a remove action on each except the last, an "Add" tag that opens a multi-select
-  picker, and an n/6 counter; the Add tag disappears at six. The picker disables the last selected
+  picker, and no counter; the Add tag disappears at six. The picker disables the last selected
   category, with a short hint, because a movimiento keeps at least one. CSV exports every category
   name of a movimiento joined by " · " and, in the parent column, the top-level name at the same
   position (a root category repeats its own name).

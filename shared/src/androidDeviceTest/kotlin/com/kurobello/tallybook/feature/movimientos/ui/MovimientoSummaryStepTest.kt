@@ -35,9 +35,10 @@ import tallybook.shared.generated.resources.category_tag_remove
 import tallybook.shared.generated.resources.date
 import tallybook.shared.generated.resources.expense
 import tallybook.shared.generated.resources.movement_type
+import tallybook.shared.generated.resources.movimiento_amount_not_detected
 import tallybook.shared.generated.resources.movimiento_pending_label
 import tallybook.shared.generated.resources.movimiento_relative_yesterday
-import tallybook.shared.generated.resources.movimiento_summary_amount_missing
+import tallybook.shared.generated.resources.movimiento_summary_amount_missing_hint
 import tallybook.shared.generated.resources.movimiento_summary_amount_review
 import tallybook.shared.generated.resources.movimiento_summary_description_label
 import tallybook.shared.generated.resources.movimiento_summary_description_quote
@@ -173,11 +174,14 @@ class MovimientoSummaryStepTest {
   }
 
   @Test
-  fun missingAmountShowsTheRequiredMessageInsteadOfAnAmount() {
+  fun missingAmountSaysItWasNotDetectedAndWhereToAddIt() {
     show(samples.missingAmountSummary)
 
     composeRule
-        .onNodeWithText(string(Res.string.movimiento_summary_amount_missing))
+        .onNodeWithText(string(Res.string.movimiento_amount_not_detected))
+        .assertIsDisplayed()
+    composeRule
+        .onNodeWithText(string(Res.string.movimiento_summary_amount_missing_hint))
         .assertIsDisplayed()
   }
 

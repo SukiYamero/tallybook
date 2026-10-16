@@ -328,7 +328,8 @@
     <string name="movimiento_relative_today">Hoje</string>
     <string name="movimiento_relative_yesterday">Ontem</string>
     <string name="movimiento_pending_label">A completar</string>
-    <string name="movimiento_summary_amount_missing">Adicione o valor</string>
+    <string name="movimiento_amount_not_detected">Não identificamos o valor</string>
+    <string name="movimiento_summary_amount_missing_hint">Toque em Editar movimentação para adicionar.</string>
     <string name="movimiento_summary_amount_review">Encontramos vários valores e escolhemos o maior. Confira antes de salvar.</string>
     <string name="movimiento_summary_description_quote">“%1$s”</string>
     <string name="movimiento_summary_edit">Editar movimentação</string>
@@ -342,7 +343,6 @@
         <item quantity="other">mais %1$d categorias</item>
     </plurals>
     <string name="category_tag_field_label">Categorias</string>
-    <string name="category_tag_field_counter_description">%1$d de %2$d categorias</string>
     <string name="category_tag_field_suggestions">Sugestões</string>
     <string name="category_tag_add">Adicionar</string>
     <string name="category_tag_add_description">Adicionar categoria</string>

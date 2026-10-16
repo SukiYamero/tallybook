@@ -9,8 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
@@ -21,17 +19,16 @@ import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.category_tag_field_counter_description
 import tallybook.shared.generated.resources.category_tag_field_label
 import tallybook.shared.generated.resources.category_tag_field_suggestions
 import tallybook.shared.generated.resources.movimiento_pending_label
 
 /**
- * The single category surface of the entry flow: a labeled list of [categorias] as tags with an
- * `n/max` counter. Each tag can be removed except when it is the only one, and the Add tag
- * disappears once [max] is reached. [pending] marks the Otros fallback, shown as a neutral dashed
- * tag without removal and labeled "to complete" beside the field label. [suggestions] already
- * selected are skipped and hidden while the field is full.
+ * The single category surface of the entry flow: a labeled list of [categorias] as tags. Each tag
+ * can be removed except when it is the only one, and the Add tag disappears once [max] is reached.
+ * [pending] marks the Otros fallback, shown as a neutral dashed tag without removal and labeled "to
+ * complete" beside the field label. [suggestions] already selected are skipped and hidden while the
+ * field is full.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -53,7 +50,7 @@ internal fun CategoryTagField(
       modifier = modifier.fillMaxWidth(),
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
   ) {
-    CategoryTagFieldHeader(count = categorias.size, max = max, pending = pending)
+    CategoryTagFieldHeader(pending)
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
@@ -78,32 +75,19 @@ internal fun CategoryTagField(
 }
 
 @Composable
-private fun CategoryTagFieldHeader(count: Int, max: Int, pending: Boolean) {
-  val description = stringResource(Res.string.category_tag_field_counter_description, count, max)
+private fun CategoryTagFieldHeader(pending: Boolean) {
   Row(
-      modifier = Modifier.fillMaxWidth(),
-      horizontalArrangement = Arrangement.SpaceBetween,
+      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
       verticalAlignment = Alignment.CenterVertically,
   ) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-      TallybookSectionHeading(stringResource(Res.string.category_tag_field_label))
-      if (pending) {
-        TallybookText(
-            text = stringResource(Res.string.movimiento_pending_label),
-            color = TallybookTheme.colors.foreground.tertiary,
-            style = TallybookTheme.typography.caption,
-        )
-      }
+    TallybookSectionHeading(stringResource(Res.string.category_tag_field_label))
+    if (pending) {
+      TallybookText(
+          text = stringResource(Res.string.movimiento_pending_label),
+          color = TallybookTheme.colors.foreground.tertiary,
+          style = TallybookTheme.typography.caption,
+      )
     }
-    TallybookText(
-        text = "$count/$max",
-        modifier = Modifier.semantics { contentDescription = description },
-        color = TallybookTheme.colors.foreground.tertiary,
-        style = TallybookTheme.typography.caption,
-    )
   }
 }
 

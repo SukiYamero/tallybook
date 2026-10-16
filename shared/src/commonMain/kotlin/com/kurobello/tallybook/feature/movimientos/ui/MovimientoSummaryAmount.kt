@@ -3,6 +3,7 @@ package com.kurobello.tallybook.feature.movimientos.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -28,14 +29,15 @@ import com.kurobello.tallybook.core.ui.theme.TallybookTypeScale
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSummaryUi
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.movimiento_summary_amount_missing
+import tallybook.shared.generated.resources.movimiento_amount_not_detected
+import tallybook.shared.generated.resources.movimiento_summary_amount_missing_hint
 import tallybook.shared.generated.resources.movimiento_summary_amount_review
 
 @Composable
 internal fun SummaryAmount(summary: MovimientoSummaryUi) {
   Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4)) {
     val monto = summary.monto
-    if (monto == null) MissingAmountMessage() else SummaryAmountText(monto, summary.tipo)
+    if (monto == null) MissingAmount() else SummaryAmountText(monto, summary.tipo)
     if (monto != null && summary.amountNeedsReview) AmountReviewHint()
   }
 }
@@ -52,8 +54,8 @@ private fun SummaryAmountText(monto: Money, tipo: TipoMovimiento) {
 }
 
 @Composable
-private fun MissingAmountMessage() {
-  val message = stringResource(Res.string.movimiento_summary_amount_missing)
+private fun ColumnScope.MissingAmount() {
+  val message = stringResource(Res.string.movimiento_amount_not_detected)
   TallybookText(
       text = message,
       modifier =
@@ -63,6 +65,11 @@ private fun MissingAmountMessage() {
           },
       color = TallybookTheme.colors.status.danger.base,
       style = TallybookTheme.typography.title,
+  )
+  TallybookText(
+      text = stringResource(Res.string.movimiento_summary_amount_missing_hint),
+      color = TallybookTheme.colors.foreground.tertiary,
+      style = TallybookTheme.typography.caption,
   )
 }
 

@@ -328,7 +328,8 @@
     <string name="movimiento_relative_today">Hoy</string>
     <string name="movimiento_relative_yesterday">Ayer</string>
     <string name="movimiento_pending_label">Por completar</string>
-    <string name="movimiento_summary_amount_missing">Agrega el monto</string>
+    <string name="movimiento_amount_not_detected">No detectamos el monto</string>
+    <string name="movimiento_summary_amount_missing_hint">Toca Editar movimiento para agregarlo.</string>
     <string name="movimiento_summary_amount_review">Encontramos varios montos y elegimos el mayor. Revísalo antes de guardar.</string>
     <string name="movimiento_summary_description_quote">“%1$s”</string>
     <string name="movimiento_summary_edit">Editar movimiento</string>
@@ -342,7 +343,6 @@
         <item quantity="other">%1$d categorías más</item>
     </plurals>
     <string name="category_tag_field_label">Categorías</string>
-    <string name="category_tag_field_counter_description">%1$d de %2$d categorías</string>
     <string name="category_tag_field_suggestions">Sugerencias</string>
     <string name="category_tag_add">Agregar</string>
     <string name="category_tag_add_description">Agregar categoría</string>

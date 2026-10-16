@@ -1,6 +1,13 @@
 package com.kurobello.tallybook.feature.movimientos.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -12,13 +19,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -45,6 +47,7 @@ import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSentenceU
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.add_movimiento_pane_title
+import tallybook.shared.generated.resources.movimiento_amount_not_detected
 import tallybook.shared.generated.resources.movimiento_detected_label
 import tallybook.shared.generated.resources.movimiento_phrase_continue
 import tallybook.shared.generated.resources.movimiento_phrase_fill_manually
@@ -67,28 +70,18 @@ internal data class MovimientoSentenceCallbacks(
 /**
  * Content of the sentence dialog. The title and the Continue footer stay put and the middle
  * scrolls, because the dialog keeps its anchor when the keyboard opens and only the height
- * available to it shrinks.
+ * available to it shrinks. The Detected card appears once the sentence has text.
  */
 @Composable
 internal fun MovimientoSentenceStep(
     sentence: MovimientoSentenceUi,
     callbacks: MovimientoSentenceCallbacks,
-    focusRequester: FocusRequester,
     modifier: Modifier = Modifier,
-    requestFocusOnStart: Boolean = true,
 ) {
-  if (requestFocusOnStart) {
-    val keyboard = LocalSoftwareKeyboardController.current
-    LaunchedEffect(focusRequester) {
-      // The modal window is still attaching on first composition; focusing a frame later lets the
-      // keyboard open with it.
-      withFrameNanos {}
-      focusRequester.requestFocus()
-      keyboard?.show()
-    }
-  }
+  // A new window hands initial focus to its first focusable node and opens the keyboard with it;
+  // the container takes that focus instead, so the input only focuses when the user taps it.
   Column(
-      modifier = modifier.fillMaxWidth(),
+      modifier = modifier.fillMaxWidth().focusable(),
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16),
   ) {
     TallybookSheetTitle(stringResource(Res.string.add_movimiento_pane_title))
@@ -97,8 +90,21 @@ internal fun MovimientoSentenceStep(
             Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16),
     ) {
-      SentenceInput(sentence, callbacks, focusRequester)
-      DetectedArea(sentence, callbacks)
+      // No spacing here: the card owns its top padding so a hidden card leaves no extra gap.
+      Column(modifier = Modifier.fillMaxWidth()) {
+        SentenceInput(sentence, callbacks)
+        AnimatedVisibility(
+            visible = sentence.text.isNotBlank(),
+            enter =
+                fadeIn(tween(TallybookTheme.motion.fadeMillis)) +
+                    expandVertically(tween(TallybookTheme.motion.fadeMillis)),
+            exit =
+                fadeOut(tween(TallybookTheme.motion.fadeMillis)) +
+                    shrinkVertically(tween(TallybookTheme.motion.fadeMillis)),
+        ) {
+          DetectedArea(sentence, callbacks, Modifier.padding(top = TallybookTheme.spacing.space16))
+        }
+      }
       VoiceDictationPlaceholder()
       TallybookTextButton(
           onClick = callbacks.onFillManually,
@@ -122,7 +128,6 @@ internal fun MovimientoSentenceStep(
 private fun SentenceInput(
     sentence: MovimientoSentenceUi,
     callbacks: MovimientoSentenceCallbacks,
-    focusRequester: FocusRequester,
 ) {
   TallybookTextField(
       value = sentence.text,
@@ -149,16 +154,19 @@ private fun SentenceInput(
           ),
       keyboardActions =
           KeyboardActions(onDone = { if (sentence.canContinue) callbacks.onContinue() }),
-      inputModifier =
-          Modifier.fillMaxWidth().focusRequester(focusRequester).testTag(PHRASE_INPUT_TAG),
+      inputModifier = Modifier.fillMaxWidth().testTag(PHRASE_INPUT_TAG),
   )
 }
 
 @Composable
-private fun DetectedArea(sentence: MovimientoSentenceUi, callbacks: MovimientoSentenceCallbacks) {
+private fun DetectedArea(
+    sentence: MovimientoSentenceUi,
+    callbacks: MovimientoSentenceCallbacks,
+    modifier: Modifier = Modifier,
+) {
   val detected = sentence.detected
   TallybookSurface(
-      modifier = Modifier.fillMaxWidth(),
+      modifier = modifier.fillMaxWidth(),
       style =
           TallybookSurfaceStyle(
               color = TallybookTheme.colors.surface.card,
@@ -184,7 +192,8 @@ private fun DetectedArea(sentence: MovimientoSentenceUi, callbacks: MovimientoSe
       ) {
         MovimientoTypeBadge(detected.tipo)
         MovimientoDateBadge(detected.fecha, sentence.today)
-        detected.monto?.let { DetectedAmount(it, detected.tipo) }
+        val monto = detected.monto
+        if (monto == null) AmountNotDetected() else DetectedAmount(monto, detected.tipo)
       }
       CategoryTagField(
           categorias = sentence.categorias,
@@ -198,6 +207,15 @@ private fun DetectedArea(sentence: MovimientoSentenceUi, callbacks: MovimientoSe
       )
     }
   }
+}
+
+@Composable
+private fun AmountNotDetected() {
+  TallybookText(
+      text = stringResource(Res.string.movimiento_amount_not_detected),
+      color = TallybookTheme.colors.foreground.tertiary,
+      style = TallybookTheme.typography.bodySmall,
+  )
 }
 
 @Composable

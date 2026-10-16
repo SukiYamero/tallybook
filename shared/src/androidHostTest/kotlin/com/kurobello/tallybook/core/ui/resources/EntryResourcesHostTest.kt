@@ -10,6 +10,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.movimiento_amount_not_detected
 import tallybook.shared.generated.resources.movimiento_detected_label
 import tallybook.shared.generated.resources.movimiento_row_extra_categories
 import tallybook.shared.generated.resources.movimiento_summary_title
@@ -32,6 +33,26 @@ class EntryResourcesHostTest {
         Locale.setDefault(Locale.forLanguageTag(locale))
         assertEquals(title, getString(Res.string.movimiento_summary_title), locale)
         assertEquals(detected, getString(Res.string.movimiento_detected_label), locale)
+      }
+    } finally {
+      Locale.setDefault(original)
+    }
+  }
+
+  @Test
+  fun missingAmountSaysItWasNotDetectedInEveryLocale() = runBlocking {
+    val original = Locale.getDefault()
+    try {
+      val cases =
+          listOf(
+              "es-CO" to "No detectamos el monto",
+              "es-AR" to "No detectamos el monto",
+              "en-US" to "We couldn’t detect the amount",
+              "pt-BR" to "Não identificamos o valor",
+          )
+      cases.forEach { (locale, message) ->
+        Locale.setDefault(Locale.forLanguageTag(locale))
+        assertEquals(message, getString(Res.string.movimiento_amount_not_detected), locale)
       }
     } finally {
       Locale.setDefault(original)

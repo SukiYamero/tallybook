@@ -12,11 +12,13 @@ Creation moves through three steps; business rules for each live in
 [Category suggestions](../business-logic.md#category-suggestions) and
 [Multiple categories](../business-logic.md#multiple-categories-per-movimiento).
 
-- **Sentence (dialog)**: the labeled two-line input takes focus on entry and the keyboard opens with
-  it. Its placeholder is a localized example; Continue is disabled for a blank sentence and Done on
-  the keyboard continues. The "Detected" card always shows the tipo and date badges (expense and
-  today until the sentence says more), the amount when found, and the tag field: selected tags,
-  "+ Add", `n/6` and suggestions. Detection runs after a 250 ms debounce and clears immediately when
+- **Sentence (dialog)**: the labeled two-line input opens unfocused, with no keyboard, so the user
+  sees it and taps to type (the dialog container holds the window's initial focus so the input does not
+  take it). Its placeholder is a localized example; Continue is disabled for a blank
+  sentence and Done on the keyboard continues. The "Detected" card is absent while the sentence is
+  blank and fades in, expanding, with the first text (it leaves the same way). It shows the tipo and
+  date badges (expense and today until the sentence says more), the amount when found or a note that
+  it was not detected, and the tag field: selected tags, "+ Add" and suggestions. Detection runs after a 250 ms debounce and clears immediately when
   the input is emptied, which also resets what an earlier Continue derived. Continue is pinned in a
   footer outside the scrolling body, so it stays on screen with the keyboard open and suggestions
   showing. The body scrolls the input, the Detected card, the "or" divider with the voice placeholder
@@ -25,8 +27,8 @@ Creation moves through three steps; business rules for each live in
   failure shows the existing retry message. The dialog keeps its position when the keyboard opens and
   scrolls inside the height left over.
 - **Review (sheet)**: opens tall rather than hugging its content. A title and one-line subtitle
-  lead labeled sections: Type and Date as large badges side by side, Amount, the quoted Description
-  and the Categories tag field with suggestions. Edit movimiento (left) opens the form with the same
+  lead labeled sections: Type and Date as large badges side by side, Amount (a missing one reads "not detected", with a hint to use Edit movimiento), the quoted
+  Description and the Categories tag field with suggestions, each section `space24` apart. Edit movimiento (left) opens the form with the same
   draft; Save (right) persists; the actions sit at the bottom, at least `space32` below the content.
   A failed save shows the shared save error above the actions and keeps the draft.
 - **Form**: the complete form in the same sheet, with the tag field and the multi-select picker in

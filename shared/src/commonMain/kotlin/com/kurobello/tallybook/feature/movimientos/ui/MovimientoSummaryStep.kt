@@ -84,7 +84,7 @@ internal fun MovimientoSummaryStep(
     Column(
         modifier =
             Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space20),
+        verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space24),
     ) {
       SummaryHeader()
       SummaryTipoAndDate(summary, today)

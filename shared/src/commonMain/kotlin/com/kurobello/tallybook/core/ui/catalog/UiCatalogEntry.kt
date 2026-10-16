@@ -12,7 +12,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoriaSelection
@@ -116,8 +115,6 @@ private fun CatalogSentenceStep(sentence: MovimientoSentenceUi) {
               onAddCategoria = {},
               onSuggestion = {},
           ),
-      focusRequester = remember { FocusRequester() },
-      requestFocusOnStart = false,
   )
 }
 

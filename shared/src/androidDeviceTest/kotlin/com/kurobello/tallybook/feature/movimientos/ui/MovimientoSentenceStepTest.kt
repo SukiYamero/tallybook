@@ -6,11 +6,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -37,6 +36,7 @@ import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_tag_add_description
 import tallybook.shared.generated.resources.category_tag_remove
 import tallybook.shared.generated.resources.expense
+import tallybook.shared.generated.resources.movimiento_amount_not_detected
 import tallybook.shared.generated.resources.movimiento_detected_label
 import tallybook.shared.generated.resources.movimiento_phrase_continue
 import tallybook.shared.generated.resources.movimiento_phrase_fill_manually
@@ -84,21 +84,43 @@ class MovimientoSentenceStepTest {
   }
 
   @Test
-  fun inputTakesFocusOnFirstComposition() {
-    show(samples.emptySentence, requestFocusOnStart = true)
+  fun inputDoesNotTakeFocusWhenTheDialogOpens() {
+    show(samples.emptySentence)
 
-    composeRule.onNodeWithContentDescription(inputLabel()).assertIsFocused()
+    composeRule.onNodeWithContentDescription(inputLabel()).assertIsNotFocused()
   }
 
   @Test
-  fun detectedAreaShowsTheDefaultsBeforeAnythingIsDetected() {
+  fun detectedAreaStaysHiddenWhileTheSentenceIsBlank() {
     show(samples.emptySentence)
+
+    composeRule.onNodeWithText(string(Res.string.movimiento_detected_label)).assertDoesNotExist()
+    composeRule
+        .onNodeWithContentDescription(string(Res.string.category_tag_add_description))
+        .assertDoesNotExist()
+  }
+
+  @Test
+  fun detectedAreaAppearsWithTheDefaultsOnceTheUserTypes() {
+    show(samples.emptySentence)
+
+    composeRule.onNodeWithContentDescription(inputLabel()).performTextInput("Lunch")
 
     composeRule.onNodeWithText(string(Res.string.movimiento_detected_label)).assertIsDisplayed()
     composeRule.onNodeWithText(string(Res.string.expense)).assertIsDisplayed()
     composeRule.onNodeWithText(string(Res.string.movimiento_relative_today)).assertIsDisplayed()
     composeRule
         .onNodeWithContentDescription(string(Res.string.category_tag_add_description))
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun detectedAreaSaysWhenNoAmountWasDetected() {
+    show(samples.emptySentence)
+    composeRule.onNodeWithContentDescription(inputLabel()).performTextInput("Lunch")
+
+    composeRule
+        .onNodeWithText(string(Res.string.movimiento_amount_not_detected))
         .assertIsDisplayed()
   }
 
@@ -114,6 +136,9 @@ class MovimientoSentenceStepTest {
             )
         )
         .assertIsDisplayed()
+    composeRule
+        .onNodeWithText(string(Res.string.movimiento_amount_not_detected))
+        .assertDoesNotExist()
     composeRule
         .onNodeWithText(string(Res.string.movimiento_relative_yesterday))
         .assertDoesNotExist()
@@ -181,7 +206,6 @@ class MovimientoSentenceStepTest {
 
   private fun show(
       sentence: MovimientoSentenceUi,
-      requestFocusOnStart: Boolean = false,
       maxHeight: Dp = Dp.Unspecified,
   ) {
     composeRule.setContent {
@@ -198,9 +222,7 @@ class MovimientoSentenceStepTest {
                     onAddCategoria = { addRequests++ },
                     onSuggestion = { suggested += it.id },
                 ),
-            focusRequester = remember { FocusRequester() },
             modifier = Modifier.heightIn(max = maxHeight),
-            requestFocusOnStart = requestFocusOnStart,
         )
       }
     }

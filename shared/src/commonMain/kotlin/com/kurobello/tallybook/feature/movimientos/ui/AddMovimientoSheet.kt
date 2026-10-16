@@ -18,7 +18,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -151,7 +150,6 @@ private fun MovimientoSentenceDialog(
     onHidden: () -> Unit,
 ) {
   val focusManager = LocalFocusManager.current
-  val focusRequester = remember { FocusRequester() }
   val callbacks =
       MovimientoSentenceCallbacks(
           onTextChange = actions::onPhraseChanged,
@@ -176,7 +174,6 @@ private fun MovimientoSentenceDialog(
     MovimientoSentenceStep(
         sentence = uiState.sentence,
         callbacks = callbacks,
-        focusRequester = focusRequester,
         modifier = Modifier.weight(1f, fill = false),
     )
     MovimientoFormErrorMessage(

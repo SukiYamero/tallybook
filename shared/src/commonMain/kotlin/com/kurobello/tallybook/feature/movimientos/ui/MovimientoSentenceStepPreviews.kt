@@ -4,9 +4,7 @@ package com.kurobello.tallybook.feature.movimientos.ui
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.tooling.preview.Preview
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSentenceUi
@@ -50,9 +48,7 @@ private fun SentenceStepPreview(
     MovimientoSentenceStep(
         sentence = sentence(rememberMovimientoEntrySamples()),
         callbacks = noOpSentenceCallbacks,
-        focusRequester = remember { FocusRequester() },
         modifier = Modifier.padding(TallybookTheme.spacing.space16),
-        requestFocusOnStart = false,
     )
   }
 }

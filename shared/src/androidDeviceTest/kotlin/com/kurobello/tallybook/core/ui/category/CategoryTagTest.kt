@@ -33,7 +33,6 @@ import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_tag_add_description
-import tallybook.shared.generated.resources.category_tag_field_counter_description
 import tallybook.shared.generated.resources.category_tag_field_suggestions
 import tallybook.shared.generated.resources.category_tag_remove
 import tallybook.shared.generated.resources.movimiento_pending_label
@@ -112,7 +111,7 @@ class CategoryTagTest {
   }
 
   @Test
-  fun fieldAnnouncesTheCounterAndOffersAddUntilTheLimit() {
+  fun fieldShowsNoCounterAndOffersAddUntilTheLimit() {
     var adds = 0
     composeRule.setContent {
       TallybookTheme {
@@ -125,12 +124,7 @@ class CategoryTagTest {
       }
     }
 
-    composeRule.onNodeWithText("2/$LIMIT").assertExists()
-    composeRule
-        .onNodeWithContentDescription(
-            string(Res.string.category_tag_field_counter_description, 2, LIMIT)
-        )
-        .assertExists()
+    composeRule.onNodeWithText("2/$LIMIT").assertDoesNotExist()
     composeRule
         .onNodeWithContentDescription(string(Res.string.category_tag_add_description))
         .performClick()
