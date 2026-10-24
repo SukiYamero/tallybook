@@ -54,6 +54,23 @@ class CategoriaRepositoryTest {
   }
 
   @Test
+  fun `localizing seeded names keeps the SEED stamp and issues none`() = runTest {
+    val changeClock = TestChangeClock()
+    withRepository(changeClock) { database, repository ->
+      repository.ensureSeeded(listOf(comida))
+
+      assertEquals(
+          DataOutcome.Success(Unit),
+          repository.localizeSeeded(listOf(comida.copy(nombre = "Food"))),
+      )
+
+      val stored = database.categoriaQueries.selectCategoriaById(comida.id).executeAsOne()
+      assertEquals("Food" to ChangeStamp.SEED.value, stored.nombre to stored.updated_at)
+      assertEquals(emptyList(), changeClock.issuedStamps)
+    }
+  }
+
+  @Test
   fun `getAll maps database rows to domain categorias`() = runTest {
     withRepository { database, repository ->
       database.seed(comida)

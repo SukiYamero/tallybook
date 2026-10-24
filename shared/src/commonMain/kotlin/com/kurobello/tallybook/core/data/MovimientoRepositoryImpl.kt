@@ -381,9 +381,13 @@ internal class MovimientoRepositoryImpl(
           live != null ->
               if (live.isIdenticalTo(restorable)) MovimientoRestoreResult.AlreadyPresent
               else MovimientoRestoreResult.Conflict
-          tombstone == null || tombstone.holdsContentOf(movimiento) -> {
+          tombstone == null -> {
             queries.deleteMovimientoEtiquetas(movimiento.id)
             insertRow(restorable, changeClock.next())
+            MovimientoRestoreResult.Restored
+          }
+          tombstone.holdsContentOf(movimiento) -> {
+            revive(restorable, changeClock.next())
             MovimientoRestoreResult.Restored
           }
           else -> MovimientoRestoreResult.Conflict
@@ -392,39 +396,38 @@ internal class MovimientoRepositoryImpl(
     }
   }
 
-  private fun insertRow(movimiento: Movimiento, stamp: ChangeStamp) {
+  private fun revive(movimiento: Movimiento, stamp: ChangeStamp) {
     val queries = database.movimientoQueries
-    val tombstoned =
-        queries.selectStoredMovimientoById(movimiento.id).executeAsOneOrNull()?.deleted_at != null
-    val written =
-        if (tombstoned) {
-          queries.reviveMovimiento(
-              tipo = movimiento.tipo.name,
-              monto_minor = movimiento.monto.minorUnits,
-              monto_moneda = movimiento.monto.moneda.name,
-              fecha = movimiento.fecha.toString(),
-              titulo = movimiento.titulo,
-              descripcion = movimiento.descripcion,
-              created_at = movimiento.createdAt.toString(),
-              categoria_id = movimiento.categoriaId,
-              stamp = stamp.value,
-              id = movimiento.id,
-          )
-        } else {
-          queries.insertMovimiento(
-              id = movimiento.id,
-              tipo = movimiento.tipo.name,
-              monto_minor = movimiento.monto.minorUnits,
-              monto_moneda = movimiento.monto.moneda.name,
-              fecha = movimiento.fecha.toString(),
-              titulo = movimiento.titulo,
-              descripcion = movimiento.descripcion,
-              created_at = movimiento.createdAt.toString(),
-              categoria_id = movimiento.categoriaId,
-              updated_at = stamp.value,
-          )
-        }
-    check(written.value == 1L)
+    check(
+        queries
+            .reviveMovimiento(
+                categoria_id = movimiento.categoriaId,
+                stamp = stamp.value,
+                id = movimiento.id,
+            )
+            .value == 1L
+    )
+    queries.deleteMovimientoEtiquetas(movimiento.id)
+    insertEtiquetas(movimiento.id, movimiento.etiquetaIds)
+  }
+
+  private fun insertRow(movimiento: Movimiento, stamp: ChangeStamp) {
+    check(
+        database.movimientoQueries
+            .insertMovimiento(
+                id = movimiento.id,
+                tipo = movimiento.tipo.name,
+                monto_minor = movimiento.monto.minorUnits,
+                monto_moneda = movimiento.monto.moneda.name,
+                fecha = movimiento.fecha.toString(),
+                titulo = movimiento.titulo,
+                descripcion = movimiento.descripcion,
+                created_at = movimiento.createdAt.toString(),
+                categoria_id = movimiento.categoriaId,
+                updated_at = stamp.value,
+            )
+            .value == 1L
+    )
     insertEtiquetas(movimiento.id, movimiento.etiquetaIds)
   }
 

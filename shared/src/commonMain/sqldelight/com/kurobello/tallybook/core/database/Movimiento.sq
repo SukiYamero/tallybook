@@ -189,14 +189,12 @@ UPDATE movimiento
 SET updated_at = :stamp, deleted_at = :stamp
 WHERE id = :id AND deleted_at IS NULL;
 
--- A write onto a tombstoned id is a newer change to that row, so it takes the row over instead of
--- failing on the primary key: Undo writes the captured content (categoria possibly falling back to
--- Otros), and an insert reusing the id writes its own.
+-- Only Undo revives, after checking the tombstone holds the snapshot's content, so only categoria_id
+-- (the Otros fallback) and the stamps change. Inserts never write over a tombstone: a later sync must
+-- weigh an incoming row's stamp against it rather than mint a fresh one, so reusing the id fails.
 reviveMovimiento:
 UPDATE movimiento
-SET tipo = :tipo, monto_minor = :monto_minor, monto_moneda = :monto_moneda, fecha = :fecha,
-    titulo = :titulo, descripcion = :descripcion, created_at = :created_at,
-    categoria_id = :categoria_id, updated_at = :stamp, deleted_at = NULL
+SET categoria_id = :categoria_id, updated_at = :stamp, deleted_at = NULL
 WHERE id = :id AND deleted_at IS NOT NULL;
 
 sumMovimientosByTipo:

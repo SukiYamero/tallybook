@@ -17,7 +17,10 @@ class InstallationIdRepositoryImpl(
 
   override suspend fun nodeId(): DataOutcome<String> =
       try {
-        val node = deviceDataStore.data.first()[NODE_ID_KEY] ?: createNode()
+        val stored = deviceDataStore.data.first()[NODE_ID_KEY]
+        // A malformed node cannot have issued any stamp, so replacing it loses no history and keeps
+        // startup from failing on every launch.
+        val node = stored?.takeIf(NODE_FORMAT::matches) ?: createNode(replacing = stored)
         if (NODE_FORMAT.matches(node)) {
           // Re-applied on every read: DataStore replaces the file on write, which clears the iOS
           // flag, and a crash between creation and exclusion must not leave it unmarked.
@@ -30,10 +33,10 @@ class InstallationIdRepositoryImpl(
         DataOutcome.Failure(DataError.Local(error))
       }
 
-  private suspend fun createNode(): String {
+  private suspend fun createNode(replacing: String?): String {
     val candidate = randomNode()
     val stored = deviceDataStore.edit { preferences ->
-      if (preferences[NODE_ID_KEY] == null) preferences[NODE_ID_KEY] = candidate
+      if (preferences[NODE_ID_KEY] == replacing) preferences[NODE_ID_KEY] = candidate
     }
     return checkNotNull(stored[NODE_ID_KEY])
   }

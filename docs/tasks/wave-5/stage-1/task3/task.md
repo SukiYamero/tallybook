@@ -19,9 +19,10 @@ row; deleting a tag bumps the movimientos that lose it; no-op writes issue no st
 - Modify `shared/src/commonMain/sqldelight/com/kurobello/tallybook/core/database/Movimiento.sq`:
   - replace `deleteMovimiento` with `tombstoneMovimiento(stamp, id)` (`... WHERE id = ? AND deleted_at IS NULL`);
   - add `selectStoredMovimientoById` (table row including tombstone state, no links) and
-    `reviveMovimiento(<content fields>, stamp, id)`, which writes a row over its tombstone: Undo writes
-    the captured content, and an `insert` reusing a tombstoned ID takes the row over (newer write)
-    instead of failing on the primary key, as inserting after a hard delete did;
+    `reviveMovimiento(categoria_id, stamp, id)`, called only by Undo on the tombstone it already read;
+  - `insertMovimiento` stays a strict insert: an ID that exists, live or tombstoned, fails on the
+    primary key and never resurrects the row, so a future sync compares incoming stamps against the
+    tombstone instead of minting a fresh one (Stage 2 transfers follow the same pattern);
   - `updateMovimiento` adds `AND deleted_at IS NULL`;
   - direct table reads add `deleted_at IS NULL`: `selectMovimientoYears`, `selectCategoryHistory`,
     `sumMovimientosByTipo`, `sumMovimientosPorCategoria`.
@@ -92,7 +93,11 @@ How they apply to the current code:
 - [x] GREEN: implement query and repository changes.
 - [x] Re-run Search/History/CSV/integration suites unchanged; re-check the `EXPLAIN QUERY PLAN` tests
       from task2 against the direct-table aggregates touched here.
-- [ ] Checks below.
+- [x] Checks below. Physical smoke by the orchestrator on the Xiaomi M2012K11AG with the build from
+      `33abe33`: upgraded over the existing mock dataset to `user_version` 7 without a crash; 27 live
+      movimientos (the expected count), 62 categorias, 3 etiquetas, stamps backfilled from
+      `created_at`; delete + Undo revived the same row with a new stamp carrying the installation
+      node. Not run on the device: tag deletion and CSV export, which the host tests cover.
 
 ## Checks
 

@@ -375,8 +375,9 @@ class SearchRepositoryTest {
           }
           job.cancelAndJoin()
           assertEquals(0, driver.listeners)
-          assertEquals(DataOutcome.Success(Unit), repository.insert(matching))
-          assertEquals(listOf(matching), snapshot(repository, criteria).movimientos)
+          val again = matching.copy(id = "matching-again")
+          assertEquals(DataOutcome.Success(Unit), repository.insert(again))
+          assertEquals(listOf(again), snapshot(repository, criteria).movimientos)
           runCurrent()
           assertEquals(0, driver.listeners)
         } finally {

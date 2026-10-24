@@ -303,7 +303,7 @@ class HistoryRepositoryTest {
           yearsJob.cancelAndJoin()
           assertEquals(0, driver.listeners)
           val counts = rangeEmissions.size to yearEmissions.size
-          assertEquals(DataOutcome.Success(Unit), repository.insert(first))
+          assertEquals(DataOutcome.Success(Unit), repository.insert(first.copy(id = "again")))
           runCurrent()
           assertEquals(counts, rangeEmissions.size to yearEmissions.size)
           assertTrue(rangeEmissions.all { it is DataOutcome.Success })

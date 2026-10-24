@@ -2,7 +2,6 @@ package com.kurobello.tallybook.core.data
 
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import java.nio.file.Path
@@ -112,25 +111,25 @@ class InstallationIdRepositoryTest {
   }
 
   @Test
-  fun `a malformed stored node is a local error`() = runTest {
-    withPreferencesDirectory { directory ->
-      val factory = factory(directory)
-      try {
-        factory.device().edit { it[stringPreferencesKey("node_id")] = "NOT-A-NODE" }
-        val exclusion = RecordingExclusion()
+  fun `a malformed stored node is replaced by a fresh node that stays excluded from backup`() =
+      runTest {
+        withPreferencesDirectory { directory ->
+          val factory = factory(directory)
+          try {
+            factory.device().edit { it[stringPreferencesKey("node_id")] = "NOT-A-NODE" }
+            val exclusion = RecordingExclusion()
+            val repository = InstallationIdRepositoryImpl(factory.device(), exclusion)
 
-        val failure =
-            assertIs<DataOutcome.Failure>(
-                InstallationIdRepositoryImpl(factory.device(), exclusion).nodeId()
-            )
+            val replaced = assertIs<DataOutcome.Success<String>>(repository.nodeId()).data
 
-        assertIs<DataError.Local>(failure.error)
-        assertEquals(emptyList(), exclusion.excluded)
-      } finally {
-        factory.close()
+            assertTrue(NODE_FORMAT.matches(replaced), replaced)
+            assertEquals(DataOutcome.Success(replaced), repository.nodeId())
+            assertEquals(listOf(PreferencesFile.DEVICE, PreferencesFile.DEVICE), exclusion.excluded)
+          } finally {
+            factory.close()
+          }
+        }
       }
-    }
-  }
 
   private fun TestScope.factory(directory: Path) =
       PreferencesDataStoreFactory(

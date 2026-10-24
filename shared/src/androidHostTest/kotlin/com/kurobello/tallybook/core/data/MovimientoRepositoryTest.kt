@@ -212,35 +212,34 @@ class MovimientoRepositoryTest {
       }
 
   @Test
-  fun `an insert reusing a tombstoned id takes the row over with its own content and stamp`() =
-      runTest {
-        JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-          val changeClock = TestChangeClock()
-          val repository =
-              MovimientoRepositoryImpl(
-                  seeded(driver),
-                  StandardTestDispatcher(testScheduler),
-                  changeClock,
-              )
-          val row = movimiento("reused", etiquetaIds = listOf("tag_a"))
-          repository.insert(row)
-          repository.delete(row.id)
-          val replacement =
-              row.copy(
-                  monto = Money(900, Moneda.COP),
-                  etiquetaIds = listOf("tag_b"),
-                  createdAt = LATER,
-              )
+  fun `an insert reusing a tombstoned id fails and leaves the tombstone untouched`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      val changeClock = TestChangeClock()
+      val repository =
+          MovimientoRepositoryImpl(
+              seeded(driver),
+              StandardTestDispatcher(testScheduler),
+              changeClock,
+          )
+      val row = movimiento("reused", etiquetaIds = listOf("tag_a"))
+      repository.insert(row)
+      repository.delete(row.id)
+      val tombstone = driver.storedStamps("movimiento", row.id)
+      val replacement =
+          row.copy(monto = Money(900, Moneda.COP), etiquetaIds = listOf("tag_b"), createdAt = LATER)
 
-          assertEquals(DataOutcome.Success(Unit), repository.insert(replacement))
+      assertLocal(repository.insert(replacement))
 
-          val stamp = changeClock.issuedStamps.last().value
-          assertEquals(3, changeClock.issuedStamps.size)
-          assertEquals(stamp to null, driver.storedStamps("movimiento", row.id))
-          assertEquals(DataOutcome.Success(listOf(replacement)), repository.getAll())
-          assertEquals(listOf("reused:tag_b:0"), linkRows(driver))
-        }
-      }
+      assertEquals(tombstone, driver.storedStamps("movimiento", row.id))
+      assertEquals(DataOutcome.Success(emptyList()), repository.getAll())
+      assertEquals(emptyList(), linkRows(driver))
+      assertEquals(
+          DataOutcome.Success(MovimientoRestoreResult.Restored),
+          repository.restoreDeleted(row),
+      )
+      assertEquals(DataOutcome.Success(listOf(row)), repository.getAll())
+    }
+  }
 
   @Test
   fun `update of a tombstone is not found and leaves it untouched`() = runTest {
