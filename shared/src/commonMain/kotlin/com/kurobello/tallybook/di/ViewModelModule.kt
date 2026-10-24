@@ -22,6 +22,9 @@ import com.kurobello.tallybook.feature.search.viewmodel.SearchDateProvider
 import com.kurobello.tallybook.feature.search.viewmodel.SearchRepositories
 import com.kurobello.tallybook.feature.search.viewmodel.SearchViewModel
 import com.kurobello.tallybook.feature.tags.viewmodel.TagsViewModel
+import com.kurobello.tallybook.feature.transfers.viewmodel.ManageTransferenciaRepositories
+import com.kurobello.tallybook.feature.transfers.viewmodel.ManageTransferenciaViewModel
+import com.kurobello.tallybook.feature.transfers.viewmodel.RecentTransferenciasViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
@@ -109,4 +112,21 @@ internal val viewModelModule = module {
     )
   }
   viewModel { QuickCuentaViewModel(cuentaRepository = get()) }
+  viewModel { parameters ->
+    ManageTransferenciaViewModel(
+        repositories =
+            ManageTransferenciaRepositories(
+                transferencias = get(),
+                cuentas = get(),
+                preferences = get(),
+            ),
+        idGenerator = get(),
+        clock = get(),
+        timeZoneProvider = get(),
+        feedback = parameters.get(),
+    )
+  }
+  viewModel {
+    RecentTransferenciasViewModel(transferencias = get(), cuentas = get(), preferences = get())
+  }
 }

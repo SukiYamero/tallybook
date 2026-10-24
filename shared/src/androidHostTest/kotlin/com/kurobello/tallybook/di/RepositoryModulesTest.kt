@@ -24,6 +24,8 @@ import com.kurobello.tallybook.feature.home.HomeViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.ManageMovimientoViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoEntryEngine
+import com.kurobello.tallybook.feature.transfers.viewmodel.ManageTransferenciaViewModel
+import com.kurobello.tallybook.feature.transfers.viewmodel.RecentTransferenciasViewModel
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -73,6 +75,10 @@ class RepositoryModulesTest {
       assertNotNull(
           application.koin.get<ManageMovimientoViewModel> { parametersOf(feedback.queue) }
       )
+      assertNotNull(
+          application.koin.get<ManageTransferenciaViewModel> { parametersOf(feedback.queue) }
+      )
+      assertNotNull(application.koin.get<RecentTransferenciasViewModel>())
     } finally {
       application.koin.get<PreferencesDataStoreFactory>().close()
       application.close()
