@@ -36,6 +36,15 @@ internal data class TransferFieldErrors(
     val fechaFuture: Boolean = false,
 )
 
+/** The form's fields in reading order, so an invalid submit can lead to the first error. */
+internal enum class TransferField {
+  Origen,
+  Destino,
+  MontoOrigen,
+  MontoDestino,
+  Fecha,
+}
+
 /**
  * One transfer being written over a snapshot of the live [cuentas]. Unless both accounts are known
  * and differ in currency there is a single amount: [TransferDraft.montoOrigen] and
@@ -81,6 +90,19 @@ internal data class TransferDraftState(
 
   val hasUnsavedChanges: Boolean
     get() = contentKey(draft) != contentKey(baseline)
+
+  val firstInvalidField: TransferField?
+    get() =
+        with(visibleErrors) {
+          when {
+            origen != null -> TransferField.Origen
+            destino != null -> TransferField.Destino
+            montoOrigen != null -> TransferField.MontoOrigen
+            montoDestino != null -> TransferField.MontoDestino
+            fechaFuture -> TransferField.Fecha
+            else -> null
+          }
+        }
 
   fun showsMoneda(cuenta: Cuenta): Boolean = cuenta.moneda != primary
 

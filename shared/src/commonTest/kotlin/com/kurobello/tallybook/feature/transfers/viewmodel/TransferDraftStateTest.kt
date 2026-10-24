@@ -76,6 +76,23 @@ class TransferDraftStateTest {
   }
 
   @Test
+  fun theFirstInvalidFieldFollowsTheFormOrderOnlyAfterSubmitting() {
+    val empty = newState(origenId = null, destinoId = null)
+    assertNull(empty.firstInvalidField)
+    assertEquals(TransferField.Origen, empty.submitted().firstInvalidField)
+
+    val withAccounts = newState(origenId = NEQUI.id, destinoId = EFECTIVO.id).submitted()
+    assertEquals(TransferField.MontoOrigen, withAccounts.firstInvalidField)
+
+    val cross =
+        newState(origenId = DOLARES.id, destinoId = NEQUI.id).withMontoOrigen("10").submitted()
+    assertEquals(TransferField.MontoDestino, cross.firstInvalidField)
+
+    val valid = withAccounts.withMontoOrigen("150")
+    assertNull(valid.firstInvalidField)
+  }
+
+  @Test
   fun aMissingAccountIsReportedOnItsSide() {
     val state = newState(origenId = NEQUI.id, destinoId = null).withMontoOrigen("10").submitted()
 

@@ -4,11 +4,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import com.kurobello.tallybook.core.model.Cuenta
@@ -28,6 +33,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookTextField
 import com.kurobello.tallybook.core.ui.component.message
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.transfers.viewmodel.TransferDraftState
+import com.kurobello.tallybook.feature.transfers.viewmodel.TransferField
 import com.kurobello.tallybook.feature.transfers.viewmodel.TransferFormActions
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -59,6 +65,8 @@ internal fun TransferForm(
     revealFocusedInput: @Composable Modifier.() -> Modifier = { this },
 ) {
   val errors = form.visibleErrors
+  val focus = remember { TransferFieldFocus() }
+  TransferValidationFocus(form, focus)
   Column(
       modifier = modifier.fillMaxWidth(),
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space20),
@@ -71,6 +79,7 @@ internal fun TransferForm(
         form = form,
         enabled = enabled,
         onSelect = actions::onOrigenSelected,
+        modifier = Modifier.bringIntoViewRequester(focus.reveal(TransferField.Origen)),
     )
     CuentaChoices(
         label = stringResource(Res.string.transfer_destino_label),
@@ -80,6 +89,7 @@ internal fun TransferForm(
         form = form,
         enabled = enabled,
         onSelect = actions::onDestinoSelected,
+        modifier = Modifier.bringIntoViewRequester(focus.reveal(TransferField.Destino)),
     )
     if (form.original == null && form.origenOptions.size < 2) {
       TallybookText(
@@ -88,8 +98,14 @@ internal fun TransferForm(
           style = TallybookTheme.typography.body,
       )
     }
-    TransferAmounts(form, enabled, actions, revealFocusedInput)
-    TransferDateField(form, errors.fechaFuture, enabled, actions)
+    TransferAmounts(form, enabled, actions, focus, revealFocusedInput)
+    TransferDateField(
+        form,
+        errors.fechaFuture,
+        enabled,
+        actions,
+        Modifier.bringIntoViewRequester(focus.reveal(TransferField.Fecha)),
+    )
     TransferDescripcionField(
         form.draft.descripcion,
         enabled,
@@ -99,11 +115,40 @@ internal fun TransferForm(
   }
 }
 
+/** Amounts take focus like the movimiento amount; choice groups and the date can only scroll in. */
+private class TransferFieldFocus {
+  private val reveals = TransferField.entries.associateWith { BringIntoViewRequester() }
+
+  val amounts: Map<TransferField, FocusRequester> =
+      mapOf(
+          TransferField.MontoOrigen to FocusRequester(),
+          TransferField.MontoDestino to FocusRequester(),
+      )
+
+  fun reveal(field: TransferField): BringIntoViewRequester = reveals.getValue(field)
+}
+
+@Composable
+private fun TransferValidationFocus(form: TransferDraftState, focus: TransferFieldFocus) {
+  val focusManager = LocalFocusManager.current
+  LaunchedEffect(form.submitAttempted) {
+    val field = form.firstInvalidField ?: return@LaunchedEffect
+    val amount = focus.amounts[field]
+    if (amount != null) {
+      amount.requestFocus()
+    } else {
+      focusManager.clearFocus()
+      focus.reveal(field).bringIntoView()
+    }
+  }
+}
+
 @Composable
 private fun TransferAmounts(
     form: TransferDraftState,
     enabled: Boolean,
     actions: TransferFormActions,
+    focus: TransferFieldFocus,
     revealFocusedInput: @Composable Modifier.() -> Modifier,
 ) {
   val errors = form.visibleErrors
@@ -118,6 +163,7 @@ private fun TransferAmounts(
       enabled = enabled,
       onValueChange = actions::onMontoOrigenChanged,
       modifier = Modifier.revealFocusedInput(),
+      focusRequester = focus.amounts.getValue(TransferField.MontoOrigen),
   )
   if (form.isCrossCurrency) {
     TransferAmountField(
@@ -128,6 +174,7 @@ private fun TransferAmounts(
         enabled = enabled,
         onValueChange = actions::onMontoDestinoChanged,
         modifier = Modifier.revealFocusedInput(),
+        focusRequester = focus.amounts.getValue(TransferField.MontoDestino),
     )
   }
 }
@@ -142,6 +189,7 @@ private fun CuentaChoices(
     form: TransferDraftState,
     enabled: Boolean,
     onSelect: (String) -> Unit,
+    modifier: Modifier,
 ) {
   val message =
       when (error) {
@@ -149,7 +197,10 @@ private fun CuentaChoices(
         TransferenciaCuentaError.SAME_AS_ORIGEN -> stringResource(Res.string.transfer_same_cuenta)
         null -> null
       }
-  Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.dimensions.fieldLabelSpacing)) {
+  Column(
+      modifier = modifier,
+      verticalArrangement = Arrangement.spacedBy(TallybookTheme.dimensions.fieldLabelSpacing),
+  ) {
     TallybookInputLabel(
         label,
         color =
@@ -191,6 +242,7 @@ private fun TransferAmountField(
     enabled: Boolean,
     onValueChange: (String) -> Unit,
     modifier: Modifier,
+    focusRequester: FocusRequester,
 ) {
   val message = error?.let { TallybookFieldMessage.Error(it.message()) }
   TallybookAmountInput(
@@ -201,6 +253,7 @@ private fun TransferAmountField(
       modifier = modifier,
       enabled = enabled,
       message = message,
+      focusRequester = focusRequester,
       labelContent = {
         TallybookInputLabel(
             text = label,
@@ -218,8 +271,12 @@ private fun TransferDateField(
     isFuture: Boolean,
     enabled: Boolean,
     actions: TransferFormActions,
+    modifier: Modifier,
 ) {
-  Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.dimensions.fieldLabelSpacing)) {
+  Column(
+      modifier = modifier,
+      verticalArrangement = Arrangement.spacedBy(TallybookTheme.dimensions.fieldLabelSpacing),
+  ) {
     TallybookInputLabel(stringResource(Res.string.date))
     TallybookDateChipPicker(
         value = form.draft.fecha,

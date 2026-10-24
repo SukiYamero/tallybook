@@ -3,6 +3,8 @@ package com.kurobello.tallybook.feature.transfers.ui
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
@@ -67,6 +69,20 @@ internal class TransferFormTest {
 
     composeRule.onAllNodes(hasText("Nequi") and hasClickAction())[1].performClick()
     assertEquals(NEQUI.id, actions.destino)
+  }
+
+  @Test
+  fun anInvalidSubmitFocusesTheFirstAmountWithAnError() {
+    val form = mutableStateOf(formFor(TransferEntry.New(NEQUI.id, CASH.id, prefill = null)))
+    composeRule.setContent {
+      TallybookTheme { TransferForm(form.value, RecordingActions(), enabled = true) }
+    }
+    val amount = hasSetTextAction() and hasContentDescription(text(Res.string.amount))
+    composeRule.onNode(amount).assertIsNotFocused()
+
+    composeRule.runOnIdle { form.value = form.value.copy(submitAttempted = true) }
+
+    composeRule.onNode(amount).assertIsFocused()
   }
 
   @Test
