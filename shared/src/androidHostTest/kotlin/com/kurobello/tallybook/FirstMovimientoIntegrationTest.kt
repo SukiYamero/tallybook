@@ -4,6 +4,7 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.CivilToday
 import com.kurobello.tallybook.core.data.CuentaSeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
@@ -13,6 +14,7 @@ import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
+import com.kurobello.tallybook.core.data.SaldoRepositoryImpl
 import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.cashCuenta
@@ -125,6 +127,8 @@ class FirstMovimientoIntegrationTest {
                   preferencesRepository = preferences,
                   movimientoRepository = movimientos,
                   categoriaRepository = categorias,
+                  saldoRepository = SaldoRepositoryImpl(database, dispatcher),
+                  today = CivilToday(FixedClock(FIXED_INSTANT), TimeZoneProvider { TimeZone.UTC }),
                   scope = scopes.newScope(dispatcher),
               )
           backgroundScope.launch { home.uiState.collect {} }
@@ -182,6 +186,7 @@ class FirstMovimientoIntegrationTest {
               home.uiState.value.summary,
           )
           assertEquals(Money(950, Moneda.COP), home.uiState.value.summary.balance)
+          assertEquals(Money(950, Moneda.COP), home.uiState.value.totalBalance)
 
           database.insertCuentaRow(cashCuenta(Moneda.USD), ChangeStamp.SEED)
           assertEquals(
@@ -204,6 +209,7 @@ class FirstMovimientoIntegrationTest {
           testScheduler.advanceUntilIdle()
 
           assertEquals(Money(950, Moneda.COP), home.uiState.value.summary.balance)
+          assertEquals(Money(950, Moneda.COP), home.uiState.value.totalBalance)
 
           scopes.forEach(CoroutineScope::cancel)
           testScheduler.advanceUntilIdle()

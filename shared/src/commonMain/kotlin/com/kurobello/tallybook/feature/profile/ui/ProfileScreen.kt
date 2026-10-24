@@ -36,6 +36,7 @@ import com.composables.icons.lucide.Hash
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Smartphone
 import com.composables.icons.lucide.Tags
+import com.composables.icons.lucide.Wallet
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessageContent
@@ -50,6 +51,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
 import com.kurobello.tallybook.core.ui.component.rememberTallybookTapFeedback
 import com.kurobello.tallybook.core.ui.layout.TallybookScreenFrame
+import com.kurobello.tallybook.core.ui.navigation.Accounts
 import com.kurobello.tallybook.core.ui.navigation.Categories
 import com.kurobello.tallybook.core.ui.navigation.Destination
 import com.kurobello.tallybook.core.ui.navigation.Tags
@@ -63,6 +65,8 @@ import com.kurobello.tallybook.feature.profile.viewmodel.ProfileUiState
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.navigation_profile
+import tallybook.shared.generated.resources.profile_accounts_body
+import tallybook.shared.generated.resources.profile_accounts_label
 import tallybook.shared.generated.resources.profile_categories_body
 import tallybook.shared.generated.resources.profile_categories_label
 import tallybook.shared.generated.resources.profile_currency_label
@@ -119,6 +123,12 @@ internal fun ProfileScreen(
       )
       ProfileSection(stringResource(Res.string.profile_section_data)) {
         LocalDataCard()
+        NavigationCard(
+            icon = Lucide.Wallet,
+            title = stringResource(Res.string.profile_accounts_label),
+            body = stringResource(Res.string.profile_accounts_body),
+            onClick = { onOpenSecondary(Accounts) },
+        )
         NavigationCard(
             icon = Lucide.Tags,
             title = stringResource(Res.string.profile_categories_label),

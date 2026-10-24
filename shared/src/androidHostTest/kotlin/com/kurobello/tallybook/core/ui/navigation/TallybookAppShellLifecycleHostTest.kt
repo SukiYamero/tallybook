@@ -36,7 +36,9 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeSaldoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.SaldoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.AppLocale
@@ -276,6 +278,7 @@ private class ShellSuite(private val scope: TestScope) {
           module {
             single<AppPreferencesRepository> { ShellPreferences() }
             single<MovimientoRepository> { repository }
+            single<SaldoRepository> { FakeSaldoRepository() }
             single<EtiquetaRepository> { FakeEtiquetaRepository() }
             single<CategoriaRepository> { ShellCategories() }
             single<Clock> {
@@ -430,7 +433,8 @@ private class ShellHarness(
               Profile,
               UiCatalog,
               Categories,
-              Tags -> Unit
+              Tags,
+              Accounts -> Unit
             }
             SideEffect {
               owners[destination] = owner

@@ -4,12 +4,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.CivilToday
 import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.SaldoRepository
 import com.kurobello.tallybook.core.model.AppPreferencesState
+import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoPeriodRanges
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.ui.state.failed
 import kotlinx.coroutines.CoroutineScope
@@ -28,12 +33,15 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.yearMonth
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class HomeViewModel(
     private val preferencesRepository: AppPreferencesRepository,
     private val movimientoRepository: MovimientoRepository,
     private val categoriaRepository: CategoriaRepository,
+    private val saldoRepository: SaldoRepository,
+    private val today: CivilToday,
     scope: CoroutineScope? = null,
 ) : ViewModel() {
 
@@ -104,14 +112,18 @@ internal class HomeViewModel(
             }
       }
 
-  private fun observePersistedHome(moneda: Moneda): Flow<HomeUiState> =
-      combine(
-          movimientoRepository.observeSummary(moneda).toLoadState(),
-          movimientoRepository.observeRecent(moneda, HOME_RECENT_LIMIT).toLoadState(),
-          categoriaRepository.observeAll().toLoadState(),
-      ) { summary, recent, categorias ->
-        HomeSnapshot.from(summary, recent, categorias).toUiState(moneda)
-      }
+  // Every resume resubscribes, so the month is read again then and rolls over like History.
+  private fun observePersistedHome(moneda: Moneda): Flow<HomeUiState> {
+    val month = MovimientoPeriodRanges.calendarMonth(today.date().yearMonth)
+    return combine(
+        movimientoRepository.observeSummary(moneda, month).toLoadState(),
+        movimientoRepository.observeRecent(moneda, HOME_RECENT_LIMIT).toLoadState(),
+        categoriaRepository.observeAll().toLoadState(),
+        saldoRepository.observeTotales().toLoadState(),
+    ) { summary, recent, categorias, totales ->
+      HomeSnapshot.from(summary, recent, categorias, totales, moneda).toUiState(moneda)
+    }
+  }
 }
 
 private sealed interface LoadState<out T> {
@@ -128,7 +140,8 @@ private fun HomeUiState.asFlow(): Flow<HomeUiState> = kotlinx.coroutines.flow.fl
 private data class HomeSnapshot(
     val summary: MovimientoSummary?,
     val recent: List<Movimiento>?,
-    val categoriasById: Map<String, com.kurobello.tallybook.core.model.Categoria>?,
+    val categoriasById: Map<String, Categoria>?,
+    val totalBalance: Money?,
     val error: DataError?,
     val isLoading: Boolean,
 ) {
@@ -142,6 +155,7 @@ private data class HomeSnapshot(
                     summary = requireNotNull(summary),
                     recent = requireNotNull(recent),
                     categoriasById = requireNotNull(categoriasById),
+                    totalBalance = requireNotNull(totalBalance),
                 )
             )
       }
@@ -150,17 +164,25 @@ private data class HomeSnapshot(
     fun from(
         summary: LoadState<MovimientoSummary>,
         recent: LoadState<List<Movimiento>>,
-        categorias: LoadState<List<com.kurobello.tallybook.core.model.Categoria>>,
+        categorias: LoadState<List<Categoria>>,
+        totales: LoadState<Map<Moneda, Money>>,
+        moneda: Moneda,
     ): HomeSnapshot =
         HomeSnapshot(
             summary = summary.successOrNull(),
             recent = recent.successOrNull(),
             categoriasById = categorias.successOrNull()?.associateBy { it.id },
-            error = summary.errorOrNull() ?: recent.errorOrNull() ?: categorias.errorOrNull(),
+            totalBalance = totales.successOrNull()?.let { it[moneda] ?: Money(0, moneda) },
+            error =
+                summary.errorOrNull()
+                    ?: recent.errorOrNull()
+                    ?: categorias.errorOrNull()
+                    ?: totales.errorOrNull(),
             isLoading =
                 summary is LoadState.Loading ||
                     recent is LoadState.Loading ||
-                    categorias is LoadState.Loading,
+                    categorias is LoadState.Loading ||
+                    totales is LoadState.Loading,
         )
   }
 }

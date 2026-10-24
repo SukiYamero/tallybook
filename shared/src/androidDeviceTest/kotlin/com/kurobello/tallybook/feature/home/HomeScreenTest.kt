@@ -292,6 +292,7 @@ class HomeScreenTest {
                 summary = HomeUiState.emptySummary(Moneda.COP),
                 recent = emptyList(),
                 categoriasById = emptyMap(),
+                totalBalance = Money(0, Moneda.COP),
             )
         )
     val populatedState =
@@ -300,6 +301,7 @@ class HomeScreenTest {
                 summary = MovimientoSummary(Money(100, Moneda.COP), Money(100, Moneda.COP)),
                 recent = listOf(movimiento),
                 categoriasById = mapOf(categoria.id to categoria),
+                totalBalance = Money(250_000, Moneda.COP),
             )
         )
   }

@@ -22,6 +22,7 @@ import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackRoute
 import com.kurobello.tallybook.core.ui.layout.TallybookAppShell
 import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSession
 import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSessionLifecycle
+import com.kurobello.tallybook.feature.accounts.ui.AccountsRoute
 import com.kurobello.tallybook.feature.categories.ui.CategoriesRoute
 import com.kurobello.tallybook.feature.history.ui.HistoryRoute
 import com.kurobello.tallybook.feature.home.HomeRoute
@@ -135,6 +136,7 @@ private fun PrimaryRoute(
             onOpenCatalog = navigator.openCatalog,
             onSearch = navigator::openSearch,
             onOpenMovimiento = openManagement,
+            onOpenAccounts = { navigator.openSecondary(Accounts) },
         )
     History -> HistoryRoute(navigator::openCreation, clearance, onOpenMovimiento = openManagement)
     Search ->
@@ -171,6 +173,13 @@ private fun PrimaryRoute(
             onBack = navigator::back,
             onShowTag = { id -> navigator.showSearchFilter(etiquetaIds = setOf(id)) },
         )
+    Accounts ->
+        AccountsRoute(
+            modals = navigator.modals,
+            active = state.secondary == Accounts,
+            onBack = navigator::back,
+            onTransfer = null,
+        )
   }
 }
 
@@ -205,6 +214,7 @@ internal fun primaryContentKey(destination: Destination): String =
       UiCatalog -> "ui-catalog"
       Categories -> "secondary-categories"
       Tags -> "secondary-tags"
+      Accounts -> "secondary-accounts"
     }
 
 internal fun destinationBackStackSerializer(): KSerializer<NavBackStack<Destination>> =

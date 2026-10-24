@@ -30,7 +30,12 @@ class HomePresentationTest {
   fun cachedEmptySnapshotRemainsEmptyWithoutInitialLoadingFeedback() = runTest {
     val empty =
         HomeUiState.ready(
-            HomeContent(HomeUiState.emptySummary(Moneda.USD), emptyList(), emptyMap())
+            HomeContent(
+                HomeUiState.emptySummary(Moneda.USD),
+                emptyList(),
+                emptyMap(),
+                Money(0, Moneda.USD),
+            )
         )
     val source = MutableStateFlow(empty)
     val frames = mutableListOf<HomePresentation>()
@@ -152,6 +157,7 @@ class HomePresentationTest {
                 MovimientoSummary(Money(100, Moneda.USD), Money(0, Moneda.USD)),
                 listOf(movement),
                 mapOf(category.id to category),
+                Money(2_000, Moneda.USD),
             )
         )
   }

@@ -16,12 +16,18 @@ import com.kurobello.tallybook.core.data.AppInfo
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
+import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeSaldoRepository
+import com.kurobello.tallybook.core.data.FakeTransferenciaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.SaldoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.TransferenciaRepository
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.data.export.MovimientoExportSharer
 import com.kurobello.tallybook.core.model.AppLocale
@@ -31,6 +37,7 @@ import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaSaldo
 import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
@@ -46,6 +53,7 @@ import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.ThemeMode
+import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.di.DispatcherQualifier
 import com.kurobello.tallybook.di.entryModule
@@ -70,6 +78,8 @@ import org.koin.dsl.module
 
 internal class PrimaryDeviceShell {
   val movimientos = NavigationMovimientos()
+  val cuentas = FakeCuentaRepository(listOf(NAVIGATION_CASH))
+  val saldos = FakeSaldoRepository(listOf(CuentaSaldo(NAVIGATION_CASH, Money(125_000, Moneda.COP))))
   val mounted = mutableStateOf(true)
   val owner = mutableStateOf(NavigationParent(null))
   val registry =
@@ -89,6 +99,9 @@ internal class PrimaryDeviceShell {
           single<MovimientoRepository> { movimientos }
           single<CategoriaRepository> { NavigationCategories() }
           single<EtiquetaRepository> { FakeEtiquetaRepository() }
+          single<CuentaRepository> { cuentas }
+          single<SaldoRepository> { saldos }
+          single<TransferenciaRepository> { FakeTransferenciaRepository(cuentas) }
           single<IdGenerator> { IdGenerator { "new-${ids.incrementAndGet()}" } }
           single<Clock> {
             object : Clock {
@@ -145,6 +158,17 @@ internal class PrimaryDeviceShell {
     context.close()
   }
 }
+
+private val NAVIGATION_CASH =
+    Cuenta(
+        id = Cuenta.defaultCashId(Moneda.COP),
+        nombre = "Efectivo",
+        tipo = TipoCuenta.EFECTIVO,
+        saldoInicial = Money(0, Moneda.COP),
+        diaCorte = null,
+        archivada = false,
+        createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+    )
 
 internal data class PrimaryNavigationSnapshot(
     val owner: SavedState,
