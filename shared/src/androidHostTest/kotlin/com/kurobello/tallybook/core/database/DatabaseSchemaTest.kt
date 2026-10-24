@@ -5,13 +5,18 @@ import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.db.SqlPreparedStatement
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
+import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.seedCashCuentas
 import com.kurobello.tallybook.core.data.toDomain
 import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
+import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import java.io.File
 import java.sql.SQLException
@@ -21,6 +26,9 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.LocalDate
 
 class DatabaseSchemaTest {
 
@@ -79,7 +87,7 @@ class DatabaseSchemaTest {
         val seed = ChangeStamp.SEED.value
         assertEquals(
             listOf(
-                "cuenta_efectivo_clp Efectivo EFECTIVO CLP 0 - 0 2025-12-31T23:59:59Z $seed -",
+                "cuenta_efectivo_clp Efectivo EFECTIVO CLP 0 - 0 2025-12-31T23:59:59Z $seed $seed",
                 "cuenta_efectivo_cop Efectivo EFECTIVO COP 0 - 0 2026-01-01T10:00:00Z $seed -",
                 "cuenta_efectivo_usd Efectivo EFECTIVO USD 0 - 0 2026-02-01T00:00:00Z $seed -",
             ),
@@ -131,6 +139,26 @@ class DatabaseSchemaTest {
                 "SELECT movimiento_id || ' ' || etiqueta_id || ' ' || posicion " +
                     "FROM movimiento_etiqueta ORDER BY 1"
             ),
+        )
+        val clpSnapshot =
+            Movimiento(
+                id = "clp_deleted",
+                tipo = TipoMovimiento.GASTO,
+                monto = Money(900, Moneda.CLP),
+                fecha = LocalDate(2026, 1, 15),
+                categoriaId = "cat_comida",
+                titulo = null,
+                descripcion = null,
+                createdAt = Instant.parse("2025-12-31T23:59:59Z"),
+                cuentaId = Cuenta.defaultCashId(Moneda.CLP),
+                medio = MedioPago.EFECTIVO,
+            )
+        assertEquals(
+            DataOutcome.Success(RestoreResult.MissingCuenta),
+            runBlocking {
+              MovimientoRepositoryImpl(database, Dispatchers.Unconfined, TestChangeClock())
+                  .restoreDeleted(clpSnapshot)
+            },
         )
         assertEquals(freshSchema(), driver.schemaObjects())
       }

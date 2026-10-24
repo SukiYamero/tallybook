@@ -22,8 +22,10 @@ CREATE TABLE cuenta (
     deleted_at TEXT
 );
 
--- Tombstones count too: a revived movimiento must still find its cuenta. The IDs match
--- Cuenta.defaultCashId and the stamp is ChangeStamp.SEED, so installations agree on these rows.
+-- Tombstones count too, so every movimiento keeps a cuenta that owns its currency. The IDs match
+-- Cuenta.defaultCashId and the stamp is ChangeStamp.SEED, so installations agree on these rows. A
+-- currency with only tombstoned movimientos gets its cuenta already tombstoned: no live account
+-- appears that the user never had, and Undo of those rows reports the cuenta missing.
 -- created_at is the earliest instant of the currency; julianday orders "10:00:00Z" before
 -- "10:00:00.5Z", which text order does not, and an unparseable value only wins when nothing parses.
 INSERT INTO cuenta(id, nombre, tipo, moneda, saldo_inicial_minor, dia_corte, archivada, created_at, updated_at, deleted_at)
@@ -43,7 +45,14 @@ SELECT
         LIMIT 1
     ),
     '0000000000000-0000-0000000000000000',
-    NULL
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM movimiento_legacy AS live
+            WHERE live.monto_moneda = monedas.monto_moneda AND live.deleted_at IS NULL
+        ) THEN NULL
+        ELSE '0000000000000-0000-0000000000000000'
+    END
 FROM (SELECT DISTINCT monto_moneda FROM movimiento_legacy) AS monedas;
 
 CREATE TABLE movimiento (
