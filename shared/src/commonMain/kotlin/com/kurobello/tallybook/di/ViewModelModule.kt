@@ -3,6 +3,7 @@ package com.kurobello.tallybook.di
 import com.kurobello.tallybook.AppDisplayViewModel
 import com.kurobello.tallybook.AppStartupViewModel
 import com.kurobello.tallybook.core.data.CivilToday
+import com.kurobello.tallybook.core.data.export.MovimientoExportSource
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackViewModel
 import com.kurobello.tallybook.feature.accounts.viewmodel.AccountsViewModel
 import com.kurobello.tallybook.feature.accounts.viewmodel.QuickCuentaViewModel
@@ -97,7 +98,13 @@ internal val viewModelModule = module {
   viewModel {
     ProfileViewModel(
         preferencesRepository = get(),
-        export = ProfileExportDependencies(get(), get(), get(), get(), get(), get()),
+        export =
+            ProfileExportDependencies(
+                source = MovimientoExportSource(get(), get(), get(), get(), get()),
+                sharer = get(),
+                clock = get(),
+                timeZoneProvider = get(),
+            ),
         appInfo = get(),
         computationDispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.DEFAULT)),
     )

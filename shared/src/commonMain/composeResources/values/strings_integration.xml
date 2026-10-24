@@ -3,4 +3,10 @@
     <string name="account_view_movements">Ver movimientos</string>
     <string name="search_type_transfers">Entre cuentas</string>
     <string name="search_accounts_label">Cuentas</string>
+    <string name="csv_header_account">Cuenta</string>
+    <string name="csv_header_medio">Medio de pago</string>
+    <string name="csv_header_destination_account">Cuenta destino</string>
+    <string name="csv_header_destination_amount">Monto destino</string>
+    <string name="csv_header_destination_currency">Moneda destino</string>
+    <string name="csv_transfer_type">Transferencia entre cuentas</string>
 </resources>

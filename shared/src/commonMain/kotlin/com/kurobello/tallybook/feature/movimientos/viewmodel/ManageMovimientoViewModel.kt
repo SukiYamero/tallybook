@@ -14,12 +14,14 @@ import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
-import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.text.AmountInputResult
 import com.kurobello.tallybook.core.text.normalizeOptionalText
+import com.kurobello.tallybook.core.text.parseAmountInput
+import com.kurobello.tallybook.core.text.toAmountInput
 import com.kurobello.tallybook.core.ui.component.DismissalDecision
 import com.kurobello.tallybook.core.ui.component.dismissalDecision
 import com.kurobello.tallybook.core.ui.feedback.DeletedSnapshot
@@ -550,12 +552,6 @@ private val MovimientoManagementSession.hasPendingConfirmation: Boolean
 
 private val MovimientoManagementSession.canModifyDraft: Boolean
   get() = phase == MovimientoManagementPhase.Edit && canInteract && !hasPendingConfirmation
-
-internal fun Money.toAmountInput(): String {
-  val digits = minorUnits.toString().padStart(moneda.scale + 1, '0')
-  return if (moneda.scale == 0) digits
-  else digits.dropLast(moneda.scale) + moneda.decimalSeparator + digits.takeLast(moneda.scale)
-}
 
 internal fun Movimiento.toDraft() =
     MovimientoDraft(

@@ -16,12 +16,12 @@ import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
+import com.kurobello.tallybook.core.text.AmountInputError
 import com.kurobello.tallybook.core.ui.component.TallybookProgressIndicator
 import com.kurobello.tallybook.core.ui.component.TallybookSheetForm
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
-import com.kurobello.tallybook.feature.movimientos.viewmodel.AmountInputError
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormError
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormState

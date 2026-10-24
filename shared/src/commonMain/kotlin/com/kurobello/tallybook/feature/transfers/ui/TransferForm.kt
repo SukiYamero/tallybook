@@ -15,6 +15,7 @@ import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TRANSFERENCIA_DESCRIPCION_MAX
 import com.kurobello.tallybook.core.model.TransferenciaCuentaError
+import com.kurobello.tallybook.core.text.AmountInputError
 import com.kurobello.tallybook.core.ui.component.TallybookAmountInput
 import com.kurobello.tallybook.core.ui.component.TallybookChoicePill
 import com.kurobello.tallybook.core.ui.component.TallybookDateChipPicker
@@ -25,7 +26,6 @@ import com.kurobello.tallybook.core.ui.component.TallybookInputLabel
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextField
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
-import com.kurobello.tallybook.feature.movimientos.viewmodel.AmountInputError
 import com.kurobello.tallybook.feature.transfers.viewmodel.TransferDraftState
 import com.kurobello.tallybook.feature.transfers.viewmodel.TransferFormActions
 import org.jetbrains.compose.resources.StringResource

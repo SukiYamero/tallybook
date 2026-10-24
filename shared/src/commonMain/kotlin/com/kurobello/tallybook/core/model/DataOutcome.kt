@@ -18,3 +18,6 @@ inline fun <T, R> DataOutcome<T>.map(transform: (T) -> R): DataOutcome<R> =
       is DataOutcome.Success -> DataOutcome.Success(transform(data))
       is DataOutcome.Failure -> this
     }
+
+inline fun <T, R> DataOutcome<T>.andThen(next: (T) -> DataOutcome<R>): DataOutcome<R> =
+    fold(onSuccess = next, onFailure = { DataOutcome.Failure(it) })

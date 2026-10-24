@@ -1,8 +1,7 @@
-package com.kurobello.tallybook.feature.movimientos.viewmodel
+package com.kurobello.tallybook.core.text
 
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
-import com.kurobello.tallybook.core.text.isAsciiDigit
 
 internal sealed interface AmountInputResult {
 
@@ -26,6 +25,12 @@ internal fun parseAmountInput(raw: String, moneda: Moneda): AmountInputResult {
   } else {
     parseNonEmptyAmount(input, moneda)
   }
+}
+
+internal fun Money.toAmountInput(): String {
+  val digits = minorUnits.toString().padStart(moneda.scale + 1, '0')
+  return if (moneda.scale == 0) digits
+  else digits.dropLast(moneda.scale) + moneda.decimalSeparator + digits.takeLast(moneda.scale)
 }
 
 private fun parseNonEmptyAmount(input: String, moneda: Moneda): AmountInputResult {
