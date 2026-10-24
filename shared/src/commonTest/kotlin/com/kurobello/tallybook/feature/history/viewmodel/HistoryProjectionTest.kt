@@ -414,6 +414,7 @@ class HistoryProjectionTest {
     assertEquals(Money(250, Moneda.COP), content.summary.ingresos)
     assertEquals(Money(100, Moneda.COP), content.summary.gastos)
     assertEquals(2, content.movementCount)
+    assertEquals(2, content.transferCount)
     assertEquals(
         listOf(listOf("interna", "gasto"), listOf("entrada", "ingreso")),
         content.groups.map { group -> group.rows.map { it.id } },
@@ -442,6 +443,7 @@ class HistoryProjectionTest {
             )
         )
     assertEquals(0, content.movementCount)
+    assertEquals(1, content.transferCount)
     assertEquals(false, content.isEmpty)
     assertEquals(Money(0, Moneda.COP), content.summary.balance)
   }

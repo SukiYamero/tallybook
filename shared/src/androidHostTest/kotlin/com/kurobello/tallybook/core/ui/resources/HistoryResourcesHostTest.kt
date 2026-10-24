@@ -15,6 +15,7 @@ import tallybook.shared.generated.resources.calendar_date_content_description
 import tallybook.shared.generated.resources.date_picker_months
 import tallybook.shared.generated.resources.date_picker_months_short
 import tallybook.shared.generated.resources.history_movement_count
+import tallybook.shared.generated.resources.history_transfer_count
 import tallybook.shared.generated.resources.history_week_title
 import tallybook.shared.generated.resources.history_year_description
 
@@ -44,6 +45,35 @@ class HistoryResourcesHostTest {
               else -> "Seleccionar año:"
             }
         assertEquals("$prefix 2026", getString(Res.string.history_year_description, 2026), locale)
+      }
+    } finally {
+      Locale.setDefault(original)
+    }
+  }
+
+  @Test
+  fun transferCountNamesTheInternalTransferInEverySupportedLocale() = runBlocking {
+    val original = Locale.getDefault()
+    try {
+      val locales =
+          listOf(
+              Triple(
+                  "es-CO",
+                  "1 transferencia entre cuentas",
+                  "2 transferencias entre cuentas",
+              ),
+              Triple(
+                  "es-AR",
+                  "1 transferencia entre cuentas",
+                  "2 transferencias entre cuentas",
+              ),
+              Triple("en-US", "1 transfer between accounts", "2 transfers between accounts"),
+              Triple("pt-BR", "1 transferência entre contas", "2 transferências entre contas"),
+          )
+      locales.forEach { (locale, singular, plural) ->
+        Locale.setDefault(Locale.forLanguageTag(locale))
+        assertEquals(singular, getPluralString(Res.plurals.history_transfer_count, 1, 1), locale)
+        assertEquals(plural, getPluralString(Res.plurals.history_transfer_count, 2, 2), locale)
       }
     } finally {
       Locale.setDefault(original)

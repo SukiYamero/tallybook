@@ -69,7 +69,8 @@ Both reads run movimiento and transfer selects inside **one** `transactionWithRe
 - History: rows are ordered `fecha DESC, created_at DESC, id DESC` across both kinds; a same-currency
   transfer between two accounts of the viewed currency is one row; a cross-currency transfer appears
   in each currency with that side's amount. `projectHistory` summary counts only movimientos; the
-  "N movements" count keeps its current meaning and is extended only if wording defines "N actividades".
+  period count keeps "N movements" for movimientos and appends "· M transfers between accounts"
+  (`history_transfer_count`, omitted when M = 0), per `docs/wording.md` §7.
 - Transfer rows reuse Stage 3's `TransferenciaRowContent` and open transfer management.
 - Search: README rules decide when transfers appear; the account filter matches either transfer side;
   the medio dimension never matches transfers. Text search matches transfer descripcion and both

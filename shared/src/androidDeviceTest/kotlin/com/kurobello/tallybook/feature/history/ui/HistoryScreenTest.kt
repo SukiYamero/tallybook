@@ -81,6 +81,7 @@ import tallybook.shared.generated.resources.history_period_balance
 import tallybook.shared.generated.resources.history_period_error
 import tallybook.shared.generated.resources.history_scope_month
 import tallybook.shared.generated.resources.history_stale
+import tallybook.shared.generated.resources.history_transfer_count
 import tallybook.shared.generated.resources.loading
 import tallybook.shared.generated.resources.navigation_add_movement
 import tallybook.shared.generated.resources.navigation_history
@@ -172,7 +173,11 @@ class HistoryScreenTest {
     composeRule.onNodeWithText(transfer.montoDestino.format()).assertIsDisplayed()
     composeRule.onNodeWithText(route).performClick()
     composeRule.runOnIdle { assertEquals("move", opened) }
-    val count = runBlocking { getPluralString(Res.plurals.history_movement_count, 1, 1) }
+    val count = runBlocking {
+      getPluralString(Res.plurals.history_movement_count, 1, 1) +
+          " · " +
+          getPluralString(Res.plurals.history_transfer_count, 1, 1)
+    }
     composeRule.onNodeWithText(count).assertExists()
   }
 

@@ -15,11 +15,14 @@ import com.kurobello.tallybook.feature.history.ui.HistoryRowUi
 import com.kurobello.tallybook.feature.history.ui.HistoryTransferenciaRowUi
 
 internal sealed interface HistoryProjection {
-  /** Transfers are rows only: [summary] and [movementCount] describe movimientos. */
+  /** Transfers never reach [summary]; [movementCount] and [transferCount] count rows separately. */
   data class Content(val summary: MovimientoSummary, val groups: List<HistoryDayGroupUi>) :
       HistoryProjection {
     val movementCount: Int
       get() = groups.sumOf { group -> group.rows.count { it is HistoryMovimientoRowUi } }
+
+    val transferCount: Int
+      get() = groups.sumOf { group -> group.rows.count { it is HistoryTransferenciaRowUi } }
 
     val isEmpty: Boolean
       get() = groups.isEmpty()

@@ -46,6 +46,7 @@ import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.history_empty_body
 import tallybook.shared.generated.resources.history_empty_title
 import tallybook.shared.generated.resources.history_movement_count
+import tallybook.shared.generated.resources.history_transfer_count
 import tallybook.shared.generated.resources.history_unavailable
 import tallybook.shared.generated.resources.history_year_error
 import tallybook.shared.generated.resources.movimiento_preferences_error
@@ -54,6 +55,7 @@ import tallybook.shared.generated.resources.navigation_history
 import tallybook.shared.generated.resources.retry
 
 private const val MOVEMENT_SKELETON_COUNT = 3
+private const val COUNT_SEPARATOR = " · "
 
 @Composable
 internal fun HistoryScreen(
@@ -110,6 +112,19 @@ internal fun HistoryRow(
   )
 }
 
+@Composable
+private fun HistoryCountText(movementCount: Int, transferCount: Int) {
+  val movements =
+      pluralStringResource(Res.plurals.history_movement_count, movementCount, movementCount)
+  val text =
+      if (transferCount == 0) movements
+      else
+          movements +
+              COUNT_SEPARATOR +
+              pluralStringResource(Res.plurals.history_transfer_count, transferCount, transferCount)
+  TallybookText(text, style = TallybookTheme.typography.bodySmall)
+}
+
 private fun LazyListScope.historyContent(
     uiState: HistoryUiState,
     actions: HistoryActions,
@@ -121,14 +136,7 @@ private fun LazyListScope.historyContent(
   historyMonedaSelector(uiState, actions)
   item(key = "history-count") {
     if (content != null) {
-      TallybookText(
-          pluralStringResource(
-              Res.plurals.history_movement_count,
-              content.movementCount,
-              content.movementCount,
-          ),
-          style = TallybookTheme.typography.bodySmall,
-      )
+      HistoryCountText(content.movementCount, content.transferCount)
     } else if (uiState.period is RetainedLoadState.Loading) {
       TallybookSkeletonLine(
           sampleText = pluralStringResource(Res.plurals.history_movement_count, 1, 1),

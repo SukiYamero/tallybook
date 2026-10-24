@@ -73,6 +73,8 @@ eso:
 - La transferencia interna siempre lleva "entre cuentas" o "entre tus cuentas": acción "Mover entre
   cuentas", sustantivo "Transferencia entre tus cuentas", y "Entre cuentas" como etiqueta corta donde no
   entra más (chip de tipo en Búsqueda, filas de Historial).
+- Los conteos nunca suman transferencias internas a los movimientos: el Historial muestra
+  "N movimientos · M transferencias entre cuentas" y omite la segunda parte cuando M es 0.
 - Pagar una tarjeta es una transferencia interna ("Pagar tarjeta"): las compras ya se registraron como
   gastos, así que la copy nunca lo presenta como un gasto nuevo.
 - La deuda de la tarjeta y el consumo del ciclo son estimaciones (el usuario puede no registrar todas las
@@ -95,6 +97,7 @@ eso:
 | Pagar la tarjeta (transferencia interna) | Pagar tarjeta | Pagar tarjeta | Pay card | Pagar cartão |
 | Deuda estimada de la tarjeta | Deuda estimada | Deuda estimada | Estimated debt | Dívida estimada |
 | Consumo del ciclo actual | Consumo del ciclo | Consumo del ciclo | Spending this cycle | Gastos do ciclo |
+| Conteo de transferencias internas (Historial) | N transferencias entre cuentas | N transferencias entre cuentas | N transfers between accounts | N transferências entre contas |
 
 Los rótulos de medio y tipo de cuenta viven en `composeResources/values*/strings_accounts.xml`; las
 pantallas de cuentas agregan ahí sus claves nuevas en vez de tocar `strings.xml`.
