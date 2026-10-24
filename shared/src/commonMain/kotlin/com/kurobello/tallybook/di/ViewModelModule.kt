@@ -50,7 +50,7 @@ internal val viewModelModule = module {
   }
   viewModel { parameters ->
     HistoryViewModel(
-        repositories = HistoryRepositories(get(), get(), get()),
+        repositories = HistoryRepositories(get(), get(), get(), get()),
         savedStateHandle = get(),
         unknownCategoryLabel = parameters.get(),
         dateProvider = HistoryDateProvider(get(), get()),
@@ -87,7 +87,7 @@ internal val viewModelModule = module {
   viewModel { QuickCategoryViewModel(categoriaRepository = get(), suggester = get()) }
   viewModel { parameters ->
     SearchViewModel(
-        repositories = SearchRepositories(get(), get(), get(), get()),
+        repositories = SearchRepositories(get(), get(), get(), get(), get()),
         savedStateHandle = get(),
         unknownCategoryLabel = parameters.get(),
         dateProvider = SearchDateProvider(get(), get()),

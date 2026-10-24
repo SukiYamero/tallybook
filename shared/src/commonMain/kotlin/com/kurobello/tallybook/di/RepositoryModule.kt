@@ -1,5 +1,7 @@
 package com.kurobello.tallybook.di
 
+import com.kurobello.tallybook.core.data.ActividadRepository
+import com.kurobello.tallybook.core.data.ActividadRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
@@ -83,6 +85,12 @@ val repositoryModule = module {
   }
   single<SaldoRepository> {
     SaldoRepositoryImpl(
+        database = get(),
+        dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
+    )
+  }
+  single<ActividadRepository> {
+    ActividadRepositoryImpl(
         database = get(),
         dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
     )
