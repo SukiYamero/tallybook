@@ -116,6 +116,37 @@ class TransferDraftStateTest {
   }
 
   @Test
+  fun aValidSingleAmountMovesToTheNewCurrencySeparator() {
+    val byOrigen = newState(origenId = null, destinoId = null).withMontoOrigen("12,50")
+    val inDollars = byOrigen.withOrigen(DOLARES.id)
+    assertEquals("12.50", inDollars.draft.montoOrigen)
+    assertEquals("12.50", inDollars.draft.montoDestino)
+    assertEquals(
+        Money(1_250, Moneda.USD),
+        inDollars
+            .withDestino(AHORRO_USD.id)
+            .submitted()
+            .toTransferencia(ID, CREATED_AT)
+            ?.montoOrigen,
+    )
+
+    val byDestino =
+        newState(origenId = null, destinoId = DOLARES.id)
+            .withMontoOrigen("7.25")
+            .withDestino(NEQUI.id)
+    assertEquals("7,25", byDestino.draft.montoOrigen)
+    assertEquals("7,25", byDestino.draft.montoDestino)
+  }
+
+  @Test
+  fun anInvalidSingleAmountStaysAsTypedWhenTheCurrencyChanges() {
+    val state =
+        newState(origenId = null, destinoId = null).withMontoOrigen("12,5,0").withOrigen(DOLARES.id)
+
+    assertEquals("12,5,0", state.draft.montoOrigen)
+  }
+
+  @Test
   fun payCardFromTheSameCurrencyPrefillsTheOnlyAmountWithTheDebt() {
     val state =
         TransferDraftState.forNew(

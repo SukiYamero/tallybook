@@ -13,6 +13,7 @@ import com.kurobello.tallybook.core.text.AmountInputError
 import com.kurobello.tallybook.core.text.AmountInputResult
 import com.kurobello.tallybook.core.text.normalizeOptionalText
 import com.kurobello.tallybook.core.text.parseAmountInput
+import com.kurobello.tallybook.core.text.reformatAmountInput
 import com.kurobello.tallybook.core.text.toAmountInput
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
@@ -168,10 +169,15 @@ internal data class TransferDraftState(
     val nowDestino = next.destinoId?.let(::cuenta)
     val after = if (changedOrigen) nowOrigen else nowDestino
     val nowCross = isCross(nowOrigen, nowDestino)
-    val kept = if (changedOrigen) next.montoDestino else next.montoOrigen
+    if (!nowCross) {
+      val keptMoneda = if (changedOrigen) montoDestinoMoneda else montoOrigenMoneda
+      val singleMoneda = nowOrigen?.moneda ?: nowDestino?.moneda ?: primary
+      val kept = if (changedOrigen) next.montoDestino else next.montoOrigen
+      val single = kept.reformatAmountInput(keptMoneda, singleMoneda)
+      return copy(draft = next.copy(montoOrigen = single, montoDestino = single))
+    }
     val changedText =
         when {
-          !nowCross -> kept
           !wasCross || before?.moneda != after?.moneda -> ""
           else -> if (changedOrigen) next.montoOrigen else next.montoDestino
         }

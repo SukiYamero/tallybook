@@ -27,6 +27,15 @@ internal fun parseAmountInput(raw: String, moneda: Moneda): AmountInputResult {
   }
 }
 
+/**
+ * A valid amount moves to [to]'s decimal separator; invalid text stays as typed so the user still
+ * sees what they wrote.
+ */
+internal fun String.reformatAmountInput(from: Moneda, to: Moneda): String =
+    if (parseAmountInput(this, from) is AmountInputResult.Valid)
+        replace(from.decimalSeparator, to.decimalSeparator)
+    else this
+
 internal fun Money.toAmountInput(): String {
   val digits = minorUnits.toString().padStart(moneda.scale + 1, '0')
   return if (moneda.scale == 0) digits

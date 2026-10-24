@@ -107,6 +107,29 @@ class AddMovimientoCuentaTest {
   }
 
   @Test
+  fun aTypedAmountMovesToTheNewCurrencySeparatorWhenTheCuentaChangesCurrency() = runTest {
+    val viewModel = cuentaViewModel()
+    populate(viewModel, amount = "12,50")
+
+    viewModel.onCuentaSelected(USD_CARD.id)
+
+    assertEquals("12.50", viewModel.uiState.value.amountInput)
+    assertNull(viewModel.uiState.value.amountError)
+    viewModel.onCuentaSelected(COP_CASH.id)
+    assertEquals("12,50", viewModel.uiState.value.amountInput)
+  }
+
+  @Test
+  fun anInvalidTypedAmountStaysAsTypedWhenTheCuentaChangesCurrency() = runTest {
+    val viewModel = cuentaViewModel()
+    populate(viewModel, amount = "12,5,0")
+
+    viewModel.onCuentaSelected(USD_CARD.id)
+
+    assertEquals("12,5,0", viewModel.uiState.value.amountInput)
+  }
+
+  @Test
   fun aClpCuentaRejectsTypedDecimalsOnSave() = runTest {
     val movimientos = cuentaMovimientos()
     val viewModel = cuentaViewModel(movimientos)

@@ -30,6 +30,7 @@ import com.kurobello.tallybook.core.model.map
 import com.kurobello.tallybook.core.text.AmountInputResult
 import com.kurobello.tallybook.core.text.normalizeOptionalText
 import com.kurobello.tallybook.core.text.parseAmountInput
+import com.kurobello.tallybook.core.text.reformatAmountInput
 import com.kurobello.tallybook.core.text.toAmountInput
 import kotlin.time.Clock
 import kotlinx.coroutines.CoroutineScope
@@ -376,7 +377,8 @@ internal class AddMovimientoViewModel(
   private fun AddMovimientoUiState.withRederivedAmount(previous: Moneda): AddMovimientoUiState {
     val text = phrase.trim()
     val ownsAmount = step != AddMovimientoStep.PHRASE && !amountEdited
-    if (!ownsAmount || moneda == previous || text.isEmpty()) return this
+    if (moneda == previous || !ownsAmount || text.isEmpty())
+        return copy(amountInput = amountInput.reformatAmountInput(previous, moneda))
     val parsed = entryEngine.parse(text, phraseContext(today), moneda, cuentas)
     return copy(
         amountInput = parsed.monto?.toAmountInput().orEmpty(),
