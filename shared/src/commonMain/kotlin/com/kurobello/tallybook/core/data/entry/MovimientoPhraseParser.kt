@@ -10,21 +10,32 @@ import kotlinx.datetime.LocalDate
 private val whitespaceRuns = Regex("\\s+")
 
 /**
- * Derives tipo, monto, fecha and subject from one sentence. Pure and deterministic: the vocabulary
- * is the union of every supported language and [AppLocale] only decides numeric date order.
+ * Derives tipo, monto, fecha, medio and subject from one sentence. Pure and deterministic: the
+ * vocabulary is the union of every supported language and [AppLocale] only decides numeric date
+ * order. The medio is the words' own reading; the final tipo and a named account may still change
+ * it, see [resolveSentenceMedio].
  */
 class MovimientoPhraseParser {
 
+  /**
+   * [reservedSpans] are character ranges of [text] that another matcher already owns, such as an
+   * account name: they never become a date or an amount and they leave the subject.
+   */
   fun parse(
       text: String,
       moneda: Moneda,
       locale: AppLocale,
       today: LocalDate,
+      reservedSpans: List<IntRange> = emptyList(),
   ): ParsedMovimientoPhrase {
     val tokens = tokenizePhrase(text)
     val consumed = BooleanArray(tokens.size)
     val cursor = PhraseCursor(tokens, consumed)
     val tipo = consumeTipoVerbs(cursor)
+    // Before the reserved spans: the seeded cash account is named "Efectivo", and reserving it
+    // first would leave the "en" of "en efectivo" behind in the subject.
+    val medio = consumePhraseMedio(cursor)
+    consumeReserved(cursor, reservedSpans)
     val date =
         findPhraseDate(cursor, today, locale)?.also { cursor.consume(it.start, it.endExclusive) }
     val amount =
@@ -40,6 +51,8 @@ class MovimientoPhraseParser {
                 PhraseReviewFlag.AMBIGUOUS_AMOUNT.takeIf { amount?.isAmbiguous == true },
                 PhraseReviewFlag.FUTURE_DATE_IGNORED.takeIf { isFuture },
             ),
+        medio = medio.medio,
+        medioCandidates = medio.candidates,
     )
   }
 
@@ -56,6 +69,14 @@ class MovimientoPhraseParser {
       index += hit?.length ?: 1
     }
     return tipo
+  }
+
+  private fun consumeReserved(cursor: PhraseCursor, spans: List<IntRange>) {
+    cursor.tokens.forEachIndexed { index, token ->
+      if (spans.any { token.start <= it.last && it.first < token.end }) {
+        cursor.consume(index, index + 1)
+      }
+    }
   }
 
   /** Keeps the user's words, spacing and inner punctuation; only the edges are cleaned. */

@@ -8,6 +8,8 @@ data class ParsedMovimientoPhrase(
     val fecha: LocalDate?,
     val subject: String,
     val reviewFlags: Set<PhraseReviewFlag>,
+    val medio: MedioPago?,
+    val medioCandidates: Set<MedioPago>,
 )
 
 enum class PhraseReviewFlag {

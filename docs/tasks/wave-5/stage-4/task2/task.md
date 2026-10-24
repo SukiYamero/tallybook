@@ -88,11 +88,54 @@ the title remains the sentence as typed.
 
 ## TDD
 
-- [ ] RED parser tables per language: each medio phrase, ambiguous card, two method words, negated mentions, no medio, "transferí" verb, medio words removed from subject, interaction with amount/date tokens ("50 mil en efectivo ayer").
-- [ ] RED `CuentaMatcherTest`: whole words, accents/case folding, multi-word names, overlapping names (earliest/longest), archived excluded, same name in two currencies (primary preferred / ambiguous), name equal to a tag.
-- [ ] GREEN; refactor the shared sequence helper with `EtiquetaMatcherTest` green.
+- [x] RED parser tables per language: each medio phrase, ambiguous card, two method words, negated mentions, no medio, "transferí" verb, medio words removed from subject, interaction with amount/date tokens ("50 mil en efectivo ayer").
+- [x] RED `CuentaMatcherTest`: whole words, accents/case folding, multi-word names, overlapping names (earliest/longest), archived excluded, same name in two currencies (primary preferred / ambiguous), name equal to a tag.
+- [x] GREEN; refactor the shared sequence helper with `EtiquetaMatcherTest` green.
 - [ ] Integration (after task1): `AddMovimientoEntryFlowTest` for ownership transfer, clear sentence, Continue/Back, currency-dependent amount re-derivation (COP vs CLP account).
 - [ ] `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosSimulatorArm64 detekt ktfmtCheck`.
+
+## Parser layer record (done; integration pending)
+
+Pure layer in `core/data/entry`, tested by `MovimientoPhraseMedioTest`, `CuentaMatcherTest`,
+`SentenceSelectionTest` (all languages in one table, `medioWords` in `PhraseLexicon.kt`):
+
+- API: `MovimientoPhraseParser.parse(text, moneda, locale, today, reservedSpans: List<IntRange> = emptyList())`
+  fills `medio`/`medioCandidates`; `CuentaMatcher.match` as contracted (char offsets into the raw
+  text); `resolveSentenceCuenta(matches, cuentas, primary): SentenceCuenta(cuenta, alternativeIds)`;
+  `resolveSentenceMedio(parsed, tipo, cuentaTipo): SentenceMedio(medio, candidates)` applies account
+  precedence, the BANCO transfer-word rule and `forTipo` (an ingreso never keeps `DEBITO`).
+  `SearchWords.kt` holds the whole-word helper shared with `EtiquetaMatcher`.
+- Vocabulary added beyond the list above: EFECTIVO "with cash", "no dinheiro", "dinheiro vivo";
+  DEBITO "tarjeta debito", "con la de debito" (es-AR); CREDITO "tarjeta credito", "con la de credito";
+  TRANSFERENCIA "con transferencia", "wire transfer", "no pix", "pelo pix"; any card "con mi
+  tarjeta", "with a card", "with my card", "com o cartao", "com meu cartao". Negators: no, sin, not,
+  without, sem, não; negator + card noun ("sin tarjeta") is consumed without a method.
+- Rules added to avoid false positives (challenge for review): a card phrase that is the object
+  being paid — after "pago/pagar/pay/fatura/factura/cuota/de/do/da/of", after a determiner not
+  introduced by a preposition ("Pagué la tarjeta de crédito"), or before "bill/payment/statement" — is
+  not a method word and stays in the subject (it is a Finance keyword). "cash back", "petty cash" and
+  "transferencia recibida" are category keywords, not method words. Phrases starting with pt "no"
+  ("no pix", "no cartão de crédito") are listed whole so the Spanish negator never cancels them.
+- Order inside the parser: tipo verbs → medio words → reserved spans → date → amount.
+
+### What the integration step needs (after task1)
+
+1. `MovimientoEntryEngine` gets a `CuentaMatcher` and the live `List<Cuenta>` plus the primary
+   `Moneda` (or reuses task1's account list); `interpret` runs `match` → `resolveSentenceCuenta`
+   first, parses with `sentenceCuenta.cuenta?.moneda ?: <selected/preselected account currency>`
+   and `reservedSpans = matches.map { it.start until it.endExclusive }` (all matched names, also the
+   alternatives), then `resolveSentenceMedio(parsed, tipo, sentenceCuenta.cuenta?.tipo)` with the
+   final tipo (parsed or implied).
+2. `PhraseInterpretation` carries `SentenceCuenta` + `SentenceMedio`; task1's
+   `CuentaSelectionState` layers them as sentence-owned over `defaultSelection` (same lifecycle as
+   sentence-owned tags; a medio-only result restricts the account to compatible ones, an ambiguous
+   result offers `candidates`/`alternativeIds` and keeps the default).
+3. Re-derive a sentence-owned amount when the account changes: re-run `parse` with the new account's
+   currency (the parser is pure; no cache to invalidate).
+4. `buildIndex` parses history titles without account spans; decide whether history subjects should
+   also drop account names (needs the account list at index time) so learned subjects match live ones.
+5. A tipo change after interpretation must re-run `resolveSentenceMedio` (or `MedioPago.forTipo`).
+6. `AddMovimientoEntryFlowTest` cases listed in TDD above.
 
 ## Blocks
 
