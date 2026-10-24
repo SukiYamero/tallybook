@@ -50,7 +50,10 @@ class ManageMovimientoFeedbackTest {
     deleteAndHide(f, managementMovimiento())
     val first = assertNotNull(f.viewModel.uiState.value.feedback)
     val timer =
-        TallybookSnackbarTimer(this, testScheduler.timeSource, f.viewModel::onFeedbackDismiss)
+        TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
+          f.viewModel.onFeedbackDismiss(token, revision)
+          true
+        }
     updateFeedbackTimer(timer, f)
     advanceTimeBy(3_000)
     deleteAndHide(f, managementMovimiento().copy(id = "second"), missing = true)

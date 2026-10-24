@@ -46,7 +46,10 @@ internal fun TallybookScreenSnackbar(
         isActive = isActive && lifecycleState.isAtLeast(Lifecycle.State.RESUMED),
         closeLabel = stringResource(Res.string.movimiento_notification_close),
         onAction = { _, _ -> },
-        onDismiss = { token, _, _ -> onDismiss(token) },
+        onDismiss = { token, _, _ ->
+          onDismiss(token)
+          true
+        },
         modifier =
             Modifier.align(Alignment.BottomCenter)
                 .widthIn(max = TallybookTheme.dimensions.screenContentMaxWidth)

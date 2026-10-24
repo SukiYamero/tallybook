@@ -791,7 +791,10 @@ window, including indefinitely without overflow. Indefinite and busy feedback ne
 A window belongs to one token/revision and counts only visible time. Background or modal coverage
 and busy progress pause it without dismissing the message; the next reveal of the same generation
 resumes with the remaining time. A different token/revision, an empty host or disposal discards it.
-A timeout the caller refused while covered is retried once on that generation's next reveal.
+Timeout delivery reports acceptance: a refused timeout is retried every 50 ms while the same
+generation stays visible, and a generation still present after an accepted timeout retries on its
+next reveal. Feedback visibility follows actual modal coverage, not navigation admission, so a
+destination that has not attached its modal controller yet does not hide the snackbar.
 Activity or scene recreation (rotation, theme, locale, resize) starts a new host, so a message that
 survives it receives a new window.
 Secondary screens (`TallybookScreenSnackbar`) also count as hidden unless their lifecycle is resumed.

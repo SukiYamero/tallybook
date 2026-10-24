@@ -8,6 +8,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 
@@ -19,6 +20,7 @@ class TallybookSnackbarTimingTest {
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
           expired += token to revision
+          true
         }
     timer.update(null, isActive = true, timeoutMillis = 4_000)
     advanceTimeBy(20_000)
@@ -38,6 +40,7 @@ class TallybookSnackbarTimingTest {
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
           expired += token to revision
+          true
         }
     timer.update(message(), false, 4_000)
     advanceTimeBy(3_000)
@@ -60,6 +63,7 @@ class TallybookSnackbarTimingTest {
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
           expired += token to revision
+          true
         }
     timer.update(message(), true, 4_000)
     advanceTimeBy(3_000)
@@ -79,6 +83,7 @@ class TallybookSnackbarTimingTest {
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
           expired += token to revision
+          true
         }
     timer.update(message(), true, 4_000)
     advanceTimeBy(3_000)
@@ -101,6 +106,7 @@ class TallybookSnackbarTimingTest {
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
           expired += token to revision
+          true
         }
     repeat(3) {
       timer.update(message(), true, 4_000)
@@ -122,11 +128,12 @@ class TallybookSnackbarTimingTest {
   }
 
   @Test
-  fun refusedTimeoutIsRetriedOnceWhenTheStillPresentGenerationIsRevealedAgain() = runTest {
+  fun deliveredButStillPresentGenerationRetriesOnceWhenRevealedAgain() = runTest {
     val expired = mutableListOf<Pair<Long, Int>>()
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
           expired += token to revision
+          true
         }
     timer.update(message(), true, 4_000)
     advanceTimeBy(4_000)
@@ -146,11 +153,38 @@ class TallybookSnackbarTimingTest {
   }
 
   @Test
+  fun refusedTimeoutWhileVisibleRetriesUntilAcceptedAndNeverAfterwards() = runTest {
+    var accepts = false
+    val attempts = mutableListOf<Long>()
+    val timer =
+        TallybookSnackbarTimer(this, testScheduler.timeSource) { _, _ ->
+          attempts += currentTime
+          accepts
+        }
+    timer.update(message(), true, 4_000)
+    advanceTimeBy(4_000)
+    runCurrent()
+    assertEquals(listOf(4_000L), attempts)
+    advanceTimeBy(1_000)
+    runCurrent()
+    assertTrue(attempts.size > 1)
+    accepts = true
+    advanceTimeBy(1_000)
+    runCurrent()
+    val accepted = attempts.size
+    timer.update(message(), true, 4_000)
+    advanceTimeBy(20_000)
+    runCurrent()
+    assertEquals(accepted, attempts.size)
+  }
+
+  @Test
   fun generationChangeWhileHiddenDiscardsTheOldWindow() = runTest {
     val expired = mutableListOf<Pair<Long, Int>>()
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
           expired += token to revision
+          true
         }
     timer.update(message(), true, 4_000)
     advanceTimeBy(3_000)
@@ -173,6 +207,7 @@ class TallybookSnackbarTimingTest {
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
           expired += token to revision
+          true
         }
     timer.update(message(), true, 10_000)
     advanceTimeBy(2_000)
@@ -196,6 +231,7 @@ class TallybookSnackbarTimingTest {
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
           expired += token to revision
+          true
         }
     timer.update(message(), true, 10_000)
     advanceTimeBy(6_000)
@@ -215,6 +251,7 @@ class TallybookSnackbarTimingTest {
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
           expired += token to revision
+          true
         }
     timer.update(message(), true, 4_000)
     advanceTimeBy(3_000)
@@ -235,6 +272,7 @@ class TallybookSnackbarTimingTest {
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
           expired += token to revision
+          true
         }
     timer.update(message(), true, 4_000)
     advanceTimeBy(3_000)
@@ -258,7 +296,11 @@ class TallybookSnackbarTimingTest {
   @Test
   fun disposalCancelsTheWindowWithoutDismissal() = runTest {
     var expirations = 0
-    val timer = TallybookSnackbarTimer(this, testScheduler.timeSource) { _, _ -> expirations++ }
+    val timer =
+        TallybookSnackbarTimer(this, testScheduler.timeSource) { _, _ ->
+          expirations++
+          true
+        }
     timer.update(message(), true, 4_000)
     advanceTimeBy(3_000)
     timer.dispose()
@@ -284,7 +326,11 @@ class TallybookSnackbarTimingTest {
     val timeout = tallybookSnackbarTimeoutMillis(TallybookSnackbarDuration.Long, manager)
     assertNull(timeout)
     var expirations = 0
-    val timer = TallybookSnackbarTimer(this, testScheduler.timeSource) { _, _ -> expirations++ }
+    val timer =
+        TallybookSnackbarTimer(this, testScheduler.timeSource) { _, _ ->
+          expirations++
+          true
+        }
     timer.update(message(), true, timeout)
     advanceTimeBy(100_000)
     runCurrent()
@@ -325,6 +371,7 @@ class TallybookSnackbarTimingTest {
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
           expired += token to revision
+          true
         }
     timer.update(message(), true, 10_000)
     advanceTimeBy(3_000)
@@ -342,7 +389,11 @@ class TallybookSnackbarTimingTest {
     var expirations = 0
     val manager = RecordingAccessibilityManager(7_000)
     val current = message().copy(duration = TallybookSnackbarDuration.Long)
-    val timer = TallybookSnackbarTimer(this, testScheduler.timeSource) { _, _ -> expirations++ }
+    val timer =
+        TallybookSnackbarTimer(this, testScheduler.timeSource) { _, _ ->
+          expirations++
+          true
+        }
     timer.update(current, true, tallybookSnackbarTimeoutMillis(current.duration, manager))
     advanceTimeBy(3_000)
     timer.update(
@@ -365,6 +416,7 @@ class TallybookSnackbarTimingTest {
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
           expired += token to revision
+          true
         }
     timer.update(message(), true, 4_000)
     advanceTimeBy(500)
@@ -386,6 +438,7 @@ class TallybookSnackbarTimingTest {
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
           expired += token to revision
+          true
         }
     timer.update(message(), true, 4_000)
     advanceTimeBy(3_000)
@@ -402,7 +455,11 @@ class TallybookSnackbarTimingTest {
   @Test
   fun pressureAfterNormalExpiryNeverDeliversTheSameIdentityAgain() = runTest {
     var expirations = 0
-    val timer = TallybookSnackbarTimer(this, testScheduler.timeSource) { _, _ -> expirations++ }
+    val timer =
+        TallybookSnackbarTimer(this, testScheduler.timeSource) { _, _ ->
+          expirations++
+          true
+        }
     timer.update(message(), true, 4_000)
     advanceTimeBy(4_000)
     runCurrent()
@@ -419,6 +476,7 @@ class TallybookSnackbarTimingTest {
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
           expired += token to revision
+          true
         }
     assertTrue(timer.shouldCompact(message(), hasWaitingMessages = true))
     timer.update(message(), true, 2_000, isCompacted = true)
@@ -461,6 +519,7 @@ class TallybookSnackbarTimingTest {
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
           expired += token to revision
+          true
         }
     timer.update(message().copy(duration = TallybookSnackbarDuration.Indefinite), true, null, true)
     advanceTimeBy(10_000)

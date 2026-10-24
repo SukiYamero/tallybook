@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 internal class TallybookSnackbarTimer(
     private val scope: CoroutineScope,
     private val timeSource: TimeSource = TimeSource.Monotonic,
-    private val onTimeout: (Long, Int) -> Unit,
+    private val onTimeout: (Long, Int) -> Boolean,
 ) {
   private var window: Window? = null
   private var timeoutJob: Job? = null
@@ -61,9 +61,11 @@ internal class TallybookSnackbarTimer(
         else {
           scope.launch {
             delay(remaining)
-            if (window === current && !current.isDelivered) {
+            while (window === current && !current.isDelivered) {
               current.isDelivered = true
-              onTimeout(current.generation.first, current.generation.second)
+              if (onTimeout(current.generation.first, current.generation.second)) break
+              current.isDelivered = false
+              delay(REFUSED_TIMEOUT_RETRY_MILLIS)
             }
           }
         }
@@ -104,8 +106,8 @@ internal class TallybookSnackbarTimer(
       if (visible == isVisible) return false
       if (visible) {
         visibleSince = timeSource.markNow()
-        // Callers may refuse a delivery made while their live state was already covered; a
-        // generation that is still present must expire again once it is revealed.
+        // A generation still present after an accepted timeout was not advanced by its owner;
+        // retrying on reveal keeps a timed message, which has no Close, from staying forever.
         isDelivered = false
       } else {
         accumulatedMillis = visibleMillis()
@@ -115,6 +117,12 @@ internal class TallybookSnackbarTimer(
     }
   }
 }
+
+/**
+ * Refusals come from admission state that settles within a frame or two, such as a destination
+ * attaching its modal controller; a few 60 Hz frames retries promptly without polling every frame.
+ */
+private const val REFUSED_TIMEOUT_RETRY_MILLIS = 50L
 
 internal fun tallybookSnackbarTimeoutMillis(
     duration: TallybookSnackbarDuration,
