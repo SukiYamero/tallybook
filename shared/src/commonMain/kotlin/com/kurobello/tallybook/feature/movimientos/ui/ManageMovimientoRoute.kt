@@ -39,7 +39,13 @@ internal fun ManageMovimientoRoute(
             actions,
             CategoryPickerCreation(quickCategoryState, quickCategory),
             session.form?.let { form ->
-              CuentaCreation(quickCuentaState, quickCuenta, quickCuenta.effects, form.moneda)
+              CuentaCreation(
+                  quickCuentaState,
+                  quickCuenta,
+                  quickCuenta.effects,
+                  form.moneda,
+                  pinsMoneda = true,
+              )
             },
         )
       }

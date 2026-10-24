@@ -37,6 +37,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.accounts.ui.AccountFieldErrors
+import com.kurobello.tallybook.feature.accounts.ui.AccountFieldLocks
 import com.kurobello.tallybook.feature.accounts.ui.AccountForm
 import com.kurobello.tallybook.feature.accounts.ui.AccountFormMode
 import com.kurobello.tallybook.feature.accounts.viewmodel.QuickCuentaActions
@@ -59,13 +60,15 @@ internal const val CUENTA_CREATION_TAG = "movimiento_cuenta_creation"
 
 /**
  * The in-place account creation a movimiento surface offers when no cuenta fits its medio. Its
- * owner keeps the draft and the write; [moneda] is the currency the new cuenta starts in.
+ * owner keeps the draft and the write; [moneda] is the currency the new cuenta starts in, and
+ * [pinsMoneda] keeps it there when the surface only accepts cuentas in that currency.
  */
 internal data class CuentaCreation(
     val state: QuickCuentaUiState,
     val actions: QuickCuentaActions,
     val effects: Flow<QuickCuentaEffect>,
     val moneda: Moneda,
+    val pinsMoneda: Boolean = false,
 )
 
 /** The type a new cuenta needs to be usable with [medio]; without one, the cash type. */
@@ -73,7 +76,7 @@ internal fun quickCuentaTipo(medio: MedioPago?): TipoCuenta =
     medio?.compatibleTipos?.first() ?: TipoCuenta.EFECTIVO
 
 internal fun CuentaCreation.start(field: MovimientoCuentaUi) {
-  actions.onStart(quickCuentaTipo(field.medio), moneda)
+  actions.onStart(quickCuentaTipo(field.medio), moneda, monedaPinned = pinsMoneda)
 }
 
 @Composable
@@ -138,6 +141,7 @@ private fun CuentaCreationPane(creation: CuentaCreation, title: String, onBack: 
         mode = AccountFormMode.QUICK,
         enabled = !state.saving,
         errors = AccountFieldErrors(duplicate = state.duplicate),
+        locks = AccountFieldLocks(currency = state.monedaPinned),
         duplicateAction =
             state.duplicate
                 ?.takeIf { state.canUseDuplicate }

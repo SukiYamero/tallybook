@@ -47,6 +47,25 @@ class QuickCuentaViewModelTest {
   }
 
   @Test
+  fun aPinnedCurrencyStaysSoTheCreatedAccountFitsTheMovimiento() = runTest {
+    val repository = FakeCuentaRepository()
+    val (vm, effects) = quickCuenta(repository)
+    vm.onStart(TipoCuenta.BANCO, Moneda.USD, "Chase", monedaPinned = true)
+
+    vm.onDraftChanged { onSaldo("12.50").onMoneda(Moneda.COP) }
+    val draft = assertNotNull(vm.uiState.value.draft)
+    assertEquals(Moneda.USD, draft.moneda)
+    assertEquals("12.50", draft.saldo)
+    assertTrue(vm.uiState.value.monedaPinned)
+
+    vm.onSave()
+    runCurrent()
+    val created = repository.cuentas.value.single()
+    assertEquals(Money(1_250, Moneda.USD), created.saldoInicial)
+    assertEquals(listOf<QuickCuentaEffect>(QuickCuentaEffect.Created(created)), effects)
+  }
+
+  @Test
   fun savingCreatesTheAccountReportsItAndCloses() = runTest {
     val repository = FakeCuentaRepository()
     val (vm, effects) = quickCuenta(repository)

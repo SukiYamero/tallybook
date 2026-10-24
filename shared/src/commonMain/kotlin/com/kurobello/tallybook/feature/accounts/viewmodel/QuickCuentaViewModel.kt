@@ -20,10 +20,12 @@ import kotlinx.coroutines.launch
 
 /**
  * [draft] is null while the selector shows its accounts; otherwise the creation pane is open.
- * [duplicate] is the live account the last save collided with.
+ * [duplicate] is the live account the last save collided with. A [monedaPinned] draft keeps the
+ * currency it started in.
  */
 internal data class QuickCuentaUiState(
     val draft: AccountDraftState? = null,
+    val monedaPinned: Boolean = false,
     val saving: Boolean = false,
     val saveFailed: Boolean = false,
     val duplicate: Cuenta? = null,
@@ -46,8 +48,11 @@ internal sealed interface QuickCuentaEffect {
 
 @Stable
 internal interface QuickCuentaActions {
-  /** The medio presets [tipo], which the pane never lets the user change. */
-  fun onStart(tipo: TipoCuenta, moneda: Moneda, nombre: String = "")
+  /**
+   * The medio presets [tipo], which the pane never lets the user change; [monedaPinned] holds
+   * [moneda] the same way, for an editor whose movimiento keeps its stored currency.
+   */
+  fun onStart(tipo: TipoCuenta, moneda: Moneda, nombre: String = "", monedaPinned: Boolean = false)
 
   fun onDraftChanged(transform: AccountDraftState.() -> AccountDraftState)
 
@@ -74,15 +79,21 @@ internal class QuickCuentaViewModel(
   private val effectChannel = Channel<QuickCuentaEffect>(Channel.BUFFERED)
   val effects: Flow<QuickCuentaEffect> = effectChannel.receiveAsFlow()
 
-  override fun onStart(tipo: TipoCuenta, moneda: Moneda, nombre: String) {
+  override fun onStart(tipo: TipoCuenta, moneda: Moneda, nombre: String, monedaPinned: Boolean) {
     generation++
-    uiState.value = QuickCuentaUiState(draft = AccountDraftState.forNew(nombre, tipo, moneda))
+    uiState.value =
+        QuickCuentaUiState(
+            draft = AccountDraftState.forNew(nombre, tipo, moneda),
+            monedaPinned = monedaPinned,
+        )
   }
 
   override fun onDraftChanged(transform: AccountDraftState.() -> AccountDraftState) =
       uiState.update { state ->
         val draft = state.draft?.takeUnless { state.saving } ?: return@update state
-        state.copy(draft = draft.transform().copy(tipo = draft.tipo), duplicate = null)
+        val changed = draft.transform().copy(tipo = draft.tipo)
+        val pinned = if (state.monedaPinned) changed.onMoneda(draft.moneda) else changed
+        state.copy(draft = pinned, duplicate = null)
       }
 
   override fun onSave() {
