@@ -263,6 +263,12 @@ then the description (`caption`, one line) only when present, and the signed amo
 them, so long titles and long amounts never compete for the same line. Text ends with an ellipsis and
 no card shows the date.
 
+The amount line starts with the movimiento's payment-method icon (`MedioPagoIcon`, `iconSmall`,
+`foreground.secondary`); the amount keeps its style and color rule. The icon has no description of
+its own: the row's merged description ends with the medio label after the amount and currency
+("…, -$ 50.000,00, COP, Crédito"). Rows never show the account name. The skeleton reserves the same
+icon slot so loading does not shift the amount.
+
 ### Token organization
 
 The intended files are:

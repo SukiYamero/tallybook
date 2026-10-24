@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
@@ -22,9 +23,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.composables.icons.lucide.CircleQuestionMark
 import com.composables.icons.lucide.Lucide
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.MedioPago
+import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.account.MedioPagoIcon
+import com.kurobello.tallybook.core.ui.account.labelResource
 import com.kurobello.tallybook.core.ui.category.CategoryAvatar
 import com.kurobello.tallybook.core.ui.category.neutralCategoryTintColors
 import com.kurobello.tallybook.core.ui.component.TallybookSurface
@@ -36,8 +41,6 @@ import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.core.ui.theme.TallybookTypeScale
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.expense
-import tallybook.shared.generated.resources.income
 import tallybook.shared.generated.resources.movimiento_open_detail
 import tallybook.shared.generated.resources.movimiento_pending_label
 
@@ -54,8 +57,8 @@ internal fun MovimientoRowContent(
     pending: Boolean = false,
 ) {
   val amountText = signedMovimientoAmountText(movimiento.monto, movimiento.tipo)
-  val pendingLabel = if (pending) stringResource(Res.string.movimiento_pending_label) else null
-  val description = movimientoRowDescription(movimiento, text, amountText, pendingLabel)
+  val labels = movimientoRowLabels(movimiento, pending)
+  val description = movimientoRowDescription(text, amountText, movimiento.monto.moneda, labels)
   val interactions = remember { MutableInteractionSource() }
   val isPressed by interactions.collectIsPressedAsState()
   val tapFeedback = rememberTallybookTapFeedback()
@@ -77,48 +80,76 @@ internal fun MovimientoRowContent(
   ) {
     MovimientoRowDescription(
         categoria,
-        text.copy(secondary = pendingSubtitle(pendingLabel, text.secondary)),
+        text.copy(secondary = pendingSubtitle(labels.pending, text.secondary)),
         pending,
         Modifier.padding(
             horizontal = TallybookTheme.spacing.space14,
             vertical = TallybookTheme.spacing.space12,
         ),
     ) {
-      TallybookText(
-          amountText,
-          modifier = Modifier.padding(top = TallybookTheme.spacing.space4),
-          color =
-              if (movimiento.tipo == TipoMovimiento.INGRESO)
-                  TallybookTheme.colors.status.success.base
-              else TallybookTheme.colors.foreground.primary,
-          style = movementRowAmountStyle(),
-      )
+      MovimientoRowAmountLine(icon = { MovimientoRowMedioIcon(movimiento.medio) }) {
+        TallybookText(
+            amountText,
+            color =
+                if (movimiento.tipo == TipoMovimiento.INGRESO)
+                    TallybookTheme.colors.status.success.base
+                else TallybookTheme.colors.foreground.primary,
+            style = movementRowAmountStyle(),
+        )
+      }
     }
   }
 }
 
+/** Shared with the skeleton so loading reserves the medio slot and the amount does not shift. */
 @Composable
-private fun movimientoRowDescription(
-    movimiento: Movimiento,
+internal fun MovimientoRowAmountLine(icon: @Composable () -> Unit, amount: @Composable () -> Unit) {
+  Row(
+      modifier = Modifier.padding(top = TallybookTheme.spacing.space4),
+      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space6),
+      verticalAlignment = Alignment.CenterVertically,
+  ) {
+    icon()
+    amount()
+  }
+}
+
+/** The row's merged description already announces the medio, so the icon stays silent. */
+@Composable
+private fun MovimientoRowMedioIcon(medio: MedioPago) {
+  MedioPagoIcon(
+      medio = medio,
+      modifier = Modifier.size(TallybookTheme.dimensions.iconSmall),
+      contentDescription = null,
+      tint = TallybookTheme.colors.foreground.secondary,
+  )
+}
+
+@Composable
+private fun movimientoRowLabels(movimiento: Movimiento, pending: Boolean) =
+    MovimientoRowLabels(
+        tipo = stringResource(movimiento.tipo.presentation.label),
+        medio = stringResource(movimiento.medio.labelResource),
+        pending = if (pending) stringResource(Res.string.movimiento_pending_label) else null,
+    )
+
+internal fun movimientoRowDescription(
     text: MovimientoRowText,
     amountText: String,
-    pendingLabel: String?,
-): String {
-  val typeLabel =
-      stringResource(
-          if (movimiento.tipo == TipoMovimiento.INGRESO) Res.string.income else Res.string.expense
-      )
-  return listOfNotNull(
-          text.primary,
-          text.secondary,
-          text.categoryLabel.takeUnless { it == text.primary },
-          pendingLabel,
-          typeLabel,
-          amountText,
-          movimiento.monto.moneda.name,
-      )
-      .joinToString(", ")
-}
+    moneda: Moneda,
+    labels: MovimientoRowLabels,
+): String =
+    listOfNotNull(
+            text.primary,
+            text.secondary,
+            text.categoryLabel.takeUnless { it == text.primary },
+            labels.pending,
+            labels.tipo,
+            amountText,
+            moneda.name,
+            labels.medio,
+        )
+        .joinToString(", ")
 
 @Composable
 private fun movimientoRowClickModifier(
