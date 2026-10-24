@@ -8,12 +8,12 @@ import com.kurobello.tallybook.core.model.DiaCorteError
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoCuenta
+import com.kurobello.tallybook.core.text.AmountInputError
+import com.kurobello.tallybook.core.text.AmountInputResult
 import com.kurobello.tallybook.core.text.capTo
 import com.kurobello.tallybook.core.text.isAsciiDigit
-import com.kurobello.tallybook.feature.movimientos.viewmodel.AmountInputError
-import com.kurobello.tallybook.feature.movimientos.viewmodel.AmountInputResult
-import com.kurobello.tallybook.feature.movimientos.viewmodel.parseAmountInput
-import com.kurobello.tallybook.feature.movimientos.viewmodel.toAmountInput
+import com.kurobello.tallybook.core.text.parseAmountInput
+import com.kurobello.tallybook.core.text.toAmountInput
 
 internal enum class AccountSaldoError {
   MALFORMED,

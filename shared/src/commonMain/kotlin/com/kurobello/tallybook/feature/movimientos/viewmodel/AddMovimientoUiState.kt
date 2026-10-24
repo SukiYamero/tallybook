@@ -8,6 +8,9 @@ import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.text.AmountInputError
+import com.kurobello.tallybook.core.text.AmountInputResult
+import com.kurobello.tallybook.core.text.parseAmountInput
 import kotlinx.datetime.LocalDate
 
 internal enum class MovimientoFormError {

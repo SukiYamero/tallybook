@@ -6,7 +6,7 @@ import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.Transferencia
 import com.kurobello.tallybook.core.model.TransferenciaCuentaError
-import com.kurobello.tallybook.feature.movimientos.viewmodel.AmountInputError
+import com.kurobello.tallybook.core.text.AmountInputError
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

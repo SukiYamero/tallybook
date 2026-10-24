@@ -27,7 +27,10 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.PhraseReviewFlag
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.model.map
+import com.kurobello.tallybook.core.text.AmountInputResult
 import com.kurobello.tallybook.core.text.normalizeOptionalText
+import com.kurobello.tallybook.core.text.parseAmountInput
+import com.kurobello.tallybook.core.text.toAmountInput
 import kotlin.time.Clock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi

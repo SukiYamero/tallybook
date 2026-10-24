@@ -10,6 +10,7 @@ import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.text.AmountInputError
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

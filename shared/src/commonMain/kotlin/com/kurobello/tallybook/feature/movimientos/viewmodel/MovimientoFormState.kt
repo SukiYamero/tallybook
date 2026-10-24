@@ -7,6 +7,7 @@ import com.kurobello.tallybook.core.model.EtiquetaWrite
 import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.text.AmountInputError
 import kotlinx.datetime.LocalDate
 
 /** Tags are optional, so their catalog loads apart from what blocks entry. */

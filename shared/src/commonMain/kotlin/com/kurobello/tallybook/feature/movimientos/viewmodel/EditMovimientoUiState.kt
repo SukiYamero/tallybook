@@ -4,6 +4,9 @@ import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.text.AmountInputError
+import com.kurobello.tallybook.core.text.AmountInputResult
+import com.kurobello.tallybook.core.text.parseAmountInput
 import kotlinx.datetime.LocalDate
 
 internal data class EditMovimientoUiState(

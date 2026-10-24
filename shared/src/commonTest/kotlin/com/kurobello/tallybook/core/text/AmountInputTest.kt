@@ -1,11 +1,29 @@
-package com.kurobello.tallybook.feature.movimientos.viewmodel
+package com.kurobello.tallybook.core.text
 
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 class AmountInputTest {
+  @Test
+  fun amountPrefillRoundTripsExactCurrencyAndLongBoundaries() {
+    listOf(
+            Money(1234, Moneda.COP),
+            Money(1234, Moneda.USD),
+            Money(1234, Moneda.CLP),
+            Money(Long.MAX_VALUE, Moneda.COP),
+            Money(1, Moneda.USD),
+        )
+        .forEach { amount ->
+          assertEquals(
+              AmountInputResult.Valid(amount),
+              parseAmountInput(amount.toAmountInput(), amount.moneda),
+          )
+          assertFalse(amount.toAmountInput().contains(amount.moneda.symbol))
+        }
+  }
 
   @Test
   fun parsesPlainAmountsForEachSupportedScaleAndSeparator() {

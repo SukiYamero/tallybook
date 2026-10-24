@@ -9,11 +9,11 @@ import com.kurobello.tallybook.core.model.TransferenciaCuentaError
 import com.kurobello.tallybook.core.model.TransferenciaErrors
 import com.kurobello.tallybook.core.model.TransferenciaMontoError
 import com.kurobello.tallybook.core.model.TransferenciaRules
+import com.kurobello.tallybook.core.text.AmountInputError
+import com.kurobello.tallybook.core.text.AmountInputResult
 import com.kurobello.tallybook.core.text.normalizeOptionalText
-import com.kurobello.tallybook.feature.movimientos.viewmodel.AmountInputError
-import com.kurobello.tallybook.feature.movimientos.viewmodel.AmountInputResult
-import com.kurobello.tallybook.feature.movimientos.viewmodel.parseAmountInput
-import com.kurobello.tallybook.feature.movimientos.viewmodel.toAmountInput
+import com.kurobello.tallybook.core.text.parseAmountInput
+import com.kurobello.tallybook.core.text.toAmountInput
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 
