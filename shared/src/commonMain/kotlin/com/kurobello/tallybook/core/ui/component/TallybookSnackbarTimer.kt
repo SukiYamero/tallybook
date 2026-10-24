@@ -28,34 +28,39 @@ internal class TallybookSnackbarTimer(
       isCompacted: Boolean = false,
   ) {
     compactBatch = shouldCompact(message, isCompacted)
-    val nextGeneration = message?.takeIf { isActive && !it.isBusy }?.let { it.token to it.revision }
-    val current = window
-    if (current?.generation == nextGeneration) {
-      current?.let { compactCurrentWindow(it, timeoutMillis) }
+    val generation = message?.let { it.token to it.revision }
+    val isVisible = isActive && message?.isBusy == false
+    val current = window?.takeIf { it.generation == generation }
+    if (current == null) {
+      window =
+          generation
+              ?.takeIf { isVisible }
+              ?.let { Window(it, timeoutMillis, compactBatch, timeSource.markNow()) }
+      schedule(window)
       return
     }
-    window = nextGeneration?.let { Window(it, timeSource.markNow(), timeoutMillis, compactBatch) }
-    schedule(window)
+    val compacted = compactCurrentWindow(current, timeoutMillis)
+    val visibilityChanged = current.setVisible(isVisible)
+    if (compacted || visibilityChanged) schedule(current)
   }
 
-  private fun compactCurrentWindow(current: Window, timeoutMillis: Long?) {
-    if (!compactBatch || current.isCompacted) return
+  private fun compactCurrentWindow(current: Window, timeoutMillis: Long?): Boolean {
+    if (!compactBatch || current.isCompacted) return false
     current.isCompacted = true
     val previousTimeout = current.timeoutMillis
-    if (current.isDelivered || previousTimeout == null) return
-    current.timeoutMillis = timeoutMillis?.coerceAtMost(previousTimeout)
-    schedule(current)
+    val shortens = !current.isDelivered && previousTimeout != null
+    if (shortens) current.timeoutMillis = timeoutMillis?.coerceAtMost(previousTimeout)
+    return shortens
   }
 
   private fun schedule(current: Window?) {
     timeoutJob?.cancel()
-    val timeout = current?.timeoutMillis
+    val remaining = current?.remainingMillis()
     timeoutJob =
-        if (current == null || timeout == null) null
+        if (current == null || remaining == null) null
         else {
           scope.launch {
-            val elapsed = current.startedAt.elapsedNow().inWholeMilliseconds.coerceAtLeast(0)
-            delay((timeout - elapsed).coerceAtLeast(0))
+            delay(remaining)
             if (window === current && !current.isDelivered) {
               current.isDelivered = true
               onTimeout(current.generation.first, current.generation.second)
@@ -71,13 +76,43 @@ internal class TallybookSnackbarTimer(
     compactBatch = false
   }
 
-  private class Window(
+  /**
+   * Deadlines are measured against accumulated on-screen time, so coverage or busy progress pauses
+   * the window instead of consuming or restarting it.
+   */
+  private inner class Window(
       val generation: Pair<Long, Int>,
-      val startedAt: TimeMark,
       var timeoutMillis: Long?,
       var isCompacted: Boolean,
+      private var visibleSince: TimeMark?,
   ) {
     var isDelivered = false
+    private var accumulatedMillis = 0L
+
+    val isVisible: Boolean
+      get() = visibleSince != null
+
+    fun remainingMillis(): Long? =
+        timeoutMillis
+            ?.takeIf { isVisible && !isDelivered }
+            ?.let { (it - visibleMillis()).coerceAtLeast(0) }
+
+    private fun visibleMillis(): Long =
+        accumulatedMillis + (visibleSince?.elapsedNow()?.inWholeMilliseconds?.coerceAtLeast(0) ?: 0)
+
+    fun setVisible(visible: Boolean): Boolean {
+      if (visible == isVisible) return false
+      if (visible) {
+        visibleSince = timeSource.markNow()
+        // Callers may refuse a delivery made while their live state was already covered; a
+        // generation that is still present must expire again once it is revealed.
+        isDelivered = false
+      } else {
+        accumulatedMillis = visibleMillis()
+        visibleSince = null
+      }
+      return true
+    }
   }
 }
 

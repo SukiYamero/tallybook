@@ -74,7 +74,7 @@ class TallybookSnackbarTimingTest {
   }
 
   @Test
-  fun hidingCancelsWithoutDismissalAndRevealingRestartsTheFullWindow() = runTest {
+  fun hidingPausesWithoutDismissalAndRevealingResumesTheRemainingWindow() = runTest {
     val expired = mutableListOf<Pair<Long, Int>>()
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
@@ -87,10 +87,124 @@ class TallybookSnackbarTimingTest {
     runCurrent()
     assertEquals(emptyList(), expired)
     timer.update(message(), true, 4_000)
+    advanceTimeBy(999)
+    runCurrent()
+    assertEquals(emptyList(), expired)
+    advanceTimeBy(1)
+    runCurrent()
+    assertEquals(listOf(1L to 0), expired)
+  }
+
+  @Test
+  fun repeatedCoverageAccumulatesVisibleTimeInsteadOfRestartingTheWindow() = runTest {
+    val expired = mutableListOf<Pair<Long, Int>>()
+    val timer =
+        TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
+          expired += token to revision
+        }
+    repeat(3) {
+      timer.update(message(), true, 4_000)
+      advanceTimeBy(1_000)
+      timer.update(message(), false, 4_000)
+      advanceTimeBy(5_000)
+    }
+    timer.update(message().copy(isBusy = true), true, 4_000)
+    advanceTimeBy(5_000)
+    runCurrent()
+    assertEquals(emptyList(), expired)
+    timer.update(message(), true, 4_000)
+    advanceTimeBy(999)
+    runCurrent()
+    assertEquals(emptyList(), expired)
+    advanceTimeBy(1)
+    runCurrent()
+    assertEquals(listOf(1L to 0), expired)
+  }
+
+  @Test
+  fun refusedTimeoutIsRetriedOnceWhenTheStillPresentGenerationIsRevealedAgain() = runTest {
+    val expired = mutableListOf<Pair<Long, Int>>()
+    val timer =
+        TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
+          expired += token to revision
+        }
+    timer.update(message(), true, 4_000)
+    advanceTimeBy(4_000)
+    runCurrent()
+    assertEquals(listOf(1L to 0), expired)
+    timer.update(message(), false, 4_000)
+    advanceTimeBy(10_000)
+    runCurrent()
+    assertEquals(listOf(1L to 0), expired)
+    timer.update(message(), true, 4_000)
+    runCurrent()
+    assertEquals(listOf(1L to 0, 1L to 0), expired)
+    timer.update(message(), true, 4_000)
+    advanceTimeBy(20_000)
+    runCurrent()
+    assertEquals(listOf(1L to 0, 1L to 0), expired)
+  }
+
+  @Test
+  fun generationChangeWhileHiddenDiscardsTheOldWindow() = runTest {
+    val expired = mutableListOf<Pair<Long, Int>>()
+    val timer =
+        TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
+          expired += token to revision
+        }
+    timer.update(message(), true, 4_000)
+    advanceTimeBy(3_000)
+    timer.update(message(), false, 4_000)
+    val next = message().copy(token = 2)
+    timer.update(next, false, 4_000)
+    advanceTimeBy(10_000)
+    timer.update(next, true, 4_000)
     advanceTimeBy(3_999)
     runCurrent()
     assertEquals(emptyList(), expired)
     advanceTimeBy(1)
+    runCurrent()
+    assertEquals(listOf(2L to 0), expired)
+  }
+
+  @Test
+  fun compactionWhileHiddenResumesTheShortenedRemainderOnReveal() = runTest {
+    val expired = mutableListOf<Pair<Long, Int>>()
+    val timer =
+        TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
+          expired += token to revision
+        }
+    timer.update(message(), true, 10_000)
+    advanceTimeBy(2_000)
+    timer.update(message(), false, 10_000)
+    timer.update(message(), false, 5_000, isCompacted = true)
+    advanceTimeBy(10_000)
+    runCurrent()
+    assertEquals(emptyList(), expired)
+    timer.update(message(), true, 5_000, isCompacted = true)
+    advanceTimeBy(2_999)
+    runCurrent()
+    assertEquals(emptyList(), expired)
+    advanceTimeBy(1)
+    runCurrent()
+    assertEquals(listOf(1L to 0), expired)
+  }
+
+  @Test
+  fun compactionBelowAccumulatedVisibleTimeExpiresImmediatelyOnReveal() = runTest {
+    val expired = mutableListOf<Pair<Long, Int>>()
+    val timer =
+        TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
+          expired += token to revision
+        }
+    timer.update(message(), true, 10_000)
+    advanceTimeBy(6_000)
+    timer.update(message(), false, 10_000)
+    timer.update(message(), false, 5_000, isCompacted = true)
+    advanceTimeBy(10_000)
+    runCurrent()
+    assertEquals(emptyList(), expired)
+    timer.update(message(), true, 5_000, isCompacted = true)
     runCurrent()
     assertEquals(listOf(1L to 0), expired)
   }
@@ -157,11 +271,11 @@ class TallybookSnackbarTimingTest {
   fun accessibilityUsesActualContentAndNeverShortensTheBaseline() {
     val manager = RecordingAccessibilityManager(18_000)
     assertEquals(18_000L, tallybookSnackbarTimeoutMillis(TallybookSnackbarDuration.Long, manager))
-    assertEquals(10_000L, manager.originalTimeout)
+    assertEquals(9_700L, manager.originalTimeout)
     assertEquals(listOf(true, true, true), manager.flags)
     manager.recommendation = 1
-    assertEquals(4_000L, tallybookSnackbarTimeoutMillis(TallybookSnackbarDuration.Short, manager))
-    assertEquals(10_000L, tallybookSnackbarTimeoutMillis(TallybookSnackbarDuration.Long, null))
+    assertEquals(3_700L, tallybookSnackbarTimeoutMillis(TallybookSnackbarDuration.Short, manager))
+    assertEquals(9_700L, tallybookSnackbarTimeoutMillis(TallybookSnackbarDuration.Long, null))
   }
 
   @Test
@@ -183,19 +297,19 @@ class TallybookSnackbarTimingTest {
   @Test
   fun compactedBaselinesAreHalvedBeforeAccessibilityRecommendations() {
     assertEquals(
-        2_000L,
+        1_850L,
         tallybookSnackbarTimeoutMillis(TallybookSnackbarDuration.Short, null, true),
     )
-    assertEquals(5_000L, tallybookSnackbarTimeoutMillis(TallybookSnackbarDuration.Long, null, true))
+    assertEquals(4_850L, tallybookSnackbarTimeoutMillis(TallybookSnackbarDuration.Long, null, true))
     val manager = RecordingAccessibilityManager(7_000)
     assertEquals(
         7_000L,
         tallybookSnackbarTimeoutMillis(TallybookSnackbarDuration.Short, manager, true),
     )
-    assertEquals(2_000L, manager.originalTimeout)
+    assertEquals(1_850L, manager.originalTimeout)
     manager.recommendation = 0
     assertEquals(
-        5_000L,
+        4_850L,
         tallybookSnackbarTimeoutMillis(TallybookSnackbarDuration.Long, manager, true),
     )
     manager.recommendation = Long.MAX_VALUE

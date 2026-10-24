@@ -34,7 +34,8 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
   navigation, sheet-form keyboard scrolling), movimiento title fixtures (Search day
   headings, signed amounts) and single category and tags fixtures (`CategorySingleFieldTest`,
   `EtiquetaTagFieldTest`, `EtiquetaPickerSheetTest`, `TagsScreenTest`, `TagsNavigationTest`, the tag
-  filter in `SearchFilterSheetTest`, the catalog sections in `UiCatalogScreenTest`) also compile but remain
+  filter in `SearchFilterSheetTest`, the catalog sections in `UiCatalogScreenTest`) and the screen snackbar lifecycle gate
+  (`TallybookScreenSnackbarTest`) also compile but remain
   unexecuted after a bounded stalled-runner retry; execute them after runner repair, preserving their Back, reread-height and IME assertions.
 
 - **Management accessibility on Android** — Verify TalkBack announcements/focus and enlarged-text
