@@ -14,6 +14,7 @@ import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
+import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.DataOutcome
@@ -73,7 +74,7 @@ internal class TagsViewModelGraphHostTest {
                 dispatcher,
             )
         val preferences = AppPreferencesRepositoryImpl(factory.create())
-        val movimientos = MovimientoRepositoryImpl(database, dispatcher)
+        val movimientos = MovimientoRepositoryImpl(database, dispatcher, TestChangeClock())
         val etiquetas =
             EtiquetaRepositoryImpl(
                 database,
@@ -82,6 +83,7 @@ internal class TagsViewModelGraphHostTest {
                 object : Clock {
                   override fun now() = Instant.parse("2026-10-05T00:00:00Z")
                 },
+                TestChangeClock(),
             )
         val context = koinApplication {
           modules(
@@ -100,7 +102,12 @@ internal class TagsViewModelGraphHostTest {
           assertEquals(DataOutcome.Success(Unit), preferences.initialize(Moneda.COP))
           assertEquals(
               DataOutcome.Success(Unit),
-              CategoriaRepositoryImpl(database, dispatcher, IdGenerator { "unused" })
+              CategoriaRepositoryImpl(
+                      database,
+                      dispatcher,
+                      IdGenerator { "unused" },
+                      TestChangeClock(),
+                  )
                   .ensureSeeded(
                       CategorySeedCatalog.categories.map {
                         Categoria(it.id, it.id, it.padreId, it.icono, it.color)

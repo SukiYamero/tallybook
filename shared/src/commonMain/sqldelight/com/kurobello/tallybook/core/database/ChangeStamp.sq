@@ -1,0 +1,10 @@
+-- Tombstones count: a deleted row's stamp was issued too, and the clock must never reissue below it.
+selectMaxChangeStamp:
+SELECT max(updated_at) AS max_stamp
+FROM (
+    SELECT updated_at FROM movimiento
+    UNION ALL
+    SELECT updated_at FROM categoria
+    UNION ALL
+    SELECT updated_at FROM etiqueta
+);

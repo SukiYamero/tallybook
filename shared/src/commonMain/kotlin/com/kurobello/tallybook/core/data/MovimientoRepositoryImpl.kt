@@ -6,6 +6,7 @@ import app.cash.sqldelight.coroutines.mapToList
 import com.kurobello.tallybook.core.database.Movimiento_con_etiquetas as DatabaseMovimiento
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
+import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
@@ -40,6 +41,7 @@ import kotlinx.datetime.LocalDate
 internal class MovimientoRepositoryImpl(
     private val database: TallybookDatabase,
     private val dispatcher: CoroutineDispatcher,
+    private val changeClock: ChangeClock,
 ) : MovimientoRepository {
 
   override fun observeFiltered(
@@ -257,7 +259,7 @@ internal class MovimientoRepositoryImpl(
             if (missing != null) {
               DataOutcome.Failure(missing)
             } else {
-              insertRow(movimiento)
+              insertRow(movimiento, changeClock.next())
               DataOutcome.Success(Unit)
             }
           }
@@ -317,6 +319,7 @@ internal class MovimientoRepositoryImpl(
                         titulo = changes.titulo,
                         descripcion = changes.descripcion,
                         categoria_id = changes.categoriaId,
+                        updated_at = changeClock.next().value,
                         id = id,
                     )
                     .value == 1L
@@ -365,7 +368,7 @@ internal class MovimientoRepositoryImpl(
             database.movimientoQueries.selectMovimientoById(movimiento.id).executeAsOneOrNull()
         if (existing == null) {
           database.movimientoQueries.deleteMovimientoEtiquetas(movimiento.id)
-          insertRow(restorable)
+          insertRow(restorable, changeClock.next())
           MovimientoRestoreResult.Restored
         } else {
           // An unreadable occupied ID must block restoration rather than become a retryable
@@ -383,7 +386,7 @@ internal class MovimientoRepositoryImpl(
     }
   }
 
-  private fun insertRow(movimiento: Movimiento) {
+  private fun insertRow(movimiento: Movimiento, stamp: ChangeStamp) {
     check(
         database.movimientoQueries
             .insertMovimiento(
@@ -396,6 +399,7 @@ internal class MovimientoRepositoryImpl(
                 descripcion = movimiento.descripcion,
                 created_at = movimiento.createdAt.toString(),
                 categoria_id = movimiento.categoriaId,
+                updated_at = stamp.value,
             )
             .value == 1L
     )

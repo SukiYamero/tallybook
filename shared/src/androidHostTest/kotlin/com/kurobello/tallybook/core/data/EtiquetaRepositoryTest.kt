@@ -2,6 +2,7 @@ package com.kurobello.tallybook.core.data
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.ETIQUETA_DESCRIPCION_MAX
@@ -20,6 +21,22 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 
 class EtiquetaRepositoryTest {
+
+  @Test
+  fun `create and update store the stamp their transaction issued`() = runTest {
+    val changeClock = TestChangeClock()
+    withRepository(changeClock) { database, repository ->
+      val created = repository.create("Viaje").saved()
+      val storedStamp = {
+        database.etiquetaQueries.selectEtiquetaById(created.id).executeAsOne().updated_at
+      }
+      assertEquals(changeClock.issuedStamps.single().value, storedStamp())
+
+      repository.update(created.id, "Viaje", "con Ana")
+      assertEquals(2, changeClock.issuedStamps.size)
+      assertEquals(changeClock.issuedStamps.last().value, storedStamp())
+    }
+  }
 
   @Test
   fun `create trims the name and lists etiquetas by name ignoring case and accents`() = runTest {
@@ -190,7 +207,8 @@ class EtiquetaRepositoryTest {
   }
 
   private suspend fun TestScope.withRepository(
-      block: suspend (TallybookDatabase, EtiquetaRepository) -> Unit
+      changeClock: ChangeClock = TestChangeClock(),
+      block: suspend (TallybookDatabase, EtiquetaRepository) -> Unit,
   ) {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     TallybookDatabase.Schema.create(driver)
@@ -203,6 +221,7 @@ class EtiquetaRepositoryTest {
               dispatcher = StandardTestDispatcher(testScheduler),
               idGenerator = IdGenerator { "tag-${++nextId}" },
               clock = FixedClock,
+              changeClock = changeClock,
           )
       block(database, repository)
     } finally {
@@ -226,6 +245,7 @@ class EtiquetaRepositoryTest {
           null,
           "2026-10-01T12:00:00Z",
           "cat_comida",
+          ChangeStamp.SEED.value,
       )
       etiquetaIds.forEachIndexed { posicion, etiquetaId ->
         movimientoQueries.insertMovimientoEtiqueta(id, etiquetaId, posicion.toLong())

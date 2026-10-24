@@ -12,11 +12,13 @@ import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
+import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
 import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
+import com.kurobello.tallybook.core.data.maxStoredChangeStamp
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -74,14 +76,16 @@ class FirstMovimientoIntegrationTest {
                   database,
                   dispatcher,
                   IdGenerator { error("Not used by this test") },
+                  TestChangeClock(),
               )
-          val movimientos = MovimientoRepositoryImpl(database, dispatcher)
+          val movimientos = MovimientoRepositoryImpl(database, dispatcher, TestChangeClock())
           val etiquetas =
               EtiquetaRepositoryImpl(
                   database,
                   dispatcher,
                   IdGenerator { error("Not used by this test") },
                   FixedClock(FIXED_INSTANT),
+                  TestChangeClock(),
               )
           val bootstrapper =
               LocalDataBootstrapper(
@@ -94,6 +98,8 @@ class FirstMovimientoIntegrationTest {
                         // deterministic names.
                         resource.key
                       },
+                  changeClock = TestChangeClock(),
+                  storedMaxChangeStamp = { database.maxStoredChangeStamp(dispatcher) },
               )
 
           assertEquals(DataOutcome.Success(Unit), bootstrapper.initialize())
@@ -194,9 +200,14 @@ class FirstMovimientoIntegrationTest {
                   TallybookDatabase(databaseDriver),
                   dispatcher,
                   IdGenerator { error("Not used by this test") },
+                  TestChangeClock(),
               )
           val recreatedMovimientos =
-              MovimientoRepositoryImpl(TallybookDatabase(databaseDriver), dispatcher)
+              MovimientoRepositoryImpl(
+                  TallybookDatabase(databaseDriver),
+                  dispatcher,
+                  TestChangeClock(),
+              )
 
           assertEquals(
               DataOutcome.Success(AppPreferencesState.Ready(AppPreferences(Moneda.COP))),
@@ -238,14 +249,16 @@ class FirstMovimientoIntegrationTest {
                   database,
                   dispatcher,
                   IdGenerator { error("Not used by this test") },
+                  TestChangeClock(),
               )
-          val movimientos = MovimientoRepositoryImpl(database, dispatcher)
+          val movimientos = MovimientoRepositoryImpl(database, dispatcher, TestChangeClock())
           val etiquetas =
               EtiquetaRepositoryImpl(
                   database,
                   dispatcher,
                   IdGenerator { error("Not used by this test") },
                   FixedClock(FIXED_INSTANT),
+                  TestChangeClock(),
               )
           val bootstrapper =
               LocalDataBootstrapper(
@@ -253,6 +266,8 @@ class FirstMovimientoIntegrationTest {
                   preferencesRepository = preferences,
                   categoriaRepository = categorias,
                   categorySeedProvider = CategorySeedProvider { resource -> resource.key },
+                  changeClock = TestChangeClock(),
+                  storedMaxChangeStamp = { database.maxStoredChangeStamp(dispatcher) },
               )
           assertEquals(DataOutcome.Success(Unit), bootstrapper.initialize())
 

@@ -20,6 +20,7 @@ import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
+import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.DataOutcome
@@ -180,7 +181,8 @@ private class ManagementOwnerSuite(val scope: TestScope) {
   init {
     TallybookDatabase.Schema.create(driver)
     Dispatchers.setMain(dispatcher)
-    repository = OwnerMutationRepository(MovimientoRepositoryImpl(database, dispatcher))
+    repository =
+        OwnerMutationRepository(MovimientoRepositoryImpl(database, dispatcher, TestChangeClock()))
     koin = koinApplication {
       modules(
           viewModelModule,
@@ -192,6 +194,7 @@ private class ManagementOwnerSuite(val scope: TestScope) {
                   database,
                   dispatcher,
                   IdGenerator { error("Not used by this test") },
+                  TestChangeClock(),
               )
             }
             single<Clock> {

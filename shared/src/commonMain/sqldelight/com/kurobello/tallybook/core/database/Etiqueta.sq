@@ -1,8 +1,11 @@
+-- updated_at has no DEFAULT so a write that forgets its ChangeStamp fails instead of becoming SEED.
 CREATE TABLE etiqueta (
     id TEXT NOT NULL PRIMARY KEY,
     nombre TEXT NOT NULL,
     descripcion TEXT,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT
 );
 
 selectAllEtiquetas:
@@ -20,12 +23,12 @@ FROM etiqueta
 WHERE id IN ?;
 
 insertEtiqueta:
-INSERT INTO etiqueta(id, nombre, descripcion, created_at)
-VALUES (?, ?, ?, ?);
+INSERT INTO etiqueta(id, nombre, descripcion, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?);
 
 updateEtiqueta:
 UPDATE etiqueta
-SET nombre = :nombre, descripcion = :descripcion
+SET nombre = :nombre, descripcion = :descripcion, updated_at = :updated_at
 WHERE id = :id;
 
 deleteEtiqueta:

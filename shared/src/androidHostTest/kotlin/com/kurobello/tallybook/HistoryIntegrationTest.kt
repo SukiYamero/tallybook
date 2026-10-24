@@ -28,6 +28,7 @@ import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
+import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.insertLegacy
 import com.kurobello.tallybook.core.database.TallybookDatabase
@@ -383,14 +384,16 @@ class HistoryIntegrationTest {
             database,
             fixture.dispatcher,
             IdGenerator { error("Not used by this test") },
+            TestChangeClock(),
         )
-    val movimientos = MovimientoRepositoryImpl(database, fixture.dispatcher)
+    val movimientos = MovimientoRepositoryImpl(database, fixture.dispatcher, TestChangeClock())
     private val etiquetas =
         EtiquetaRepositoryImpl(
             database,
             fixture.dispatcher,
             IdGenerator { error("Not used by this test") },
             fixture.clock,
+            TestChangeClock(),
         )
     private var nextId = "unset"
     private val owners = mutableListOf<GraphOwner>()
@@ -440,6 +443,8 @@ class HistoryIntegrationTest {
               preferences,
               categorias,
               CategorySeedProvider { it.key },
+              TestChangeClock(),
+              { DataOutcome.Success(null) },
           )
       assertEquals(DataOutcome.Success(Unit), bootstrap.initialize())
       assertEquals(

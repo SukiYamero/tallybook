@@ -5,6 +5,7 @@ import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
+import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
@@ -38,9 +39,40 @@ import kotlinx.datetime.LocalDate
 class MovimientoRepositoryTest {
 
   @Test
+  fun `insert update and restore each store the one stamp their transaction issued`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      val database = seeded(driver)
+      val changeClock = TestChangeClock()
+      val repository =
+          MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler), changeClock)
+      val original = movimiento(id = "mov", etiquetaIds = listOf("tag_a", "tag_b"))
+      val storedStamp = {
+        database.movimientoQueries.selectMovimientoById("mov").executeAsOne().updated_at
+      }
+
+      repository.insert(original)
+      assertEquals(changeClock.issuedStamps.single().value, storedStamp())
+
+      repository.update("mov", original.changes().copy(titulo = "cena"))
+      assertEquals(2, changeClock.issuedStamps.size)
+      assertEquals(changeClock.issuedStamps.last().value, storedStamp())
+
+      repository.deleteAndCapture("mov")
+      repository.restoreDeleted(original)
+      assertEquals(3, changeClock.issuedStamps.size)
+      assertEquals(changeClock.issuedStamps.last().value, storedStamp())
+    }
+  }
+
+  @Test
   fun `insert rejects invalid movimiento input without writing`() = runTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    val repository = MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+    val repository =
+        MovimientoRepositoryImpl(
+            seeded(driver),
+            StandardTestDispatcher(testScheduler),
+            TestChangeClock(),
+        )
     val valid = movimiento(id = "valid")
     val invalid =
         listOf(
@@ -66,7 +98,12 @@ class MovimientoRepositoryTest {
   @Test
   fun `insert and getAll round-trip a domain movimiento`() = runTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    val repository = MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+    val repository =
+        MovimientoRepositoryImpl(
+            seeded(driver),
+            StandardTestDispatcher(testScheduler),
+            TestChangeClock(),
+        )
     val movimiento =
         Movimiento(
             id = "mov1",
@@ -89,7 +126,12 @@ class MovimientoRepositoryTest {
   @Test
   fun `insert maps a duplicate id to a local error`() = runTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    val repository = MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+    val repository =
+        MovimientoRepositoryImpl(
+            seeded(driver),
+            StandardTestDispatcher(testScheduler),
+            TestChangeClock(),
+        )
     val movimiento =
         Movimiento(
             id = "duplicado",
@@ -113,7 +155,12 @@ class MovimientoRepositoryTest {
   @Test
   fun `delete removes the movimiento and its etiqueta links`() = runTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    val repository = MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+    val repository =
+        MovimientoRepositoryImpl(
+            seeded(driver),
+            StandardTestDispatcher(testScheduler),
+            TestChangeClock(),
+        )
     val movimiento =
         Movimiento(
             id = "mov1",
@@ -139,7 +186,12 @@ class MovimientoRepositoryTest {
   fun `getById distinguishes absent rows invalid ids and unreadable rows`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val database = seeded(driver)
-      val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+      val repository =
+          MovimientoRepositoryImpl(
+              database,
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val row = movimiento("read", monto = Money(Long.MAX_VALUE, Moneda.CLP))
       assertEquals(DataOutcome.Success(Unit), repository.insert(row))
       assertEquals(DataOutcome.Success(row), repository.getById(row.id))
@@ -155,7 +207,11 @@ class MovimientoRepositoryTest {
       runTest {
         JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
           val repository =
-              MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+              MovimientoRepositoryImpl(
+                  seeded(driver),
+                  StandardTestDispatcher(testScheduler),
+                  TestChangeClock(),
+              )
           val original = movimiento("edit", monto = Money(1_050, Moneda.USD))
           val sibling = original.copy(id = "sibling")
           repository.insert(original)
@@ -205,7 +261,12 @@ class MovimientoRepositoryTest {
   fun `update keeps a stored categoria missing from the catalog only while unchanged`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val database = seeded(driver)
-      val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+      val repository =
+          MovimientoRepositoryImpl(
+              database,
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val legacy = movimiento("legacy", categoriaId = "missing-legacy-category")
       insertRaw(database, legacy)
 
@@ -231,7 +292,11 @@ class MovimientoRepositoryTest {
   fun `update rejects invalid values without replacing the stored row`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val repository =
-          MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+          MovimientoRepositoryImpl(
+              seeded(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val original = movimiento("valid", etiquetaIds = listOf("tag_a"))
       repository.insert(original)
       val valid = original.changes()
@@ -259,7 +324,11 @@ class MovimientoRepositoryTest {
       runTest {
         JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
           val repository =
-              MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+              MovimientoRepositoryImpl(
+                  seeded(driver),
+                  StandardTestDispatcher(testScheduler),
+                  TestChangeClock(),
+              )
           val original = movimiento("delete")
           repository.insert(original)
           val latest = original.copy(monto = Money(750, Moneda.COP), descripcion = "latest")
@@ -282,7 +351,12 @@ class MovimientoRepositoryTest {
       runTest {
         JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
           val database = seeded(driver)
-          val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+          val repository =
+              MovimientoRepositoryImpl(
+                  database,
+                  StandardTestDispatcher(testScheduler),
+                  TestChangeClock(),
+              )
           insertUnreadable(database, "corrupt")
           assertLocal(repository.deleteAndCapture("corrupt"))
           assertEquals(
@@ -304,7 +378,11 @@ class MovimientoRepositoryTest {
   fun `delete and restore reproduce every stored field and stable tied order`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val repository =
-          MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+          MovimientoRepositoryImpl(
+              seeded(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val first =
           movimiento(
               "a",
@@ -338,7 +416,12 @@ class MovimientoRepositoryTest {
   fun `restore skips etiquetas deleted after the capture and keeps the rest`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val database = seeded(driver)
-      val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+      val repository =
+          MovimientoRepositoryImpl(
+              database,
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val row = movimiento("gone", etiquetaIds = listOf("tag_c", "tag_a", "tag_b"))
       repository.insert(row)
       assertEquals(DataOutcome.Success(row), repository.deleteAndCapture(row.id))
@@ -364,7 +447,12 @@ class MovimientoRepositoryTest {
       runTest {
         JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
           val database = seeded(driver, extraCategoriaIds = listOf("custom"))
-          val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+          val repository =
+              MovimientoRepositoryImpl(
+                  database,
+                  StandardTestDispatcher(testScheduler),
+                  TestChangeClock(),
+              )
           val row = movimiento("gone", categoriaId = "custom", etiquetaIds = listOf("tag_a"))
           repository.insert(row)
           assertEquals(DataOutcome.Success(row), repository.deleteAndCapture(row.id))
@@ -387,7 +475,12 @@ class MovimientoRepositoryTest {
       runTest {
         JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
           val database = seeded(driver)
-          val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+          val repository =
+              MovimientoRepositoryImpl(
+                  database,
+                  StandardTestDispatcher(testScheduler),
+                  TestChangeClock(),
+              )
           val whitespace = movimiento("whitespace-category", categoriaId = " ")
           insertRaw(database, whitespace)
           val oversized =
@@ -413,7 +506,11 @@ class MovimientoRepositoryTest {
   fun `restore rejects invalid snapshots without writing`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val repository =
-          MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+          MovimientoRepositoryImpl(
+              seeded(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val valid = movimiento("restore")
       for (row in
           listOf(
@@ -431,7 +528,11 @@ class MovimientoRepositoryTest {
   fun `mutation write failures roll back without yielding a false capture or restore`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val repository =
-          MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+          MovimientoRepositoryImpl(
+              seeded(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val row = movimiento("blocked")
       repository.insert(row)
       driver.execute(
@@ -463,7 +564,11 @@ class MovimientoRepositoryTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     try {
       val repository =
-          MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+          MovimientoRepositoryImpl(
+              seeded(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       driver.close()
       val row = movimiento("closed")
       assertLocal(repository.getById(row.id))
@@ -479,7 +584,11 @@ class MovimientoRepositoryTest {
   fun `category history returns the newest described rows within the limit`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val repository =
-          MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+          MovimientoRepositoryImpl(
+              seeded(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val base = Instant.parse("2026-09-05T12:00:00Z")
       val rows =
           listOf(
@@ -527,7 +636,11 @@ class MovimientoRepositoryTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     try {
       val repository =
-          MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+          MovimientoRepositoryImpl(
+              seeded(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
 
       assertInvalid(repository.observeCategoryHistory(0).first())
       assertInvalid(repository.observeCategoryHistory(-1).first())
@@ -542,7 +655,11 @@ class MovimientoRepositoryTest {
   fun `category history emits again after an insert and after an edit`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val repository =
-          MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+          MovimientoRepositoryImpl(
+              seeded(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val emissions = mutableListOf<DataOutcome<List<CategoryHistoryRow>>>()
       val collector = backgroundScope.launch {
         repository.observeCategoryHistory(5).collect(emissions::add)
@@ -572,7 +689,12 @@ class MovimientoRepositoryTest {
   fun `category history keeps the newest rows at the volume bound`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val database = seeded(driver)
-      val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+      val repository =
+          MovimientoRepositoryImpl(
+              database,
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val base = Instant.parse("2026-01-01T00:00:00Z")
       database.transaction {
         repeat(CATEGORY_HISTORY_BOUND + 200) { index ->
@@ -586,6 +708,7 @@ class MovimientoRepositoryTest {
               null,
               (base + index.seconds).toString(),
               "cat_comida",
+              ChangeStamp.SEED.value,
           )
         }
       }
@@ -606,7 +729,11 @@ class MovimientoRepositoryTest {
   fun `zero and the maximum of etiquetas round-trip in display order`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val repository =
-          MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+          MovimientoRepositoryImpl(
+              seeded(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val none = movimiento("none")
       val maximum =
           movimiento(
@@ -629,7 +756,11 @@ class MovimientoRepositoryTest {
       runTest {
         JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
           val repository =
-              MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+              MovimientoRepositoryImpl(
+                  seeded(driver),
+                  StandardTestDispatcher(testScheduler),
+                  TestChangeClock(),
+              )
           val original = movimiento("valid", etiquetaIds = listOf("tag_a", "tag_b"))
           repository.insert(original)
           val invalid =
@@ -661,7 +792,11 @@ class MovimientoRepositoryTest {
   fun `update replaces the categoria and the whole etiqueta list without stale links`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val repository =
-          MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+          MovimientoRepositoryImpl(
+              seeded(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val original = movimiento("edit", etiquetaIds = listOf("tag_a", "tag_b", "tag_c"))
       val sibling = movimiento("sibling", etiquetaIds = listOf("tag_a"), at = LATER)
       repository.insert(original)
@@ -705,6 +840,7 @@ class MovimientoRepositoryTest {
           MovimientoRepositoryImpl(
               seeded(driver, etiquetaIds = listOf("bad")),
               StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
           )
       val original = movimiento("kept", etiquetaIds = listOf("tag_a", "tag_b"))
       repository.insert(original)
@@ -738,7 +874,11 @@ class MovimientoRepositoryTest {
   fun `delete capture and restore carry the etiquetas and detect a different list`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val repository =
-          MovimientoRepositoryImpl(seeded(driver), StandardTestDispatcher(testScheduler))
+          MovimientoRepositoryImpl(
+              seeded(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val row = movimiento("gone", etiquetaIds = listOf("tag_b", "tag_a", "tag_c"))
       val other = movimiento("other", etiquetaIds = listOf("tag_a"), at = LATER)
       repository.insert(row)
@@ -781,7 +921,12 @@ class MovimientoRepositoryTest {
   fun `observed reads emit when only the etiqueta link table changes`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val database = seeded(driver)
-      val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+      val repository =
+          MovimientoRepositoryImpl(
+              database,
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val row = movimiento("one", etiquetaIds = listOf("tag_a"), titulo = "cafe")
       repository.insert(row)
       val september = MovimientoDateRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30))
@@ -854,6 +999,7 @@ class MovimientoRepositoryTest {
         null,
         "invalid-instant",
         "cat_comida",
+        ChangeStamp.SEED.value,
     )
   }
 
@@ -868,6 +1014,7 @@ class MovimientoRepositoryTest {
         row.descripcion,
         row.createdAt.toString(),
         row.categoriaId,
+        ChangeStamp.SEED.value,
     )
     row.etiquetaIds.forEachIndexed { posicion, etiquetaId ->
       database.movimientoQueries.insertMovimientoEtiqueta(row.id, etiquetaId, posicion.toLong())
@@ -878,7 +1025,12 @@ class MovimientoRepositoryTest {
   fun `restore treats an unreadable existing id as conflict without modifying it`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val database = seeded(driver)
-      val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+      val repository =
+          MovimientoRepositoryImpl(
+              database,
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       insertUnreadable(database, "occupied")
       val raw = database.movimientoQueries.selectMovimientoById("occupied").executeAsOne()
       assertEquals(
@@ -893,7 +1045,12 @@ class MovimientoRepositoryTest {
   fun `restore replaces orphaned links left by an interrupted delete`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val database = seeded(driver)
-      val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+      val repository =
+          MovimientoRepositoryImpl(
+              database,
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val row = movimiento("gone", etiquetaIds = listOf("tag_a", "tag_b"))
       database.movimientoQueries.insertMovimientoEtiqueta("gone", "tag_a", 0)
       database.movimientoQueries.insertMovimientoEtiqueta("gone", "stale", 1)

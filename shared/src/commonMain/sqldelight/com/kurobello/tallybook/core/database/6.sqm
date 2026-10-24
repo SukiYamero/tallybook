@@ -1,0 +1,125 @@
+-- Every root table is rebuilt so the migrated DDL matches a fresh install exactly; updated_at has no
+-- DEFAULT there, so ALTER TABLE ADD COLUMN could not add it as NOT NULL. The view goes first because
+-- renaming a table rewrites the views that reference it.
+DROP VIEW movimiento_con_etiquetas;
+
+DROP INDEX movimiento_recent;
+
+DROP INDEX movimiento_by_categoria;
+
+ALTER TABLE movimiento RENAME TO movimiento_legacy;
+
+CREATE TABLE movimiento (
+    id TEXT NOT NULL PRIMARY KEY,
+    tipo TEXT NOT NULL,
+    monto_minor INTEGER NOT NULL,
+    monto_moneda TEXT NOT NULL,
+    fecha TEXT NOT NULL,
+    descripcion TEXT,
+    created_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00Z',
+    titulo TEXT,
+    categoria_id TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT
+);
+
+-- The stamp is created_at in epoch millis with a zero counter and node. A pre-1970 instant, a value
+-- SQLite cannot parse, or one beyond the 13-digit millis a ChangeStamp encodes falls back to SEED's
+-- millis, so every backfilled value stays a parseable stamp.
+INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, descripcion, created_at, titulo, categoria_id, updated_at, deleted_at)
+SELECT
+    id,
+    tipo,
+    monto_minor,
+    monto_moneda,
+    fecha,
+    descripcion,
+    created_at,
+    titulo,
+    categoria_id,
+    printf(
+        '%013d-0000-0000000000000000',
+        CASE WHEN created_millis BETWEEN 0 AND 9999999999999 THEN created_millis ELSE 0 END
+    ),
+    NULL
+FROM (
+    SELECT
+        movimiento_legacy.*,
+        CAST(round((julianday(created_at) - 2440587.5) * 86400000) AS INTEGER) AS created_millis
+    FROM movimiento_legacy
+);
+
+DROP TABLE movimiento_legacy;
+
+CREATE INDEX movimiento_recent ON movimiento(fecha DESC, created_at DESC, id DESC)
+WHERE deleted_at IS NULL;
+
+CREATE INDEX movimiento_by_categoria ON movimiento(categoria_id)
+WHERE deleted_at IS NULL;
+
+ALTER TABLE etiqueta RENAME TO etiqueta_legacy;
+
+CREATE TABLE etiqueta (
+    id TEXT NOT NULL PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    descripcion TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT
+);
+
+INSERT INTO etiqueta(id, nombre, descripcion, created_at, updated_at, deleted_at)
+SELECT
+    id,
+    nombre,
+    descripcion,
+    created_at,
+    printf(
+        '%013d-0000-0000000000000000',
+        CASE WHEN created_millis BETWEEN 0 AND 9999999999999 THEN created_millis ELSE 0 END
+    ),
+    NULL
+FROM (
+    SELECT
+        etiqueta_legacy.*,
+        CAST(round((julianday(created_at) - 2440587.5) * 86400000) AS INTEGER) AS created_millis
+    FROM etiqueta_legacy
+);
+
+DROP TABLE etiqueta_legacy;
+
+ALTER TABLE categoria RENAME TO categoria_legacy;
+
+CREATE TABLE categoria (
+    id TEXT NOT NULL PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    padre_id TEXT,
+    icono TEXT NOT NULL,
+    color TEXT NOT NULL,
+    descripcion TEXT,
+    origen TEXT NOT NULL DEFAULT 'sistema' CHECK (origen IN ('sistema', 'usuario')),
+    oculta INTEGER NOT NULL DEFAULT 0 CHECK (oculta IN (0, 1)),
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT
+);
+
+-- categoria has no created_at, so seeded and custom rows alike start at ChangeStamp.SEED.
+INSERT INTO categoria(id, nombre, padre_id, icono, color, descripcion, origen, oculta, updated_at, deleted_at)
+SELECT id, nombre, padre_id, icono, color, descripcion, origen, oculta, '0000000000000-0000-0000000000000000', NULL
+FROM categoria_legacy;
+
+DROP TABLE categoria_legacy;
+
+CREATE VIEW movimiento_con_etiquetas AS
+SELECT
+    movimiento.*,
+    COALESCE(
+        (
+            SELECT group_concat(movimiento_etiqueta.posicion || char(31) || movimiento_etiqueta.etiqueta_id, char(30))
+            FROM movimiento_etiqueta
+            WHERE movimiento_etiqueta.movimiento_id = movimiento.id
+        ),
+        ''
+    ) AS etiqueta_ids
+FROM movimiento
+WHERE movimiento.deleted_at IS NULL;

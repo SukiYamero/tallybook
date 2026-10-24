@@ -11,6 +11,7 @@ import com.kurobello.tallybook.core.model.CategoriaRules
 import com.kurobello.tallybook.core.model.CategoriaWrite
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
@@ -23,6 +24,33 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 
 class CategoriaRepositoryTest {
+
+  @Test
+  fun `seeding stores SEED while create update and hide store the stamp they issued`() = runTest {
+    val changeClock = TestChangeClock()
+    withRepository(changeClock) { database, repository ->
+      val storedStamp = { id: String ->
+        database.categoriaQueries.selectCategoriaById(id).executeAsOne().updated_at
+      }
+
+      repository.ensureSeeded(
+          listOf(Categoria("cat_comida", "Comida", null, CategoryIcon.TAG, CategoryTint.NEUTRAL))
+      )
+      assertEquals(ChangeStamp.SEED.value, storedStamp("cat_comida"))
+      assertEquals(emptyList(), changeClock.issuedStamps)
+
+      val created = repository.create(draft("Gimnasio")).savedCategoria()
+      assertEquals(changeClock.issuedStamps.single().value, storedStamp(created.id))
+
+      repository.update(created.id, draft("Gimnasio", descripcion = "pesas"))
+      assertEquals(2, changeClock.issuedStamps.size)
+      assertEquals(changeClock.issuedStamps.last().value, storedStamp(created.id))
+
+      repository.setOculta("cat_comida", oculta = true)
+      assertEquals(3, changeClock.issuedStamps.size)
+      assertEquals(changeClock.issuedStamps.last().value, storedStamp("cat_comida"))
+    }
+  }
 
   @Test
   fun `getAll maps database rows to domain categorias`() = runTest {
@@ -231,7 +259,8 @@ class CategoriaRepositoryTest {
   }
 
   private suspend fun TestScope.withRepository(
-      block: suspend (TallybookDatabase, CategoriaRepository) -> Unit
+      changeClock: ChangeClock = TestChangeClock(),
+      block: suspend (TallybookDatabase, CategoriaRepository) -> Unit,
   ) {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     TallybookDatabase.Schema.create(driver)
@@ -243,6 +272,7 @@ class CategoriaRepositoryTest {
               database,
               StandardTestDispatcher(testScheduler),
               IdGenerator { "custom-${++nextId}" },
+              changeClock,
           )
       block(database, repository)
     } finally {
@@ -258,6 +288,7 @@ class CategoriaRepositoryTest {
           it.padreId,
           it.icono.storageKey,
           it.color.storageKey,
+          ChangeStamp.SEED.value,
       )
     }
   }
@@ -277,6 +308,7 @@ class CategoriaRepositoryTest {
         null,
         "2026-10-01T12:00:00Z",
         categoriaId,
+        ChangeStamp.SEED.value,
     )
   }
 

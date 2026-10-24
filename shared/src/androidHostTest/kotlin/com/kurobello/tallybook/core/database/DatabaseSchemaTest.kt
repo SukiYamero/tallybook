@@ -1,9 +1,12 @@
 package com.kurobello.tallybook.core.database
 
 import app.cash.sqldelight.db.QueryResult
+import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
+import app.cash.sqldelight.db.SqlPreparedStatement
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.data.toDomain
+import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -17,6 +20,125 @@ import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 class DatabaseSchemaTest {
+
+  @Test
+  fun `migration from schema 6 backfills change stamps and keeps every row`() =
+      withSnapshot(version = 6) { driver ->
+        listOf(
+                "('plain', '2026-10-02T12:00:00Z')",
+                "('nanos', '2026-10-02T12:00:00.123456789Z')",
+                "('pre_1970', '1969-07-20T20:17:40Z')",
+                "('unparseable_year', '+10000-01-01T00:00:00Z')",
+                "('beyond_stamp_range', '2500-01-01T00:00:00Z')",
+            )
+            .forEach { values ->
+              driver.execute(
+                  null,
+                  "INSERT INTO movimiento(id, created_at, tipo, monto_minor, monto_moneda, fecha, " +
+                      "titulo, categoria_id) SELECT column1, column2, 'GASTO', 1000, 'COP', " +
+                      "'2026-10-01', 'almuerzo', 'cat_comida' FROM (VALUES $values)",
+                  0,
+              )
+            }
+        driver.execute(
+            null,
+            "INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, categoria_id) " +
+                "VALUES ('legacy_default', 'INGRESO', 500, 'USD', '2026-09-30', 'cat_sueldo')",
+            0,
+        )
+        listOf(
+                "('tag_a', 'Viaje', 'con Ana', '2026-09-01T08:30:00.5Z')",
+                "('tag_b', 'Casa', NULL, '1970-01-01T00:00:00Z')",
+            )
+            .forEach { values ->
+              driver.execute(
+                  null,
+                  "INSERT INTO etiqueta(id, nombre, descripcion, created_at) VALUES $values",
+                  0,
+              )
+            }
+        listOf("('plain', 'tag_b', 0)", "('plain', 'tag_a', 1)", "('nanos', 'tag_a', 0)").forEach {
+            values ->
+          driver.execute(
+              null,
+              "INSERT INTO movimiento_etiqueta(movimiento_id, etiqueta_id, posicion) " +
+                  "VALUES $values",
+              0,
+          )
+        }
+        driver.execute(
+            null,
+            "INSERT INTO categoria(id, nombre, padre_id, icono, color) " +
+                "VALUES ('cat_comida', 'Comida', NULL, 'utensils', 'amber')",
+            0,
+        )
+        driver.execute(
+            null,
+            "INSERT INTO categoria(id, nombre, padre_id, icono, color, descripcion, origen, " +
+                "oculta) VALUES ('custom', 'Mascotas', NULL, 'tag', 'neutral', 'gato', " +
+                "'usuario', 1)",
+            0,
+        )
+
+        TallybookDatabase.Schema.migrate(
+            driver,
+            oldVersion = 6,
+            newVersion = TallybookDatabase.Schema.version,
+        )
+
+        val seed = ChangeStamp.SEED.value
+        assertEquals(
+            listOf(
+                "beyond_stamp_range $seed",
+                "legacy_default $seed",
+                "nanos 1790942400123-0000-0000000000000000",
+                "plain 1790942400000-0000-0000000000000000",
+                "pre_1970 $seed",
+                "unparseable_year $seed",
+            ),
+            driver.stampsOf("movimiento"),
+        )
+        assertEquals(
+            listOf("tag_a 1788251400500-0000-0000000000000000", "tag_b $seed"),
+            driver.stampsOf("etiqueta"),
+        )
+        assertEquals(listOf("cat_comida $seed", "custom $seed"), driver.stampsOf("categoria"))
+        listOf("movimiento", "etiqueta", "categoria").forEach { table ->
+          driver.queryStrings("SELECT updated_at FROM $table").forEach(ChangeStamp::parse)
+          assertEquals(
+              emptyList(),
+              driver.queryStrings("SELECT id FROM $table WHERE deleted_at IS NOT NULL"),
+          )
+        }
+        val database = TallybookDatabase(driver)
+        val migrated =
+            database.movimientoQueries.selectAllMovimientos().executeAsList().associateBy { it.id }
+        assertEquals(6, migrated.size)
+        assertEquals(listOf("tag_b", "tag_a"), migrated.getValue("plain").toDomain().etiquetaIds)
+        assertEquals(listOf("tag_a"), migrated.getValue("nanos").toDomain().etiquetaIds)
+        assertEquals(
+            Instant.parse("2026-10-02T12:00:00.123456789Z"),
+            migrated.getValue("nanos").toDomain().createdAt,
+        )
+        val legacy = migrated.getValue("legacy_default").toDomain()
+        assertEquals(Money(500, Moneda.USD), legacy.monto)
+        assertEquals(Instant.parse("1970-01-01T00:00:00Z"), legacy.createdAt)
+        assertEquals(
+            listOf("tag_a Viaje con Ana", "tag_b Casa -"),
+            driver.queryStrings(
+                "SELECT id || ' ' || nombre || ' ' || COALESCE(descripcion, '-') FROM etiqueta " +
+                    "ORDER BY id"
+            ),
+        )
+        assertEquals(
+            listOf("cat_comida sistema 0 -", "custom usuario 1 gato"),
+            driver.queryStrings(
+                "SELECT id || ' ' || origen || ' ' || oculta || ' ' || COALESCE(descripcion, '-') " +
+                    "FROM categoria ORDER BY id"
+            ),
+        )
+        assertEquals(freshSchema(), driver.schemaObjects())
+      }
 
   @Test
   fun `migration from schema 1 preserves a legacy movimiento and derives created at from fecha`() =
@@ -109,11 +231,11 @@ class DatabaseSchemaTest {
         assertEquals(Instant.parse("2026-10-02T12:00:00Z"), one.createdAt)
         assertEquals(emptyList(), driver.queryStrings("SELECT id FROM etiqueta"))
         assertEquals(
-            listOf("id", "nombre", "descripcion", "created_at"),
+            listOf("id", "nombre", "descripcion", "created_at", "updated_at", "deleted_at"),
             driver.queryStrings("SELECT name FROM pragma_table_info('etiqueta')"),
         )
         assertEquals(
-            listOf("descripcion"),
+            listOf("descripcion", "deleted_at"),
             driver.queryStrings(
                 "SELECT name FROM pragma_table_info('etiqueta') WHERE \"notnull\" = 0"
             ),
@@ -217,10 +339,33 @@ class DatabaseSchemaTest {
         )
 
         val database = TallybookDatabase(driver)
+        val seed = ChangeStamp.SEED.value
         assertEquals(
             listOf(
-                Categoria("cat_comida", "Comida", null, "utensils", "amber", null, "sistema", 0),
-                Categoria("cat_cafe", "Café", "cat_comida", "coffee", "amber", null, "sistema", 0),
+                Categoria(
+                    "cat_comida",
+                    "Comida",
+                    null,
+                    "utensils",
+                    "amber",
+                    null,
+                    "sistema",
+                    0,
+                    seed,
+                    null,
+                ),
+                Categoria(
+                    "cat_cafe",
+                    "Café",
+                    "cat_comida",
+                    "coffee",
+                    "amber",
+                    null,
+                    "sistema",
+                    0,
+                    seed,
+                    null,
+                ),
                 Categoria(
                     "cat_otros",
                     "Otros",
@@ -230,6 +375,8 @@ class DatabaseSchemaTest {
                     null,
                     "sistema",
                     0,
+                    seed,
+                    null,
                 ),
             ),
             database.categoriaQueries.selectAllCategorias().executeAsList(),
@@ -313,6 +460,8 @@ class DatabaseSchemaTest {
                 "created_at",
                 "titulo",
                 "categoria_id",
+                "updated_at",
+                "deleted_at",
             ),
             driver.queryStrings("SELECT name FROM pragma_table_info('movimiento')"),
         )
@@ -354,6 +503,9 @@ class DatabaseSchemaTest {
               0,
           )
           .value
+
+  private fun SqlDriver.stampsOf(table: String): List<String> =
+      queryStrings("SELECT id || ' ' || updated_at FROM $table ORDER BY id")
 
   private fun withSnapshot(version: Int, block: (SqlDriver) -> Unit) {
     val snapshot = File("src/commonMain/sqldelight/databases/$version.db")
@@ -417,6 +569,7 @@ class DatabaseSchemaTest {
           descripcion = descripcion,
           created_at = createdAt,
           categoria_id = categoriaId,
+          updated_at = ChangeStamp.SEED.value,
       )
       etiquetaIds.forEachIndexed { posicion, etiquetaId ->
         movimientoQueries.insertMovimientoEtiqueta(id, etiquetaId, posicion.toLong())
@@ -653,13 +806,137 @@ class DatabaseSchemaTest {
   fun `a categoria hija keeps its padre_id while a categoria padre has none`() {
     val db = inMemoryDatabase()
 
-    db.categoriaQueries.insertCategoria("cat_ingresos", "Ingresos", null, "trending-up", "success")
-    db.categoriaQueries.insertCategoria("cat_sueldo", "Sueldo", "cat_ingresos", "wallet", "emerald")
+    db.categoriaQueries.insertCategoria(
+        "cat_ingresos",
+        "Ingresos",
+        null,
+        "trending-up",
+        "success",
+        ChangeStamp.SEED.value,
+    )
+    db.categoriaQueries.insertCategoria(
+        "cat_sueldo",
+        "Sueldo",
+        "cat_ingresos",
+        "wallet",
+        "emerald",
+        ChangeStamp.SEED.value,
+    )
 
     val byId = db.categoriaQueries.selectAllCategorias().executeAsList().associateBy { it.id }
     assertNull(byId.getValue("cat_ingresos").padre_id)
     assertEquals("cat_ingresos", byId.getValue("cat_sueldo").padre_id)
     assertEquals("trending-up", byId.getValue("cat_ingresos").icono)
     assertEquals("emerald", byId.getValue("cat_sueldo").color)
+  }
+
+  @Test
+  fun `reads through the movimiento view skip tombstones`() {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      TallybookDatabase.Schema.create(driver)
+      val db = TallybookDatabase(driver)
+      db.insert(id = "live", montoMinor = 100)
+      db.insert(id = "tombstone", montoMinor = 200)
+
+      driver.execute(
+          null,
+          "UPDATE movimiento SET deleted_at = updated_at WHERE id = 'tombstone'",
+          0,
+      )
+
+      assertEquals(
+          listOf("live"),
+          db.movimientoQueries.selectAllMovimientos().executeAsList().map { it.id },
+      )
+      assertNull(db.movimientoQueries.selectMovimientoById("tombstone").executeAsOneOrNull())
+    }
+  }
+
+  @Test
+  fun `recent and filtered reads scan movimiento_recent without a temporary sort`() {
+    val driver = PlanRecordingDriver(JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY))
+    try {
+      TallybookDatabase.Schema.create(driver)
+      val queries = TallybookDatabase(driver).movimientoQueries
+      val reads =
+          mapOf(
+              "selectRecentMovimientosByMoneda" to
+                  {
+                    queries.selectRecentMovimientosByMoneda("COP", 20).executeAsList()
+                  },
+              "selectFilteredMovimientos without filters" to
+                  {
+                    queries.selectFilteredMovimientos("COP", null, null, null).executeAsList()
+                  },
+              "selectFilteredMovimientos with range and tipo" to
+                  {
+                    queries
+                        .selectFilteredMovimientos("COP", "2026-01-01", "2026-12-31", "GASTO")
+                        .executeAsList()
+                  },
+              "selectFilteredMovimientosByCategory" to
+                  {
+                    queries
+                        .selectFilteredMovimientosByCategory(
+                            "COP",
+                            null,
+                            null,
+                            null,
+                            listOf("cat_comida"),
+                        )
+                        .executeAsList()
+                  },
+          )
+
+      reads.forEach { (name, read) ->
+        val plan = driver.planOf(read)
+        assertTrue(
+            plan.any { it.contains("movimiento USING INDEX movimiento_recent") },
+            "$name: $plan",
+        )
+        assertTrue(plan.none { it.contains("TEMP B-TREE") }, "$name: $plan")
+      }
+    } finally {
+      driver.close()
+    }
+  }
+
+  /**
+   * Records each read's SQL and binders so the test can ask SQLite for that exact statement's plan.
+   */
+  private class PlanRecordingDriver(private val delegate: SqlDriver) : SqlDriver by delegate {
+    private var lastSql: String? = null
+    private var lastParameters = 0
+    private var lastBinders: (SqlPreparedStatement.() -> Unit)? = null
+
+    override fun <R> executeQuery(
+        identifier: Int?,
+        sql: String,
+        mapper: (SqlCursor) -> QueryResult<R>,
+        parameters: Int,
+        binders: (SqlPreparedStatement.() -> Unit)?,
+    ): QueryResult<R> {
+      lastSql = sql
+      lastParameters = parameters
+      lastBinders = binders
+      return delegate.executeQuery(identifier, sql, mapper, parameters, binders)
+    }
+
+    fun planOf(read: () -> Any): List<String> {
+      read()
+      return delegate
+          .executeQuery(
+              null,
+              "EXPLAIN QUERY PLAN ${checkNotNull(lastSql)}",
+              { cursor ->
+                val details = mutableListOf<String>()
+                while (cursor.next().value) details += requireNotNull(cursor.getString(3))
+                QueryResult.Value(details)
+              },
+              lastParameters,
+              lastBinders,
+          )
+          .value
+    }
   }
 }
