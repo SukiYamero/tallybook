@@ -13,8 +13,8 @@ import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.text.normalizeOptionalText
 import com.kurobello.tallybook.core.ui.component.DismissalDecision
@@ -297,17 +297,21 @@ internal class ManageMovimientoViewModel(
               is DataOutcome.Failure -> MovimientoFeedbackKind.RestoreFailed
               is DataOutcome.Success ->
                   when (outcome.data) {
-                    MovimientoRestoreResult.Restored,
-                    MovimientoRestoreResult.AlreadyPresent -> MovimientoFeedbackKind.Restored
-                    MovimientoRestoreResult.Conflict -> MovimientoFeedbackKind.RestoreConflict
+                    RestoreResult.Restored,
+                    RestoreResult.AlreadyPresent -> MovimientoFeedbackKind.Restored
+                    RestoreResult.Conflict -> MovimientoFeedbackKind.RestoreConflict
+                    RestoreResult.MissingCuenta -> MovimientoFeedbackKind.RestoreFailed
                   }
             }
+        // Only a storage failure may succeed on retry; without its cuenta the snapshot is released
+        // so the money never lands in another one.
+        val retryable = outcome is DataOutcome.Failure
         val completed =
             claimed.copy(
                 revision = claimed.revision + 1,
                 kind = kind,
                 isRestoring = false,
-                deletedMovimiento = deleted.takeIf { kind == MovimientoFeedbackKind.RestoreFailed },
+                deletedMovimiento = deleted.takeIf { retryable },
             )
         uiState.update { latest ->
           if (latest.feedback == claimed)

@@ -88,21 +88,41 @@ together with movimientos in one snapshot, when History and Search consume them.
 
 ## TDD
 
-- [ ] RED/GREEN `CuentaRepositoryTest`: create/duplicate (accent/case, same name in another currency
+- [x] RED/GREEN `CuentaRepositoryTest`: create/duplicate (accent/case, same name in another currency
       allowed, tombstoned name reusable), update currency while referenced → `CurrencyLocked` and
       unreferenced → saved, archive last active → `LastActive`, delete in use → `InUse`, delete unused
       → tombstone, signed `saldoInicial` stored as received, stamps advance.
-- [ ] RED/GREEN `MovimientoRepositoryTest`: every incompatible medio/account/tipo is rejected;
+- [x] RED/GREEN `MovimientoRepositoryTest`: every incompatible medio/account/tipo is rejected;
       archived account on insert rejected and kept on untouched update; cross-currency account change
       rejected; restore into an archived account succeeds; restore with deleted account →
       `MissingCuenta`; restore after the account's currency changed → `Conflict`.
-- [ ] RED/GREEN `TransferenciaRepositoryTest`: validation errors, cross-currency amounts, `getAll`
+- [x] RED/GREEN `TransferenciaRepositoryTest`: validation errors, cross-currency amounts, `getAll`
       excludes tombstones, `defaultOrigin` fallbacks, delete → tombstone → restore revives with a new
       stamp, the same restore outcomes as movimientos.
-- [ ] Create `FakeCuentaRepository`/`FakeTransferenciaRepository` in `commonTest/.../core/data/` and
+- [x] Create `FakeCuentaRepository`/`FakeTransferenciaRepository` in `commonTest/.../core/data/` and
       update every existing `MovimientoRepository` fake for the new methods.
-- [ ] Bind both repositories in `RepositoryModule`; Koin graph test still resolves.
-- [ ] `./gradlew :shared:testAndroidHostTest`, `:shared:compileKotlinIosSimulatorArm64`, `detekt ktfmtCheck`.
+- [x] Bind both repositories in `RepositoryModule`; Koin graph test still resolves.
+- [x] `./gradlew :shared:testAndroidHostTest`, `:shared:compileKotlinIosSimulatorArm64`, `detekt ktfmtCheck`.
+
+## Implementation notes
+
+- `defaultOrigin` returns `DataOutcome<String?>`: after the newest transfer's origin and the primary
+  cash cuenta it falls back to the first active non-credit cuenta in the primary currency, then in
+  any currency (one ranked SQL read, `selectDefaultOrigin`); null only when no active non-credit
+  cuenta exists, e.g. a lone credit card.
+- Transfers accept archived cuentas on either side (README: "both live"), so an archived card can
+  still be paid; tombstoned or unknown cuentas are invalid input. Restore skips only the "not future"
+  check, which a captured date cannot newly fail.
+- Movimiento update keeps a stored (cuenta, medio) pair while untouched, as it keeps an archived
+  cuenta: a cuenta's type may change after the fact, and an edit of other fields must not be refused
+  for it. `medio.allows(tipo)` is always enforced.
+- `CuentaDelete.LastActive` wins over `InUse` (archiving would be refused too). `update` checks
+  `Duplicate` before `CurrencyLocked`.
+- `MissingCuenta` maps to `RestoreFailed` with the snapshot released: `MovimientoFeedback.hasAction`
+  now follows whether a snapshot is held, so no Retry is offered. The existing copy still ends with
+  "Try again"; a dedicated message is a copy decision for Stage 3.
+- `observeSummary(moneda, range)` is added next to the all-time overload; Home keeps the all-time
+  one until its display task switches to the month.
 
 ## Blocks
 

@@ -18,6 +18,7 @@ internal data class MovimientoFeedback(
     val isRestoring: Boolean = false,
     val deletedMovimiento: Movimiento? = null,
 ) {
+  /** Undo or retry, offered only while the snapshot is held. */
   val hasAction: Boolean
-    get() = kind == MovimientoFeedbackKind.Deleted || kind == MovimientoFeedbackKind.RestoreFailed
+    get() = deletedMovimiento != null
 }

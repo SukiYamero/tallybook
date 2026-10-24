@@ -8,10 +8,10 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlinx.coroutines.flow.Flow
 
@@ -24,6 +24,12 @@ interface MovimientoRepository {
   fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>>
 
   fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>>
+
+  /** Ingresos and gastos in [moneda] dated inside [range], e.g. Home's current month. */
+  fun observeSummary(
+      moneda: Moneda,
+      range: MovimientoDateRange,
+  ): Flow<DataOutcome<MovimientoSummary>>
 
   /**
    * Cross-year intervals require unsigned four-digit years because SQLite compares fecha as text.
@@ -51,7 +57,7 @@ interface MovimientoRepository {
 
   suspend fun deleteAndCapture(id: String): DataOutcome<Movimiento?>
 
-  suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<MovimientoRestoreResult>
+  suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<RestoreResult>
 
   suspend fun delete(id: String): DataOutcome<Unit>
 

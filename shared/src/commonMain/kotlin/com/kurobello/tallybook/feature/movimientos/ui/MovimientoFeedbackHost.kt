@@ -136,9 +136,10 @@ private fun MovimientoFeedback.toSnackbarMessage(): TallybookSnackbarMessage {
               }
           )
   val actionLabel =
-      when (kind) {
-        MovimientoFeedbackKind.Deleted -> stringResource(Res.string.movimiento_undo)
-        MovimientoFeedbackKind.RestoreFailed -> stringResource(Res.string.retry)
+      when {
+        !hasAction -> null
+        kind == MovimientoFeedbackKind.Deleted -> stringResource(Res.string.movimiento_undo)
+        kind == MovimientoFeedbackKind.RestoreFailed -> stringResource(Res.string.retry)
         else -> null
       }
   return TallybookSnackbarMessage(

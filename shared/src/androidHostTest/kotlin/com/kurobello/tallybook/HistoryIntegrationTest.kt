@@ -31,6 +31,8 @@ import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.cashCuenta
+import com.kurobello.tallybook.core.data.insertCuentaRow
 import com.kurobello.tallybook.core.data.insertLegacy
 import com.kurobello.tallybook.core.data.seedDefaultCuenta
 import com.kurobello.tallybook.core.database.TallybookDatabase
@@ -39,6 +41,7 @@ import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
@@ -163,6 +166,7 @@ class HistoryIntegrationTest {
       graph.submit("income", "20,00", TipoMovimiento.INGRESO, TODAY)
       val selected = graph.history.uiState.value.selection
       val period = graph.period
+      graph.addCashCuenta(Moneda.USD)
       repeat(6) { index ->
         assertEquals(
             DataOutcome.Success(Unit),
@@ -436,6 +440,10 @@ class HistoryIntegrationTest {
       }
       home = model()
       history = model()
+    }
+
+    fun addCashCuenta(moneda: Moneda) {
+      database.insertCuentaRow(cashCuenta(moneda), ChangeStamp.SEED)
     }
 
     suspend fun start() {

@@ -54,10 +54,10 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
@@ -585,6 +585,19 @@ private class ShellMovimientos : MovimientoRepository {
     )
   }
 
+  override fun observeSummary(
+      moneda: Moneda,
+      range: MovimientoDateRange,
+  ): Flow<DataOutcome<MovimientoSummary>> = rows.map {
+    val inRange = it.filter { row -> row.fecha in range.start..range.end }
+    DataOutcome.Success(
+        MovimientoSummary(
+            Money(0, moneda),
+            Money(inRange.sumOf { row -> row.monto.minorUnits }, moneda),
+        )
+    )
+  }
+
   override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
       error("Category history is not expected in this fixture")
 
@@ -629,18 +642,15 @@ private class ShellMovimientos : MovimientoRepository {
     return DataOutcome.Success(captured)
   }
 
-  override suspend fun restoreDeleted(
-      movimiento: Movimiento
-  ): DataOutcome<MovimientoRestoreResult> {
+  override suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<RestoreResult> {
     val current = rows.value.firstOrNull { it.id == movimiento.id }
     if (current != null)
         return DataOutcome.Success(
-            if (current == movimiento) MovimientoRestoreResult.AlreadyPresent
-            else MovimientoRestoreResult.Conflict
+            if (current == movimiento) RestoreResult.AlreadyPresent else RestoreResult.Conflict
         )
     val values = rows.value + movimiento
     rows.value = values
-    return DataOutcome.Success(MovimientoRestoreResult.Restored)
+    return DataOutcome.Success(RestoreResult.Restored)
   }
 
   override suspend fun delete(id: String): DataOutcome<Unit> {

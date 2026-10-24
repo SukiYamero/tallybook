@@ -29,3 +29,38 @@ countLiveCuentas:
 SELECT COUNT(*)
 FROM cuenta
 WHERE deleted_at IS NULL;
+
+selectAllCuentas:
+SELECT *
+FROM cuenta
+WHERE deleted_at IS NULL
+ORDER BY created_at, id;
+
+updateCuenta:
+UPDATE cuenta
+SET nombre = :nombre, tipo = :tipo, moneda = :moneda, saldo_inicial_minor = :saldo_inicial_minor, dia_corte = :dia_corte, updated_at = :updated_at
+WHERE id = :id AND deleted_at IS NULL;
+
+updateCuentaArchivada:
+UPDATE cuenta
+SET archivada = :archivada, updated_at = :updated_at
+WHERE id = :id AND deleted_at IS NULL;
+
+tombstoneCuenta:
+UPDATE cuenta
+SET updated_at = :stamp, deleted_at = :stamp
+WHERE id = :id AND deleted_at IS NULL;
+
+countActiveCuentasExcept:
+SELECT COUNT(*)
+FROM cuenta
+WHERE deleted_at IS NULL AND archivada = 0 AND id <> ?;
+
+-- Summed per column rather than OR-ed so each count searches its own partial index; a transfer never
+-- has the same cuenta on both sides, so no row is counted twice.
+countCuentaReferences:
+SELECT
+    (SELECT COUNT(*) FROM movimiento WHERE cuenta_id = :id AND deleted_at IS NULL)
+    + (SELECT COUNT(*) FROM transferencia WHERE cuenta_origen_id = :id AND deleted_at IS NULL)
+    + (SELECT COUNT(*) FROM transferencia WHERE cuenta_destino_id = :id AND deleted_at IS NULL)
+    AS reference_count;

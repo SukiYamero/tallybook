@@ -16,10 +16,10 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -389,7 +389,7 @@ class ReactiveRepositoryTest {
             search.last(),
         )
         assertEquals(
-            DataOutcome.Success(MovimientoRestoreResult.Restored),
+            DataOutcome.Success(RestoreResult.Restored),
             repository.restoreDeleted(changed),
         )
         testScheduler.runCurrent()

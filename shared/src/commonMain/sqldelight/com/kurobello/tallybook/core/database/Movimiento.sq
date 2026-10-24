@@ -215,6 +215,16 @@ JOIN cuenta ON cuenta.id = movimiento.cuenta_id
 WHERE cuenta.moneda = ? AND movimiento.deleted_at IS NULL
 GROUP BY movimiento.tipo;
 
+-- The same range filter as sumMovimientosPorCategoria, so it also searches movimiento_recent.
+sumMovimientosByTipoInRange:
+SELECT movimiento.tipo, SUM(movimiento.monto_minor) AS total_minor
+FROM movimiento
+JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+WHERE cuenta.moneda = ?
+  AND movimiento.fecha BETWEEN ? AND ?
+  AND movimiento.deleted_at IS NULL
+GROUP BY movimiento.tipo;
+
 -- Grouped by tipo as well as categoria_id so gastos and ingresos in the same categoria never net
 -- each other out. Filtered by moneda because minor units of different currencies are different units
 -- and adding them is meaningless.

@@ -4,6 +4,8 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.AppStartupViewModel
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.CuentaRepository
+import com.kurobello.tallybook.core.data.CuentaSeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
@@ -11,6 +13,7 @@ import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
+import com.kurobello.tallybook.core.data.TransferenciaRepository
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.core.database.DatabaseDriverFactory
@@ -39,6 +42,9 @@ class RepositoryModulesTest {
       }
       single<DeviceLocaleProvider> { RepositoryTestDeviceLocaleProvider() }
       single { CategorySeedProvider { "Category" } }
+      // AppStartupViewModel bootstraps in the background; a resource-backed seed name would throw
+      // there and leak into whichever coroutine test runs next.
+      single { CuentaSeedProvider(get()) { "Cash" } }
     }
     val application = koinApplication {
       allowOverride(true)
@@ -49,6 +55,8 @@ class RepositoryModulesTest {
       assertNotNull(application.koin.get<MovimientoRepository>())
       assertNotNull(application.koin.get<CategoriaRepository>())
       assertNotNull(application.koin.get<EtiquetaRepository>())
+      assertNotNull(application.koin.get<CuentaRepository>())
+      assertNotNull(application.koin.get<TransferenciaRepository>())
       assertNotNull(application.koin.get<CategorySeedProvider>())
       assertNotNull(application.koin.get<LocalDataBootstrapper>())
       assertNotNull(application.koin.get<AppStartupViewModel>())

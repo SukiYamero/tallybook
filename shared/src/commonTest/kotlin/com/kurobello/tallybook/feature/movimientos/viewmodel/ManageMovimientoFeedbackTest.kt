@@ -2,7 +2,7 @@ package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Movimiento
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarDuration
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarMessage
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarTimer
@@ -133,7 +133,7 @@ class ManageMovimientoFeedbackTest {
     f.viewModel.onFeedbackAction(first.token, first.revision)
     assertEquals(failed, f.viewModel.uiState.value.feedback)
 
-    f.repository.restoreResult = DataOutcome.Success(MovimientoRestoreResult.Restored)
+    f.repository.restoreResult = DataOutcome.Success(RestoreResult.Restored)
     f.viewModel.onFeedbackAction(failed.token, failed.revision)
     runCurrent()
     val restored = assertNotNull(f.viewModel.uiState.value.feedback)
@@ -176,6 +176,23 @@ class ManageMovimientoFeedbackTest {
     val restored = assertNotNull(f.viewModel.uiState.value.feedback)
     f.viewModel.onFeedbackDismiss(restored.token, restored.revision)
     assertEquals(MovimientoFeedbackKind.Deleted, f.viewModel.uiState.value.feedback?.kind)
+  }
+
+  @Test
+  fun missingCuentaFailureIsShortAndHandsOverToTheWaitingFeedback() = runTest {
+    val f = ManageMovimientoFixture(backgroundScope)
+    deleteAndHide(f, managementMovimiento())
+    val first = assertNotNull(f.viewModel.uiState.value.feedback)
+    deleteAndHide(f, managementMovimiento().copy(id = "second"), missing = true)
+    f.repository.restoreResult = DataOutcome.Success(RestoreResult.MissingCuenta)
+    f.viewModel.onFeedbackAction(first.token, first.revision)
+    runCurrent()
+    val failed = assertNotNull(f.viewModel.uiState.value.feedback)
+    assertEquals(MovimientoFeedbackKind.RestoreFailed, failed.kind)
+    assertFalse(failed.hasAction)
+
+    f.viewModel.onFeedbackDismiss(failed.token, failed.revision)
+    assertEquals(MovimientoFeedbackKind.Missing, f.viewModel.uiState.value.feedback?.kind)
   }
 }
 

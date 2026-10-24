@@ -317,6 +317,8 @@ internal class ProfileFakeMovimientos : MovimientoRepository {
 
   override fun observeSummary(moneda: Moneda) = unused()
 
+  override fun observeSummary(moneda: Moneda, range: MovimientoDateRange) = unused()
+
   override fun observeRange(moneda: Moneda, range: MovimientoDateRange) = unused()
 
   override fun observeYears(moneda: Moneda) = unused()

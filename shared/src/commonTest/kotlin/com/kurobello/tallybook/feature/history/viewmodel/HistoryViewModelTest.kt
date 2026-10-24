@@ -23,10 +23,10 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
@@ -576,6 +576,12 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) : Movimient
 
   override fun observeSummary(moneda: Moneda) = summary(moneda).observe()
 
+  override fun observeSummary(
+      moneda: Moneda,
+      range: MovimientoDateRange,
+  ): Flow<DataOutcome<MovimientoSummary>> =
+      error("Range summaries are not expected in this fixture")
+
   override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
       error("Scoped recent reads are not expected in this fixture")
 
@@ -644,19 +650,16 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) : Movimient
     return DataOutcome.Success(captured)
   }
 
-  override suspend fun restoreDeleted(
-      movimiento: Movimiento
-  ): DataOutcome<MovimientoRestoreResult> {
+  override suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<RestoreResult> {
     val current = rows.firstOrNull { it.id == movimiento.id }
     if (current != null)
         return DataOutcome.Success(
-            if (current == movimiento) MovimientoRestoreResult.AlreadyPresent
-            else MovimientoRestoreResult.Conflict
+            if (current == movimiento) RestoreResult.AlreadyPresent else RestoreResult.Conflict
         )
     val values = rows + movimiento
     rows = values
     publishRows()
-    return DataOutcome.Success(MovimientoRestoreResult.Restored)
+    return DataOutcome.Success(RestoreResult.Restored)
   }
 
   override suspend fun delete(id: String) = DataOutcome.Success(Unit)

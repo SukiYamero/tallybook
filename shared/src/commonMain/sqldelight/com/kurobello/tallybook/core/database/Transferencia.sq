@@ -47,3 +47,67 @@ FROM transferencia
 JOIN cuenta AS origen ON origen.id = transferencia.cuenta_origen_id
 JOIN cuenta AS destino ON destino.id = transferencia.cuenta_destino_id
 WHERE transferencia.id = ? AND transferencia.deleted_at IS NULL;
+
+selectAllTransferencias:
+SELECT
+    transferencia.id,
+    transferencia.cuenta_origen_id,
+    transferencia.cuenta_destino_id,
+    transferencia.monto_origen_minor,
+    origen.moneda AS moneda_origen,
+    transferencia.monto_destino_minor,
+    destino.moneda AS moneda_destino,
+    transferencia.fecha,
+    transferencia.descripcion,
+    transferencia.created_at
+FROM transferencia
+JOIN cuenta AS origen ON origen.id = transferencia.cuenta_origen_id
+JOIN cuenta AS destino ON destino.id = transferencia.cuenta_destino_id
+WHERE transferencia.deleted_at IS NULL
+ORDER BY transferencia.fecha DESC, transferencia.created_at DESC, transferencia.id DESC;
+
+-- Undo needs the row whatever its state, which selectTransferenciaById hides once it is a tombstone.
+selectStoredTransferenciaById:
+SELECT *
+FROM transferencia
+WHERE id = ?;
+
+updateTransferencia:
+UPDATE transferencia
+SET cuenta_origen_id = :cuenta_origen_id, cuenta_destino_id = :cuenta_destino_id, monto_origen_minor = :monto_origen_minor, monto_destino_minor = :monto_destino_minor, fecha = :fecha, descripcion = :descripcion, updated_at = :updated_at
+WHERE id = :id AND deleted_at IS NULL;
+
+tombstoneTransferencia:
+UPDATE transferencia
+SET updated_at = :stamp, deleted_at = :stamp
+WHERE id = :id AND deleted_at IS NULL;
+
+-- Like reviveMovimiento: only Undo revives, after checking the tombstone holds the snapshot's content.
+reviveTransferencia:
+UPDATE transferencia
+SET updated_at = :stamp, deleted_at = NULL
+WHERE id = :id AND deleted_at IS NOT NULL;
+
+-- defaultOrigin's fallback order as ranked candidates: 0 the newest live transfer's origin, 1 the
+-- primary cash account, 2 the primary currency, 3 any other cuenta; a credit card is never offered.
+selectDefaultOrigin:
+SELECT cuenta.id
+FROM (
+    SELECT
+        CASE WHEN cuenta.id = :cash_id THEN 1 WHEN cuenta.moneda = :primary THEN 2 ELSE 3 END AS rank,
+        cuenta.id AS cuenta_id
+    FROM cuenta
+    UNION ALL
+    SELECT 0, latest.cuenta_origen_id
+    FROM (
+        SELECT transferencia.cuenta_origen_id
+        FROM transferencia
+        WHERE transferencia.deleted_at IS NULL
+        ORDER BY transferencia.created_at DESC, transferencia.id DESC
+        LIMIT 1
+    ) AS latest
+) AS candidate
+JOIN cuenta ON cuenta.id = candidate.cuenta_id
+WHERE cuenta.deleted_at IS NULL AND cuenta.archivada = 0 AND cuenta.tipo <> 'CREDITO'
+ORDER BY candidate.rank, cuenta.created_at, cuenta.id
+LIMIT 1;

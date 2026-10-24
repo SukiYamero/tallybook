@@ -20,12 +20,13 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.map
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -145,7 +146,7 @@ class MovimientoRepositoryTest {
       driver.tombstone("etiqueta", "tag_a")
 
       assertEquals(
-          DataOutcome.Success(MovimientoRestoreResult.Restored),
+          DataOutcome.Success(RestoreResult.Restored),
           repository.restoreDeleted(row),
       )
 
@@ -158,11 +159,11 @@ class MovimientoRepositoryTest {
       assertEquals(DataOutcome.Success(listOf(revived)), repository.getAll())
       assertEquals(listOf("gone:tag_b:1", "gone:tag_c:0"), linkRows(driver))
       assertEquals(
-          DataOutcome.Success(MovimientoRestoreResult.AlreadyPresent),
+          DataOutcome.Success(RestoreResult.AlreadyPresent),
           repository.restoreDeleted(row),
       )
       assertEquals(
-          DataOutcome.Success(MovimientoRestoreResult.Conflict),
+          DataOutcome.Success(RestoreResult.Conflict),
           repository.restoreDeleted(row.copy(titulo = "otro")),
       )
       assertEquals(3, changeClock.issuedStamps.size)
@@ -197,7 +198,7 @@ class MovimientoRepositoryTest {
                   row.copy(createdAt = LATER),
               )) {
             assertEquals(
-                DataOutcome.Success(MovimientoRestoreResult.Conflict),
+                DataOutcome.Success(RestoreResult.Conflict),
                 repository.restoreDeleted(different),
             )
           }
@@ -206,7 +207,7 @@ class MovimientoRepositoryTest {
           assertEquals(DataOutcome.Success(null), repository.getById(row.id))
           assertEquals(2, changeClock.issuedStamps.size)
           assertEquals(
-              DataOutcome.Success(MovimientoRestoreResult.Restored),
+              DataOutcome.Success(RestoreResult.Restored),
               repository.restoreDeleted(row.copy(etiquetaIds = listOf("tag_a"))),
           )
           assertEquals(
@@ -239,7 +240,7 @@ class MovimientoRepositoryTest {
       assertEquals(DataOutcome.Success(emptyList()), repository.getAll())
       assertEquals(emptyList(), linkRows(driver))
       assertEquals(
-          DataOutcome.Success(MovimientoRestoreResult.Restored),
+          DataOutcome.Success(RestoreResult.Restored),
           repository.restoreDeleted(row),
       )
       assertEquals(DataOutcome.Success(listOf(row)), repository.getAll())
@@ -636,17 +637,17 @@ class MovimientoRepositoryTest {
       repository.insert(second)
       assertEquals(DataOutcome.Success(first), repository.deleteAndCapture(first.id))
       assertEquals(
-          DataOutcome.Success(MovimientoRestoreResult.Restored),
+          DataOutcome.Success(RestoreResult.Restored),
           repository.restoreDeleted(first),
       )
       assertEquals(DataOutcome.Success(listOf(second, first)), repository.getAll())
       assertEquals(
-          DataOutcome.Success(MovimientoRestoreResult.AlreadyPresent),
+          DataOutcome.Success(RestoreResult.AlreadyPresent),
           repository.restoreDeleted(first),
       )
       val conflict = first.copy(monto = Money(100, Moneda.CLP))
       assertEquals(
-          DataOutcome.Success(MovimientoRestoreResult.Conflict),
+          DataOutcome.Success(RestoreResult.Conflict),
           repository.restoreDeleted(conflict),
       )
       assertEquals(DataOutcome.Success(listOf(second, first)), repository.getAll())
@@ -669,7 +670,7 @@ class MovimientoRepositoryTest {
       driver.tombstone("etiqueta", "tag_a")
 
       assertEquals(
-          DataOutcome.Success(MovimientoRestoreResult.Restored),
+          DataOutcome.Success(RestoreResult.Restored),
           repository.restoreDeleted(row),
       )
 
@@ -677,7 +678,7 @@ class MovimientoRepositoryTest {
       assertEquals(DataOutcome.Success(restored), repository.getById(row.id))
       assertEquals(listOf("gone:tag_b:1", "gone:tag_c:0"), linkRows(driver))
       assertEquals(
-          DataOutcome.Success(MovimientoRestoreResult.AlreadyPresent),
+          DataOutcome.Success(RestoreResult.AlreadyPresent),
           repository.restoreDeleted(row),
       )
     }
@@ -700,7 +701,7 @@ class MovimientoRepositoryTest {
           driver.execute(null, "DELETE FROM categoria WHERE id = 'custom'", 0)
 
           assertEquals(
-              DataOutcome.Success(MovimientoRestoreResult.Restored),
+              DataOutcome.Success(RestoreResult.Restored),
               repository.restoreDeleted(row),
           )
 
@@ -794,7 +795,7 @@ class MovimientoRepositoryTest {
       assertEquals(DataOutcome.Success(null), repository.getById(row.id))
       driver.execute(null, "DROP TRIGGER block_revive", 0)
       assertEquals(
-          DataOutcome.Success(MovimientoRestoreResult.Restored),
+          DataOutcome.Success(RestoreResult.Restored),
           repository.restoreDeleted(row),
       )
     }
@@ -1129,12 +1130,12 @@ class MovimientoRepositoryTest {
       assertEquals(DataOutcome.Success(row), repository.deleteAndCapture(row.id))
       assertEquals(listOf("other:tag_a:0"), linkRows(driver))
       assertEquals(
-          DataOutcome.Success(MovimientoRestoreResult.Restored),
+          DataOutcome.Success(RestoreResult.Restored),
           repository.restoreDeleted(row),
       )
       assertEquals(DataOutcome.Success(row), repository.getById(row.id))
       assertEquals(
-          DataOutcome.Success(MovimientoRestoreResult.AlreadyPresent),
+          DataOutcome.Success(RestoreResult.AlreadyPresent),
           repository.restoreDeleted(row),
       )
       for (different in
@@ -1144,12 +1145,12 @@ class MovimientoRepositoryTest {
               listOf("tag_a", "tag_b", "tag_c"),
           )) {
         assertEquals(
-            DataOutcome.Success(MovimientoRestoreResult.Conflict),
+            DataOutcome.Success(RestoreResult.Conflict),
             repository.restoreDeleted(row.copy(etiquetaIds = different)),
         )
       }
       assertEquals(
-          DataOutcome.Success(MovimientoRestoreResult.Conflict),
+          DataOutcome.Success(RestoreResult.Conflict),
           repository.restoreDeleted(row.copy(categoriaId = "cat_cine")),
       )
       assertEquals(DataOutcome.Success(row), repository.getById(row.id))
@@ -1309,6 +1310,227 @@ class MovimientoRepositoryTest {
         }
       }
 
+  @Test
+  fun `insert and update accept exactly the medio cuenta and tipo combinations of the table`() =
+      runTest {
+        withSelectionFixture { repository, _, _ ->
+          val cuentas =
+              mapOf(
+                  TipoCuenta.EFECTIVO to COP_CASH,
+                  TipoCuenta.BANCO to NEQUI,
+                  TipoCuenta.CREDITO to NU,
+              )
+          repository.insert(movimiento("edited"))
+          var next = 0
+          for (medio in MedioPago.entries) {
+            for ((tipoCuenta, cuentaId) in cuentas) {
+              for (tipo in TipoMovimiento.entries) {
+                val valid = tipoCuenta in medio.compatibleTipos && medio.allows(tipo)
+                val row =
+                    movimiento("row-${next++}", tipo = tipo)
+                        .copy(cuentaId = cuentaId, medio = medio)
+                val inserted = repository.insert(row)
+                val updated = repository.update("edited", row.changes())
+                if (valid) {
+                  assertEquals(DataOutcome.Success(Unit), inserted, "$medio $tipoCuenta $tipo")
+                  assertEquals(
+                      DataOutcome.Success(MovimientoUpdateResult.Updated),
+                      updated,
+                      "$medio $tipoCuenta $tipo",
+                  )
+                } else {
+                  assertInvalid(inserted)
+                  assertInvalid(updated)
+                }
+              }
+            }
+          }
+          assertEquals(
+              DataOutcome.Success(8),
+              repository.getAll().map { rows -> rows.size },
+          )
+        }
+      }
+
+  @Test
+  fun `insert rejects a missing tombstoned or archived cuenta and a foreign currency`() = runTest {
+    withSelectionFixture { repository, _, driver ->
+      val row = movimiento("row").copy(cuentaId = NEQUI, medio = MedioPago.DEBITO)
+      driver.execute(null, "UPDATE cuenta SET archivada = 1 WHERE id = '$NU'", 0)
+      driver.tombstone("cuenta", COP_CASH)
+
+      for (invalid in
+          listOf(
+              row.copy(cuentaId = "absent"),
+              row.copy(cuentaId = COP_CASH, medio = MedioPago.EFECTIVO),
+              row.copy(cuentaId = NU, medio = MedioPago.CREDITO),
+              row.copy(monto = Money(500, Moneda.USD)),
+              row.copy(cuentaId = USD_CASH, medio = MedioPago.EFECTIVO),
+          )) {
+        assertInvalid(repository.insert(invalid))
+      }
+      assertEquals(DataOutcome.Success(emptyList()), repository.getAll())
+      assertEquals(DataOutcome.Success(Unit), repository.insert(row))
+    }
+  }
+
+  @Test
+  fun `update keeps an archived cuenta only while unchanged and never changes the currency`() =
+      runTest {
+        withSelectionFixture { repository, database, driver ->
+          val row = movimiento("row").copy(cuentaId = NEQUI, medio = MedioPago.DEBITO)
+          repository.insert(row)
+          driver.execute(null, "UPDATE cuenta SET archivada = 1 WHERE id = '$NEQUI'", 0)
+
+          val kept = row.changes().copy(titulo = "kept", medio = MedioPago.TRANSFERENCIA)
+          assertEquals(
+              DataOutcome.Success(MovimientoUpdateResult.Updated),
+              repository.update(row.id, kept),
+          )
+          driver.execute(null, "UPDATE cuenta SET archivada = 1 WHERE id = '$NU'", 0)
+          assertInvalid(
+              repository.update(row.id, kept.copy(cuentaId = NU, medio = MedioPago.CREDITO))
+          )
+          for (otherCurrency in
+              listOf(
+                  kept.copy(cuentaId = USD_CASH, medio = MedioPago.EFECTIVO),
+                  kept.copy(
+                      cuentaId = USD_CASH,
+                      medio = MedioPago.EFECTIVO,
+                      monto = Money(500, Moneda.USD),
+                  ),
+              )) {
+            assertInvalid(repository.update(row.id, otherCurrency))
+          }
+          val expected = row.copy(titulo = "kept", medio = MedioPago.TRANSFERENCIA)
+          assertEquals(DataOutcome.Success(expected), repository.getById(row.id))
+
+          val moved = kept.copy(cuentaId = COP_CASH, medio = MedioPago.EFECTIVO)
+          assertEquals(
+              DataOutcome.Success(MovimientoUpdateResult.Updated),
+              repository.update(row.id, moved),
+          )
+          assertInvalid(
+              repository.update(row.id, moved.copy(cuentaId = NEQUI, medio = MedioPago.DEBITO))
+          )
+          assertEquals(
+              COP_CASH,
+              database.movimientoQueries.selectMovimientoById(row.id).executeAsOne().cuenta_id,
+          )
+        }
+      }
+
+  @Test
+  fun `update keeps a stored medio its cuenta type no longer allows only while unchanged`() =
+      runTest {
+        withSelectionFixture { repository, _, driver ->
+          val row = movimiento("row").copy(cuentaId = NEQUI, medio = MedioPago.DEBITO)
+          repository.insert(row)
+          driver.execute(null, "UPDATE cuenta SET tipo = 'EFECTIVO' WHERE id = '$NEQUI'", 0)
+
+          assertEquals(
+              DataOutcome.Success(MovimientoUpdateResult.Updated),
+              repository.update(row.id, row.changes().copy(titulo = "kept")),
+          )
+          assertInvalid(
+              repository.update(row.id, row.changes().copy(medio = MedioPago.TRANSFERENCIA))
+          )
+          assertInvalid(
+              repository.update(row.id, row.changes().copy(tipo = TipoMovimiento.INGRESO))
+          )
+        }
+      }
+
+  @Test
+  fun `restore into an archived cuenta revives the row and the cuenta stays archived`() = runTest {
+    withSelectionFixture { repository, database, _ ->
+      val row = movimiento("row").copy(cuentaId = NEQUI, medio = MedioPago.DEBITO)
+      repository.insert(row)
+      assertEquals(DataOutcome.Success(row), repository.deleteAndCapture(row.id))
+      database.cuentaQueries.updateCuentaArchivada(1L, ChangeStamp.SEED.value, NEQUI)
+
+      assertEquals(DataOutcome.Success(RestoreResult.Restored), repository.restoreDeleted(row))
+
+      assertEquals(DataOutcome.Success(row), repository.getById(row.id))
+      assertTrue(database.cuentaQueries.selectCuentaById(NEQUI).executeAsOne().toDomain().archivada)
+    }
+  }
+
+  @Test
+  fun `restore without its cuenta is MissingCuenta and keeps the tombstone`() = runTest {
+    withSelectionFixture { repository, _, driver ->
+      val row = movimiento("row").copy(cuentaId = NEQUI, medio = MedioPago.DEBITO)
+      repository.insert(row)
+      repository.deleteAndCapture(row.id)
+      val tombstone = driver.storedStamps("movimiento", row.id)
+      driver.tombstone("cuenta", NEQUI)
+
+      assertEquals(DataOutcome.Success(RestoreResult.MissingCuenta), repository.restoreDeleted(row))
+      assertEquals(
+          DataOutcome.Success(RestoreResult.MissingCuenta),
+          repository.restoreDeleted(row.copy(id = "never-stored", cuentaId = "absent")),
+      )
+
+      assertEquals(tombstone, driver.storedStamps("movimiento", row.id))
+      assertEquals(null, driver.storedStamps("movimiento", "never-stored"))
+    }
+  }
+
+  @Test
+  fun `restore after the cuenta changed currency is a conflict that keeps the tombstone`() =
+      runTest {
+        withSelectionFixture { repository, _, driver ->
+          val row = movimiento("row").copy(cuentaId = NEQUI, medio = MedioPago.DEBITO)
+          repository.insert(row)
+          repository.deleteAndCapture(row.id)
+          val tombstone = driver.storedStamps("movimiento", row.id)
+          driver.execute(null, "UPDATE cuenta SET moneda = 'USD' WHERE id = '$NEQUI'", 0)
+
+          assertEquals(DataOutcome.Success(RestoreResult.Conflict), repository.restoreDeleted(row))
+          assertEquals(tombstone, driver.storedStamps("movimiento", row.id))
+        }
+      }
+
+  @Test
+  fun `range summary adds live ingresos and gastos of one currency inside the range`() = runTest {
+    withSelectionFixture { repository, _, driver ->
+      val october = MovimientoDateRange(LocalDate(2026, 10, 1), LocalDate(2026, 10, 31))
+      listOf(
+              movimiento("first", monto = Money(100, Moneda.COP)).copy(fecha = october.start),
+              movimiento("last", monto = Money(200, Moneda.COP)).copy(fecha = october.end),
+              movimiento("income", tipo = TipoMovimiento.INGRESO, monto = Money(1_000, Moneda.COP))
+                  .copy(fecha = LocalDate(2026, 10, 15)),
+              movimiento("before", monto = Money(400, Moneda.COP))
+                  .copy(fecha = LocalDate(2026, 9, 30)),
+              movimiento("after", monto = Money(800, Moneda.COP))
+                  .copy(fecha = LocalDate(2026, 11, 1)),
+              movimiento("dollars", monto = Money(1_600, Moneda.USD))
+                  .copy(fecha = LocalDate(2026, 10, 15)),
+              movimiento("deleted", monto = Money(3_200, Moneda.COP))
+                  .copy(fecha = LocalDate(2026, 10, 15)),
+          )
+          .forEach { repository.insert(it) }
+      driver.tombstone("movimiento", "deleted")
+
+      assertEquals(
+          DataOutcome.Success(MovimientoSummary(Money(1_000, Moneda.COP), Money(300, Moneda.COP))),
+          repository.observeSummary(Moneda.COP, october).first(),
+      )
+      assertEquals(
+          DataOutcome.Success(MovimientoSummary(Money(0, Moneda.MXN), Money(0, Moneda.MXN))),
+          repository.observeSummary(Moneda.MXN, october).first(),
+      )
+      assertInvalid(
+          repository
+              .observeSummary(
+                  Moneda.COP,
+                  MovimientoDateRange(LocalDate(2026, 1, 1), LocalDate(10_000, 1, 1)),
+              )
+              .first()
+      )
+    }
+  }
+
   /** Cash in COP and USD, the Nequi bank and the NU card in COP, created in that order. */
   private suspend fun TestScope.withSelectionFixture(
       block: suspend (MovimientoRepository, TallybookDatabase, SqlDriver) -> Unit
@@ -1441,7 +1663,7 @@ class MovimientoRepositoryTest {
       insertUnreadable(database, "occupied")
       val raw = database.movimientoQueries.selectMovimientoById("occupied").executeAsOne()
       assertEquals(
-          DataOutcome.Success(MovimientoRestoreResult.Conflict),
+          DataOutcome.Success(RestoreResult.Conflict),
           repository.restoreDeleted(movimiento("occupied")),
       )
       assertEquals(raw, database.movimientoQueries.selectMovimientoById("occupied").executeAsOne())
@@ -1463,7 +1685,7 @@ class MovimientoRepositoryTest {
       database.movimientoQueries.insertMovimientoEtiqueta("gone", "stale", 1)
 
       assertEquals(
-          DataOutcome.Success(MovimientoRestoreResult.Restored),
+          DataOutcome.Success(RestoreResult.Restored),
           repository.restoreDeleted(row),
       )
 

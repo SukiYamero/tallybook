@@ -3,12 +3,16 @@ package com.kurobello.tallybook.di
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.CuentaRepository
+import com.kurobello.tallybook.core.data.CuentaRepositoryImpl
 import com.kurobello.tallybook.core.data.CuentaSeedProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
+import com.kurobello.tallybook.core.data.TransferenciaRepository
+import com.kurobello.tallybook.core.data.TransferenciaRepositoryImpl
 import com.kurobello.tallybook.core.data.maxStoredChangeStamp
 import com.kurobello.tallybook.core.data.seedDefaultCuenta
 import com.kurobello.tallybook.core.database.TallybookDatabase
@@ -38,6 +42,24 @@ val repositoryModule = module {
         dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
         idGenerator = get(),
         clock = get(),
+        changeClock = get(),
+    )
+  }
+  single<CuentaRepository> {
+    CuentaRepositoryImpl(
+        database = get(),
+        dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
+        idGenerator = get(),
+        clock = get(),
+        changeClock = get(),
+    )
+  }
+  single<TransferenciaRepository> {
+    TransferenciaRepositoryImpl(
+        database = get(),
+        dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
+        clock = get(),
+        timeZoneProvider = get(),
         changeClock = get(),
     )
   }

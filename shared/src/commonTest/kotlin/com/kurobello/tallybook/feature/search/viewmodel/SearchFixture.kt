@@ -24,10 +24,10 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.model.map
@@ -176,6 +176,11 @@ internal class SearchMovimientos : MovimientoRepository {
   override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> =
       error("Unexpected read")
 
+  override fun observeSummary(
+      moneda: Moneda,
+      range: MovimientoDateRange,
+  ): Flow<DataOutcome<MovimientoSummary>> = error("Unexpected read")
+
   override fun observeRange(
       moneda: Moneda,
       range: MovimientoDateRange,
@@ -228,19 +233,16 @@ internal class SearchMovimientos : MovimientoRepository {
     return DataOutcome.Success(captured)
   }
 
-  override suspend fun restoreDeleted(
-      movimiento: Movimiento
-  ): DataOutcome<MovimientoRestoreResult> {
+  override suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<RestoreResult> {
     val current = rows.firstOrNull { it.id == movimiento.id }
     if (current != null)
         return DataOutcome.Success(
-            if (current == movimiento) MovimientoRestoreResult.AlreadyPresent
-            else MovimientoRestoreResult.Conflict
+            if (current == movimiento) RestoreResult.AlreadyPresent else RestoreResult.Conflict
         )
     val values = rows + movimiento
     rows = values
     restore()
-    return DataOutcome.Success(MovimientoRestoreResult.Restored)
+    return DataOutcome.Success(RestoreResult.Restored)
   }
 
   override suspend fun delete(id: String) = DataOutcome.Success(Unit)

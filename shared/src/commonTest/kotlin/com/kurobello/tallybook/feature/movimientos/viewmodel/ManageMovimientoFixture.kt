@@ -20,10 +20,10 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -91,8 +91,7 @@ internal class ManagementRepository : MovimientoRepository {
   var updateResult: DataOutcome<MovimientoUpdateResult> =
       DataOutcome.Success(MovimientoUpdateResult.Updated)
   var deleteResult: DataOutcome<Movimiento?>? = null
-  var restoreResult: DataOutcome<MovimientoRestoreResult> =
-      DataOutcome.Success(MovimientoRestoreResult.Restored)
+  var restoreResult: DataOutcome<RestoreResult> = DataOutcome.Success(RestoreResult.Restored)
   var readGate: CompletableDeferred<Unit>? = null
   var updateGate: CompletableDeferred<Unit>? = null
   var restoreGate: CompletableDeferred<Unit>? = null
@@ -142,9 +141,7 @@ internal class ManagementRepository : MovimientoRepository {
     return result
   }
 
-  override suspend fun restoreDeleted(
-      movimiento: Movimiento
-  ): DataOutcome<MovimientoRestoreResult> {
+  override suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<RestoreResult> {
     restores++
     restored = movimiento
     restoreGate?.await()
@@ -157,6 +154,11 @@ internal class ManagementRepository : MovimientoRepository {
       emptyFlow()
 
   override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> = emptyFlow()
+
+  override fun observeSummary(
+      moneda: Moneda,
+      range: MovimientoDateRange,
+  ): Flow<DataOutcome<MovimientoSummary>> = emptyFlow()
 
   override fun observeRange(
       moneda: Moneda,

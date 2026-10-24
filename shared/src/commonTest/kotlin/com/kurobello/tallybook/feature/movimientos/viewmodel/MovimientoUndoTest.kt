@@ -1,7 +1,7 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.model.DataOutcome
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSession
 import com.kurobello.tallybook.core.ui.navigation.MovimientoManagementController
 import com.kurobello.tallybook.core.ui.navigation.PrimaryModalCoordinator
@@ -182,7 +182,7 @@ class MovimientoUndoTest {
     runCurrent()
     assertEquals(1, f.repository.restores)
     assertEquals(failed, f.viewModel.uiState.value.feedback)
-    f.repository.restoreResult = DataOutcome.Success(MovimientoRestoreResult.AlreadyPresent)
+    f.repository.restoreResult = DataOutcome.Success(RestoreResult.AlreadyPresent)
     f.viewModel.onFeedbackAction(failed.token, failed.revision)
     runCurrent()
     assertEquals(2, f.repository.restores)
@@ -199,13 +199,35 @@ class MovimientoUndoTest {
     runCurrent()
     f.viewModel.onSheetHidden(assertNotNull(f.viewModel.uiState.value.session).token)
     val feedback = assertNotNull(f.viewModel.uiState.value.feedback)
-    f.repository.restoreResult = DataOutcome.Success(MovimientoRestoreResult.Conflict)
+    f.repository.restoreResult = DataOutcome.Success(RestoreResult.Conflict)
     f.viewModel.onFeedbackAction(feedback.token, feedback.revision)
     runCurrent()
     val conflict = assertNotNull(f.viewModel.uiState.value.feedback)
     assertEquals(MovimientoFeedbackKind.RestoreConflict, conflict.kind)
     assertFalse(conflict.hasAction)
     f.viewModel.onFeedbackAction(conflict.token, conflict.revision)
+    runCurrent()
+    assertEquals(1, f.repository.restores)
+  }
+
+  @Test
+  fun restoreWithoutItsCuentaReleasesSnapshotAsInformationalFailure() = runTest {
+    val f = ManageMovimientoFixture(backgroundScope)
+    f.viewModel.open("movement")
+    runCurrent()
+    f.viewModel.onRequestDelete()
+    f.viewModel.onConfirmDelete()
+    runCurrent()
+    f.viewModel.onSheetHidden(assertNotNull(f.viewModel.uiState.value.session).token)
+    val feedback = assertNotNull(f.viewModel.uiState.value.feedback)
+    f.repository.restoreResult = DataOutcome.Success(RestoreResult.MissingCuenta)
+    f.viewModel.onFeedbackAction(feedback.token, feedback.revision)
+    runCurrent()
+    val failed = assertNotNull(f.viewModel.uiState.value.feedback)
+    assertEquals(MovimientoFeedbackKind.RestoreFailed, failed.kind)
+    assertNull(failed.deletedMovimiento)
+    assertFalse(failed.hasAction)
+    f.viewModel.onFeedbackAction(failed.token, failed.revision)
     runCurrent()
     assertEquals(1, f.repository.restores)
   }

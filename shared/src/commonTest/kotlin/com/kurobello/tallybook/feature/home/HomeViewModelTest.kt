@@ -23,10 +23,10 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
@@ -491,6 +491,11 @@ class HomeViewModelTest {
       emitAll(summaryValues.filterNotNull())
     }
 
+    override fun observeSummary(
+        moneda: Moneda,
+        range: MovimientoDateRange,
+    ): Flow<DataOutcome<MovimientoSummary>> = error("Range summaries are not read by Home yet")
+
     override fun observeFiltered(
         criteria: MovimientoReadCriteria
     ): Flow<DataOutcome<MovimientoSearchSnapshot>> =
@@ -525,9 +530,7 @@ class HomeViewModelTest {
     override suspend fun deleteAndCapture(id: String): DataOutcome<Movimiento?> =
         DataOutcome.Success(null)
 
-    override suspend fun restoreDeleted(
-        movimiento: Movimiento
-    ): DataOutcome<MovimientoRestoreResult> =
+    override suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<RestoreResult> =
         DataOutcome.Failure(
             DataError.InvalidInput("This Home fixture has no persistent movimiento store")
         )
