@@ -80,7 +80,8 @@ internal sealed interface AccountConfirmation {
 /**
  * The one open account sheet: a new account when [editing] is null. [editing] and [credit] follow
  * the source while open; [baseline] is what [draft] started from, to tell unsaved changes. A
- * closing sheet keeps the shell modal-owned until it reports it hid; [exit] then opens a transfer.
+ * closing sheet keeps the shell modal-owned until it reports it hid; [exit] then opens a transfer
+ * or Search.
  */
 internal data class AccountSheet(
     val editing: Cuenta?,
@@ -91,7 +92,7 @@ internal data class AccountSheet(
     val error: AccountSheetError? = null,
     val confirmation: AccountConfirmation? = null,
     val isClosing: Boolean = false,
-    val exit: AccountsEffect.Transfer? = null,
+    val exit: AccountsEffect? = null,
 ) {
   val hasUnsavedChanges: Boolean
     get() = !draft.sameContentAs(baseline)

@@ -21,6 +21,7 @@ import com.composables.icons.lucide.Archive
 import com.composables.icons.lucide.ArchiveRestore
 import com.composables.icons.lucide.ArrowLeftRight
 import com.composables.icons.lucide.CreditCard
+import com.composables.icons.lucide.ListFilter
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Trash2
 import com.kurobello.tallybook.core.model.Cuenta
@@ -66,6 +67,7 @@ import tallybook.shared.generated.resources.account_save
 import tallybook.shared.generated.resources.account_save_error
 import tallybook.shared.generated.resources.account_transfer
 import tallybook.shared.generated.resources.account_unarchive
+import tallybook.shared.generated.resources.account_view_movements
 import tallybook.shared.generated.resources.accounts_edit
 import tallybook.shared.generated.resources.accounts_new
 import tallybook.shared.generated.resources.cancel
@@ -75,14 +77,15 @@ import tallybook.shared.generated.resources.discard_changes_message
 import tallybook.shared.generated.resources.discard_changes_title
 
 /**
- * [canTransfer] is false until the transfer form exists, so the sheet never offers an action that
- * goes nowhere.
+ * [canTransfer] and [canViewMovements] are false while the caller has nowhere to go for them, so
+ * the sheet never offers an action that goes nowhere.
  */
 @Composable
 internal fun AccountSheetHost(
     sheet: AccountSheet?,
     actions: AccountsActions,
     canTransfer: Boolean,
+    canViewMovements: Boolean = false,
 ) {
   if (sheet == null) return
   val title =
@@ -102,17 +105,21 @@ internal fun AccountSheetHost(
               onHidden = actions::onSheetHidden,
           ),
   ) {
-    key(sheet.editing?.id) { AccountSheetBody(sheet, title, actions, canTransfer) }
+    key(sheet.editing?.id) {
+      AccountSheetBody(sheet, title, actions, AccountSheetExits(canTransfer, canViewMovements))
+    }
   }
   AccountSheetDialogs(sheet, actions)
 }
+
+private data class AccountSheetExits(val canTransfer: Boolean, val canViewMovements: Boolean)
 
 @Composable
 private fun AccountSheetBody(
     sheet: AccountSheet,
     title: String,
     actions: AccountsActions,
-    canTransfer: Boolean,
+    exits: AccountSheetExits,
 ) {
   val enabled = sheet.isEditable
   TallybookSheetForm(
@@ -131,7 +138,7 @@ private fun AccountSheetBody(
         revealFocusedInput = { revealWhenFocused() },
     )
     sheet.error?.generalMessage?.let { AccountSheetErrorText(stringResource(it)) }
-    if (canTransfer && sheet.canTransfer) AccountTransferActions(sheet, enabled, actions)
+    AccountExitActions(sheet, enabled, actions, exits)
   }
 }
 
@@ -184,17 +191,29 @@ private fun AccountHeaderActions(cuenta: Cuenta, enabled: Boolean, actions: Acco
   }
 }
 
+// An archived account stays searchable, so View movements does not follow canTransfer.
 @Composable
-private fun AccountTransferActions(
+private fun AccountExitActions(
     sheet: AccountSheet,
     enabled: Boolean,
     actions: AccountsActions,
+    exits: AccountSheetExits,
 ) {
+  val viewMovements = exits.canViewMovements && sheet.editing != null
+  val transfer = exits.canTransfer && sheet.canTransfer
+  if (!viewMovements && !transfer) return
   FlowRow(horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8)) {
-    TallybookTextButton(onClick = actions::onTransfer, enabled = enabled) {
-      ActionLabel(Lucide.ArrowLeftRight, stringResource(Res.string.account_transfer))
+    if (viewMovements) {
+      TallybookTextButton(onClick = actions::onViewMovements, enabled = enabled) {
+        ActionLabel(Lucide.ListFilter, stringResource(Res.string.account_view_movements))
+      }
     }
-    if (sheet.canPayCard) {
+    if (transfer) {
+      TallybookTextButton(onClick = actions::onTransfer, enabled = enabled) {
+        ActionLabel(Lucide.ArrowLeftRight, stringResource(Res.string.account_transfer))
+      }
+    }
+    if (transfer && sheet.canPayCard) {
       TallybookTextButton(onClick = actions::onPayCard, enabled = enabled) {
         ActionLabel(Lucide.CreditCard, stringResource(Res.string.account_pay_card))
       }

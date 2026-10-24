@@ -55,6 +55,8 @@ private object PreviewAccountsActions : AccountsActions {
   override fun onTransfer() = Unit
 
   override fun onPayCard() = Unit
+
+  override fun onViewMovements() = Unit
 }
 
 private val previewCreatedAt = Instant.parse("2026-01-01T00:00:00Z")

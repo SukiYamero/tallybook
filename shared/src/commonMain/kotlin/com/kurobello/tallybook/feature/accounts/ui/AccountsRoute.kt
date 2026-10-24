@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.ui.component.TallybookScreenSnackbar
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarDuration
@@ -56,6 +57,7 @@ internal fun AccountsRoute(
     onBack: () -> Unit,
     onTransfer: ((origenId: String?, destinoId: String?, prefill: Money?) -> Unit)?,
     modifier: Modifier = Modifier,
+    onViewMovements: ((cuentaId: String, moneda: Moneda) -> Unit)? = null,
     trailingContent: LazyListScope.() -> Unit = {},
 ) {
   val viewModel: AccountsViewModel = koinViewModel()
@@ -86,6 +88,7 @@ internal fun AccountsRoute(
   var snackbar by remember { mutableStateOf<TallybookSnackbarMessage?>(null) }
   var nextSnackbarToken by remember { mutableLongStateOf(0L) }
   val latestTransfer = rememberUpdatedState(onTransfer)
+  val latestViewMovements = rememberUpdatedState(onViewMovements)
   val lifecycle = LocalLifecycleOwner.current.lifecycle
   LaunchedEffect(viewModel, lifecycle) {
     lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -96,6 +99,10 @@ internal fun AccountsRoute(
             // the ViewModel's by a frame.
             snapshotFlow { state.value.sheet == null }.first { it }
             latestTransfer.value?.invoke(effect.origenId, effect.destinoId, effect.prefill)
+          }
+          is AccountsEffect.ViewMovements -> {
+            snapshotFlow { state.value.sheet == null }.first { it }
+            latestViewMovements.value?.invoke(effect.cuentaId, effect.moneda)
           }
           is AccountsEffect.Feedback ->
               snackbar = effect.feedback.toSnackbarMessage(++nextSnackbarToken)
@@ -109,6 +116,7 @@ internal fun AccountsRoute(
         actions,
         onBack,
         canTransfer = onTransfer != null,
+        canViewMovements = onViewMovements != null,
         trailingContent = trailingContent,
     )
     TallybookScreenSnackbar(

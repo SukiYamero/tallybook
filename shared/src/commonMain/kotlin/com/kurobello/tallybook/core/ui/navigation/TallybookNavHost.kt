@@ -154,11 +154,18 @@ private fun PrimaryRoute(
             onOpenMovimiento = openManagement,
             onOpenAccounts = { navigator.openSecondary(Accounts) },
         )
-    History -> HistoryRoute(navigator::openCreation, clearance, onOpenMovimiento = openManagement)
+    History ->
+        HistoryRoute(
+            navigator::openCreation,
+            clearance,
+            onOpenMovimiento = openManagement,
+            onOpenTransferencia = { id -> openers.transfer(TransferEntry.Existing(id)) },
+        )
     Search ->
         SearchRoute(
             onAdd = navigator::openCreation,
             onOpenMovimiento = openManagement,
+            onOpenTransferencia = { id -> openers.transfer(TransferEntry.Existing(id)) },
             bottomBarClearance = clearance,
             modals = navigator.modals,
             focusRequest = navigator.focusRequest,
@@ -204,6 +211,9 @@ private fun AccountsDestination(
       onBack = navigator::back,
       onTransfer = { origenId, destinoId, prefill ->
         openTransfer(TransferEntry.New(origenId, destinoId, prefill))
+      },
+      onViewMovements = { cuentaId, moneda ->
+        navigator.showSearchFilter(cuentaIds = setOf(cuentaId), moneda = moneda)
       },
       trailingContent =
           recentTransferenciasContent { id -> openTransfer(TransferEntry.Existing(id)) },

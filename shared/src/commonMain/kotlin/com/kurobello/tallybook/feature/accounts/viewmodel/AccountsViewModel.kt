@@ -239,7 +239,12 @@ internal class AccountsViewModel(
     leaveFor(AccountsEffect.Transfer(origenId = null, destinoId = sheet.editing?.id, deuda))
   }
 
-  private fun leaveFor(exit: AccountsEffect.Transfer) = updateSheet {
+  override fun onViewMovements() {
+    val cuenta = uiState.value.sheet?.takeIf { it.isEditable }?.editing ?: return
+    leaveFor(AccountsEffect.ViewMovements(cuenta.id, cuenta.moneda))
+  }
+
+  private fun leaveFor(exit: AccountsEffect) = updateSheet {
     if (it.hasUnsavedChanges) it.copy(confirmation = AccountConfirmation.Discard, exit = exit)
     else it.copy(isClosing = true, exit = exit)
   }

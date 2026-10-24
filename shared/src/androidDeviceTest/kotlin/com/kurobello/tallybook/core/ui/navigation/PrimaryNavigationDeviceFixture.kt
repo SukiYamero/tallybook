@@ -12,6 +12,7 @@ import androidx.savedstate.SavedState
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.savedState
+import com.kurobello.tallybook.core.data.ActividadRepository
 import com.kurobello.tallybook.core.data.AppInfo
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
@@ -30,6 +31,7 @@ import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.TransferenciaRepository
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.data.export.MovimientoExportSharer
+import com.kurobello.tallybook.core.model.Actividad
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -55,6 +57,7 @@ import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.map
 import com.kurobello.tallybook.di.DispatcherQualifier
 import com.kurobello.tallybook.di.entryModule
 import com.kurobello.tallybook.di.viewModelModule
@@ -97,6 +100,7 @@ internal class PrimaryDeviceShell {
           }
           single<AppPreferencesRepository> { NavigationPreferences() }
           single<MovimientoRepository> { movimientos }
+          single<ActividadRepository> { movimientos }
           single<CategoriaRepository> { NavigationCategories() }
           single<EtiquetaRepository> { FakeEtiquetaRepository() }
           single<CuentaRepository> { cuentas }
@@ -199,7 +203,7 @@ internal class NavigationParent(restored: SavedState?) :
   }
 }
 
-internal class NavigationMovimientos : MovimientoRepository {
+internal class NavigationMovimientos : MovimientoRepository, ActividadRepository {
   override suspend fun defaultSelection(
       primary: Moneda,
       tipo: TipoMovimiento,
@@ -243,17 +247,24 @@ internal class NavigationMovimientos : MovimientoRepository {
                       .filter { row ->
                         (criteria.range == null ||
                             row.fecha in criteria.range.start..criteria.range.end) &&
-                            (criteria.tipo == null || row.tipo == criteria.tipo) &&
+                            (criteria.tipo == null || row.tipo == criteria.tipo.tipoMovimiento) &&
                             (criteria.categoryIds.isEmpty() ||
                                 row.categoriaId in criteria.categoryIds)
                       }
-                      .sortedWith(navigationStorageOrder),
+                      .sortedWith(navigationStorageOrder)
+                      .map(Actividad::DeMovimiento),
                   currencyRows.map { it.fecha.year }.distinct().sortedDescending(),
               )
           )
         }
     )
   }
+
+  override fun observeActividadRange(
+      moneda: Moneda,
+      range: MovimientoDateRange,
+  ): Flow<DataOutcome<List<Actividad>>> =
+      observeRange(moneda, range).map { outcome -> outcome.map { it.map(Actividad::DeMovimiento) } }
 
   override fun observeRange(
       moneda: Moneda,

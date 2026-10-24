@@ -467,6 +467,28 @@ class AccountsViewModelTest {
   }
 
   @Test
+  fun viewMovementsLeavesForSearchInTheAccountsCurrencyEvenWhenArchived() = runTest {
+    val archived = EFECTIVO.copy(archivada = true)
+    val fixture = AccountsFixture(this, listOf(archived, NEQUI))
+    val vm = fixture.create()
+    val effects = fixture.collectEffects(vm)
+    runCurrent()
+
+    vm.onOpenCuenta(archived.id)
+    vm.onViewMovements()
+    assertEquals(true, vm.uiState.value.sheet?.isClosing)
+    runCurrent()
+    assertTrue(effects.isEmpty())
+    vm.onSheetHidden()
+    runCurrent()
+
+    assertEquals(
+        listOf<AccountsEffect>(AccountsEffect.ViewMovements(archived.id, archived.moneda)),
+        effects,
+    )
+  }
+
+  @Test
   fun leavingForATransferWithUnsavedChangesAsksFirst() = runTest {
     val fixture = AccountsFixture(this, listOf(EFECTIVO, NEQUI))
     val vm = fixture.create()

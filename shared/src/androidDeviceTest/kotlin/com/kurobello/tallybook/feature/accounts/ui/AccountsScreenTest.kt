@@ -56,6 +56,7 @@ import tallybook.shared.generated.resources.account_pay_card
 import tallybook.shared.generated.resources.account_transfer
 import tallybook.shared.generated.resources.account_type_bank
 import tallybook.shared.generated.resources.account_type_credit_card
+import tallybook.shared.generated.resources.account_view_movements
 import tallybook.shared.generated.resources.accounts_archived_show
 import tallybook.shared.generated.resources.accounts_load_error
 import tallybook.shared.generated.resources.accounts_new
@@ -196,6 +197,33 @@ class AccountsScreenTest {
     composeRule.onNodeWithText(text(Res.string.account_pay_card)).assertDoesNotExist()
   }
 
+  @Test
+  fun viewMovementsAppearsForAnArchivedAccountOnceSearchCanOpen() {
+    val actions = RecordingActions()
+    val archived = NEQUI.copy(archivada = true)
+    val state = mutableStateOf(listed.copy(sheet = AccountSheet.forEdit(archived, null)))
+    val canViewMovements = mutableStateOf(false)
+    composeRule.setContent {
+      TallybookTheme {
+        TallybookViewportOverlayHost {
+          AccountsScreen(
+              state.value,
+              actions,
+              onBack = {},
+              canTransfer = true,
+              canViewMovements = canViewMovements.value,
+          )
+        }
+      }
+    }
+
+    composeRule.onNodeWithText(text(Res.string.account_view_movements)).assertDoesNotExist()
+    composeRule.onNodeWithText(text(Res.string.account_transfer)).assertDoesNotExist()
+    canViewMovements.value = true
+    composeRule.onNodeWithText(text(Res.string.account_view_movements)).performClick()
+    composeRule.runOnIdle { assertEquals(listOf("view-movements"), actions.calls) }
+  }
+
   private fun show(
       state: androidx.compose.runtime.MutableState<AccountsUiState>,
       actions: RecordingActions,
@@ -291,6 +319,10 @@ class AccountsScreenTest {
 
     override fun onPayCard() {
       calls += "pay-card"
+    }
+
+    override fun onViewMovements() {
+      calls += "view-movements"
     }
   }
 

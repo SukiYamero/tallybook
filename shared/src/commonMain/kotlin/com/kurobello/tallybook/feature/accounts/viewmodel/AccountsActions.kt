@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.feature.accounts.viewmodel
 
 import androidx.compose.runtime.Stable
+import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 
 // The screen, its account sheet and the sheet's dialogs share one owner of the open sheet.
@@ -45,12 +46,17 @@ internal interface AccountsActions {
   fun onTransfer()
 
   fun onPayCard()
+
+  /** Leaves for Search filtered by the open account, in its currency. */
+  fun onViewMovements()
 }
 
 internal sealed interface AccountsEffect {
   /** Either side may be unset; [prefill] is the received amount, e.g. a card's estimated debt. */
   data class Transfer(val origenId: String?, val destinoId: String?, val prefill: Money?) :
       AccountsEffect
+
+  data class ViewMovements(val cuentaId: String, val moneda: Moneda) : AccountsEffect
 
   data class Feedback(val feedback: AccountsFeedback) : AccountsEffect
 }

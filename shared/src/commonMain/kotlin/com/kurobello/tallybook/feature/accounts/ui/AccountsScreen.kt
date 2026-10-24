@@ -65,6 +65,7 @@ internal fun AccountsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     canTransfer: Boolean = false,
+    canViewMovements: Boolean = false,
     trailingContent: LazyListScope.() -> Unit = {},
 ) {
   TallybookScreenFrame(modifier = modifier) {
@@ -95,7 +96,7 @@ internal fun AccountsScreen(
       }
     }
   }
-  AccountSheetHost(uiState.sheet, actions, canTransfer)
+  AccountSheetHost(uiState.sheet, actions, canTransfer, canViewMovements)
 }
 
 private fun LazyListScope.accountsContent(uiState: AccountsUiState, actions: AccountsActions) {
