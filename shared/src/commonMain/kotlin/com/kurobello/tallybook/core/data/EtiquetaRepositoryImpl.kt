@@ -165,7 +165,7 @@ private fun EtiquetaQueries.findDuplicate(nombre: String, excludingId: String?):
       ?.toDomain()
 }
 
-private fun List<DatabaseEtiqueta>.toSortedDomain(): List<Etiqueta> =
+internal fun List<DatabaseEtiqueta>.toSortedDomain(): List<Etiqueta> =
     map { it.toDomain() }
         .sortedWith(compareBy({ CategoriaRules.nombreKey(it.nombre) }, Etiqueta::id))
 

@@ -17,6 +17,8 @@ import com.kurobello.tallybook.core.data.SaldoRepository
 import com.kurobello.tallybook.core.data.SaldoRepositoryImpl
 import com.kurobello.tallybook.core.data.TransferenciaRepository
 import com.kurobello.tallybook.core.data.TransferenciaRepositoryImpl
+import com.kurobello.tallybook.core.data.export.DatabaseMovimientoExportSource
+import com.kurobello.tallybook.core.data.export.MovimientoExportSource
 import com.kurobello.tallybook.core.data.maxStoredChangeStamp
 import com.kurobello.tallybook.core.data.seedDefaultCuenta
 import com.kurobello.tallybook.core.database.TallybookDatabase
@@ -91,6 +93,12 @@ val repositoryModule = module {
   }
   single<ActividadRepository> {
     ActividadRepositoryImpl(
+        database = get(),
+        dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
+    )
+  }
+  single<MovimientoExportSource> {
+    DatabaseMovimientoExportSource(
         database = get(),
         dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
     )

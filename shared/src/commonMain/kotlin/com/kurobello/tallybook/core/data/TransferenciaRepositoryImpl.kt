@@ -9,6 +9,7 @@ import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.TRANSFERENCIA_DESCRIPCION_MAX
 import com.kurobello.tallybook.core.model.Transferencia
@@ -242,6 +243,9 @@ private fun validateShape(transferencia: Transferencia): DataError.InvalidInput?
           DataError.InvalidInput("Transferencia cuentas must differ")
       transferencia.montoOrigen.minorUnits <= 0 || transferencia.montoDestino.minorUnits <= 0 ->
           DataError.InvalidInput("Transferencia amounts must be positive")
+      transferencia.montoOrigen.minorUnits > Money.MAX_MINOR_UNITS ||
+          transferencia.montoDestino.minorUnits > Money.MAX_MINOR_UNITS ->
+          DataError.InvalidInput("Transferencia amounts exceed the maximum")
       (transferencia.descripcion?.length ?: 0) > TRANSFERENCIA_DESCRIPCION_MAX ->
           DataError.InvalidInput("Transferencia descripcion is too long")
       else -> null

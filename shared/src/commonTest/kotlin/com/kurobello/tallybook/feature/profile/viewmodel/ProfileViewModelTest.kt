@@ -9,7 +9,7 @@ import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.data.export.MovimientoCsvLabels
 import com.kurobello.tallybook.core.data.export.MovimientoExportSharer
-import com.kurobello.tallybook.core.data.export.MovimientoExportSource
+import com.kurobello.tallybook.core.data.export.RepositoryExportSource
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -326,7 +326,7 @@ private fun TestScope.profileViewModel(
         export =
             ProfileExportDependencies(
                 source =
-                    MovimientoExportSource(
+                    RepositoryExportSource(
                         movimientos = movimientos,
                         transferencias = transferencias,
                         cuentas = cuentas,

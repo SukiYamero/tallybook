@@ -432,7 +432,7 @@ class MovimientoRepositoryTest {
               StandardTestDispatcher(testScheduler),
               TestChangeClock(),
           )
-      val row = movimiento("read", monto = Money(Long.MAX_VALUE, Moneda.CLP))
+      val row = movimiento("read", monto = Money(Money.MAX_MINOR_UNITS, Moneda.CLP))
       assertEquals(DataOutcome.Success(Unit), repository.insert(row))
       assertEquals(DataOutcome.Success(row), repository.getById(row.id))
       assertEquals(DataOutcome.Success(null), repository.getById("absent"))
@@ -459,7 +459,7 @@ class MovimientoRepositoryTest {
           val changes =
               MovimientoChanges(
                   TipoMovimiento.INGRESO,
-                  Money(Long.MAX_VALUE, Moneda.USD),
+                  Money(Money.MAX_MINOR_UNITS, Moneda.USD),
                   LocalDate(2025, 12, 31),
                   "cat_sueldo",
                   listOf("tag_c"),
@@ -475,7 +475,7 @@ class MovimientoRepositoryTest {
           val expected =
               original.copy(
                   tipo = TipoMovimiento.INGRESO,
-                  monto = Money(Long.MAX_VALUE, Moneda.USD),
+                  monto = Money(Money.MAX_MINOR_UNITS, Moneda.USD),
                   fecha = LocalDate(2025, 12, 31),
                   categoriaId = "cat_sueldo",
                   etiquetaIds = listOf("tag_c"),
@@ -527,6 +527,27 @@ class MovimientoRepositoryTest {
           DataOutcome.Success(legacy.copy(titulo = "kept")),
           repository.getById(legacy.id),
       )
+    }
+  }
+
+  @Test
+  fun `amounts up to the domain maximum are stored and larger ones rejected`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      val repository =
+          MovimientoRepositoryImpl(
+              seeded(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
+      val largest = movimiento("largest").copy(monto = Money(Money.MAX_MINOR_UNITS, Moneda.COP))
+      val tooLarge = Money(Money.MAX_MINOR_UNITS + 1, Moneda.COP)
+
+      assertEquals(DataOutcome.Success(Unit), repository.insert(largest))
+      assertInvalid(repository.insert(movimiento("too-large").copy(monto = tooLarge)))
+      assertInvalid(repository.update(largest.id, largest.changes().copy(monto = tooLarge)))
+      repository.deleteAndCapture(largest.id)
+      assertInvalid(repository.restoreDeleted(largest.copy(monto = tooLarge)))
+      assertEquals(DataOutcome.Success(emptyList()), repository.getAll())
     }
   }
 
@@ -619,7 +640,7 @@ class MovimientoRepositoryTest {
       val first =
           movimiento(
               "a",
-              monto = Money(Long.MAX_VALUE, Moneda.CLP),
+              monto = Money(Money.MAX_MINOR_UNITS, Moneda.CLP),
               descripcion = "a".repeat(MOVIMIENTO_DESCRIPTION_MAX_LENGTH),
               etiquetaIds = listOf("tag_b", "tag_a"),
           )

@@ -376,6 +376,8 @@ internal class MovimientoRepositoryImpl(
       when {
         changes.monto.minorUnits <= 0 ->
             DataError.InvalidInput("Movimiento amount must be positive")
+        changes.monto.minorUnits > Money.MAX_MINOR_UNITS ->
+            DataError.InvalidInput("Movimiento amount exceeds the maximum")
         !changes.medio.allows(changes.tipo) ->
             DataError.InvalidInput("Medio ${changes.medio} does not allow ${changes.tipo}")
         else ->
@@ -408,6 +410,8 @@ internal class MovimientoRepositoryImpl(
       when {
         movimiento.monto.minorUnits <= 0 ->
             DataError.InvalidInput("Movimiento amount must be positive")
+        movimiento.monto.minorUnits > Money.MAX_MINOR_UNITS ->
+            DataError.InvalidInput("Movimiento amount exceeds the maximum")
         movimiento.id.isEmpty() -> DataError.InvalidInput("Movimiento id must not be empty")
         !movimiento.medio.allows(movimiento.tipo) ->
             DataError.InvalidInput("Medio ${movimiento.medio} does not allow ${movimiento.tipo}")

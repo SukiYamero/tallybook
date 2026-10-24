@@ -109,6 +109,22 @@ class TransferenciaRepositoryTest {
   }
 
   @Test
+  fun `amounts up to the domain maximum are stored and larger ones rejected`() = runTest {
+    withRepository { _, _, repository ->
+      val largest = Money(Money.MAX_MINOR_UNITS, Moneda.COP)
+      val tooLarge = Money(Money.MAX_MINOR_UNITS + 1, Moneda.COP)
+      val valid =
+          transferencia("t", COP_CASH, NEQUI).copy(montoOrigen = largest, montoDestino = largest)
+
+      assertEquals(DataOutcome.Success(Unit), repository.insert(valid))
+      assertInvalid(
+          repository.insert(valid.copy(id = "big", montoOrigen = tooLarge, montoDestino = tooLarge))
+      )
+      assertEquals(DataOutcome.Success(listOf(valid)), repository.getAll())
+    }
+  }
+
+  @Test
   fun `a cross-currency transfer stores each side in its cuenta currency`() = runTest {
     withRepository { _, _, repository ->
       val payment =

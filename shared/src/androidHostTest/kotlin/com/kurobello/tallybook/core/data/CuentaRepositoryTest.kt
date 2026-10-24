@@ -107,6 +107,21 @@ class CuentaRepositoryTest {
   }
 
   @Test
+  fun `opening balances up to the domain maximum either way are stored and larger ones rejected`() =
+      runTest {
+        withRepository { _, _, _, repository ->
+          val max = Money.MAX_MINOR_UNITS
+          val card = repository.create(draft("NU", TipoCuenta.CREDITO, -max)).saved()
+          assertEquals(Money(-max, Moneda.COP), card.saldoInicial)
+          repository.update(card.id, draft("NU", TipoCuenta.CREDITO, max)).saved()
+
+          assertInvalid(repository.create(draft("Nequi", TipoCuenta.BANCO, max + 1)))
+          assertInvalid(repository.create(draft("Nequi", TipoCuenta.BANCO, -max - 1)))
+          assertInvalid(repository.update(card.id, draft("NU", TipoCuenta.CREDITO, Long.MIN_VALUE)))
+        }
+      }
+
+  @Test
   fun `update saves new values once and a no-op or self-match writes nothing`() = runTest {
     withRepository { driver, _, changeClock, repository ->
       val nequi = repository.create(draft("Nequi", TipoCuenta.BANCO)).saved()

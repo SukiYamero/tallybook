@@ -2,6 +2,7 @@ package com.kurobello.tallybook.di
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.AppStartupViewModel
+import com.kurobello.tallybook.core.data.ActividadRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategorySeedProvider
 import com.kurobello.tallybook.core.data.CuentaRepository
@@ -17,6 +18,7 @@ import com.kurobello.tallybook.core.data.SaldoRepository
 import com.kurobello.tallybook.core.data.TransferenciaRepository
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
+import com.kurobello.tallybook.core.data.export.MovimientoExportSource
 import com.kurobello.tallybook.core.database.DatabaseDriverFactory
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackViewModel
@@ -63,6 +65,8 @@ class RepositoryModulesTest {
       assertNotNull(application.koin.get<CuentaRepository>())
       assertNotNull(application.koin.get<TransferenciaRepository>())
       assertNotNull(application.koin.get<SaldoRepository>())
+      assertNotNull(application.koin.get<ActividadRepository>())
+      assertNotNull(application.koin.get<MovimientoExportSource>())
       assertNotNull(application.koin.get<CategorySeedProvider>())
       assertNotNull(application.koin.get<LocalDataBootstrapper>())
       assertNotNull(application.koin.get<AppStartupViewModel>())

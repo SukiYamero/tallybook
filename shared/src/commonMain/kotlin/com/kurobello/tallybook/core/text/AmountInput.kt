@@ -15,6 +15,8 @@ internal enum class AmountInputError {
   MALFORMED,
   NOT_POSITIVE,
   TOO_MANY_DECIMALS,
+
+  /** Above [Money.MAX_MINOR_UNITS], whether or not it would still fit a Long. */
   OVERFLOW,
 }
 
@@ -62,7 +64,8 @@ private fun String.toDecimalParts(separator: Char): DecimalParts? {
 private fun DecimalParts.toAmountResult(moneda: Moneda): AmountInputResult {
   val minorUnits = (integerPart + decimals.padEnd(moneda.scale, '0')).toLongOrNull()
   return when {
-    minorUnits == null -> AmountInputResult.Invalid(AmountInputError.OVERFLOW)
+    minorUnits == null || minorUnits > Money.MAX_MINOR_UNITS ->
+        AmountInputResult.Invalid(AmountInputError.OVERFLOW)
     minorUnits <= 0 -> AmountInputResult.Invalid(AmountInputError.NOT_POSITIVE)
     else -> AmountInputResult.Valid(Money(minorUnits, moneda))
   }
