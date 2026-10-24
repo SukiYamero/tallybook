@@ -1492,6 +1492,26 @@ class MovimientoRepositoryTest {
       }
 
   @Test
+  fun `restore after the cuenta changed type is a conflict that keeps the tombstone`() = runTest {
+    withSelectionFixture { repository, _, driver ->
+      val row = movimiento("row").copy(cuentaId = NU, medio = MedioPago.CREDITO)
+      repository.insert(row)
+      repository.deleteAndCapture(row.id)
+      val tombstone = driver.storedStamps("movimiento", row.id)
+      driver.execute(null, "UPDATE cuenta SET tipo = 'BANCO' WHERE id = '$NU'", 0)
+
+      assertEquals(DataOutcome.Success(RestoreResult.Conflict), repository.restoreDeleted(row))
+      assertEquals(
+          DataOutcome.Success(RestoreResult.Conflict),
+          repository.restoreDeleted(row.copy(id = "never-stored")),
+      )
+
+      assertEquals(tombstone, driver.storedStamps("movimiento", row.id))
+      assertEquals(null, driver.storedStamps("movimiento", "never-stored"))
+    }
+  }
+
+  @Test
   fun `range summary adds live ingresos and gastos of one currency inside the range`() = runTest {
     withSelectionFixture { repository, _, driver ->
       val october = MovimientoDateRange(LocalDate(2026, 10, 1), LocalDate(2026, 10, 31))

@@ -52,6 +52,10 @@ interface MovimientoRepository {
 
   suspend fun deleteAndCapture(id: String): DataOutcome<Movimiento?>
 
+  /**
+   * [RestoreResult.Conflict] when the id holds other content or the cuenta no longer takes the
+   * snapshot's medio or currency; an archived cuenta still takes it back.
+   */
   suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<RestoreResult>
 
   suspend fun delete(id: String): DataOutcome<Unit>

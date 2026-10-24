@@ -313,11 +313,15 @@ internal class MovimientoRepositoryImpl(
         }
         // An archived cuenta still takes its movimiento back: Undo returns money where it was.
         val cuenta =
-            database.cuentaQueries.selectCuentaById(movimiento.cuentaId).executeAsOneOrNull()
+            database.cuentaQueries
+                .selectCuentaById(movimiento.cuentaId)
+                .executeAsOneOrNull()
+                ?.toDomain()
         val tombstone = queries.selectStoredMovimientoById(movimiento.id).executeAsOneOrNull()
         when {
           cuenta == null -> RestoreResult.MissingCuenta
-          cuenta.moneda != movimiento.monto.moneda.name -> RestoreResult.Conflict
+          !cuenta.accepts(movimiento.medio, movimiento.monto.moneda, movimiento.cuentaId) ->
+              RestoreResult.Conflict
           tombstone == null -> {
             queries.deleteMovimientoEtiquetas(movimiento.id)
             insertRow(restorable, changeClock.next())
