@@ -37,7 +37,7 @@ internal fun TallybookSnackbarHost(
     isActive: Boolean,
     closeLabel: String,
     onAction: (Long, Int) -> Unit,
-    onDismiss: (Long, Int, TallybookSnackbarDismissReason) -> Unit,
+    onDismiss: (Long, Int, TallybookSnackbarDismissReason) -> Boolean,
     modifier: Modifier = Modifier,
     hasWaitingMessages: Boolean = false,
 ) {
@@ -130,7 +130,7 @@ private fun SnackbarAction(message: TallybookSnackbarMessage, onAction: (Long, I
 private fun SnackbarClose(
     message: TallybookSnackbarMessage,
     closeLabel: String,
-    onDismiss: (Long, Int, TallybookSnackbarDismissReason) -> Unit,
+    onDismiss: (Long, Int, TallybookSnackbarDismissReason) -> Boolean,
 ) {
   TallybookIconButton(
       onClick = {

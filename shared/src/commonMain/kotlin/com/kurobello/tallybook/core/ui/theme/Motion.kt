@@ -13,8 +13,8 @@ internal object TallybookMotion {
   const val sheetDownMillis = sheetUpMillis / 2
   const val loadingRotationMillis = 1_000
   const val loadingFeedbackDelayMillis = 200
-  const val snackbarShortMillis = 4_000
-  const val snackbarLongMillis = 10_000
+  const val snackbarShortMillis = 3_700
+  const val snackbarLongMillis = 9_700
 
   val iosEasing = CubicBezierEasing(IOS_EASING_X1, IOS_EASING_Y1, 0f, 1f)
 

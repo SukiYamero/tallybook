@@ -49,10 +49,17 @@ internal class PrimaryModalCoordinator(
     get() = canNavigate && management?.isRestoring != true
 
   val canNavigate: Boolean
+    get() = !isContentCovered && (destinationModal != null || !isSearchSelected())
+
+  /**
+   * Unlike [canNavigate], an unattached Search destination is not coverage: refusing navigation
+   * before its controller attaches only guards early intents and must not hide shell feedback.
+   */
+  val isContentCovered: Boolean
     get() =
-        !creation.hasBeenOpened &&
-            !(destinationModal?.hasActiveSession ?: isSearchSelected()) &&
-            management?.hasActiveSession != true
+        creation.hasBeenOpened ||
+            destinationModal?.hasActiveSession == true ||
+            management?.hasActiveSession == true
 
   fun attach(controller: DestinationModalController) {
     destinationModal = controller

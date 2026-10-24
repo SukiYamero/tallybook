@@ -9,8 +9,12 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
@@ -26,6 +30,7 @@ internal fun TallybookScreenSnackbar(
     isActive: Boolean,
     onDismiss: (Long) -> Unit,
 ) {
+  val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
   Box(
       modifier =
           Modifier.fillMaxSize()
@@ -38,10 +43,13 @@ internal fun TallybookScreenSnackbar(
   ) {
     TallybookSnackbarHost(
         message = message,
-        isActive = isActive,
+        isActive = isActive && lifecycleState.isAtLeast(Lifecycle.State.RESUMED),
         closeLabel = stringResource(Res.string.movimiento_notification_close),
         onAction = { _, _ -> },
-        onDismiss = { token, _, _ -> onDismiss(token) },
+        onDismiss = { token, _, _ ->
+          onDismiss(token)
+          true
+        },
         modifier =
             Modifier.align(Alignment.BottomCenter)
                 .widthIn(max = TallybookTheme.dimensions.screenContentMaxWidth)

@@ -55,6 +55,7 @@ class TallybookSnackbarTest {
             onAction = { token, revision -> actions += token to revision },
             onDismiss = { token, revision, reason ->
               dismissals += Triple(token, revision, reason)
+              true
             },
         )
       }
@@ -85,7 +86,10 @@ class TallybookSnackbarTest {
             isActive = true,
             closeLabel = "Close notification",
             onAction = { _, _ -> actions++ },
-            onDismiss = { _, _, _ -> dismissals++ },
+            onDismiss = { _, _, _ ->
+              dismissals++
+              true
+            },
         )
       }
     }
@@ -110,7 +114,7 @@ class TallybookSnackbarTest {
             true,
             "Close notification",
             { _, _ -> },
-            { _, _, _ -> },
+            { _, _, _ -> true },
         )
       }
     }
@@ -132,7 +136,7 @@ class TallybookSnackbarTest {
               true,
               "Close notification",
               { _, _ -> },
-              { _, _, _ -> },
+              { _, _, _ -> true },
           )
         }
       }
@@ -152,7 +156,7 @@ class TallybookSnackbarTest {
               true,
               "Close notification",
               { _, _ -> },
-              { _, _, _ -> },
+              { _, _, _ -> true },
               Modifier.width(320.dp),
           )
         }
@@ -183,7 +187,7 @@ class TallybookSnackbarTest {
             active.value,
             "Close notification",
             { _, _ -> },
-            { _, _, _ -> },
+            { _, _, _ -> true },
         )
       }
     }
@@ -207,7 +211,7 @@ class TallybookSnackbarTest {
               true,
               "Close notification",
               { _, _ -> },
-              { _, _, _ -> },
+              { _, _, _ -> true },
               Modifier.width(280.dp).testTag("snackbar"),
           )
         }

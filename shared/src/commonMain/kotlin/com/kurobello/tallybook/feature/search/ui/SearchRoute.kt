@@ -67,15 +67,7 @@ internal fun SearchRoute(
   val keyboard = LocalSoftwareKeyboardController.current
   val latestActive = rememberUpdatedState(active)
   var returnFilterFocus by remember { mutableStateOf<SearchFilterSessionId?>(null) }
-  val controller =
-      remember(viewModel) {
-        object : DestinationModalController {
-          override val hasActiveSession: Boolean
-            get() = viewModel.hasActiveFilterSession
-
-          override fun open(): Boolean = viewModel.onOpenFilters() != null
-        }
-      }
+  val controller = remember(viewModel, state) { SearchFilterController(viewModel, state) }
   DisposableEffect(modals, controller, active) {
     if (active) modals.attach(controller)
     onDispose { modals.detach(controller) }
@@ -201,6 +193,19 @@ internal fun rememberSearchRouteState(
 
 private fun SearchUiState.routeRevalidating(): SearchUiState =
     copy(results = results.refreshing(), work = SearchWork.Revalidating)
+
+internal class SearchFilterController(
+    private val viewModel: SearchViewModel,
+    private val state: State<SearchUiState>,
+) : DestinationModalController {
+  // The collected State mirrors the view model's session and is read first so shell readers
+  // always subscribe to it; the view model still answers immediately for admission guards.
+  override val hasActiveSession: Boolean
+    get() =
+        state.value.filterSession != SearchFilterSession.Hidden || viewModel.hasActiveFilterSession
+
+  override fun open(): Boolean = viewModel.onOpenFilters() != null
+}
 
 @Serializable private data class SearchScrollCheckpoint(val request: SearchScrollIdentity? = null)
 

@@ -140,6 +140,54 @@ internal class PrimaryModalCoordinatorTest {
     assertTrue(coordinator.canNavigate)
   }
 
+  @Test
+  fun unattachedSearchBlocksNavigationWithoutCoveringContent() {
+    val coordinator = PrimaryModalCoordinator(AddMovimientoSheetSession()) { true }
+    assertFalse(coordinator.canNavigate)
+    assertFalse(coordinator.tryOpenCreation())
+    assertFalse(coordinator.isContentCovered)
+    coordinator.attach(FilterController())
+    assertTrue(coordinator.canNavigate)
+    assertFalse(coordinator.isContentCovered)
+  }
+
+  @Test
+  fun destinationSessionCoversContentUntilItIsFullyHidden() {
+    val coordinator = PrimaryModalCoordinator(AddMovimientoSheetSession()) { true }
+    val filters = FilterController()
+    coordinator.attach(filters)
+    assertTrue(coordinator.tryOpenDestinationModal(filters))
+    assertTrue(coordinator.isContentCovered)
+    filters.active = false
+    filters.closing = true
+    assertTrue(coordinator.isContentCovered)
+    filters.closing = false
+    assertFalse(coordinator.isContentCovered)
+    coordinator.detach(filters)
+    assertFalse(coordinator.isContentCovered)
+  }
+
+  @Test
+  fun creationAndManagementSessionsCoverContentUntilHidden() {
+    val creation = AddMovimientoSheetSession()
+    val coordinator = PrimaryModalCoordinator(creation) { false }
+    val management = ManagementController()
+    coordinator.attachManagement(management)
+    assertFalse(coordinator.isContentCovered)
+    assertTrue(coordinator.tryOpenCreation())
+    assertTrue(coordinator.isContentCovered)
+    creation.dismiss()
+    assertTrue(coordinator.isContentCovered)
+    creation.onSheetHidden(creation.token)
+    assertFalse(coordinator.isContentCovered)
+    assertTrue(coordinator.tryOpenManagement("movement"))
+    assertTrue(coordinator.isContentCovered)
+    management.active = false
+    management.restoring = true
+    assertFalse(coordinator.isContentCovered)
+    assertFalse(coordinator.tryOpenCreation())
+  }
+
   private class ManagementController : MovimientoManagementController {
     var active = false
     var restoring = false

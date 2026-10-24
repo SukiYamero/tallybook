@@ -125,6 +125,7 @@ private fun SnackbarSampleHost(
         if (message?.token == dismissToken && message.revision == revision) {
           onMessageChange(message, null)
         }
+        true
       },
       modifier = Modifier.fillMaxWidth(),
   )

@@ -58,7 +58,7 @@ internal fun MovimientoFeedbackRoute(
     lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && viewport?.isScrimVisible != true
   }
   val isUncovered =
-      uiState.session == null && modals.canNavigate && viewport?.isScrimVisible != true
+      uiState.session == null && !modals.isContentCovered && viewport?.isScrimVisible != true
   MovimientoFeedbackHost(
       feedbackQueue = uiState.feedbackQueue,
       isActive = lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && isUncovered,
@@ -78,7 +78,7 @@ private fun MovimientoFeedbackHost(
     isActive: Boolean,
     bottomBarClearance: Dp,
     onAction: (Long, Int) -> Unit,
-    onDismiss: (Long, Int, TallybookSnackbarDismissReason) -> Unit,
+    onDismiss: (Long, Int, TallybookSnackbarDismissReason) -> Boolean,
 ) {
   val density = LocalDensity.current
   val direction = LocalLayoutDirection.current

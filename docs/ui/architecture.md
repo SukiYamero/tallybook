@@ -780,16 +780,24 @@ the originating sheet is hidden. It sits above measured bottom chrome, safe draw
 respecting horizontal safe edges and the shared content width. Inline messages remain the recovery
 surface inside an open sheet; creation does not acquire a new snackbar producer.
 
-Informational feedback normally uses the Short 4-second token; Undo/Retry uses Long 10 seconds.
-Once messages are waiting, that visible batch uses half the baseline: Short 2 seconds and Long
-5 seconds, including its final queued message. The active deadline shortens once from its initial
-reveal, counting time already spent on screen; if that deadline has passed, it expires immediately.
+Informational feedback normally uses the Short 3.7-second token; Undo/Retry uses Long 9.7 seconds.
+Once messages are waiting, that visible batch uses half the baseline: Short 1.85 seconds and Long
+4.85 seconds, including its final queued message. The active deadline shortens once, counting the
+visible time the message has already accumulated; if that deadline has passed, it expires immediately.
 Enqueueing or recomposing cannot repeatedly halve the window or restart it. An empty queue resets
 the policy so a subsequent isolated message receives its normal baseline.
 Provided accessibility recommendations apply after the baseline is selected and may extend the
 window, including indefinitely without overflow. Indefinite and busy feedback never expires.
-Background or modal coverage hides feedback and cancels
-its timer without dismissing it; each foreground reveal receives a full usable window.
+A window belongs to one token/revision and counts only visible time. Background or modal coverage
+and busy progress pause it without dismissing the message; the next reveal of the same generation
+resumes with the remaining time. A different token/revision, an empty host or disposal discards it.
+Timeout delivery reports acceptance: a refused timeout is retried every 50 ms while the same
+generation stays visible, and a generation still present after an accepted timeout retries on its
+next reveal. Feedback visibility follows actual modal coverage, not navigation admission, so a
+destination that has not attached its modal controller yet does not hide the snackbar.
+Activity or scene recreation (rotation, theme, locale, resize) starts a new host, so a message that
+survives it receives a new window.
+Secondary screens (`TallybookScreenSnackbar`) also count as hidden unless their lifecycle is resumed.
 Root delivery checks live resumed lifecycle and modal/viewport admission, then current token/revision.
 
 Undo/Retry remains a dynamic trailing action, with adaptive wrapping and 48 dp controls. Timed
