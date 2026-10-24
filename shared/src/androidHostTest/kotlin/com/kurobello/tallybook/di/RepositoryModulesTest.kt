@@ -13,6 +13,7 @@ import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
+import com.kurobello.tallybook.core.data.SaldoRepository
 import com.kurobello.tallybook.core.data.TransferenciaRepository
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
@@ -57,6 +58,7 @@ class RepositoryModulesTest {
       assertNotNull(application.koin.get<EtiquetaRepository>())
       assertNotNull(application.koin.get<CuentaRepository>())
       assertNotNull(application.koin.get<TransferenciaRepository>())
+      assertNotNull(application.koin.get<SaldoRepository>())
       assertNotNull(application.koin.get<CategorySeedProvider>())
       assertNotNull(application.koin.get<LocalDataBootstrapper>())
       assertNotNull(application.koin.get<AppStartupViewModel>())
