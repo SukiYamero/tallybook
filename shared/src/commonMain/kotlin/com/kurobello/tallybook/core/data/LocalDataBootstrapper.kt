@@ -3,7 +3,7 @@ package com.kurobello.tallybook.core.data
 import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataOutcome
-import com.kurobello.tallybook.core.model.fold
+import com.kurobello.tallybook.core.model.andThen
 import com.kurobello.tallybook.core.model.primaryMoneda
 import kotlinx.coroutines.flow.first
 
@@ -33,6 +33,3 @@ class LocalDataBootstrapper(
         seedDefaultCuenta(cuentaSeedProvider.defaultCash(primary))
       }
 }
-
-private inline fun <T, R> DataOutcome<T>.andThen(next: (T) -> DataOutcome<R>): DataOutcome<R> =
-    fold(onSuccess = next, onFailure = { DataOutcome.Failure(it) })

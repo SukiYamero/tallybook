@@ -1,0 +1,8 @@
+<resources>
+    <string name="csv_header_account">Conta</string>
+    <string name="csv_header_medio">Forma de pagamento</string>
+    <string name="csv_header_destination_account">Conta de destino</string>
+    <string name="csv_header_destination_amount">Valor de destino</string>
+    <string name="csv_header_destination_currency">Moeda de destino</string>
+    <string name="csv_transfer_type">Transferência entre contas</string>
+</resources>
