@@ -44,7 +44,7 @@ the shared type/medio icons and labels that Stages 3 and 4 both consume.
 ```kotlin
 enum class TipoCuenta {
   EFECTIVO, BANCO, CREDITO;
-  val defaultMedio: MedioPago                   // EFECTIVO→EFECTIVO, BANCO→DEBITO, CREDITO→CREDITO
+  fun defaultMedio(tipo: TipoMovimiento): MedioPago // EFECTIVO/DEBITO/CREDITO, then MedioPago.forTipo(tipo)
 }
 
 enum class MedioPago {
@@ -61,6 +61,7 @@ data class Cuenta(
   companion object { fun defaultCashId(moneda: Moneda): String } // "cuenta_efectivo_<moneda lowercase>"
 }
 
+/** Persisted domain type; validation reads field values instead (see TransferenciaRules). */
 data class Transferencia(
     val id: String, val cuentaOrigenId: String, val cuentaDestinoId: String,
     val montoOrigen: Money, val montoDestino: Money, val fecha: LocalDate,
@@ -70,10 +71,17 @@ data class Transferencia(
 object CuentaRules { const val NOMBRE_MAX = 30; fun nombreKey(nombre: String, moneda: Moneda): String; fun validate(...) }
 /** Every failing field at once, like CuentaRules: the Stage 3 form shows all errors together. */
 data class TransferenciaErrors(
-    val sameCuenta: Boolean, val montoOrigen: TransferenciaMontoError?, val montoDestino: TransferenciaMontoError?,
+    val cuentaOrigen: TransferenciaCuentaError?,   // MISSING
+    val cuentaDestino: TransferenciaCuentaError?,  // MISSING, SAME_AS_ORIGEN
+    val montoOrigen: TransferenciaMontoError?,     // MISSING, WRONG_MONEDA, NOT_POSITIVE
+    val montoDestino: TransferenciaMontoError?,    // + DIFFERS_FROM_ORIGEN, only when montoOrigen is valid
     val fechaFuture: Boolean, val descripcionTooLong: Boolean,
 ) { val isValid: Boolean }
-object TransferenciaRules { fun validate(t: Transferencia, origen: Cuenta, destino: Cuenta, today: LocalDate): TransferenciaErrors }
+/** Field values, so a form can validate an empty amount (Pay card) without fake ids. */
+object TransferenciaRules {
+  fun validate(origen: Cuenta?, destino: Cuenta?, montoOrigen: Money?, montoDestino: Money?,
+               fecha: LocalDate, descripcion: String?, today: LocalDate): TransferenciaErrors
+}
 
 /** Inclusive civil range of the cycle containing [today]; calendar month when [diaCorte] is null. */
 fun creditCycle(today: LocalDate, diaCorte: Int?): MovimientoDateRange
@@ -83,9 +91,10 @@ data class CreditEstimate(val deuda: Money, val cycleSpending: Money, val cycle:
 ```
 
 Exact field names may adapt to existing conventions; the semantics may not. `MedioPago` also exposes
-the gasto → ingreso switch (`DEBITO` → `TRANSFERENCIA`) as one function. `TipoCuenta.defaultMedio` is the single
-owner of the medio implied by an account type: Stage 2/task2 `defaultSelection` and the Stage 4 parser
-consume it instead of re-deriving it.
+the gasto → ingreso switch (`DEBITO` → `TRANSFERENCIA`) as one function. `TipoCuenta.defaultMedio(tipo)` is the single
+owner of the medio implied by an account type (BANCO is `DEBITO` for gasto, `TRANSFERENCIA` for
+ingreso): Stage 2/task2 `defaultSelection` must pass the movimiento tipo, and it and the Stage 4
+parser consume this function instead of re-deriving it.
 
 ## Exact rules
 
@@ -127,7 +136,7 @@ consume it instead of re-deriving it.
 - The generated `Res.string.account_type_bank` reads `values{,-en,-es-rAR,-pt-rBR}/strings_accounts.commonMain.cvr`;
   `AccountsResourcesHostTest` resolves every label per locale, so Stages 3–5 can add their own
   `strings_<area>.xml`.
-- Lucide accessors verified in the artifact: `Wallet`, `Landmark`, `CreditCard` (account types);
+- Lucide accessors verified in the artifact: `Banknote`, `Landmark`, `CreditCard` (account types);
   `Banknote`, `WalletCards`, `Send`, `CreditCard` (medios). Two-way arrows stay free for transfers
   between own accounts.
 

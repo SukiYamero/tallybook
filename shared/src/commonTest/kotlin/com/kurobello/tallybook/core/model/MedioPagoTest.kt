@@ -77,17 +77,22 @@ class MedioPagoTest {
   }
 
   @Test
-  fun everyTipoCuentaHasACompatibleDefaultMedio() {
+  fun everyTipoCuentaHasADefaultMedioPerTipoMovimiento() {
     val expected =
         mapOf(
-            TipoCuenta.EFECTIVO to MedioPago.EFECTIVO,
-            TipoCuenta.BANCO to MedioPago.DEBITO,
-            TipoCuenta.CREDITO to MedioPago.CREDITO,
+            (TipoCuenta.EFECTIVO to TipoMovimiento.GASTO) to MedioPago.EFECTIVO,
+            (TipoCuenta.EFECTIVO to TipoMovimiento.INGRESO) to MedioPago.EFECTIVO,
+            (TipoCuenta.BANCO to TipoMovimiento.GASTO) to MedioPago.DEBITO,
+            (TipoCuenta.BANCO to TipoMovimiento.INGRESO) to MedioPago.TRANSFERENCIA,
+            (TipoCuenta.CREDITO to TipoMovimiento.GASTO) to MedioPago.CREDITO,
+            (TipoCuenta.CREDITO to TipoMovimiento.INGRESO) to MedioPago.CREDITO,
         )
 
-    assertEquals(expected, TipoCuenta.entries.associateWith { it.defaultMedio })
-    for (tipo in TipoCuenta.entries) {
-      assertTrue(tipo in tipo.defaultMedio.compatibleTipos, "$tipo")
+    for ((input, medio) in expected) {
+      val (tipoCuenta, tipo) = input
+      val actual = tipoCuenta.defaultMedio(tipo)
+      assertEquals(medio, actual, "$tipoCuenta $tipo")
+      assertTrue(tipoCuenta in actual.compatibleTipos && actual.allows(tipo), "$tipoCuenta $tipo")
     }
   }
 }

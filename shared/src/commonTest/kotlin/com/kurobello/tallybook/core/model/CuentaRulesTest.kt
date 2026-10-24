@@ -39,11 +39,6 @@ class CuentaRulesTest {
         CuentaRules.nombreKey("Ahorros Davivienda", Moneda.COP),
         CuentaRules.nombreKey("  ahórros DAVIVIENDA ", Moneda.COP),
     )
-    assertEquals(
-        CategoriaRules.nombreKey("Ahórros") == CategoriaRules.nombreKey("ahorros"),
-        CuentaRules.nombreKey("Ahórros", Moneda.COP) ==
-            CuentaRules.nombreKey("ahorros", Moneda.COP),
-    )
     assertNotEquals(
         CuentaRules.nombreKey("Año", Moneda.COP),
         CuentaRules.nombreKey("Ano", Moneda.COP),

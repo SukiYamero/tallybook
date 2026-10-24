@@ -8,8 +8,7 @@ enum class TipoCuenta {
   CREDITO;
 
   /** The medio implied when only the account is known, e.g. a sentence naming "Nequi". */
-  val defaultMedio: MedioPago
-    get() = defaultMedios.getValue(this)
+  fun defaultMedio(tipo: TipoMovimiento): MedioPago = defaultMedios.getValue(this).forTipo(tipo)
 }
 
 // A map instead of a constructor argument: MedioPago's entries already reference TipoCuenta.

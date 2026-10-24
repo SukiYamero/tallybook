@@ -17,29 +17,73 @@ import tallybook.shared.generated.resources.account_type_bank
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class AccountsResourcesHostTest {
-  private data class Labels(val tipos: List<String>, val medios: List<String>)
+  private data class Labels(val tipos: Map<TipoCuenta, String>, val medios: Map<MedioPago, String>)
 
   private val expected =
       mapOf(
           "es-CO" to
               Labels(
-                  listOf("Efectivo", "Banco o billetera", "Tarjeta de crédito"),
-                  listOf("Efectivo", "Débito", "Transferencia", "Crédito"),
+                  tipos =
+                      mapOf(
+                          TipoCuenta.EFECTIVO to "Efectivo",
+                          TipoCuenta.BANCO to "Banco o billetera",
+                          TipoCuenta.CREDITO to "Tarjeta de crédito",
+                      ),
+                  medios =
+                      mapOf(
+                          MedioPago.EFECTIVO to "Efectivo",
+                          MedioPago.DEBITO to "Débito",
+                          MedioPago.TRANSFERENCIA to "Transferencia",
+                          MedioPago.CREDITO to "Crédito",
+                      ),
               ),
           "es-AR" to
               Labels(
-                  listOf("Efectivo", "Banco o billetera virtual", "Tarjeta de crédito"),
-                  listOf("Efectivo", "Débito", "Transferencia", "Crédito"),
+                  tipos =
+                      mapOf(
+                          TipoCuenta.EFECTIVO to "Efectivo",
+                          TipoCuenta.BANCO to "Banco o billetera virtual",
+                          TipoCuenta.CREDITO to "Tarjeta de crédito",
+                      ),
+                  medios =
+                      mapOf(
+                          MedioPago.EFECTIVO to "Efectivo",
+                          MedioPago.DEBITO to "Débito",
+                          MedioPago.TRANSFERENCIA to "Transferencia",
+                          MedioPago.CREDITO to "Crédito",
+                      ),
               ),
           "en-US" to
               Labels(
-                  listOf("Cash", "Bank or wallet", "Credit card"),
-                  listOf("Cash", "Debit", "Bank transfer", "Credit"),
+                  tipos =
+                      mapOf(
+                          TipoCuenta.EFECTIVO to "Cash",
+                          TipoCuenta.BANCO to "Bank or wallet",
+                          TipoCuenta.CREDITO to "Credit card",
+                      ),
+                  medios =
+                      mapOf(
+                          MedioPago.EFECTIVO to "Cash",
+                          MedioPago.DEBITO to "Debit",
+                          MedioPago.TRANSFERENCIA to "Bank transfer",
+                          MedioPago.CREDITO to "Credit",
+                      ),
               ),
           "pt-BR" to
               Labels(
-                  listOf("Dinheiro", "Banco ou carteira digital", "Cartão de crédito"),
-                  listOf("Dinheiro", "Débito", "Transferência", "Crédito"),
+                  tipos =
+                      mapOf(
+                          TipoCuenta.EFECTIVO to "Dinheiro",
+                          TipoCuenta.BANCO to "Banco ou carteira digital",
+                          TipoCuenta.CREDITO to "Cartão de crédito",
+                      ),
+                  medios =
+                      mapOf(
+                          MedioPago.EFECTIVO to "Dinheiro",
+                          MedioPago.DEBITO to "Débito",
+                          MedioPago.TRANSFERENCIA to "Transferência",
+                          MedioPago.CREDITO to "Crédito",
+                      ),
               ),
       )
 
@@ -47,7 +91,7 @@ class AccountsResourcesHostTest {
   fun secondStringsFileResolvesThroughTheGeneratedAccessorInEveryLocale() = withLocales {
     expected.forEach { (locale, labels) ->
       Locale.setDefault(Locale.forLanguageTag(locale))
-      assertEquals(labels.tipos[TipoCuenta.BANCO.ordinal], getString(Res.string.account_type_bank))
+      assertEquals(labels.tipos.getValue(TipoCuenta.BANCO), getString(Res.string.account_type_bank))
     }
   }
 
@@ -55,8 +99,16 @@ class AccountsResourcesHostTest {
   fun everyTipoCuentaAndMedioPagoHasItsLocalizedLabel() = withLocales {
     expected.forEach { (locale, labels) ->
       Locale.setDefault(Locale.forLanguageTag(locale))
-      assertEquals(labels.tipos, TipoCuenta.entries.map { getString(it.labelResource) }, locale)
-      assertEquals(labels.medios, MedioPago.entries.map { getString(it.labelResource) }, locale)
+      assertEquals(
+          labels.tipos,
+          TipoCuenta.entries.associateWith { getString(it.labelResource) },
+          locale,
+      )
+      assertEquals(
+          labels.medios,
+          MedioPago.entries.associateWith { getString(it.labelResource) },
+          locale,
+      )
     }
   }
 

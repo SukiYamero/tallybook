@@ -16,14 +16,21 @@ data class Transferencia(
     val createdAt: Instant,
 )
 
+enum class TransferenciaCuentaError {
+  MISSING,
+  SAME_AS_ORIGEN,
+}
+
 enum class TransferenciaMontoError {
+  MISSING,
   WRONG_MONEDA,
   NOT_POSITIVE,
   DIFFERS_FROM_ORIGEN,
 }
 
 data class TransferenciaErrors(
-    val sameCuenta: Boolean = false,
+    val cuentaOrigen: TransferenciaCuentaError? = null,
+    val cuentaDestino: TransferenciaCuentaError? = null,
     val montoOrigen: TransferenciaMontoError? = null,
     val montoDestino: TransferenciaMontoError? = null,
     val fechaFuture: Boolean = false,
@@ -33,37 +40,50 @@ data class TransferenciaErrors(
     get() = this == TransferenciaErrors()
 }
 
+/**
+ * Validates field values rather than a [Transferencia] so a form can check a draft whose accounts
+ * or amounts are still empty (Pay card from another currency starts without [montoOrigen]).
+ */
 object TransferenciaRules {
+  @Suppress("LongParameterList")
   fun validate(
-      transferencia: Transferencia,
-      origen: Cuenta,
-      destino: Cuenta,
+      origen: Cuenta?,
+      destino: Cuenta?,
+      montoOrigen: Money?,
+      montoDestino: Money?,
+      fecha: LocalDate,
+      descripcion: String?,
       today: LocalDate,
   ): TransferenciaErrors {
-    require(
-        origen.id == transferencia.cuentaOrigenId && destino.id == transferencia.cuentaDestinoId
-    ) {
-      "Accounts must be the transferencia's origin and destination"
-    }
-    val montoOrigen = transferencia.montoOrigen
-    val montoDestino = transferencia.montoDestino
+    val montoOrigenError = montoError(montoOrigen, origen)
+    val montoDestinoError =
+        montoError(montoDestino, destino)
+            ?: TransferenciaMontoError.DIFFERS_FROM_ORIGEN.takeIf {
+              montoOrigenError == null &&
+                  origen != null &&
+                  origen.moneda == destino?.moneda &&
+                  montoDestino != montoOrigen
+            }
     return TransferenciaErrors(
-        sameCuenta = transferencia.cuentaOrigenId == transferencia.cuentaDestinoId,
-        montoOrigen = montoError(montoOrigen, origen.moneda),
-        montoDestino =
-            montoError(montoDestino, destino.moneda)
-                ?: TransferenciaMontoError.DIFFERS_FROM_ORIGEN.takeIf {
-                  origen.moneda == destino.moneda && montoDestino != montoOrigen
-                },
-        fechaFuture = transferencia.fecha > today,
-        descripcionTooLong =
-            (transferencia.descripcion?.length ?: 0) > TRANSFERENCIA_DESCRIPCION_MAX,
+        cuentaOrigen = TransferenciaCuentaError.MISSING.takeIf { origen == null },
+        cuentaDestino =
+            when {
+              destino == null -> TransferenciaCuentaError.MISSING
+              destino.id == origen?.id -> TransferenciaCuentaError.SAME_AS_ORIGEN
+              else -> null
+            },
+        montoOrigen = montoOrigenError,
+        montoDestino = montoDestinoError,
+        fechaFuture = fecha > today,
+        descripcionTooLong = (descripcion?.length ?: 0) > TRANSFERENCIA_DESCRIPCION_MAX,
     )
   }
 
-  private fun montoError(monto: Money, moneda: Moneda): TransferenciaMontoError? =
+  /** Without its account the currency is unknown, so only presence and sign are checked. */
+  private fun montoError(monto: Money?, cuenta: Cuenta?): TransferenciaMontoError? =
       when {
-        monto.moneda != moneda -> TransferenciaMontoError.WRONG_MONEDA
+        monto == null -> TransferenciaMontoError.MISSING
+        cuenta != null && monto.moneda != cuenta.moneda -> TransferenciaMontoError.WRONG_MONEDA
         monto.minorUnits <= 0 -> TransferenciaMontoError.NOT_POSITIVE
         else -> null
       }
