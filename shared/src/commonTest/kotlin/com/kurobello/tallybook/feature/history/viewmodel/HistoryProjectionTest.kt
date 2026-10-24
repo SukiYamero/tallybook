@@ -1,15 +1,22 @@
 package com.kurobello.tallybook.feature.history.viewmodel
 
+import com.kurobello.tallybook.core.model.Actividad
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.Direccion
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoDateRange
+import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.Transferencia
+import com.kurobello.tallybook.feature.history.ui.HistoryDayGroupUi
+import com.kurobello.tallybook.feature.history.ui.HistoryMovimientoRowUi
+import com.kurobello.tallybook.feature.history.ui.HistoryTransferenciaRowUi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -25,7 +32,7 @@ class HistoryProjectionTest {
     for (moneda in listOf(Moneda.COP, Moneda.CLP)) {
       val content =
           assertIs<HistoryProjection.Content>(
-              projectHistory(moneda, september, emptyList(), emptyMap(), "Unknown category")
+              projectMovimientos(moneda, september, emptyList(), emptyMap(), "Unknown category")
           )
       assertEquals(Money(0, moneda), content.summary.ingresos)
       assertEquals(Money(0, moneda), content.summary.gastos)
@@ -40,7 +47,7 @@ class HistoryProjectionTest {
     for (moneda in listOf(Moneda.COP, Moneda.CLP)) {
       val income =
           assertIs<HistoryProjection.Content>(
-              projectHistory(
+              projectMovimientos(
                   moneda,
                   september,
                   listOf(movimiento("income", TipoMovimiento.INGRESO, 1250, moneda)),
@@ -55,7 +62,7 @@ class HistoryProjectionTest {
 
       val expense =
           assertIs<HistoryProjection.Content>(
-              projectHistory(
+              projectMovimientos(
                   moneda,
                   september,
                   listOf(movimiento("expense", TipoMovimiento.GASTO, 350, moneda)),
@@ -81,7 +88,7 @@ class HistoryProjectionTest {
         )
     val content =
         assertIs<HistoryProjection.Content>(
-            projectHistory(Moneda.COP, september, rows, emptyMap(), "Unknown category")
+            projectMovimientos(Moneda.COP, september, rows, emptyMap(), "Unknown category")
         )
 
     assertEquals(Money(1275, Moneda.COP), content.summary.ingresos)
@@ -92,10 +99,10 @@ class HistoryProjectionTest {
         listOf(LocalDate(2026, 9, 30), LocalDate(2026, 9, 1)),
         content.groups.map { it.fecha },
     )
-    assertEquals(listOf(2, 2), content.groups.map { it.rows.size })
+    assertEquals(listOf(2, 2), content.groups.map { it.movimientoRows.size })
     assertEquals(
         listOf("income-a", "expense-a", "income-b", "expense-b"),
-        content.groups.flatMap { it.rows }.map { it.id },
+        content.groups.flatMap { it.movimientoRows }.map { it.id },
     )
   }
 
@@ -106,7 +113,7 @@ class HistoryProjectionTest {
     for ((tipo, expectedBalance) in cases) {
       val content =
           assertIs<HistoryProjection.Content>(
-              projectHistory(
+              projectMovimientos(
                   Moneda.COP,
                   september,
                   listOf(movimiento("maximum", tipo, Long.MAX_VALUE)),
@@ -116,7 +123,10 @@ class HistoryProjectionTest {
           )
       assertEquals(Money(expectedBalance, Moneda.COP), content.summary.balance)
       assertEquals(1, content.movementCount)
-      assertEquals(Money(Long.MAX_VALUE, Moneda.COP), content.groups.single().rows.single().monto)
+      assertEquals(
+          Money(Long.MAX_VALUE, Moneda.COP),
+          content.groups.single().movimientoRows.single().monto,
+      )
     }
   }
 
@@ -129,7 +139,7 @@ class HistoryProjectionTest {
         )
     val content =
         assertIs<HistoryProjection.Content>(
-            projectHistory(Moneda.COP, september, rows, emptyMap(), "Unknown category")
+            projectMovimientos(Moneda.COP, september, rows, emptyMap(), "Unknown category")
         )
     assertEquals(Money(Long.MAX_VALUE, Moneda.COP), content.summary.ingresos)
     assertEquals(Money(Long.MAX_VALUE, Moneda.COP), content.summary.gastos)
@@ -147,7 +157,7 @@ class HistoryProjectionTest {
         )
     assertEquals(
         HistoryProjection.Failure(HistoryFailure.CalculationOverflow),
-        projectHistory(Moneda.COP, september, rows, emptyMap(), "Unknown category"),
+        projectMovimientos(Moneda.COP, september, rows, emptyMap(), "Unknown category"),
     )
   }
 
@@ -161,7 +171,7 @@ class HistoryProjectionTest {
         )
     assertEquals(
         HistoryProjection.Failure(HistoryFailure.CalculationOverflow),
-        projectHistory(Moneda.COP, september, rows, emptyMap(), "Unknown category"),
+        projectMovimientos(Moneda.COP, september, rows, emptyMap(), "Unknown category"),
     )
   }
 
@@ -175,9 +185,15 @@ class HistoryProjectionTest {
         )
     val content =
         assertIs<HistoryProjection.Content>(
-            projectHistory(Moneda.COP, september, rows, mapOf(food.id to food), "Unknown category")
+            projectMovimientos(
+                Moneda.COP,
+                september,
+                rows,
+                mapOf(food.id to food),
+                "Unknown category",
+            )
         )
-    val projected = content.groups.single().rows
+    val projected = content.groups.single().movimientoRows
 
     assertEquals(listOf("  Lunch with Ana  ", "Food", "Food"), projected.map { it.title })
     assertEquals(listOf("Food", "Food", "Food"), projected.map { it.categoryLabel })
@@ -194,9 +210,9 @@ class HistoryProjectionTest {
         )
     val content =
         assertIs<HistoryProjection.Content>(
-            projectHistory(Moneda.COP, september, rows, emptyMap(), "Categoría desconocida")
+            projectMovimientos(Moneda.COP, september, rows, emptyMap(), "Categoría desconocida")
         )
-    val projected = content.groups.single().rows
+    val projected = content.groups.single().movimientoRows
 
     assertEquals(listOf("Bus", "Categoría desconocida"), projected.map { it.title })
     assertEquals(
@@ -214,13 +230,19 @@ class HistoryProjectionTest {
     val rows = listOf(movimiento("known"), movimiento("missing", categoriaId = "missing"))
     val initial =
         assertIs<HistoryProjection.Content>(
-            projectHistory(Moneda.COP, september, rows, mapOf(food.id to food), "Unknown category")
+            projectMovimientos(
+                Moneda.COP,
+                september,
+                rows,
+                mapOf(food.id to food),
+                "Unknown category",
+            )
         )
     val updatedFood =
         food.copy(nombre = "Comida", icono = CategoryIcon.COFFEE, color = CategoryTint.BLUE)
     val updated =
         assertIs<HistoryProjection.Content>(
-            projectHistory(
+            projectMovimientos(
                 Moneda.COP,
                 september,
                 rows,
@@ -229,17 +251,20 @@ class HistoryProjectionTest {
             )
         )
 
-    assertEquals(listOf("Food", "Unknown category"), initial.groups.single().rows.map { it.title })
+    assertEquals(
+        listOf("Food", "Unknown category"),
+        initial.groups.single().movimientoRows.map { it.title },
+    )
     assertEquals(
         listOf("Comida", "Categoría desconocida"),
-        updated.groups.single().rows.map { it.title },
+        updated.groups.single().movimientoRows.map { it.title },
     )
-    assertEquals(updatedFood, updated.groups.single().rows.first().categoria)
+    assertEquals(updatedFood, updated.groups.single().movimientoRows.first().categoria)
     assertEquals(initial.summary, updated.summary)
     assertEquals(initial.movementCount, updated.movementCount)
     assertEquals(
-        initial.groups.single().rows.map { it.key },
-        updated.groups.single().rows.map { it.key },
+        initial.groups.single().movimientoRows.map { it.key },
+        updated.groups.single().movimientoRows.map { it.key },
     )
     assertEquals(initial.groups.single().key, updated.groups.single().key)
   }
@@ -253,14 +278,14 @@ class HistoryProjectionTest {
         )
     val content =
         assertIs<HistoryProjection.Content>(
-            projectHistory(Moneda.COP, september, rows, emptyMap(), "Unknown category")
+            projectMovimientos(Moneda.COP, september, rows, emptyMap(), "Unknown category")
         )
 
-    assertEquals(rows, content.groups.single().rows.map { it.movimiento })
+    assertEquals(rows, content.groups.single().movimientoRows.map { it.movimiento })
     assertEquals(LocalDate(2026, 9, 15), content.groups.single().fecha)
     assertEquals(
         listOf(LocalDate(2026, 9, 15), LocalDate(2026, 9, 15)),
-        content.groups.single().rows.map { it.fecha },
+        content.groups.single().movimientoRows.map { it.fecha },
     )
   }
 
@@ -269,25 +294,28 @@ class HistoryProjectionTest {
     val row = movimiento("history-day:2026-09-15")
     val content =
         assertIs<HistoryProjection.Content>(
-            projectHistory(Moneda.COP, september, listOf(row), emptyMap(), "Unknown category")
+            projectMovimientos(Moneda.COP, september, listOf(row), emptyMap(), "Unknown category")
         )
     val group = content.groups.single()
 
-    assertEquals(row.id, group.rows.single().id)
-    assertNotEquals(group.key, group.rows.single().key)
+    assertEquals(row.id, group.movimientoRows.single().id)
+    assertNotEquals(group.key, group.movimientoRows.single().key)
     val rebuilt =
         assertIs<HistoryProjection.Content>(
-            projectHistory(Moneda.COP, september, listOf(row), emptyMap(), "Otro idioma")
+            projectMovimientos(Moneda.COP, september, listOf(row), emptyMap(), "Otro idioma")
         )
     assertEquals(group.key, rebuilt.groups.single().key)
-    assertEquals(group.rows.single().key, rebuilt.groups.single().rows.single().key)
+    assertEquals(
+        group.movimientoRows.single().key,
+        rebuilt.groups.single().movimientoRows.single().key,
+    )
   }
 
   @Test
   fun rowsOutsideTheRangeAreRejectedInsteadOfFilteredOrCounted() {
     for (date in listOf(LocalDate(2026, 8, 31), LocalDate(2026, 10, 1))) {
       assertFailsWith<IllegalArgumentException> {
-        projectHistory(
+        projectMovimientos(
             Moneda.COP,
             september,
             listOf(movimiento("outside", fecha = date)),
@@ -301,7 +329,7 @@ class HistoryProjectionTest {
   @Test
   fun mixedCurrencyAndNonpositiveMovimientoInputsAreRejected() {
     assertFailsWith<IllegalArgumentException> {
-      projectHistory(
+      projectMovimientos(
           Moneda.COP,
           september,
           listOf(movimiento("wrong-currency", moneda = Moneda.USD)),
@@ -311,7 +339,7 @@ class HistoryProjectionTest {
     }
     for (amount in listOf(0L, -1L)) {
       assertFailsWith<IllegalArgumentException> {
-        projectHistory(
+        projectMovimientos(
             Moneda.COP,
             september,
             listOf(movimiento("invalid-amount", amount = amount)),
@@ -336,7 +364,13 @@ class HistoryProjectionTest {
             movimiento("amount", amount = 0),
         )) {
       assertFailsWith<IllegalArgumentException> {
-        projectHistory(Moneda.COP, september, overflowing + invalid, emptyMap(), "Unknown category")
+        projectMovimientos(
+            Moneda.COP,
+            september,
+            overflowing + invalid,
+            emptyMap(),
+            "Unknown category",
+        )
       }
     }
   }
@@ -350,9 +384,119 @@ class HistoryProjectionTest {
             movimiento("late-again", fecha = LocalDate(2026, 9, 30)),
         )
     assertFailsWith<IllegalArgumentException> {
-      projectHistory(Moneda.COP, september, rows, emptyMap(), "Unknown category")
+      projectMovimientos(Moneda.COP, september, rows, emptyMap(), "Unknown category")
     }
   }
+
+  @Test
+  fun transfersShareDayGroupsButStayOutOfTotalsAndTheMovementCount() {
+    val interna = transferencia("interna", 900, LocalDate(2026, 9, 30))
+    val entrada = transferencia("entrada", 4000, LocalDate(2026, 9, 15), Direccion.ENTRADA)
+    val actividades =
+        listOf(
+            interna,
+            Actividad.DeMovimiento(movimiento("gasto", fecha = LocalDate(2026, 9, 30))),
+            entrada,
+            Actividad.DeMovimiento(movimiento("ingreso", TipoMovimiento.INGRESO, 250)),
+        )
+    val content =
+        assertIs<HistoryProjection.Content>(
+            projectHistory(
+                Moneda.COP,
+                september,
+                actividades,
+                emptyMap(),
+                "Unknown category",
+                mapOf(NEQUI.id to NEQUI),
+            )
+        )
+
+    assertEquals(Money(250, Moneda.COP), content.summary.ingresos)
+    assertEquals(Money(100, Moneda.COP), content.summary.gastos)
+    assertEquals(2, content.movementCount)
+    assertEquals(
+        listOf(listOf("interna", "gasto"), listOf("entrada", "ingreso")),
+        content.groups.map { group -> group.rows.map { it.id } },
+    )
+    val row = assertIs<HistoryTransferenciaRowUi>(content.groups.first().rows.first())
+    assertEquals(interna, row.actividad)
+    assertEquals(NEQUI, row.origen)
+    assertNull(row.destino)
+    assertEquals(Money(900, Moneda.COP), row.monto)
+    assertNotEquals(
+        content.groups.first().rows[0].key,
+        HistoryMovimientoRowUi(movimiento("interna"), null, "", "").key,
+    )
+  }
+
+  @Test
+  fun aPeriodWithOnlyTransfersIsNotEmptyAndCountsNoMovements() {
+    val content =
+        assertIs<HistoryProjection.Content>(
+            projectHistory(
+                Moneda.COP,
+                september,
+                listOf(transferencia("move", 900, LocalDate(2026, 9, 15))),
+                emptyMap(),
+                "Unknown category",
+            )
+        )
+    assertEquals(0, content.movementCount)
+    assertEquals(false, content.isEmpty)
+    assertEquals(Money(0, Moneda.COP), content.summary.balance)
+  }
+
+  @Test
+  fun aTransferSideInAnotherCurrencyIsRejected() {
+    val usd =
+        Actividad.DeTransferencia(
+            transferencia("usd", 10, LocalDate(2026, 9, 15)).transferencia,
+            Money(10, Moneda.USD),
+            Direccion.SALIDA,
+        )
+    assertFailsWith<IllegalArgumentException> {
+      projectHistory(Moneda.COP, september, listOf(usd), emptyMap(), "Unknown category")
+    }
+  }
+
+  private fun transferencia(
+      id: String,
+      amount: Long,
+      fecha: LocalDate,
+      direccion: Direccion = Direccion.INTERNA,
+  ): Actividad.DeTransferencia =
+      Actividad.DeTransferencia(
+          Transferencia(
+              id,
+              NEQUI.id,
+              "nu",
+              Money(amount, Moneda.COP),
+              Money(amount, Moneda.COP),
+              fecha,
+              null,
+              Instant.parse("2026-09-15T13:00:00Z"),
+          ),
+          Money(amount, Moneda.COP),
+          direccion,
+      )
+
+  private fun projectMovimientos(
+      moneda: Moneda,
+      range: MovimientoDateRange,
+      movimientos: List<Movimiento>,
+      categoriasById: Map<String, Categoria>,
+      unknownCategoryLabel: String,
+  ): HistoryProjection =
+      projectHistory(
+          moneda,
+          range,
+          movimientos.map(Actividad::DeMovimiento),
+          categoriasById,
+          unknownCategoryLabel,
+      )
+
+  private val HistoryDayGroupUi.movimientoRows: List<HistoryMovimientoRowUi>
+    get() = rows.map { assertIs<HistoryMovimientoRowUi>(it) }
 
   private fun movimiento(
       id: String,
@@ -379,5 +523,15 @@ class HistoryProjectionTest {
   private companion object {
     val september = MovimientoDateRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30))
     val food = Categoria("food", "Food", null, CategoryIcon.UTENSILS, CategoryTint.AMBER)
+    val NEQUI =
+        Cuenta(
+            "nequi",
+            "Nequi",
+            TipoCuenta.BANCO,
+            Money(0, Moneda.COP),
+            null,
+            false,
+            Instant.parse("2026-01-01T00:00:00Z"),
+        )
   }
 }

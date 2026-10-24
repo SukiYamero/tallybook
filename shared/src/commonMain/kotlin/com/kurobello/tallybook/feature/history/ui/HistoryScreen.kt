@@ -24,6 +24,9 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
+import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.ui.account.ActividadTransferenciaRow
+import com.kurobello.tallybook.core.ui.account.MonedaSelector
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookSkeletonLine
 import com.kurobello.tallybook.core.ui.component.TallybookText
@@ -86,13 +89,7 @@ internal fun HistoryScreen(
             ),
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
     ) {
-      historyContent(
-          renderedState,
-          actions,
-          navigation.onAdd,
-          presentation.showLoading,
-          navigation.onOpenMovimiento,
-      )
+      historyContent(renderedState, actions, navigation, presentation.showLoading)
     }
   }
 }
@@ -116,12 +113,12 @@ internal fun HistoryRow(
 private fun LazyListScope.historyContent(
     uiState: HistoryUiState,
     actions: HistoryActions,
-    onAdd: () -> Unit,
+    navigation: HistoryNavigationCallbacks,
     showLoading: Boolean,
-    onOpenMovimiento: ((String) -> Unit)?,
 ) {
   val content = uiState.period.cachedValue
   item(key = "history-context") { HistoryPeriodHeader(uiState, actions) }
+  historyMonedaSelector(uiState, actions)
   item(key = "history-count") {
     if (content != null) {
       TallybookText(
@@ -163,14 +160,48 @@ private fun LazyListScope.historyContent(
       MovimientoRowSkeleton(Modifier.fillMaxWidth())
     }
   }
-  if (uiState.isEmpty) item(key = "history-empty") { HistoryEmptyPeriod(onAdd) }
-  content?.groups?.forEach { group ->
+  if (uiState.isEmpty) item(key = "history-empty") { HistoryEmptyPeriod(navigation.onAdd) }
+  historyGroups(content?.groups.orEmpty(), uiState.primary ?: uiState.moneda, navigation)
+}
+
+private fun LazyListScope.historyMonedaSelector(uiState: HistoryUiState, actions: HistoryActions) {
+  val moneda = uiState.moneda
+  if (uiState.showsMonedaSelector && moneda != null)
+      item(key = "history-currency") {
+        MonedaSelector(uiState.monedas, moneda, actions::onMonedaSelected)
+      }
+}
+
+private fun LazyListScope.historyGroups(
+    groups: List<HistoryDayGroupUi>,
+    primary: Moneda?,
+    navigation: HistoryNavigationCallbacks,
+) {
+  groups.forEach { group ->
     item(key = group.key, contentType = "date") { CivilDayHeader(group.fecha) }
-    items(group.rows, key = { it.key }, contentType = { "movimiento" }) { row ->
-      HistoryRow(row, onClick = onOpenMovimiento?.let { open -> { open(row.movimiento.id) } })
+    items(group.rows, key = { it.key }, contentType = { it.contentType }) { row ->
+      when (row) {
+        is HistoryMovimientoRowUi ->
+            HistoryRow(row, onClick = navigation.onOpenMovimiento?.let { open -> { open(row.id) } })
+        is HistoryTransferenciaRowUi ->
+            ActividadTransferenciaRow(
+                row.actividad,
+                row.origen,
+                row.destino,
+                primary,
+                onClick = navigation.onOpenTransferencia?.let { open -> { open(row.id) } },
+            )
+      }
     }
   }
 }
+
+private val HistoryRowUi.contentType: String
+  get() =
+      when (this) {
+        is HistoryMovimientoRowUi -> "movimiento"
+        is HistoryTransferenciaRowUi -> "transferencia"
+      }
 
 @Composable
 private fun HistoryReadNotice(message: String, onRetry: () -> Unit) {

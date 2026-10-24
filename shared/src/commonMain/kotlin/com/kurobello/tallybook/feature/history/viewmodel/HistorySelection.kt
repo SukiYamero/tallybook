@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.feature.history.viewmodel
 
 import com.kurobello.tallybook.core.model.FIRST_SELECTABLE_YEAR
+import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoPeriodRanges
 import kotlinx.datetime.LocalDate
@@ -100,7 +101,17 @@ internal data class HistorySelection(val scope: HistoryScope, val anchor: LocalD
   }
 }
 
+/** [moneda] is the currency the user picked; an absent or unknown one restores the primary. */
 @Serializable
-internal data class HistorySavedInput(val version: Int, val scope: String, val anchor: String)
+internal data class HistorySavedInput(
+    val version: Int,
+    val scope: String,
+    val anchor: String,
+    val moneda: String? = null,
+) {
+  fun restoredMoneda(): Moneda? =
+      if (version == HISTORY_SAVED_VERSION) Moneda.entries.firstOrNull { it.name == moneda }
+      else null
+}
 
 private const val HISTORY_SAVED_VERSION = 1

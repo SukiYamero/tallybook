@@ -13,6 +13,8 @@ import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.db.SqlPreparedStatement
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.kurobello.tallybook.core.data.ActividadRepository
+import com.kurobello.tallybook.core.data.ActividadRepositoryImpl
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepository
@@ -60,6 +62,8 @@ import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.di.DispatcherQualifier
 import com.kurobello.tallybook.di.entryModule
 import com.kurobello.tallybook.di.viewModelModule
+import com.kurobello.tallybook.feature.history.ui.HistoryMovimientoRowUi
+import com.kurobello.tallybook.feature.history.ui.HistoryRowUi
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryFailure
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryProjection
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryScope
@@ -213,11 +217,11 @@ class HistoryIntegrationTest {
       graph.start()
       graph.insertLegacy(row("missing", TODAY, category = "later-category", title = null))
       runCurrent()
-      assertEquals("Unknown category", graph.period.groups.single().rows.single().title)
+      assertEquals("Unknown category", graph.period.groups.single().rows.single().movimientoTitle)
       val originalSummary = graph.period.summary
       graph.history.onPresentationChanged("Sin categoría")
       runCurrent()
-      assertEquals("Sin categoría", graph.period.groups.single().rows.single().title)
+      assertEquals("Sin categoría", graph.period.groups.single().rows.single().movimientoTitle)
       assertEquals(
           DataOutcome.Success(Unit),
           graph.categorias.ensureSeeded(
@@ -233,7 +237,7 @@ class HistoryIntegrationTest {
           ),
       )
       runCurrent()
-      assertEquals("Recovered category", graph.period.groups.single().rows.single().title)
+      assertEquals("Recovered category", graph.period.groups.single().rows.single().movimientoTitle)
       assertEquals(originalSummary, graph.period.summary)
       assertEquals(
           DataOutcome.Success(Unit),
@@ -442,6 +446,7 @@ class HistoryIntegrationTest {
               single<AppPreferencesRepository> { preferences }
               single<MovimientoRepository> { movimientos }
               single<SaldoRepository> { SaldoRepositoryImpl(database, fixture.dispatcher) }
+              single<ActividadRepository> { ActividadRepositoryImpl(database, fixture.dispatcher) }
               single<CategoriaRepository> { categorias }
               single<EtiquetaRepository> { etiquetas }
               single<CuentaRepository> { cuentas }
@@ -648,3 +653,6 @@ class HistoryIntegrationTest {
         assertIs<DataOutcome.Success<T>>(outcome).data
   }
 }
+
+private val HistoryRowUi.movimientoTitle: String
+  get() = assertIs<HistoryMovimientoRowUi>(this).title

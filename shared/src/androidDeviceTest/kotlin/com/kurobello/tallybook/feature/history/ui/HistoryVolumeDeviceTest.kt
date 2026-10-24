@@ -28,9 +28,11 @@ import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.db.SqlPreparedStatement
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
+import com.kurobello.tallybook.core.data.ActividadRepositoryImpl
 import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
@@ -38,13 +40,19 @@ import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.insertCuentaRow
+import com.kurobello.tallybook.core.data.insertTransferenciaRow
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.model.Actividad
 import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
+import com.kurobello.tallybook.core.model.TipoCuenta
+import com.kurobello.tallybook.core.model.Transferencia
 import com.kurobello.tallybook.core.ui.layout.TallybookAppShell
 import com.kurobello.tallybook.core.ui.navigation.History
 import com.kurobello.tallybook.core.ui.navigation.TallybookBottomNavigation
@@ -152,6 +160,7 @@ class HistoryVolumeDeviceTest {
                           context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0,
                       )
                       .put("selected", 10000)
+                      .put("transfers", VOLUME_TRANSFERS)
                       .put("excludedCurrency", 4000)
                       .put("excludedDates", 4000)
                       .put("beforePssKb", beforePssKb)
@@ -231,6 +240,8 @@ class HistoryVolumeDeviceTest {
         )
     private val preferences = AppPreferencesRepositoryImpl(factory.create())
     private val movimientos = MovimientoRepositoryImpl(database, Dispatchers.IO, TestChangeClock())
+    private val actividades = ActividadRepositoryImpl(database, Dispatchers.IO)
+    private val cuentas = FakeCuentaRepository(volumeCuentas)
     private val categorias =
         CategoriaRepositoryImpl(
             database,
@@ -261,7 +272,7 @@ class HistoryVolumeDeviceTest {
             )
         viewModel =
             HistoryViewModel(
-                HistoryRepositories(preferences, movimientos, categorias),
+                HistoryRepositories(preferences, actividades, categorias, cuentas),
                 handle,
                 fallback,
                 HistoryDateProvider(
@@ -279,6 +290,24 @@ class HistoryVolumeDeviceTest {
       requireNotNull(viewModel).uiState.first { it.period is RetainedLoadState.Ready }
       withContext(Dispatchers.IO) {
         database.transaction {
+          volumeCuentas.forEach { database.insertCuentaRow(it, ChangeStamp.SEED) }
+          repeat(VOLUME_TRANSFERS) { index ->
+            val cross = index % 3 == 0
+            database.insertTransferenciaRow(
+                Transferencia(
+                    "transfer-$index",
+                    if (cross) Cuenta.defaultCashId(Moneda.USD)
+                    else Cuenta.defaultCashId(Moneda.COP),
+                    VOLUME_BANK,
+                    Money(if (cross) 10 else 500, if (cross) Moneda.USD else Moneda.COP),
+                    Money(500, Moneda.COP),
+                    LocalDate(2026, 9, index % 28 + 2),
+                    null,
+                    Instant.parse("2026-09-01T00:00:00Z"),
+                ),
+                ChangeStamp.SEED,
+            )
+          }
           repeat(10000) { index ->
             val id = "cop-${index.toString().padStart(5, '0')}"
             insert(
@@ -341,18 +370,25 @@ class HistoryVolumeDeviceTest {
     suspend fun measureSnapshot(): Measurement {
       val range = MovimientoDateRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30))
       val started = TimeSource.Monotonic.markNow()
-      val rows =
-          assertIs<DataOutcome.Success<List<com.kurobello.tallybook.core.model.Movimiento>>>(
-                  movimientos.observeRange(Moneda.COP, range).first()
+      val actividadRows =
+          assertIs<DataOutcome.Success<List<Actividad>>>(
+                  actividades.observeActividadRange(Moneda.COP, range).first()
               )
               .data
       val readTime = started.elapsedNow().toString()
       val sql = requireNotNull(driver.rangeSql)
+      val rows = actividadRows.mapNotNull { (it as? Actividad.DeMovimiento)?.movimiento }
+      assertEquals(10000 + VOLUME_TRANSFERS, actividadRows.size)
       assertEquals(10000, rows.size)
       assertEquals(10000, rows.map { it.id }.toSet().size)
-      assertEquals("cop-09989", rows.first().id)
-      assertEquals("cop-00000", rows.last().id)
+      assertEquals("cop-09989", actividadRows.first().id)
+      assertEquals("cop-00000", actividadRows.last().id)
       assertTrue(rows.all { it.monto.moneda == Moneda.COP && it.fecha in range.start..range.end })
+      assertTrue(
+          actividadRows.filterIsInstance<Actividad.DeTransferencia>().all {
+            it.monto == Money(500, Moneda.COP)
+          }
+      )
       val categorySnapshot =
           assertIs<DataOutcome.Success<List<com.kurobello.tallybook.core.model.Categoria>>>(
                   categorias.getAll()
@@ -363,7 +399,14 @@ class HistoryVolumeDeviceTest {
       val projectionStart = TimeSource.Monotonic.markNow()
       val projection =
           assertIs<HistoryProjection.Content>(
-              projectHistory(Moneda.COP, range, rows, categorySnapshot, fallback)
+              projectHistory(
+                  Moneda.COP,
+                  range,
+                  actividadRows,
+                  categorySnapshot,
+                  fallback,
+                  volumeCuentas.associateBy { it.id },
+              )
           )
       val projectionTime = projectionStart.elapsedNow().toString()
       assertEquals(10000, projection.movementCount)
@@ -387,7 +430,8 @@ class HistoryVolumeDeviceTest {
                 }
                 .value
           }
-      val projectedRows = projection.groups.flatMap { it.rows }
+      val projectedRows =
+          projection.groups.flatMap { it.rows }.filterIsInstance<HistoryMovimientoRowUi>()
       return Measurement(
           projectedRows.first(),
           projectedRows[5000],
@@ -438,12 +482,25 @@ class HistoryVolumeDeviceTest {
         parameters: Int,
         binders: (SqlPreparedStatement.() -> Unit)?,
     ): QueryResult<R> {
-      if (sql.trimStart().startsWith("SELECT") && sql.contains("fecha >=")) rangeSql = sql
+      if (sql.trimStart().startsWith("SELECT movimiento_con_etiquetas") && sql.contains("fecha >="))
+          rangeSql = sql
       return delegate.executeQuery(identifier, sql, mapper, parameters, binders)
     }
   }
 
   private companion object {
+    const val VOLUME_TRANSFERS = 300
+    const val VOLUME_BANK = "volume-bank"
+    val volumeCuentas =
+        listOf(
+            volumeCuenta(Cuenta.defaultCashId(Moneda.COP), TipoCuenta.EFECTIVO, Moneda.COP),
+            volumeCuenta(Cuenta.defaultCashId(Moneda.USD), TipoCuenta.EFECTIVO, Moneda.USD),
+            volumeCuenta(VOLUME_BANK, TipoCuenta.BANCO, Moneda.COP),
+        )
+
+    fun volumeCuenta(id: String, tipo: TipoCuenta, moneda: Moneda) =
+        Cuenta(id, id, tipo, Money(0, moneda), null, false, Instant.parse("2026-01-01T00:00:00Z"))
+
     fun memoryPssKb(): Int = Debug.MemoryInfo().also(Debug::getMemoryInfo).totalPss
   }
 }

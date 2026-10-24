@@ -31,16 +31,21 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.compose.LocalSavedStateRegistryOwner
 import androidx.savedstate.savedState
+import com.kurobello.tallybook.core.data.ActividadRepository
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
+import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.FakeSaldoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.SaldoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
+import com.kurobello.tallybook.core.data.cashCuenta
+import com.kurobello.tallybook.core.model.Actividad
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -62,9 +67,11 @@ import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.map
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.di.DispatcherQualifier
 import com.kurobello.tallybook.di.viewModelModule
+import com.kurobello.tallybook.feature.history.ui.HistoryMovimientoRowUi
 import com.kurobello.tallybook.feature.history.ui.rememberHistoryRouteState
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryScope
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryUiState
@@ -257,6 +264,7 @@ internal class TallybookAppShellLifecycleHostTest {
               .first()
               .rows
               .first()
+              .let { assertIs<HistoryMovimientoRowUi>(it) }
               .title,
       )
     }
@@ -278,6 +286,8 @@ private class ShellSuite(private val scope: TestScope) {
           module {
             single<AppPreferencesRepository> { ShellPreferences() }
             single<MovimientoRepository> { repository }
+            single<ActividadRepository> { repository }
+            single<CuentaRepository> { FakeCuentaRepository(listOf(cashCuenta(Moneda.USD))) }
             single<SaldoRepository> { FakeSaldoRepository() }
             single<EtiquetaRepository> { FakeEtiquetaRepository() }
             single<CategoriaRepository> { ShellCategories() }
@@ -504,7 +514,13 @@ private class ShellHarness(
   }
 }
 
-private class ShellMovimientos : MovimientoRepository {
+private class ShellMovimientos : MovimientoRepository, ActividadRepository {
+  override fun observeActividadRange(
+      moneda: Moneda,
+      range: MovimientoDateRange,
+  ): Flow<DataOutcome<List<Actividad>>> =
+      observeRange(moneda, range).map { outcome -> outcome.map { it.map(Actividad::DeMovimiento) } }
+
   override suspend fun defaultSelection(
       primary: Moneda,
       tipo: TipoMovimiento,

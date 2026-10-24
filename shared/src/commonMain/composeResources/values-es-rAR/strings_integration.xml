@@ -1,0 +1,6 @@
+<resources>
+    <string name="activity_missing_account">Cuenta no disponible</string>
+    <string name="account_view_movements">Ver movimientos</string>
+    <string name="search_type_transfers">Entre cuentas</string>
+    <string name="search_accounts_label">Cuentas</string>
+</resources>

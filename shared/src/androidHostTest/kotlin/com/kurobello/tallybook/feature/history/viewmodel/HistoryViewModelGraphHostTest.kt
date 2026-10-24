@@ -12,11 +12,15 @@ import androidx.savedstate.savedState
 import androidx.savedstate.serialization.encodeToSavedState
 import androidx.savedstate.write
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.kurobello.tallybook.core.data.ActividadRepository
+import com.kurobello.tallybook.core.data.ActividadRepositoryImpl
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
+import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
@@ -26,6 +30,7 @@ import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.cashCuenta
 import com.kurobello.tallybook.core.data.insertLegacy
 import com.kurobello.tallybook.core.data.seedCashCuentas
 import com.kurobello.tallybook.core.database.TallybookDatabase
@@ -40,6 +45,7 @@ import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.di.DispatcherQualifier
 import com.kurobello.tallybook.di.viewModelModule
+import com.kurobello.tallybook.feature.history.ui.HistoryMovimientoRowUi
 import java.sql.Driver
 import java.sql.DriverManager
 import kotlin.io.path.createTempDirectory
@@ -116,6 +122,8 @@ internal class HistoryViewModelGraphHostTest {
               module {
                 single<AppPreferencesRepository> { preferences }
                 single<MovimientoRepository> { movimientos }
+                single<ActividadRepository> { ActividadRepositoryImpl(database, dispatcher) }
+                single<CuentaRepository> { FakeCuentaRepository(listOf(cashCuenta(Moneda.USD))) }
                 single<EtiquetaRepository> { FakeEtiquetaRepository() }
                 single<CategoriaRepository> { categorias }
                 single<Clock> {
@@ -192,6 +200,7 @@ internal class HistoryViewModelGraphHostTest {
                   .single()
                   .rows
                   .single()
+                  .let { assertIs<HistoryMovimientoRowUi>(it) }
                   .title,
           )
           database.insertLegacy(row("outside", LocalDate(2026, 10, 4), Moneda.USD))

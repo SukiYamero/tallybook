@@ -3,17 +3,21 @@ package com.kurobello.tallybook.feature.history.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kurobello.tallybook.core.data.ActividadRepository
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
-import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.model.Actividad
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
-import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoDateRange
+import com.kurobello.tallybook.core.model.monedas
+import com.kurobello.tallybook.core.model.viewedMoneda
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.core.ui.state.failed
 import kotlin.time.Clock
@@ -43,11 +47,14 @@ import kotlinx.datetime.toLocalDateTime
 
 internal data class HistoryRepositories(
     val preferences: AppPreferencesRepository,
-    val movimientos: MovimientoRepository,
+    val actividades: ActividadRepository,
     val categorias: CategoriaRepository,
+    val cuentas: CuentaRepository,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
+// The screen callbacks and source acceptance share one synchronous input owner.
+@Suppress("TooManyFunctions")
 internal class HistoryViewModel(
     private val repositories: HistoryRepositories,
     private val savedStateHandle: SavedStateHandle,
@@ -57,7 +64,8 @@ internal class HistoryViewModel(
     scope: CoroutineScope? = null,
 ) : ViewModel(), HistoryActions {
   private val initialToday = dateProvider.today()
-  private val initialSelection = restoreHistoryInput(savedStateHandle, initialToday)
+  private val restored = restoreHistoryCheckpoint(savedStateHandle, initialToday)
+  private val initialSelection = restored.selection
   private val inputs =
       MutableStateFlow(
           HistoryInputs(
@@ -65,6 +73,7 @@ internal class HistoryViewModel(
               initialToday,
               unknownCategoryLabel,
               setOf(initialSelection.anchor.year),
+              selectedMoneda = restored.moneda,
           )
       )
   private val observationEpoch = MutableStateFlow(0L)
@@ -82,7 +91,11 @@ internal class HistoryViewModel(
     require(unknownCategoryLabel.isNotBlank()) {
       "History fallback label must be localized and nonblank"
     }
-    installHistoryCheckpoint(savedStateHandle) { inputs.value.selection }
+    installHistoryCheckpoint(
+        savedStateHandle,
+        { inputs.value.selection },
+        { inputs.value.selectedMoneda },
+    )
   }
 
   private val producer =
@@ -104,9 +117,17 @@ internal class HistoryViewModel(
             .collectLatest { command ->
               if (command == SharingCommand.START) {
                 val epoch = observationEpoch.value
-                observeHistory(repositories, inputs, computationDispatcher) { load, reload ->
-                      acceptPreferences(epoch, reload, load)
-                    }
+                observeHistory(
+                        repositories,
+                        inputs,
+                        computationDispatcher,
+                        HistoryReceiver(
+                            onPreference = { load, reload ->
+                              acceptPreferences(epoch, reload, load)
+                            },
+                            onCuentas = ::acceptCuentas,
+                        ),
+                    )
                     .collect { frame -> acceptFrame(epoch, frame) }
               }
             }
@@ -136,6 +157,13 @@ internal class HistoryViewModel(
       if (period in current.selection.periods(current.today)) {
         current.copy(selection = current.selection.selectPeriod(period, current.today))
       } else current
+    }
+  }
+
+  override fun onMonedaSelected(moneda: Moneda) {
+    changeInputs { current ->
+      if (current.monedas?.contains(moneda) != false) current.copy(selectedMoneda = moneda)
+      else current
     }
   }
 
@@ -171,13 +199,19 @@ internal class HistoryViewModel(
           previous.selection.range(previous.today) != current.selection.range(current.today)
       val presentationChanged = previous.label != current.label
       val reloadChanged = previous.reload != current.reload
+      val viewed = state.primary?.let { current.viewedMoneda(it) } ?: state.moneda
+      val monedaChanged = viewed != state.moneda
       state.copy(
           selection = current.selection,
           today = current.today,
-          years = state.years.copy(retained = current.retainedYears),
+          moneda = viewed,
+          monedas = current.monedas.orEmpty(),
+          years =
+              if (monedaChanged) HistoryYearState(retained = current.retainedYears)
+              else state.years.copy(retained = current.retainedYears),
           period =
               when {
-                rangeChanged -> RetainedLoadState.Loading()
+                rangeChanged || monedaChanged -> RetainedLoadState.Loading()
                 presentationChanged || reloadChanged -> state.period.refreshing()
                 else -> state.period
               },
@@ -186,8 +220,20 @@ internal class HistoryViewModel(
     }
   }
 
+  // A missing selected currency is dropped rather than kept for a later account in it.
+  private fun acceptCuentas(load: SourceLoad<List<Cuenta>>) {
+    val monedas = load.data?.monedas() ?: return
+    changeInputs { current ->
+      current.copy(
+          monedas = monedas,
+          selectedMoneda = current.selectedMoneda?.takeIf { it in monedas },
+      )
+    }
+  }
+
   private fun acceptPreferences(epoch: Long, reload: Long, load: SourceLoad<AppPreferencesState>) {
-    val moneda = load.readyCurrency
+    val primary = load.readyCurrency
+    val moneda = primary?.let { inputs.value.viewedMoneda(it) }
     val failure = load.preferenceFailure
     uiState.update { state ->
       when {
@@ -200,11 +246,12 @@ internal class HistoryViewModel(
         moneda != null && moneda != state.moneda ->
             state.copy(
                 moneda = moneda,
+                primary = primary,
                 preferenceFailure = null,
                 period = RetainedLoadState.Loading(),
                 years = HistoryYearState(retained = inputs.value.retainedYears),
             )
-        else -> state.copy(preferenceFailure = null)
+        else -> state.copy(primary = primary ?: state.primary, preferenceFailure = null)
       }
     }
   }
@@ -251,6 +298,15 @@ private data class HistoryInputs(
     val label: String,
     val retainedYears: Set<Int>,
     val reload: Long = 0,
+    val selectedMoneda: Moneda? = null,
+    val monedas: List<Moneda>? = null,
+) {
+  fun viewedMoneda(primary: Moneda): Moneda = viewedMoneda(primary, selectedMoneda, monedas)
+}
+
+private class HistoryReceiver(
+    val onPreference: (SourceLoad<AppPreferencesState>, Long) -> Unit,
+    val onCuentas: (SourceLoad<List<Cuenta>>) -> Unit,
 )
 
 private data class RangeRequest(
@@ -259,11 +315,12 @@ private data class RangeRequest(
     val reload: Long,
 )
 
-private data class RangeLoad(val request: RangeRequest, val load: SourceLoad<List<Movimiento>>)
+private data class RangeLoad(val request: RangeRequest, val load: SourceLoad<List<Actividad>>)
 
 private data class HistorySources(
     val range: RangeLoad,
     val categories: SourceLoad<List<Categoria>>,
+    val cuentas: SourceLoad<List<Cuenta>>,
     val years: SourceLoad<List<Int>>,
     val label: String,
 )
@@ -280,7 +337,7 @@ private fun observeHistory(
     repositories: HistoryRepositories,
     inputs: StateFlow<HistoryInputs>,
     dispatcher: CoroutineDispatcher,
-    onPreference: (SourceLoad<AppPreferencesState>, Long) -> Unit,
+    receiver: HistoryReceiver,
 ): Flow<HistoryFrame> =
     inputs
         .map { it.reload }
@@ -288,32 +345,45 @@ private fun observeHistory(
         .flatMapLatest { reload ->
           repositories.preferences.preferences
               .toSourceLoad()
-              .onEach { onPreference(it, reload) }
+              .onEach { receiver.onPreference(it, reload) }
               .flatMapLatest { preference ->
-                val moneda = preference.readyCurrency
-                if (moneda == null) emptyFlow()
+                val primary = preference.readyCurrency
+                if (primary == null) emptyFlow()
                 else
-                    combine(
-                            inputs
-                                .map {
-                                  RangeRequest(moneda, it.selection.range(it.today), it.reload)
-                                }
-                                .distinctUntilChanged()
-                                .flatMapLatest { request ->
-                                  repositories.movimientos
-                                      .observeRange(moneda, request.range)
-                                      .toSourceLoad()
-                                      .map { RangeLoad(request, it) }
-                                },
-                            repositories.categorias.observeAll().toSourceLoad(),
-                            repositories.movimientos.observeYears(moneda).toSourceLoad(),
-                            inputs.map { it.label }.distinctUntilChanged(),
-                        ) { range, categories, years, label ->
-                          HistorySources(range, categories, years, label)
+                    inputs
+                        .map { it.viewedMoneda(primary) }
+                        .distinctUntilChanged()
+                        .flatMapLatest { moneda ->
+                          observeCurrency(repositories, inputs, moneda, receiver)
                         }
                         .mapLatest { sources -> sources.toFrame(dispatcher) }
               }
         }
+
+@OptIn(ExperimentalCoroutinesApi::class)
+private fun observeCurrency(
+    repositories: HistoryRepositories,
+    inputs: StateFlow<HistoryInputs>,
+    moneda: Moneda,
+    receiver: HistoryReceiver,
+): Flow<HistorySources> =
+    combine(
+        inputs
+            .map { RangeRequest(moneda, it.selection.range(it.today), it.reload) }
+            .distinctUntilChanged()
+            .flatMapLatest { request ->
+              repositories.actividades
+                  .observeActividadRange(moneda, request.range)
+                  .toSourceLoad()
+                  .map { RangeLoad(request, it) }
+            },
+        repositories.categorias.observeAll().toSourceLoad(),
+        repositories.cuentas.observeAll().toSourceLoad().onEach(receiver.onCuentas),
+        repositories.actividades.observeYears(moneda).toSourceLoad(),
+        inputs.map { it.label }.distinctUntilChanged(),
+    ) { range, categories, cuentas, years, label ->
+      HistorySources(range, categories, cuentas, years, label)
+    }
 
 private sealed interface SourceLoad<out T> {
   data object Loading : SourceLoad<Nothing>
@@ -388,13 +458,15 @@ private fun HistoryUiState.revalidating(): HistoryUiState =
     )
 
 private suspend fun HistorySources.toFrame(dispatcher: CoroutineDispatcher): HistoryFrame {
-  val failure = range.load.failure ?: categories.failure
+  val failure = range.load.failure ?: categories.failure ?: cuentas.failure
   val rows = range.load.data
   val categoryValues = categories.data
+  val cuentaValues = cuentas.data
   val period: RetainedLoadState<HistoryProjection.Content, HistoryFailure> =
       when {
         failure != null -> RetainedLoadState.Failed(HistoryFailure.Repository(failure))
-        rows == null || categoryValues == null -> RetainedLoadState.Loading()
+        rows == null || categoryValues == null || cuentaValues == null ->
+            RetainedLoadState.Loading()
         else ->
             when (
                 val projection =
@@ -405,6 +477,7 @@ private suspend fun HistorySources.toFrame(dispatcher: CoroutineDispatcher): His
                           rows,
                           categoryValues.associateBy { it.id },
                           label,
+                          cuentaValues.associateBy { it.id },
                       )
                     }
             ) {

@@ -17,6 +17,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
@@ -33,15 +34,19 @@ import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
+import com.kurobello.tallybook.core.model.Actividad
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
+import com.kurobello.tallybook.core.model.Direccion
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
+import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.Transferencia
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryActions
@@ -80,6 +85,8 @@ import tallybook.shared.generated.resources.loading
 import tallybook.shared.generated.resources.navigation_add_movement
 import tallybook.shared.generated.resources.navigation_history
 import tallybook.shared.generated.resources.retry
+import tallybook.shared.generated.resources.transfer_row_route
+import tallybook.shared.generated.resources.transfer_with_moneda
 import tallybook.shared.generated.resources.unknown_category
 
 class HistoryScreenTest {
@@ -103,6 +110,93 @@ class HistoryScreenTest {
         .performScrollToNode(hasText("Lunch with Ana"))
     composeRule.onNodeWithText("Lunch with Ana").performClick()
     composeRule.runOnIdle { assertEquals(movement.id, opened) }
+  }
+
+  @Test
+  fun transferRowShowsTheViewedCurrencySideAndOpensTransferManagement() {
+    var opened: String? = null
+    val transfer =
+        Transferencia(
+            "move",
+            "usd",
+            "nequi",
+            Money(1_000, Moneda.USD),
+            Money(4_000_000, Moneda.COP),
+            today,
+            null,
+            Instant.parse("2026-09-15T13:00:00Z"),
+        )
+    val dollars = cuenta("usd", "Dólares", Moneda.USD)
+    val nequi = cuenta("nequi", "Nequi", Moneda.COP)
+    val withTransfer =
+        projection.copy(
+            groups =
+                listOf(
+                    HistoryDayGroupUi(
+                        today,
+                        listOf(
+                            HistoryTransferenciaRowUi(
+                                Actividad.DeTransferencia(
+                                    transfer,
+                                    transfer.montoDestino,
+                                    Direccion.ENTRADA,
+                                ),
+                                dollars,
+                                nequi,
+                            )
+                        ) + projection.groups.single().rows,
+                    )
+                )
+        )
+    composeRule.setContent {
+      TallybookTheme {
+        HistoryScreen(
+            contentState.copy(period = RetainedLoadState.Ready(withTransfer), primary = Moneda.COP),
+            NoActions,
+            HistoryNavigationCallbacks({}, onOpenTransferencia = { opened = it }),
+            0.dp,
+        )
+      }
+    }
+    val route = runBlocking {
+      getString(
+          Res.string.transfer_row_route,
+          getString(Res.string.transfer_with_moneda, "Dólares", "USD"),
+          "Nequi",
+      )
+    }
+    composeRule
+        .onNodeWithContentDescription(localized(Res.string.navigation_history))
+        .performScrollToNode(hasText(route))
+    composeRule.onNodeWithText(route).assertIsDisplayed()
+    composeRule.onNodeWithText(transfer.montoDestino.format()).assertIsDisplayed()
+    composeRule.onNodeWithText(route).performClick()
+    composeRule.runOnIdle { assertEquals("move", opened) }
+    val count = runBlocking { getPluralString(Res.plurals.history_movement_count, 1, 1) }
+    composeRule.onNodeWithText(count).assertExists()
+  }
+
+  @Test
+  fun currencySelectorAppearsOnlyWithSeveralCurrenciesAndReportsTheChoice() {
+    val selected = mutableListOf<Moneda>()
+    val state =
+        mutableStateOf(contentState.copy(primary = Moneda.COP, monedas = listOf(Moneda.COP)))
+    val actions =
+        object : HistoryActions by NoActions {
+          override fun onMonedaSelected(moneda: Moneda) {
+            selected += moneda
+          }
+        }
+    composeRule.setContent {
+      TallybookTheme { HistoryScreen(state.value, actions, HistoryNavigationCallbacks({}), 0.dp) }
+    }
+    composeRule.onNodeWithText("USD").assertDoesNotExist()
+    composeRule.runOnIdle {
+      state.value = state.value.copy(monedas = listOf(Moneda.COP, Moneda.USD))
+    }
+    composeRule.onNodeWithText("COP").assertIsSelected()
+    composeRule.onNodeWithText("USD").performClick()
+    composeRule.runOnIdle { assertEquals(listOf(Moneda.USD), selected) }
   }
 
   @Test
@@ -576,12 +670,25 @@ class HistoryScreenTest {
 
   private fun localized(resource: StringResource) = runBlocking { getString(resource) }
 
+  private fun cuenta(id: String, nombre: String, moneda: Moneda) =
+      Cuenta(
+          id,
+          nombre,
+          TipoCuenta.EFECTIVO,
+          Money(0, moneda),
+          null,
+          false,
+          Instant.parse("2026-01-01T00:00:00Z"),
+      )
+
   private object NoActions : HistoryActions {
     override fun onScopeChanged(scope: HistoryScope) = Unit
 
     override fun onYearSelected(year: Int) = Unit
 
     override fun onPeriodSelected(period: MovimientoDateRange) = Unit
+
+    override fun onMonedaSelected(moneda: Moneda) = Unit
 
     override fun onRetry() = Unit
 
