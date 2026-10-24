@@ -84,7 +84,7 @@ which adds `cuentaIds` to `SearchFilterRequest`/`PrimaryNavigator.showSearchFilt
   the accessibility label; a positive card balance reads "Saldo a favor".
 - The sheet's draft compares with its opening baseline (same guard as the category editor);
   delete/archive need confirmation; inline errors map `CuentaWrite.Duplicate` (same name in that
-  currency), `CuentaWrite.CurrencyLocked`, `CuentaArchive.LastActive`, `CuentaDelete.LastActive` and
+  currency), `CuentaWrite.CurrencyLocked`, `CuentaWrite.TypeLocked`, `CuentaArchive.LastActive`, `CuentaDelete.LastActive` and
   `CuentaDelete.InUse` (offering archive).
 - Opening debt is entered as a positive amount for `CREDITO`; `AccountDraftState` is the only place
   that negates it into the signed `CuentaDraft.saldoInicial` (and back when editing). The form never
@@ -93,6 +93,8 @@ which adds `cuentaIds` to `SearchFilterRequest`/`PrimaryNavigator.showSearchFilt
 - Home: `HomeContent` gains the total balance and this month's ingresos/gastos (civil month from the
   injected clock/time zone, refreshed on resume like History); recent rows unchanged. The card keeps
   `BalanceCard` typography and becomes clickable with a localized action label.
+- With no live account in the primary currency, Home shows a zero total in the primary currency and
+  the card still opens Accounts; creation falls back exactly as `defaultSelection` already does.
 - No Material dialogs; reuse `TallybookConfirmationDialog`, `TallybookSheetForm`, `TallybookScreenHeader`.
 
 ## TDD
@@ -100,6 +102,7 @@ which adds `cuentaIds` to `SearchFilterRequest`/`PrimaryNavigator.showSearchFilt
 - [ ] RED: `AccountDraftStateTest` — normalization, 30-char cap, positive opening debt ↔ negative `saldoInicial` round trip (the only conversion), `diaCorte` only for credit, baseline dirtiness.
 - [ ] RED: `AccountsViewModelTest` — grouping/ordering, per-currency totals, credit estimates, every repository rejection mapped inline, retry, stale load rejection.
 - [ ] RED: `HomeViewModelTest` — total balance from the read model, month secondary values, month rollover on resume.
+- [ ] RED: `HomeViewModelTest` — no live primary-currency account: zero total in the primary currency, Accounts entry still enabled.
 - [ ] GREEN each; then screens, previews (light/dark), nav destination and Profile link.
 - [ ] Device tests: Profile → Accounts → back; create account from the sheet; Home card opens Accounts.
 - [ ] `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosSimulatorArm64 detekt ktfmtCheck :androidApp:assembleDebug`.

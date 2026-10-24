@@ -110,12 +110,13 @@ together with movimientos in one snapshot, when History and Search consume them.
   cash cuenta it falls back to the first active non-credit cuenta in the primary currency, then in
   any currency (one ranked SQL read, `selectDefaultOrigin`); null only when no active non-credit
   cuenta exists, e.g. a lone credit card.
-- Transfers accept archived cuentas on either side (README: "both live"), so an archived card can
-  still be paid; tombstoned or unknown cuentas are invalid input. Restore skips only the "not future"
-  check, which a captured date cannot newly fail.
-- Movimiento update keeps a stored (cuenta, medio) pair while untouched, as it keeps an archived
-  cuenta: a cuenta's type may change after the fact, and an edit of other fields must not be refused
-  for it. `medio.allows(tipo)` is always enforced.
+- Transfers reject an archived cuenta as a newly chosen side and keep an unchanged one on update;
+  restore stays exempt and skips only the "not future" check, which a captured date cannot newly
+  fail. A movimiento keeps an archived cuenta only while untouched; its medio must always fit the
+  cuenta type, which `CuentaWrite.TypeLocked` freezes while referenced.
+- Default cash cuentas keep their currency even unused (`CurrencyLocked`). The v8 migration
+  tombstones the cash cuenta of a currency with only tombstoned movimientos, and the bootstrap seed
+  takes a generated id when a tombstone holds the deterministic one.
 - `CuentaDelete.LastActive` wins over `InUse` (archiving would be refused too). `update` checks
   `Duplicate` before `CurrencyLocked`.
 - `MissingCuenta` maps to `RestoreFailed` with the snapshot released: `MovimientoFeedback.hasAction`

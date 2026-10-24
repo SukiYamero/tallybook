@@ -81,22 +81,54 @@ class TransferenciaRepositoryTest {
   }
 
   @Test
-  fun `a cross-currency transfer stores each side in its cuenta currency even when archived`() =
-      runTest {
-        withRepository { driver, _, repository ->
-          driver.execute(null, "UPDATE cuenta SET archivada = 1 WHERE id = '$NU'", 0)
-          val payment =
-              transferencia("pay", USD_CASH, NU)
-                  .copy(
-                      montoOrigen = Money(2_500, Moneda.USD),
-                      montoDestino = Money(100_000, Moneda.COP),
-                  )
+  fun `a cross-currency transfer stores each side in its cuenta currency`() = runTest {
+    withRepository { _, _, repository ->
+      val payment =
+          transferencia("pay", USD_CASH, NU)
+              .copy(
+                  montoOrigen = Money(2_500, Moneda.USD),
+                  montoDestino = Money(100_000, Moneda.COP),
+              )
 
-          assertEquals(DataOutcome.Success(Unit), repository.insert(payment))
+      assertEquals(DataOutcome.Success(Unit), repository.insert(payment))
 
-          assertEquals(DataOutcome.Success(payment), repository.getById(payment.id))
-        }
-      }
+      assertEquals(DataOutcome.Success(payment), repository.getById(payment.id))
+    }
+  }
+
+  @Test
+  fun `insert rejects an archived cuenta on either side`() = runTest {
+    withRepository { driver, changeClock, repository ->
+      driver.execute(null, "UPDATE cuenta SET archivada = 1 WHERE id = '$NU'", 0)
+
+      assertInvalid(repository.insert(transferencia("to-card", COP_CASH, NU)))
+      assertInvalid(repository.insert(transferencia("from-card", NU, COP_CASH)))
+
+      assertEquals(DataOutcome.Success(emptyList()), repository.getAll())
+      assertEquals(0, changeClock.issuedStamps.size)
+    }
+  }
+
+  @Test
+  fun `update keeps an archived side while unchanged and rejects one it newly picks`() = runTest {
+    withRepository { driver, _, repository ->
+      val row = transferencia("t", COP_CASH, NEQUI)
+      repository.insert(row)
+      driver.execute(null, "UPDATE cuenta SET archivada = 1 WHERE id IN ('$NEQUI', '$NU')", 0)
+
+      val kept = row.copy(descripcion = "ahorro")
+      assertEquals(
+          DataOutcome.Success(TransferenciaUpdateResult.Updated),
+          repository.update(row.id, kept),
+      )
+      assertInvalid(repository.update(row.id, kept.copy(cuentaDestinoId = NU)))
+      assertInvalid(repository.update(row.id, kept.copy(cuentaOrigenId = NU)))
+      assertInvalid(
+          repository.update(row.id, kept.copy(cuentaOrigenId = NEQUI, cuentaDestinoId = COP_CASH))
+      )
+      assertEquals(DataOutcome.Success(kept), repository.getById(row.id))
+    }
+  }
 
   @Test
   fun `update replaces every field once keeping the creation instant`() = runTest {

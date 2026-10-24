@@ -143,6 +143,29 @@ class LocalDataBootstrapperTest {
   }
 
   @Test
+  fun `a tombstoned default cash id makes the fresh install seed take a new id`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      TallybookDatabase.Schema.create(driver)
+      val database = TallybookDatabase(driver)
+      val cashId = Cuenta.defaultCashId(Moneda.COP)
+      database.insertCuentaRow(cashCuenta(Moneda.COP), ChangeStamp.SEED)
+      driver.tombstone("cuenta", cashId)
+      val tombstone = driver.storedStamps("cuenta", cashId)
+      val preferences = FakePreferencesRepository(DataOutcome.Success(Unit), stored = Moneda.COP)
+
+      assertEquals(
+          DataOutcome.Success(Unit),
+          databaseBootstrapper(database, preferences).initialize(),
+      )
+
+      val live = database.cuentaQueries.selectAllCuentas().executeAsList().map { it.toDomain() }
+      assertEquals(listOf(SEEDED_CASH_ID), live.map { it.id })
+      assertEquals(Moneda.COP, live.single().moneda)
+      assertEquals(tombstone, driver.storedStamps("cuenta", cashId))
+    }
+  }
+
+  @Test
   fun `a restart or a primary currency change seeds no further cuenta`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       TallybookDatabase.Schema.create(driver)
@@ -303,7 +326,9 @@ class LocalDataBootstrapperTest {
     val dispatcher = UnconfinedTestDispatcher(testScheduler)
     return bootstrapper(
         preferencesRepository = preferences,
-        seedDefaultCuenta = { database.seedDefaultCuenta(it, dispatcher) },
+        seedDefaultCuenta = {
+          database.seedDefaultCuenta(it, IdGenerator { SEEDED_CASH_ID }, dispatcher)
+        },
         storedMaxChangeStamp = { database.maxStoredChangeStamp(dispatcher) },
     )
   }
@@ -351,6 +376,7 @@ class LocalDataBootstrapperTest {
   private companion object {
     const val NODE = "0123456789abcdef"
     val NOW: Instant = Instant.parse("2026-10-24T09:00:00Z")
+    const val SEEDED_CASH_ID: String = "cuenta-generated"
   }
 
   private class FakeDeviceLocaleProvider(

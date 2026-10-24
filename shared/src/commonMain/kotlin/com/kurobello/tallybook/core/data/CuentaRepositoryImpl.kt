@@ -89,11 +89,16 @@ internal class CuentaRepositoryImpl(
                     diaCorte = clean.diaCorte,
                 )
             val duplicate = queries.findDuplicate(clean, excludingId = id)
+            val referenced by lazy { queries.references(id) > 0L }
             DataOutcome.Success(
                 when {
                   duplicate != null -> CuentaWrite.Duplicate(duplicate)
-                  updated.moneda != current.moneda && queries.references(id) > 0L ->
+                  updated.moneda != current.moneda &&
+                      (referenced || id == Cuenta.defaultCashId(current.moneda)) ->
                       CuentaWrite.CurrencyLocked
+                  // Stored medios were checked against the current tipo, so it cannot move under
+                  // them.
+                  updated.tipo != current.tipo && referenced -> CuentaWrite.TypeLocked
                   updated == current -> CuentaWrite.Saved(current)
                   else -> {
                     check(

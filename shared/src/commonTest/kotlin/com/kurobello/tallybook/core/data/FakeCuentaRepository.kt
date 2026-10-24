@@ -14,9 +14,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 
 /**
- * In-memory live cuentas with the repository's naming, currency-lock, archive and delete rules.
- * Reference counts come from [references], which tests set directly; [failure] makes every call
- * fail with that error.
+ * In-memory live cuentas with the repository's naming, currency and type lock, archive and delete
+ * rules. Reference counts come from [references], which tests set directly; [failure] makes every
+ * call fail with that error.
  */
 internal class FakeCuentaRepository(
     initial: List<Cuenta> = emptyList(),
@@ -61,7 +61,10 @@ internal class FakeCuentaRepository(
       val duplicate = duplicateOf(clean, excludingId = id)
       when {
         duplicate != null -> CuentaWrite.Duplicate(duplicate)
-        updated.moneda != current.moneda && referencesOf(id) > 0L -> CuentaWrite.CurrencyLocked
+        updated.moneda != current.moneda &&
+            (referencesOf(id) > 0L || id == Cuenta.defaultCashId(current.moneda)) ->
+            CuentaWrite.CurrencyLocked
+        updated.tipo != current.tipo && referencesOf(id) > 0L -> CuentaWrite.TypeLocked
         else -> {
           replace(updated)
           CuentaWrite.Saved(updated)

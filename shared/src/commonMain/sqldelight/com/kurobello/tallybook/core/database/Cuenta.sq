@@ -25,6 +25,12 @@ SELECT *
 FROM cuenta
 WHERE id = ? AND deleted_at IS NULL;
 
+-- Tombstones included: an insert must never reuse an id a tombstone still holds.
+countCuentasWithId:
+SELECT COUNT(*)
+FROM cuenta
+WHERE id = ?;
+
 countLiveCuentas:
 SELECT COUNT(*)
 FROM cuenta

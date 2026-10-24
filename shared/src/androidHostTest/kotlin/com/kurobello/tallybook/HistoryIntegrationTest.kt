@@ -456,7 +456,7 @@ class HistoryIntegrationTest {
               categorias,
               CategorySeedProvider { it.key },
               CuentaSeedProvider(fixture.clock) { it.key },
-              { database.seedDefaultCuenta(it, fixture.dispatcher) },
+              { database.seedDefaultCuenta(it, IdGenerator { "cash" }, fixture.dispatcher) },
               TestChangeClock(),
               { DataOutcome.Success(null) },
           )

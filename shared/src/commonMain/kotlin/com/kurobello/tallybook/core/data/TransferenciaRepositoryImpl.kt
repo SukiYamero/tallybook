@@ -71,7 +71,7 @@ internal class TransferenciaRepositoryImpl(
                         TransferenciaUpdateResult.NotFound
                     )
             val updated = changes.copy(createdAt = current.createdAt)
-            invalidAgainstCuentas(updated)?.let {
+            invalidAgainstCuentas(updated, stored = current)?.let {
               return@transactionWithResult DataOutcome.Failure(it)
             }
             if (updated != current) {
@@ -172,13 +172,25 @@ internal class TransferenciaRepositoryImpl(
   private fun cuenta(id: String): Cuenta? =
       database.cuentaQueries.selectCuentaById(id).executeAsOneOrNull()?.toDomain()
 
-  private fun invalidAgainstCuentas(transferencia: Transferencia): DataError.InvalidInput? =
-      rulesError(
-          transferencia,
-          cuenta(transferencia.cuentaOrigenId),
-          cuenta(transferencia.cuentaDestinoId),
-          today = clock.todayIn(timeZoneProvider.current()),
-      )
+  // Archiving removes a cuenta from pickers, so only a side the edit leaves untouched may be one.
+  private fun invalidAgainstCuentas(
+      transferencia: Transferencia,
+      stored: Transferencia? = null,
+  ): DataError.InvalidInput? {
+    val origen = cuenta(transferencia.cuentaOrigenId)
+    val destino = cuenta(transferencia.cuentaDestinoId)
+    val newlyArchived =
+        (origen?.archivada == true && origen.id != stored?.cuentaOrigenId) ||
+            (destino?.archivada == true && destino.id != stored?.cuentaDestinoId)
+    return if (newlyArchived) DataError.InvalidInput("Transferencia picks an archived cuenta")
+    else
+        rulesError(
+            transferencia,
+            origen,
+            destino,
+            today = clock.todayIn(timeZoneProvider.current()),
+        )
+  }
 }
 
 private fun rulesError(

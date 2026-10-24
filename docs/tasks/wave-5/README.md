@@ -140,9 +140,15 @@ Proposed defaults, accepted unless the user objects during visual review:
 - Default cash accounts have the deterministic ID `cuenta_efectivo_<moneda in lowercase>`, so two
   installations seeding the same default produce the same entity. Bootstrap creates one in the
   primary currency **only when no live account exists** (a fresh install); changing the primary
-  currency never creates an account.
+  currency never creates an account. If a tombstone holds that ID, the seed takes a generated ID
+  instead (a tombstone is never revived by bootstrap).
+- A default cash account's currency never changes, even while unused, so its ID always names its
+  currency (`CuentaWrite.CurrencyLocked`).
+- The migration tombstones (`deleted_at = updated_at = SEED`) the cash account of a currency whose
+  movimientos are all tombstoned; Undo of those rows is `MissingCuenta`.
 - The currency is locked while any live movimiento or transfer references the account
-  (`CuentaWrite.CurrencyLocked`).
+  (`CuentaWrite.CurrencyLocked`); so is the type (`CuentaWrite.TypeLocked`), since stored medios
+  were validated against it.
 - Archiving removes the account from pickers; its balance still counts in totals and it stays visible
   under Archived in Accounts. Unarchiving is allowed. The last non-archived account cannot be archived
   or deleted.
@@ -191,6 +197,8 @@ Proposed defaults, accepted unless the user objects during visual review:
   suggestions or any future budget. It changes the two account balances only.
 - Create, edit and delete with confirmation; Undo after delete follows the movimiento contract through
   the same feedback queue. Editing may change every field; currency rules apply per side.
+- An archived account is rejected as a newly chosen side (insert, or an edit that changes that
+  side); an edit keeps an unchanged archived side, and Undo restores into it.
 - "Pay card" on a credit card opens a transfer with the card as destination and the estimated debt as
   the received amount (`montoDestino`); with a same-currency origin that is the only amount, with a
   different-currency origin `montoOrigen` starts empty. The origin defaults to the newest live

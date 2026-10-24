@@ -106,7 +106,9 @@ class FirstMovimientoIntegrationTest {
                         resource.key
                       },
                   cuentaSeedProvider = CuentaSeedProvider(FixedClock(FIXED_INSTANT)) { it.key },
-                  seedDefaultCuenta = { database.seedDefaultCuenta(it, dispatcher) },
+                  seedDefaultCuenta = {
+                    database.seedDefaultCuenta(it, IdGenerator { "cash" }, dispatcher)
+                  },
                   changeClock = TestChangeClock(),
                   storedMaxChangeStamp = { database.maxStoredChangeStamp(dispatcher) },
               )
@@ -283,7 +285,9 @@ class FirstMovimientoIntegrationTest {
                   categoriaRepository = categorias,
                   categorySeedProvider = CategorySeedProvider { resource -> resource.key },
                   cuentaSeedProvider = CuentaSeedProvider(FixedClock(FIXED_INSTANT)) { it.key },
-                  seedDefaultCuenta = { database.seedDefaultCuenta(it, dispatcher) },
+                  seedDefaultCuenta = {
+                    database.seedDefaultCuenta(it, IdGenerator { "cash" }, dispatcher)
+                  },
                   changeClock = TestChangeClock(),
                   storedMaxChangeStamp = { database.maxStoredChangeStamp(dispatcher) },
               )

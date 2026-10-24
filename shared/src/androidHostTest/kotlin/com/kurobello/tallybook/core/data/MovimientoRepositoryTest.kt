@@ -1421,25 +1421,18 @@ class MovimientoRepositoryTest {
       }
 
   @Test
-  fun `update keeps a stored medio its cuenta type no longer allows only while unchanged`() =
-      runTest {
-        withSelectionFixture { repository, _, driver ->
-          val row = movimiento("row").copy(cuentaId = NEQUI, medio = MedioPago.DEBITO)
-          repository.insert(row)
-          driver.execute(null, "UPDATE cuenta SET tipo = 'EFECTIVO' WHERE id = '$NEQUI'", 0)
+  fun `update rejects a stored medio its cuenta type no longer allows`() = runTest {
+    withSelectionFixture { repository, _, driver ->
+      val row = movimiento("row").copy(cuentaId = NEQUI, medio = MedioPago.DEBITO)
+      repository.insert(row)
+      driver.execute(null, "UPDATE cuenta SET tipo = 'EFECTIVO' WHERE id = '$NEQUI'", 0)
 
-          assertEquals(
-              DataOutcome.Success(MovimientoUpdateResult.Updated),
-              repository.update(row.id, row.changes().copy(titulo = "kept")),
-          )
-          assertInvalid(
-              repository.update(row.id, row.changes().copy(medio = MedioPago.TRANSFERENCIA))
-          )
-          assertInvalid(
-              repository.update(row.id, row.changes().copy(tipo = TipoMovimiento.INGRESO))
-          )
-        }
-      }
+      assertInvalid(repository.update(row.id, row.changes().copy(titulo = "kept")))
+      assertEquals(DataOutcome.Success(row), repository.getById(row.id))
+      assertInvalid(repository.update(row.id, row.changes().copy(medio = MedioPago.TRANSFERENCIA)))
+      assertInvalid(repository.update(row.id, row.changes().copy(tipo = TipoMovimiento.INGRESO)))
+    }
+  }
 
   @Test
   fun `restore into an archived cuenta revives the row and the cuenta stays archived`() = runTest {

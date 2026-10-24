@@ -76,7 +76,7 @@ val repositoryModule = module {
         categoriaRepository = get(),
         categorySeedProvider = get(),
         cuentaSeedProvider = get(),
-        seedDefaultCuenta = { database.seedDefaultCuenta(it, dispatcher) },
+        seedDefaultCuenta = { database.seedDefaultCuenta(it, get(), dispatcher) },
         changeClock = get(),
         storedMaxChangeStamp = { database.maxStoredChangeStamp(dispatcher) },
     )

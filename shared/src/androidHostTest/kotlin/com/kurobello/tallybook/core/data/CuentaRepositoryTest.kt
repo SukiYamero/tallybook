@@ -168,6 +168,53 @@ class CuentaRepositoryTest {
       }
 
   @Test
+  fun `the type is locked only while live movimientos or transfers reference the cuenta`() =
+      runTest {
+        withRepository { driver, database, changeClock, repository ->
+          val nequi = repository.create(draft("Nequi", TipoCuenta.BANCO)).saved()
+          val asCash = draft("Nequi", TipoCuenta.EFECTIVO)
+          database.insertLegacy(movimiento("mov", nequi.id))
+          database.insertTransferenciaRow(transferencia("out", nequi.id, COP_CASH.id), SEED)
+          val stamps = changeClock.issuedStamps.size
+
+          assertEquals(
+              DataOutcome.Success(CuentaWrite.TypeLocked),
+              repository.update(nequi.id, asCash),
+          )
+          driver.tombstone("movimiento", "mov")
+          assertEquals(
+              DataOutcome.Success(CuentaWrite.TypeLocked),
+              repository.update(nequi.id, asCash),
+          )
+          assertEquals(stamps, changeClock.issuedStamps.size)
+
+          driver.tombstone("transferencia", "out")
+          assertEquals(
+              nequi.copy(tipo = TipoCuenta.EFECTIVO),
+              repository.update(nequi.id, asCash).saved(),
+          )
+        }
+      }
+
+  @Test
+  fun `a default cash cuenta keeps its currency even while unused`() = runTest {
+    withRepository { _, _, changeClock, repository ->
+      assertEquals(
+          DataOutcome.Success(CuentaWrite.CurrencyLocked),
+          repository.update(
+              COP_CASH.id,
+              draft("Efectivo", TipoCuenta.EFECTIVO, moneda = Moneda.USD),
+          ),
+      )
+      assertEquals(0, changeClock.issuedStamps.size)
+      assertEquals(
+          COP_CASH.copy(nombre = "Billetera", saldoInicial = Money(5_000, Moneda.COP)),
+          repository.update(COP_CASH.id, draft("Billetera", TipoCuenta.EFECTIVO, 5_000)).saved(),
+      )
+    }
+  }
+
+  @Test
   fun `archiving the last active cuenta is refused and unarchiving is allowed`() = runTest {
     withRepository { _, _, changeClock, repository ->
       assertEquals(

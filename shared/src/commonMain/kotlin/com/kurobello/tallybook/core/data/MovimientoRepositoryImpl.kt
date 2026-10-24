@@ -481,8 +481,8 @@ internal class MovimientoRepositoryImpl(
   }
 
   // Checked inside the write transaction so an archive or delete cannot slip between check and
-  // write. A [stored] movimiento keeps its archived cuenta, or a medio its cuenta's type no longer
-  // allows after a type change, only while the edit leaves them untouched.
+  // write. A [stored] movimiento keeps its archived cuenta only while the edit leaves it untouched.
+  // A medio never outlives its cuenta's type: the type is locked while a live movimiento uses it.
   private fun invalidCuenta(
       cuentaId: String,
       medio: MedioPago,
@@ -494,7 +494,7 @@ internal class MovimientoRepositoryImpl(
     return when {
       cuenta == null -> DataError.InvalidInput("Unknown cuenta $cuentaId")
       cuenta.archivada && !keepsCuenta -> DataError.InvalidInput("Cuenta $cuentaId is archived")
-      cuenta.tipo !in medio.compatibleTipos && !(keepsCuenta && stored.medio == medio) ->
+      cuenta.tipo !in medio.compatibleTipos ->
           DataError.InvalidInput("Medio $medio does not fit a ${cuenta.tipo} cuenta")
       monto.moneda != cuenta.moneda ->
           DataError.InvalidInput("Movimiento currency must be its cuenta's ${cuenta.moneda}")
