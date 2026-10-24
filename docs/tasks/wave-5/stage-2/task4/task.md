@@ -65,17 +65,17 @@ interface SaldoRepository {
 
 ## TDD
 
-- [ ] RED: balance = opening + ingresos − gastos for one cash account; then add incoming and outgoing
+- [x] RED: balance = opening + ingresos − gastos for one cash account; then add incoming and outgoing
       transfers, a cross-currency transfer (each side in its own currency), a tombstoned movimiento and
       a tombstoned transfer (both excluded).
-- [ ] RED: totals per currency with an archived account included and a tombstoned account excluded;
+- [x] RED: totals per currency with an archived account included and a tombstoned account excluded;
       a currency without accounts is absent.
-- [ ] RED: credit card with opening debt, purchases inside and outside the cycle, a refund (ingreso),
+- [x] RED: credit card with opening debt, purchases inside and outside the cycle, a refund (ingreso),
       a payment transfer, `diaCorte` null versus 15; `deuda` is zero when the balance is positive.
-- [ ] RED: reactivity — inserting a movimiento or transfer re-emits balances once per committed write.
-- [ ] GREEN: `Saldo.sq` queries and `SaldoRepositoryImpl`; plan assertion.
-- [ ] Bind in `RepositoryModule`; Koin graph test still resolves.
-- [ ] `./gradlew :shared:testAndroidHostTest --tests '*SaldoRepository*'`, full host suite once before
+- [x] RED: reactivity — inserting a movimiento or transfer re-emits balances once per committed write.
+- [x] GREEN: `Saldo.sq` queries and `SaldoRepositoryImpl`; plan assertion.
+- [x] Bind in `RepositoryModule`; Koin graph test still resolves.
+- [x] `./gradlew :shared:testAndroidHostTest --tests '*SaldoRepository*'`, full host suite once before
       review, `:shared:compileKotlinIosSimulatorArm64`, `detekt ktfmtCheck`.
 
 ## Blocks

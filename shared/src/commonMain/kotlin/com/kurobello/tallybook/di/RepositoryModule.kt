@@ -9,6 +9,8 @@ import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
+import com.kurobello.tallybook.core.data.SaldoRepository
+import com.kurobello.tallybook.core.data.SaldoRepositoryImpl
 import com.kurobello.tallybook.core.data.maxStoredChangeStamp
 import com.kurobello.tallybook.core.data.seedDefaultCuenta
 import com.kurobello.tallybook.core.database.TallybookDatabase
@@ -55,6 +57,12 @@ val repositoryModule = module {
         seedDefaultCuenta = { database.seedDefaultCuenta(it, dispatcher) },
         changeClock = get(),
         storedMaxChangeStamp = { database.maxStoredChangeStamp(dispatcher) },
+    )
+  }
+  single<SaldoRepository> {
+    SaldoRepositoryImpl(
+        database = get(),
+        dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
     )
   }
 }
