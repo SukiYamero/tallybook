@@ -56,12 +56,38 @@ internal fun MedioPagoControl(
   }
 }
 
+/** Search's medio dimension: any number of [selected] medios, each toggled on its own. */
+@Composable
+internal fun MedioPagoFilterControl(
+    selected: Set<MedioPago>,
+    onToggle: (MedioPago) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+  FlowRow(
+      modifier = modifier,
+      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+  ) {
+    MedioPago.entries.forEach { medio ->
+      MedioPagoOption(
+          medio = medio,
+          selected = medio in selected,
+          onClick = { onToggle(medio) },
+          enabled = enabled,
+          role = Role.Button,
+      )
+    }
+  }
+}
+
 @Composable
 private fun MedioPagoOption(
     medio: MedioPago,
     selected: Boolean,
     onClick: () -> Unit,
     enabled: Boolean,
+    role: Role = Role.RadioButton,
 ) {
   val colors = TallybookTheme.colors
   val contentColor =
@@ -81,7 +107,7 @@ private fun MedioPagoOption(
                   interactionSource = remember { MutableInteractionSource() },
                   indication = null,
                   enabled = enabled,
-                  role = Role.RadioButton,
+                  role = role,
                   onClick = onClick,
               ),
       contentAlignment = Alignment.Center,

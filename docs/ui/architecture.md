@@ -602,7 +602,9 @@ History starts directly with its contextual header and period controls. Scrollab
 `space20` above the header after the frame safe inset. Selected-period totals have
 an explicit label and scroll with the content. No fixed global balance, currency banner or independent
 global-summary status appears in History; the global balance remains on Home.
-History has no text-search field, non-date filters, balance-visibility
+While accounts exist in more than one currency a `MonedaSelector` follows the header; day groups show
+transfers as `ActividadTransferenciaRow`s that open transfer management, and the totals and movement count
+leave them out. History has no text-search field, non-date filters, balance-visibility
 toggle or fourth annual scope. Search is a separate destination.
 
 ## Remaining product decisions
@@ -617,14 +619,17 @@ This is the presentation contract for [Search](../features/search.md).
 [Business logic](../business-logic.md#search-and-filters) owns matching and filter/date/count semantics.
 
 Search follows the supplied composition: header/title and result status, filter icon, text input,
-horizontal removable applied tags using the shared `TallybookFilterTag`, then a lazy movement list
-grouped under one `CivilDayHeader` per day (`dayHeading`, 15sp semibold, shared with History). Use the frame's top/horizontal safe area, `space20` above the header and shell-measured bottom clearance exactly once. Header/field
+a `MonedaSelector` while accounts exist in more than one currency, horizontal removable applied tags using the
+shared `TallybookFilterTag` (medio and account tags included), then a lazy movement list, transfers as
+`ActividadTransferenciaRow`s, grouped under one `CivilDayHeader` per day (`dayHeading`, 15sp semibold, shared with History). Use the frame's top/horizontal safe area, `space20` above the header and shell-measured bottom clearance exactly once. Header/field
 scroll with content; no fixed global balance or chart. Rows reuse MovimientoRowContent with the shared
 title/description card text; category/currency/type semantics remain accessible.
 
 The filter sheet occupies 72% of available height, revealing the underlying Search field in portrait.
-It uses compact, vertically centered wrapping date presets, two existing date chips for Custom, Todos/Gastos/Ingresos,
-then parent-grouped real category chips with children visible. Show all persisted categories, with
+It uses compact, vertically centered wrapping date presets, two existing date chips for Custom, wrapping
+Todos/Gastos/Ingresos/Entre cuentas type pills, Medio (`MedioPagoFilterControl`) and Cuentas (the viewed
+currency's accounts, archived included, plus selected ones of another currency and missing-ID fallbacks with
+remove semantics), then parent-grouped real category chips with children visible. Show all persisted categories, with
 their existing icons/tints, plus selected missing-ID fallback chips with remove semantics. While the
 user has tags, a Tags section of `EtiquetaChip`s follows the categories. The body
 scrolls while a separate Limpiar/Aplicar footer remains reachable above safe/IME insets. Preserve

@@ -1,5 +1,8 @@
 package com.kurobello.tallybook.feature.search.viewmodel
 
+import com.kurobello.tallybook.core.model.MedioPago
+import com.kurobello.tallybook.core.model.Moneda
+
 // Explicit callbacks keep the filter transaction and synchronous shell guards under one owner.
 @Suppress("TooManyFunctions")
 internal interface SearchActions {
@@ -17,11 +20,24 @@ internal interface SearchActions {
 
   fun onRemoveTagFilter(id: String)
 
+  fun onRemoveCuentaFilter(id: String)
+
+  fun onRemoveMedioFilter(medio: MedioPago)
+
+  /** Shows [moneda]'s results; the query and the applied filters stay. */
+  fun onMonedaSelected(moneda: Moneda)
+
   /**
-   * Resets the query and filters to All history, every type and exactly [categoryIds] and
-   * [etiquetaIds]. Blank IDs are ignored, and a request without any ID keeps the current input.
+   * Resets the query and filters to All history, every type and exactly [categoryIds],
+   * [etiquetaIds] and [cuentaIds], after switching to [moneda] when given. Blank IDs are ignored,
+   * and a request without any ID keeps the current input.
    */
-  fun onShowFilters(categoryIds: Set<String>, etiquetaIds: Set<String>)
+  fun onShowFilters(
+      categoryIds: Set<String>,
+      etiquetaIds: Set<String>,
+      cuentaIds: Set<String> = emptySet(),
+      moneda: Moneda? = null,
+  )
 
   fun onRetry()
 

@@ -87,7 +87,24 @@ internal open class SearchTestActions : SearchActions {
     events += "remove-tag:$id"
   }
 
-  override fun onShowFilters(categoryIds: Set<String>, etiquetaIds: Set<String>) {
+  override fun onRemoveCuentaFilter(id: String) {
+    events += "remove-cuenta:$id"
+  }
+
+  override fun onRemoveMedioFilter(medio: MedioPago) {
+    events += "remove-medio:$medio"
+  }
+
+  override fun onMonedaSelected(moneda: Moneda) {
+    events += "moneda:$moneda"
+  }
+
+  override fun onShowFilters(
+      categoryIds: Set<String>,
+      etiquetaIds: Set<String>,
+      cuentaIds: Set<String>,
+      moneda: Moneda?,
+  ) {
     events += "show-filters:$categoryIds:$etiquetaIds"
   }
 

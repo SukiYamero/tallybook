@@ -6,22 +6,28 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.kurobello.tallybook.core.model.Actividad
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
+import com.kurobello.tallybook.core.model.Direccion
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
+import com.kurobello.tallybook.core.model.SearchTipo
+import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.Transferencia
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.search.viewmodel.SearchActions
 import com.kurobello.tallybook.feature.search.viewmodel.SearchCategoryState
+import com.kurobello.tallybook.feature.search.viewmodel.SearchCuentaState
 import com.kurobello.tallybook.feature.search.viewmodel.SearchEtiquetaState
 import com.kurobello.tallybook.feature.search.viewmodel.SearchFailure
 import com.kurobello.tallybook.feature.search.viewmodel.SearchFilterSessionId
@@ -60,7 +66,13 @@ internal fun SearchAppliedFiltersPreview() {
   SearchPreview(
       state.copy(
           filters =
-              state.filters.copy(categoryIds = setOf("food"), etiquetaIds = setOf("t_empresa"))
+              state.filters.copy(
+                  tipo = SearchTipo.TRANSFERENCIA,
+                  cuentaIds = setOf("nequi", "gone"),
+                  medios = setOf(MedioPago.DEBITO),
+              ),
+          primary = Moneda.COP,
+          monedas = listOf(Moneda.COP, Moneda.USD),
       ),
       dark = false,
   )
@@ -123,11 +135,31 @@ private fun searchPreviewState(): SearchUiState {
           Cuenta.defaultCashId(Moneda.USD),
           MedioPago.EFECTIVO,
       )
+  val dollars = previewCuenta("usd", "Dólares", TipoCuenta.EFECTIVO, Moneda.USD)
+  val nequi = previewCuenta("nequi", "Nequi", TipoCuenta.BANCO, Moneda.COP)
+  val transfer =
+      Transferencia(
+          "transfer",
+          dollars.id,
+          nequi.id,
+          Money(10_000, Moneda.USD),
+          Money(40_000_000, Moneda.COP),
+          date,
+          "Cambio para el arriendo",
+          Instant.parse("2026-10-06T13:00:00Z"),
+      )
   val years = SearchCurrencyYears(Moneda.USD, listOf(2026))
   val content =
       SearchResultsUi(
           SearchRequest(MovimientoReadCriteria(Moneda.USD), ""),
-          listOf(SearchResultRowUi(movement, category, "Morning coffee", "Food")),
+          listOf(
+              SearchTransferenciaRowUi(
+                  Actividad.DeTransferencia(transfer, transfer.montoOrigen, Direccion.SALIDA),
+                  dollars,
+                  nequi,
+              ),
+              SearchResultRowUi(movement, category, "Morning coffee", "Food"),
+          ),
           years,
       )
   return SearchUiState(
@@ -143,8 +175,12 @@ private fun searchPreviewState(): SearchUiState {
       years = years,
       results = RetainedLoadState.Ready(content),
       work = null,
+      cuentas = SearchCuentaState(listOf(dollars, nequi)),
   )
 }
+
+private fun previewCuenta(id: String, nombre: String, tipo: TipoCuenta, moneda: Moneda) =
+    Cuenta(id, nombre, tipo, Money(0, moneda), null, false, Instant.parse("2026-01-01T00:00:00Z"))
 
 @Suppress("TooManyFunctions")
 private object SearchPreviewActions : SearchActions {
@@ -162,7 +198,18 @@ private object SearchPreviewActions : SearchActions {
 
   override fun onRemoveTagFilter(id: String) = Unit
 
-  override fun onShowFilters(categoryIds: Set<String>, etiquetaIds: Set<String>) = Unit
+  override fun onRemoveCuentaFilter(id: String) = Unit
+
+  override fun onRemoveMedioFilter(medio: MedioPago) = Unit
+
+  override fun onMonedaSelected(moneda: Moneda) = Unit
+
+  override fun onShowFilters(
+      categoryIds: Set<String>,
+      etiquetaIds: Set<String>,
+      cuentaIds: Set<String>,
+      moneda: Moneda?,
+  ) = Unit
 
   override fun onRetry() = Unit
 

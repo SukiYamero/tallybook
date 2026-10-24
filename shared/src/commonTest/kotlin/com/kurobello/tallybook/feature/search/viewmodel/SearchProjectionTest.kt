@@ -1,5 +1,6 @@
 package com.kurobello.tallybook.feature.search.viewmodel
 
+import com.kurobello.tallybook.core.model.Actividad
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
@@ -14,34 +15,54 @@ import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.text.normalizeSearchText
 import com.kurobello.tallybook.feature.search.ui.SearchCurrencyYears
 import com.kurobello.tallybook.feature.search.ui.SearchRequest
+import com.kurobello.tallybook.feature.search.ui.SearchResultRowUi
 import com.kurobello.tallybook.feature.search.ui.SearchResultsUi
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertSame
 import kotlin.time.Instant
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
 
 class SearchProjectionTest {
+  private suspend fun matchRows(
+      candidates: List<SearchCandidate>,
+      normalizedQuery: String,
+  ): List<SearchResultRowUi> =
+      matchSearchCandidates(candidates, normalizedQuery).map { assertIs<SearchResultRowUi>(it) }
+
   @Test
   fun matchesLiteralFoldedFieldsWithoutSearchingIdsOrSplittingWords() = runTest {
     val rows = listOf(row("hidden-id", "Café %_ [x] 😀"), row("second", "niño"))
-    val candidates = buildSearchCandidates(rows, emptyList(), emptyList(), "Missing category")
+    val candidates =
+        buildSearchCandidates(
+            rows.map(Actividad::DeMovimiento),
+            emptyList(),
+            emptyList(),
+            "Missing category",
+        )
     for (query in listOf("cafe", "%_", "[x]", "😀", "MISSING")) {
-      val result = matchSearchCandidates(candidates, normalizeSearchText(query))
+      val result = matchRows(candidates, normalizeSearchText(query))
       assertEquals(listOf("hidden-id"), result.take(1).map { it.id })
     }
     for (query in listOf("hidden-id", "cafe 😀", "nino")) {
-      assertEquals(emptyList(), matchSearchCandidates(candidates, normalizeSearchText(query)))
+      assertEquals(emptyList(), matchRows(candidates, normalizeSearchText(query)))
     }
-    assertEquals(listOf("second"), matchSearchCandidates(candidates, "niño").map { it.id })
+    assertEquals(listOf("second"), matchRows(candidates, "niño").map { it.id })
   }
 
   @Test
   fun usesTituloFirstAndLocalizedFallbackWhilePreservingDomainObjectsAndOrder() = runTest {
     val rows = listOf(row("first", "  "), row("second", null), row("third", "Lunch"))
-    val candidates = buildSearchCandidates(rows, emptyList(), emptyList(), "Sin categoría")
-    val matched = matchSearchCandidates(candidates, "")
+    val candidates =
+        buildSearchCandidates(
+            rows.map(Actividad::DeMovimiento),
+            emptyList(),
+            emptyList(),
+            "Sin categoría",
+        )
+    val matched = matchRows(candidates, "")
     assertEquals(listOf("first", "second", "third"), matched.map { it.id })
     assertEquals(listOf("Sin categoría", "Sin categoría", "Lunch"), matched.map { it.title })
     assertSame(rows.first(), matched.first().movimiento)
@@ -52,8 +73,13 @@ class SearchProjectionTest {
   fun blankCatalogLabelsUseTheSameFallbackForDisplayAndMatching() = runTest {
     val category = Categoria("missing", " ", null, CategoryIcon.WALLET, CategoryTint.BLUE)
     val candidates =
-        buildSearchCandidates(listOf(row("one", null)), listOf(category), emptyList(), "Unknown")
-    assertEquals("Unknown", matchSearchCandidates(candidates, "unknown").single().categoryLabel)
+        buildSearchCandidates(
+            listOf(Actividad.DeMovimiento(row("one", null))),
+            listOf(category),
+            emptyList(),
+            "Unknown",
+        )
+    assertEquals("Unknown", matchRows(candidates, "unknown").single().categoryLabel)
   }
 
   @Test
@@ -61,25 +87,37 @@ class SearchProjectionTest {
     val food = Categoria("food", "Comida", null, CategoryIcon.WALLET, CategoryTint.BLUE)
     val gift = Categoria("gift", "Regalo", null, CategoryIcon.WALLET, CategoryTint.BLUE)
     val rows = listOf(row("dinner", "Cena", "gift"), row("single", "Cine"))
-    val candidates = buildSearchCandidates(rows, listOf(food, gift), emptyList(), "Unknown")
+    val candidates =
+        buildSearchCandidates(
+            rows.map(Actividad::DeMovimiento),
+            listOf(food, gift),
+            emptyList(),
+            "Unknown",
+        )
 
-    val byGift = matchSearchCandidates(candidates, "regalo")
+    val byGift = matchRows(candidates, "regalo")
     assertEquals(listOf("dinner"), byGift.map { it.id })
     assertEquals("Regalo", byGift.single().categoryLabel)
     assertSame(gift, byGift.single().categoria)
-    assertEquals(emptyList(), matchSearchCandidates(candidates, "comida"))
-    assertEquals(emptyList(), matchSearchCandidates(candidates, "gift"))
+    assertEquals(emptyList(), matchRows(candidates, "comida"))
+    assertEquals(emptyList(), matchRows(candidates, "gift"))
   }
 
   @Test
   fun matchesTituloAndDescripcionWhileTheTitleStaysTheTitulo() = runTest {
     val rows = listOf(row("dinner", "Cena", descripcion = "Cumpleaños de Ana"), row("cine", "Cine"))
-    val candidates = buildSearchCandidates(rows, emptyList(), emptyList(), "Unknown")
+    val candidates =
+        buildSearchCandidates(
+            rows.map(Actividad::DeMovimiento),
+            emptyList(),
+            emptyList(),
+            "Unknown",
+        )
 
-    val byDescription = matchSearchCandidates(candidates, normalizeSearchText("CUMPLEAÑOS"))
+    val byDescription = matchRows(candidates, normalizeSearchText("CUMPLEAÑOS"))
     assertEquals(listOf("dinner"), byDescription.map { it.id })
     assertEquals("Cena", byDescription.single().title)
-    assertEquals(listOf("cine"), matchSearchCandidates(candidates, "cine").map { it.id })
+    assertEquals(listOf("cine"), matchRows(candidates, "cine").map { it.id })
   }
 
   @Test
@@ -92,16 +130,22 @@ class SearchProjectionTest {
             row("untagged", "Cine"),
             row("deleted-tag", "Taxi", etiquetaIds = listOf("t_deleted")),
         )
-    val candidates = buildSearchCandidates(rows, emptyList(), listOf(empresa, viaje), "Unknown")
+    val candidates =
+        buildSearchCandidates(
+            rows.map(Actividad::DeMovimiento),
+            emptyList(),
+            listOf(empresa, viaje),
+            "Unknown",
+        )
 
     for (query in listOf("ÑANDU", "chile")) {
-      val matched = matchSearchCandidates(candidates, normalizeSearchText(query))
+      val matched = matchRows(candidates, normalizeSearchText(query))
       assertEquals(listOf("tagged"), matched.map { it.id })
       assertEquals("Cena", matched.single().title)
     }
-    assertEquals(emptyList(), matchSearchCandidates(candidates, normalizeSearchText("nandu")))
-    assertEquals(emptyList(), matchSearchCandidates(candidates, "t_deleted"))
-    assertEquals(emptyList(), matchSearchCandidates(candidates, "t_empresa"))
+    assertEquals(emptyList(), matchRows(candidates, normalizeSearchText("nandu")))
+    assertEquals(emptyList(), matchRows(candidates, "t_deleted"))
+    assertEquals(emptyList(), matchRows(candidates, "t_empresa"))
   }
 
   @Test
@@ -117,8 +161,13 @@ class SearchProjectionTest {
     val results =
         SearchResultsUi(
             SearchRequest(MovimientoReadCriteria(Moneda.USD), ""),
-            matchSearchCandidates(
-                buildSearchCandidates(rows, emptyList(), emptyList(), "Unknown"),
+            matchRows(
+                buildSearchCandidates(
+                    rows.map(Actividad::DeMovimiento),
+                    emptyList(),
+                    emptyList(),
+                    "Unknown",
+                ),
                 "",
             ),
             SearchCurrencyYears(Moneda.USD, listOf(2026)),

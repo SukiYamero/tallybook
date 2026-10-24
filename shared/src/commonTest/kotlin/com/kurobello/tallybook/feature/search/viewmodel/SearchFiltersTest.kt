@@ -1,9 +1,10 @@
 package com.kurobello.tallybook.feature.search.viewmodel
 
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.SearchTipo
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -17,6 +18,49 @@ import kotlinx.datetime.plus
 
 class SearchFiltersTest {
   private val today = LocalDate(2028, 3, 1)
+
+  @Test
+  fun accountAndMedioSelectionsToggleAndActivateFiltersIntoTheCriteria() {
+    val initial = SearchFilters.initial(today)
+    val selected = initial.toggleCuenta("nequi").toggleMedio(MedioPago.DEBITO)
+    assertTrue(selected.hasActiveFilters)
+    assertEquals(setOf("nequi"), selected.cuentaIds)
+    assertEquals(setOf(MedioPago.DEBITO), selected.medios)
+    assertEquals(initial, selected.toggleCuenta("nequi").toggleMedio(MedioPago.DEBITO))
+    assertEquals(
+        initial.hashCode(),
+        selected.toggleCuenta("nequi").toggleMedio(MedioPago.DEBITO).hashCode(),
+    )
+    assertTrue(initial.copy(tipo = SearchTipo.TRANSFERENCIA).hasActiveFilters)
+    assertEquals(
+        MovimientoReadCriteria(
+            Moneda.USD,
+            tipo = SearchTipo.TRANSFERENCIA,
+            cuentaIds = setOf("nequi"),
+            medios = setOf(MedioPago.DEBITO),
+        ),
+        selected.copy(tipo = SearchTipo.TRANSFERENCIA).criteria(Moneda.USD, today),
+    )
+  }
+
+  @Test
+  fun transfersAreReadOnlyWithoutCategoryTagOrMedioAndForAnEmptyOrTransferType() {
+    val base = MovimientoReadCriteria(Moneda.COP)
+    assertTrue(base.includesTransferencias)
+    assertTrue(base.copy(cuentaIds = setOf("nequi")).includesTransferencias)
+    assertTrue(base.copy(tipo = SearchTipo.TRANSFERENCIA).includesTransferencias)
+    assertFalse(base.copy(tipo = SearchTipo.TRANSFERENCIA).includesMovimientos)
+    for (excluding in
+        listOf(
+            base.copy(tipo = SearchTipo.GASTO),
+            base.copy(categoryIds = setOf("food")),
+            base.copy(etiquetaIds = setOf("trip")),
+            base.copy(medios = setOf(MedioPago.EFECTIVO)),
+        )) {
+      assertFalse(excluding.includesTransferencias)
+      assertTrue(excluding.includesMovimientos)
+    }
+  }
 
   @Test
   fun relativePresetsIncludeBothBoundariesAcrossLeapMonth() {
@@ -103,14 +147,14 @@ class SearchFiltersTest {
             .copy(
                 preset = SearchDatePreset.Custom,
                 customStart = LocalDate(1900, 1, 1),
-                tipo = TipoMovimiento.INGRESO,
+                tipo = SearchTipo.INGRESO,
                 categoryIds = setOf("parent", "missing"),
             )
     val all = filters.copy(preset = SearchDatePreset.All)
     assertEquals(filters.customStart, resolved(all).filters.customStart)
     assertEquals(filters, filters.toggleCategory("child").toggleCategory("child"))
     assertEquals(setOf("parent", "missing"), filters.categoryIds)
-    assertEquals(TipoMovimiento.INGRESO, filters.tipo)
+    assertEquals(SearchTipo.INGRESO, filters.tipo)
     assertTrue(1900 in filters.availableYears(emptyList(), today))
   }
 
@@ -149,7 +193,7 @@ class SearchFiltersTest {
         tagged.hashCode(),
         SearchFilters.initial(today).toggleEtiqueta("t_empresa").hashCode(),
     )
-    val typed = tagged.copy(tipo = TipoMovimiento.GASTO).toggleCategory("food")
+    val typed = tagged.copy(tipo = SearchTipo.GASTO).toggleCategory("food")
     assertEquals(setOf("t_empresa"), typed.etiquetaIds)
     assertEquals(setOf("t_empresa"), resolved(typed).filters.etiquetaIds)
   }

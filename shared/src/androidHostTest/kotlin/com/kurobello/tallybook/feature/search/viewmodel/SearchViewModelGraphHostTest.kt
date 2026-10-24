@@ -11,11 +11,15 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.savedState
 import androidx.savedstate.write
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.kurobello.tallybook.core.data.ActividadRepository
+import com.kurobello.tallybook.core.data.ActividadRepositoryImpl
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
+import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
@@ -25,6 +29,7 @@ import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.cashCuenta
 import com.kurobello.tallybook.core.data.insertLegacy
 import com.kurobello.tallybook.core.data.seedCashCuentas
 import com.kurobello.tallybook.core.database.TallybookDatabase
@@ -34,6 +39,7 @@ import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.SearchTipo
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.di.DispatcherQualifier
 import com.kurobello.tallybook.di.viewModelModule
@@ -110,6 +116,8 @@ internal class SearchViewModelGraphHostTest {
           module {
             single<AppPreferencesRepository> { preferences }
             single<MovimientoRepository> { movimientos }
+            single<ActividadRepository> { ActividadRepositoryImpl(database, dispatcher) }
+            single<CuentaRepository> { FakeCuentaRepository(listOf(cashCuenta(Moneda.USD))) }
             single<EtiquetaRepository> { FakeEtiquetaRepository() }
             single<CategoriaRepository> { categorias }
             single<Clock> {
@@ -136,7 +144,7 @@ internal class SearchViewModelGraphHostTest {
       val session = requireNotNull(first.onOpenFilters())
       first.onFilterDraftChanged(
           session,
-          first.uiState.value.filters.copy(tipo = TipoMovimiento.INGRESO),
+          first.uiState.value.filters.copy(tipo = SearchTipo.INGRESO),
       )
       assertTrue(first.hasActiveFilterSession)
       first.onQueryChanged("café %_")

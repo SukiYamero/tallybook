@@ -14,13 +14,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 
+/** [role] stays a radio button for single choice; a multi-select group passes [Role.Button]. */
 @Composable
+@Suppress("LongParameterList")
 internal fun TallybookChoicePill(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    role: Role = Role.RadioButton,
 ) {
   val colors = TallybookTheme.colors
   val interactionSource = remember { MutableInteractionSource() }
@@ -36,7 +39,7 @@ internal fun TallybookChoicePill(
                   interactionSource = interactionSource,
                   indication = null,
                   enabled = enabled,
-                  role = Role.RadioButton,
+                  role = role,
                   onClick = onClick,
               ),
       contentAlignment = Alignment.Center,

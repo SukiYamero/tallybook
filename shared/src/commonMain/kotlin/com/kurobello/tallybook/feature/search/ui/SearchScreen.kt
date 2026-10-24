@@ -38,7 +38,11 @@ import androidx.compose.ui.unit.Dp
 import com.composables.icons.lucide.Hash
 import com.composables.icons.lucide.ListFilter
 import com.composables.icons.lucide.Lucide
-import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.ui.account.ActividadTransferenciaRow
+import com.kurobello.tallybook.core.ui.account.MonedaSelector
+import com.kurobello.tallybook.core.ui.account.actividadCuentaLabel
+import com.kurobello.tallybook.core.ui.account.labelResource
 import com.kurobello.tallybook.core.ui.category.categoryFamilies
 import com.kurobello.tallybook.core.ui.category.tintColors
 import com.kurobello.tallybook.core.ui.component.TallybookButton
@@ -74,13 +78,11 @@ import tallybook.shared.generated.resources.search_clear_text
 import tallybook.shared.generated.resources.search_count
 import tallybook.shared.generated.resources.search_date_range_value
 import tallybook.shared.generated.resources.search_error
-import tallybook.shared.generated.resources.search_expenses
 import tallybook.shared.generated.resources.search_filters
 import tallybook.shared.generated.resources.search_filters_active
 import tallybook.shared.generated.resources.search_filters_collapsed
 import tallybook.shared.generated.resources.search_filters_expanded
 import tallybook.shared.generated.resources.search_filters_inactive
-import tallybook.shared.generated.resources.search_income
 import tallybook.shared.generated.resources.search_invalid_dates
 import tallybook.shared.generated.resources.search_loading
 import tallybook.shared.generated.resources.search_no_data_body
@@ -107,6 +109,7 @@ internal fun SearchScreen(
     fieldModifier: Modifier = Modifier,
     filterButtonModifier: Modifier = Modifier,
     onOpenMovimiento: ((String) -> Unit)? = null,
+    onOpenTransferencia: ((String) -> Unit)? = null,
 ) {
   require(bottomBarClearance >= TallybookTheme.spacing.space0)
   val presentation by rememberSearchPresentation(uiState)
@@ -148,6 +151,7 @@ internal fun SearchScreen(
             onClear = actions::onClearQuery,
         )
       }
+      searchMonedaSelector(uiState, actions)
       if (uiState.filters.hasActiveFilters)
           item(key = "search-applied-filters") { SearchAppliedChips(uiState, actions) }
       if (resolveSearchFilters(uiState.filters, uiState.today) is SearchFilterResolution.Invalid) {
@@ -188,22 +192,55 @@ internal fun SearchScreen(
           SearchEmpty(content, uiState.rawQuery, actions, onAdd, onOpenFilters)
         }
       }
-      searchResultGroups(content?.groups.orEmpty(), onOpenMovimiento)
+      searchResultGroups(
+          content?.groups.orEmpty(),
+          uiState.primary ?: uiState.moneda,
+          onOpenMovimiento,
+          onOpenTransferencia,
+      )
     }
   }
 }
 
+private fun LazyListScope.searchMonedaSelector(uiState: SearchUiState, actions: SearchActions) {
+  val moneda = uiState.moneda
+  if (uiState.showsMonedaSelector && moneda != null)
+      item(key = "search-currency") {
+        MonedaSelector(uiState.monedas, moneda, actions::onMonedaSelected)
+      }
+}
+
 private fun LazyListScope.searchResultGroups(
     groups: List<SearchDayGroupUi>,
+    primary: Moneda?,
     onOpenMovimiento: ((String) -> Unit)?,
+    onOpenTransferencia: ((String) -> Unit)?,
 ) {
   groups.forEach { group ->
     item(key = group.key, contentType = "date") { CivilDayHeader(group.fecha) }
-    items(group.rows, key = { "search-row:${it.id}" }, contentType = { "movement" }) {
-      SearchResultRow(it, onClick = onOpenMovimiento?.let { open -> { open(it.movimiento.id) } })
+    items(group.rows, key = { it.key }, contentType = { it.contentType }) { row ->
+      when (row) {
+        is SearchResultRowUi ->
+            SearchResultRow(row, onClick = onOpenMovimiento?.let { open -> { open(row.id) } })
+        is SearchTransferenciaRowUi ->
+            ActividadTransferenciaRow(
+                row.actividad,
+                row.origen,
+                row.destino,
+                primary,
+                onClick = onOpenTransferencia?.let { open -> { open(row.id) } },
+            )
+      }
     }
   }
 }
+
+private val SearchActividadRowUi.contentType: String
+  get() =
+      when (this) {
+        is SearchResultRowUi -> "movement"
+        is SearchTransferenciaRowUi -> "transfer"
+      }
 
 @Composable
 private fun SearchHeader(
@@ -296,6 +333,13 @@ private fun SearchAppliedChips(state: SearchUiState, actions: SearchActions) {
   val missing = state.filters.categoryIds - categories.mapTo(mutableSetOf()) { it.id }
   val selectedEtiquetas =
       state.etiquetas.values.orEmpty().filter { it.id in state.filters.etiquetaIds }
+  val cuentas = state.cuentas.values.orEmpty()
+  val cuentasById = cuentas.associateBy { it.id }
+  // Catalog order first, then IDs no account holds.
+  val selectedCuentas =
+      cuentas.map { it.id }.filter { it in state.filters.cuentaIds } +
+          (state.filters.cuentaIds - cuentasById.keys).sorted()
+  val primary = state.primary ?: state.moneda
   LazyRow(horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8)) {
     if (state.filters.preset != SearchDatePreset.All)
         item(key = "date") {
@@ -315,11 +359,7 @@ private fun SearchAppliedChips(state: SearchUiState, actions: SearchActions) {
         }
     state.filters.tipo?.let { type ->
       item(key = "type") {
-        val label =
-            stringResource(
-                if (type == TipoMovimiento.GASTO) Res.string.search_expenses
-                else Res.string.search_income
-            )
+        val label = searchTipoLabel(type)
         TallybookFilterTag(
             label,
             stringResource(Res.string.search_remove_filter, label),
@@ -343,6 +383,22 @@ private fun SearchAppliedChips(state: SearchUiState, actions: SearchActions) {
           label,
           stringResource(Res.string.search_remove_filter, label),
           { actions.onRemoveCategoryFilter(id) },
+      )
+    }
+    items(state.filters.medios.sorted(), key = { "medio:${it.name}" }) { medio ->
+      val label = stringResource(medio.labelResource)
+      TallybookFilterTag(
+          label,
+          stringResource(Res.string.search_remove_filter, label),
+          { actions.onRemoveMedioFilter(medio) },
+      )
+    }
+    items(selectedCuentas, key = { "cuenta:$it" }) { id ->
+      val label = actividadCuentaLabel(cuentasById[id], primary)
+      TallybookFilterTag(
+          label,
+          stringResource(Res.string.search_remove_filter, label),
+          { actions.onRemoveCuentaFilter(id) },
       )
     }
     items(selectedEtiquetas, key = { "etiqueta:${it.id}" }) { etiqueta ->

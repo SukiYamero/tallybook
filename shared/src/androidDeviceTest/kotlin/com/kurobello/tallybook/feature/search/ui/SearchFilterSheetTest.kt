@@ -25,21 +25,32 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.MedioPago
+import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.Money
+import com.kurobello.tallybook.core.model.SearchTipo
+import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import com.kurobello.tallybook.feature.search.viewmodel.SearchCuentaState
 import com.kurobello.tallybook.feature.search.viewmodel.SearchDatePreset
 import com.kurobello.tallybook.feature.search.viewmodel.SearchEtiquetaState
 import com.kurobello.tallybook.feature.search.viewmodel.SearchFilterSession
 import com.kurobello.tallybook.feature.search.viewmodel.SearchFilterSessionId
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.getStringArray
 import org.junit.Rule
 import org.junit.Test
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.activity_missing_account
 import tallybook.shared.generated.resources.calendar_date_content_description
 import tallybook.shared.generated.resources.date_picker_months
+import tallybook.shared.generated.resources.payment_method_credit
+import tallybook.shared.generated.resources.search_accounts_label
 import tallybook.shared.generated.resources.search_apply
 import tallybook.shared.generated.resources.search_category_label
 import tallybook.shared.generated.resources.search_clear_filters
@@ -47,6 +58,7 @@ import tallybook.shared.generated.resources.search_last_7_days
 import tallybook.shared.generated.resources.search_remove_filter
 import tallybook.shared.generated.resources.search_start_date
 import tallybook.shared.generated.resources.search_tags_label
+import tallybook.shared.generated.resources.search_type_transfers
 import tallybook.shared.generated.resources.unknown_category
 
 class SearchFilterSheetTest {
@@ -74,6 +86,73 @@ class SearchFilterSheetTest {
     composeRule
         .onNodeWithText(runBlocking { getString(Res.string.search_apply) })
         .assertIsDisplayed()
+  }
+
+  @Test
+  fun medioAccountAndTransferTypeEditTheDraftAndAMissingAccountCanBeRemoved() {
+    val nequi =
+        Cuenta(
+            "nequi",
+            "Nequi",
+            TipoCuenta.BANCO,
+            Money(0, Moneda.COP),
+            null,
+            true,
+            Instant.parse("2026-01-01T00:00:00Z"),
+        )
+    val savings =
+        Cuenta(
+            "savings",
+            "Savings",
+            TipoCuenta.BANCO,
+            Money(0, Moneda.USD),
+            null,
+            false,
+            Instant.parse("2026-01-01T00:00:00Z"),
+        )
+    val actions = SearchTestActions()
+    composeRule.setContent {
+      TallybookTheme {
+        SearchFilterSheetContent(
+            searchTestState.copy(
+                primary = Moneda.COP,
+                cuentas = SearchCuentaState(listOf(nequi, savings)),
+                filterSession =
+                    SearchFilterSession.Editing(
+                        SearchFilterSessionId(1),
+                        searchTestState.filters.copy(cuentaIds = setOf("gone")),
+                    ),
+            ),
+            actions,
+        )
+      }
+    }
+    composeRule
+        .onNodeWithText(runBlocking { getString(Res.string.search_type_transfers) })
+        .performScrollTo()
+        .performClick()
+    composeRule.runOnIdle { assertEquals(SearchTipo.TRANSFERENCIA, actions.lastDraft?.tipo) }
+    composeRule
+        .onNodeWithText(runBlocking { getString(Res.string.payment_method_credit) })
+        .performScrollTo()
+        .performClick()
+    composeRule.runOnIdle { assertEquals(setOf(MedioPago.CREDITO), actions.lastDraft?.medios) }
+    composeRule
+        .onNodeWithText(runBlocking { getString(Res.string.search_accounts_label) })
+        .performScrollTo()
+        .assertIsDisplayed()
+    composeRule.onNodeWithText("Savings (USD)").performScrollTo().performClick()
+    composeRule.runOnIdle { assertEquals(setOf("gone", "savings"), actions.lastDraft?.cuentaIds) }
+    composeRule.onNodeWithText("Nequi").assertDoesNotExist()
+    val missing = runBlocking { getString(Res.string.activity_missing_account) }
+    composeRule
+        .onNodeWithContentDescription(
+            runBlocking { getString(Res.string.search_remove_filter, missing) }
+        )
+        .performScrollTo()
+        .assertIsSelected()
+        .performClick()
+    composeRule.runOnIdle { assertEquals(emptySet(), actions.lastDraft?.cuentaIds) }
   }
 
   @Test

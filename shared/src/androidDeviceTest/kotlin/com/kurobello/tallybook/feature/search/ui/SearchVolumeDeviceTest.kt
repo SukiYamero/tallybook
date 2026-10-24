@@ -23,19 +23,24 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import androidx.test.platform.app.InstrumentationRegistry
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
+import com.kurobello.tallybook.core.data.ActividadRepository
+import com.kurobello.tallybook.core.data.ActividadRepositoryImpl
 import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
-import com.kurobello.tallybook.core.data.MovimientoRepository
-import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.insertCuentaRow
+import com.kurobello.tallybook.core.data.insertTransferenciaRow
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.model.Actividad
+import com.kurobello.tallybook.core.model.ActividadRecentOrder
 import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataOutcome
@@ -45,7 +50,10 @@ import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
+import com.kurobello.tallybook.core.model.SearchTipo
+import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.Transferencia
 import com.kurobello.tallybook.core.ui.layout.TallybookAppShell
 import com.kurobello.tallybook.core.ui.navigation.Search
 import com.kurobello.tallybook.core.ui.navigation.TallybookBottomNavigation
@@ -134,7 +142,7 @@ class SearchVolumeDeviceTest {
       composed = true
       val initial = SearchFilters.initial(today)
       val all = bounded { fixture.measure(initial, "") }
-      assertEquals(1500, all.rows.size)
+      assertEquals(1500 + FIXTURE_TRANSFERS, all.rows.size)
       scenarios.put(all.metrics.put("case", "all"))
       scrollCheckpoints(all.rows, clearancePixels)
       samples.put(memorySample("afterAllScroll"))
@@ -142,11 +150,11 @@ class SearchVolumeDeviceTest {
       val year = initial.copy(preset = SearchDatePreset.ThisYear)
       val yearSettled = bounded { fixture.apply(year, "") }
       val thisYear = bounded { fixture.measure(year, "") }
-      assertEquals(1200, thisYear.rows.size)
+      assertEquals(1200 + FIXTURE_TRANSFERS / 2, thisYear.rows.size)
       scenarios.put(thisYear.metrics.put("case", "thisYear").put("settleMs", yearSettled))
       scrollCheckpoints(thisYear.rows, clearancePixels)
 
-      val sparse = year.copy(tipo = TipoMovimiento.GASTO, categoryIds = setOf("cat_comida"))
+      val sparse = year.copy(tipo = SearchTipo.GASTO, categoryIds = setOf("cat_comida"))
       val sparseSettled = bounded { fixture.apply(sparse, "needle") }
       val selected = bounded { fixture.measure(sparse, "needle") }
       assertEquals(19, selected.rows.size)
@@ -182,7 +190,9 @@ class SearchVolumeDeviceTest {
     composeRule.waitForIdle()
   }
 
-  private fun scrollCheckpoints(rows: List<SearchResultRowUi>, clearancePixels: Float) {
+  // Checkpoints land on movimiento rows, whose titles are unique; transfers share their route.
+  private fun scrollCheckpoints(results: List<SearchActividadRowUi>, clearancePixels: Float) {
+    val rows = results.filterIsInstance<SearchResultRowUi>()
     assertTrue(rows.isNotEmpty())
     val title = bounded { getString(Res.string.search_title) }
     val list = composeRule.onNode(hasContentDescription(title) and hasScrollAction())
@@ -214,7 +224,7 @@ class SearchVolumeDeviceTest {
             Dispatchers.IO,
         )
     private val preferences = AppPreferencesRepositoryImpl(factory.create())
-    private val movimientos = MovimientoRepositoryImpl(database, Dispatchers.IO, TestChangeClock())
+    private val actividades = ActividadRepositoryImpl(database, Dispatchers.IO)
     private val categorias =
         CategoriaRepositoryImpl(
             database,
@@ -222,12 +232,13 @@ class SearchVolumeDeviceTest {
             IdGenerator { error("Not used by this test") },
             TestChangeClock(),
         )
-    val subscriptions = CountingMovimientos(movimientos)
+    val subscriptions = CountingActividades(actividades)
     private val scopeJob = SupervisorJob()
     private val scope = CoroutineScope(scopeJob + Dispatchers.Main.immediate)
     private val store = ViewModelStore()
     private var collector: Job? = null
     private var fixtureRows = (0 until FIXTURE_ROWS).map(::fixtureRow)
+    private var fixtureTransfers = (0 until FIXTURE_TRANSFERS).map(::fixtureTransfer)
     var viewModel: SearchViewModel? = null
       private set
 
@@ -239,6 +250,8 @@ class SearchVolumeDeviceTest {
       )
       withContext(Dispatchers.IO) {
         database.transaction {
+          fixtureCuentas.forEach { database.insertCuentaRow(it, ChangeStamp.SEED) }
+          fixtureTransfers.forEach { database.insertTransferenciaRow(it, ChangeStamp.SEED) }
           for (row in fixtureRows) database.movimientoQueries.insertMovimiento(
               row.id,
               row.tipo.name,
@@ -263,6 +276,7 @@ class SearchVolumeDeviceTest {
                     subscriptions,
                     categorias,
                     FakeEtiquetaRepository(),
+                    FakeCuentaRepository(fixtureCuentas),
                 ),
                 SavedStateHandle(),
                 fallback,
@@ -313,7 +327,7 @@ class SearchVolumeDeviceTest {
       val started = TimeSource.Monotonic.markNow()
       val snapshot =
           assertIs<DataOutcome.Success<MovimientoSearchSnapshot>>(
-                  movimientos.observeFiltered(criteria).first()
+                  actividades.observeFiltered(criteria).first()
               )
               .data
       val readMs = started.elapsedNow().inWholeNanoseconds / 1_000_000.0
@@ -327,7 +341,13 @@ class SearchVolumeDeviceTest {
       val candidatesStarted = TimeSource.Monotonic.markNow()
       val candidates =
           withContext(Dispatchers.Default) {
-            buildSearchCandidates(snapshot.movimientos, categories, emptyList(), fallback)
+            buildSearchCandidates(
+                snapshot.actividades,
+                categories,
+                emptyList(),
+                fallback,
+                fixtureCuentas,
+            )
           }
       val candidateMs = candidatesStarted.elapsedNow().inWholeNanoseconds / 1_000_000.0
       val matchStarted = TimeSource.Monotonic.markNow()
@@ -338,7 +358,8 @@ class SearchVolumeDeviceTest {
       return Measurement(
           rows,
           JSONObject()
-              .put("structuralRows", snapshot.movimientos.size)
+              .put("structuralRows", snapshot.actividades.size)
+              .put("transfers", snapshot.actividades.size - snapshot.movimientos.size)
               .put("count", rows.size)
               .put("readMs", readMs)
               .put("candidateMs", candidateMs)
@@ -368,20 +389,27 @@ class SearchVolumeDeviceTest {
       return timings
     }
 
-    private fun expected(filters: SearchFilters, query: String): List<Movimiento> =
-        fixtureRows
-            .filter { row ->
-              row.monto.moneda == Moneda.COP &&
-                  (filters.preset == SearchDatePreset.All || row.fecha.year == today.year) &&
-                  (filters.tipo == null || row.tipo == filters.tipo) &&
-                  (filters.categoryIds.isEmpty() || row.categoriaId in filters.categoryIds) &&
-                  (query.isEmpty() || requireNotNull(row.titulo).contains("Needle"))
-            }
-            .sortedWith(
-                compareByDescending<Movimiento> { it.fecha }
-                    .thenByDescending { it.createdAt }
-                    .thenByDescending { it.id }
-            )
+    private fun expected(filters: SearchFilters, query: String): List<Actividad> {
+      val inDates = { fecha: LocalDate ->
+        filters.preset == SearchDatePreset.All || fecha.year == today.year
+      }
+      val movimientos = fixtureRows.filter { row ->
+        row.monto.moneda == Moneda.COP &&
+            inDates(row.fecha) &&
+            (filters.tipo == null || row.tipo == filters.tipo?.tipoMovimiento) &&
+            (filters.categoryIds.isEmpty() || row.categoriaId in filters.categoryIds) &&
+            (query.isEmpty() || requireNotNull(row.titulo).contains("Needle"))
+      }
+      val transfers = fixtureTransfers.filter {
+        filters.categoryIds.isEmpty() &&
+            (filters.tipo == null || filters.tipo == SearchTipo.TRANSFERENCIA) &&
+            inDates(it.fecha) &&
+            query.isEmpty()
+      }
+      return (movimientos.map(Actividad::DeMovimiento) +
+              transfers.mapNotNull { Actividad.DeTransferencia.of(it, Moneda.COP) })
+          .sortedWith(ActividadRecentOrder)
+    }
 
     fun close() {
       bounded {
@@ -395,14 +423,15 @@ class SearchVolumeDeviceTest {
       factory.close()
       driver.close()
       fixtureRows = emptyList()
+      fixtureTransfers = emptyList()
       check(name.startsWith("search-volume-"))
       if (context.getDatabasePath(name).exists()) check(context.deleteDatabase(name))
       check(directory.deleteRecursively())
     }
   }
 
-  private class CountingMovimientos(private val delegate: MovimientoRepository) :
-      MovimientoRepository by delegate {
+  private class CountingActividades(private val delegate: ActividadRepository) :
+      ActividadRepository by delegate {
     val starts = AtomicInteger()
     val stops = AtomicInteger()
     val active = AtomicInteger()
@@ -421,10 +450,35 @@ class SearchVolumeDeviceTest {
     }
   }
 
-  private data class Measurement(val rows: List<SearchResultRowUi>, val metrics: JSONObject)
+  private data class Measurement(val rows: List<SearchActividadRowUi>, val metrics: JSONObject)
 
   private companion object {
     const val FIXTURE_ROWS = 2000
+    const val FIXTURE_TRANSFERS = 200
+    const val FIXTURE_BANK = "volume-bank"
+    val fixtureCuentas =
+        listOf(
+            fixtureCuenta(Cuenta.defaultCashId(Moneda.COP), TipoCuenta.EFECTIVO, Moneda.COP),
+            fixtureCuenta(Cuenta.defaultCashId(Moneda.USD), TipoCuenta.EFECTIVO, Moneda.USD),
+            fixtureCuenta(FIXTURE_BANK, TipoCuenta.BANCO, Moneda.COP),
+        )
+
+    fun fixtureCuenta(id: String, tipo: TipoCuenta, moneda: Moneda) =
+        Cuenta(id, id, tipo, Money(0, moneda), null, false, Instant.parse("2026-01-01T00:00:00Z"))
+
+    // Half in each year, all between the COP accounts, so every one belongs to the COP results.
+    fun fixtureTransfer(index: Int): Transferencia =
+        Transferencia(
+            "transfer-${index.toString().padStart(4, '0')}",
+            Cuenta.defaultCashId(Moneda.COP),
+            FIXTURE_BANK,
+            Money(500, Moneda.COP),
+            Money(500, Moneda.COP),
+            LocalDate(if (index % 2 == 0) 2026 else 2024, 9, index % 28 + 1),
+            "Ahorro $index",
+            Instant.parse("2026-09-15T10:00:00Z"),
+        )
+
     val today = LocalDate(2026, 10, 6)
 
     fun fixtureRow(index: Int): Movimiento {

@@ -1,6 +1,8 @@
 package com.kurobello.tallybook.feature.search.viewmodel
 
-import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.MedioPago
+import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.SearchTipo
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 
@@ -15,8 +17,20 @@ private val presetTokens =
         SearchDatePreset.ThisYear to "this-year",
         SearchDatePreset.Custom to "custom",
     )
-private val typeTokens = mapOf(TipoMovimiento.GASTO to "gasto", TipoMovimiento.INGRESO to "ingreso")
 
+// "gasto" and "ingreso" are the tokens saved while the type was a TipoMovimiento, so a checkpoint
+// from before transfers restores the same selection.
+private val typeTokens =
+    mapOf(
+        SearchTipo.GASTO to "gasto",
+        SearchTipo.INGRESO to "ingreso",
+        SearchTipo.TRANSFERENCIA to "transferencia",
+    )
+
+/**
+ * Fields added after the first version default to empty, so older checkpoints still decode. Unknown
+ * medio names are dropped one by one; an unknown [moneda] restores the primary currency.
+ */
 @Serializable
 internal data class SearchSavedInput(
     val version: Int,
@@ -27,6 +41,9 @@ internal data class SearchSavedInput(
     val tipo: String?,
     val categoryIds: List<String>,
     val etiquetaIds: List<String> = emptyList(),
+    val cuentaIds: List<String> = emptyList(),
+    val medios: List<String> = emptyList(),
+    val moneda: String? = null,
 ) {
   companion object {
     fun restore(input: SearchSavedInput?, today: LocalDate): SearchRestoredInput {
@@ -34,14 +51,22 @@ internal data class SearchSavedInput(
       if (input == null || input.version != SEARCH_SAVED_VERSION)
           return SearchRestoredInput("", defaults)
       val filters = input.restoreFilters(today) ?: defaults
-      return SearchRestoredInput(input.rawQuery, filters)
+      return SearchRestoredInput(
+          input.rawQuery,
+          filters,
+          Moneda.entries.firstOrNull { it.name == input.moneda },
+      )
     }
   }
 }
 
-internal data class SearchRestoredInput(val rawQuery: String, val filters: SearchFilters)
+internal data class SearchRestoredInput(
+    val rawQuery: String,
+    val filters: SearchFilters,
+    val moneda: Moneda? = null,
+)
 
-internal fun SearchFilters.savedInput(rawQuery: String): SearchSavedInput =
+internal fun SearchFilters.savedInput(rawQuery: String, moneda: Moneda? = null): SearchSavedInput =
     SearchSavedInput(
         version = SEARCH_SAVED_VERSION,
         rawQuery = rawQuery,
@@ -51,6 +76,9 @@ internal fun SearchFilters.savedInput(rawQuery: String): SearchSavedInput =
         tipo = tipo?.let(typeTokens::getValue),
         categoryIds = categoryIds.sorted(),
         etiquetaIds = etiquetaIds.sorted(),
+        cuentaIds = cuentaIds.sorted(),
+        medios = medios.sorted().map { it.name },
+        moneda = moneda?.name,
     )
 
 private fun SearchSavedInput.restoreFilters(today: LocalDate): SearchFilters? {
@@ -71,6 +99,8 @@ private fun SearchSavedInput.restoreFilters(today: LocalDate): SearchFilters? {
           restoredType,
           categoryIds.filterNot { it.isBlank() }.toSet(),
           etiquetaIds.filterNot { it.isBlank() }.toSet(),
+          cuentaIds.filterNot { it.isBlank() }.toSet(),
+          medios.mapNotNull { name -> MedioPago.entries.firstOrNull { it.name == name } }.toSet(),
       )
   return when (val resolution = resolveSearchFilters(filters, today)) {
     is SearchFilterResolution.Valid -> resolution.filters

@@ -1,17 +1,20 @@
 package com.kurobello.tallybook.feature.search.viewmodel
 
+import com.kurobello.tallybook.core.data.ActividadRepository
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepository
-import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
+import com.kurobello.tallybook.core.model.viewedMoneda
 import com.kurobello.tallybook.feature.search.ui.SearchCurrencyYears
 import com.kurobello.tallybook.feature.search.ui.SearchRequest
 import com.kurobello.tallybook.feature.search.ui.SearchResultsUi
@@ -32,9 +35,10 @@ import kotlinx.datetime.LocalDate
 
 internal data class SearchRepositories(
     val preferences: AppPreferencesRepository,
-    val movimientos: MovimientoRepository,
+    val actividades: ActividadRepository,
     val categorias: CategoriaRepository,
     val etiquetas: EtiquetaRepository,
+    val cuentas: CuentaRepository,
 )
 
 internal data class SearchInputs(
@@ -50,21 +54,28 @@ internal data class SearchInputs(
     val reload: Long = 0,
     val textRevision: Long = 0,
     val settledRevision: Long = 0,
+    val selectedMoneda: Moneda? = null,
+    val monedas: List<Moneda>? = null,
 ) {
   val isTextPending: Boolean
     get() = textRevision != settledRevision
 
-  fun criteria(moneda: Moneda): MovimientoReadCriteria? {
-    val resolution =
-        resolveSearchFilters(filters, today) as? SearchFilterResolution.Valid ?: return null
-    return MovimientoReadCriteria(
-        moneda,
-        resolution.range,
-        filters.tipo,
-        filters.categoryIds,
-        filters.etiquetaIds,
-    )
-  }
+  fun viewedMoneda(primary: Moneda): Moneda = viewedMoneda(primary, selectedMoneda, monedas)
+
+  fun criteria(moneda: Moneda): MovimientoReadCriteria? = filters.criteria(moneda, today)
+}
+
+internal fun SearchFilters.criteria(moneda: Moneda, today: LocalDate): MovimientoReadCriteria? {
+  val resolution = resolveSearchFilters(this, today) as? SearchFilterResolution.Valid ?: return null
+  return MovimientoReadCriteria(
+      moneda,
+      resolution.range,
+      tipo,
+      categoryIds,
+      etiquetaIds,
+      cuentaIds,
+      medios,
+  )
 }
 
 internal sealed interface SearchSourceLoad<out T> {
@@ -105,6 +116,8 @@ internal interface SearchObservationReceiver {
 
   fun onEtiquetas(reload: Long, load: SearchSourceLoad<List<Etiqueta>>)
 
+  fun onCuentas(reload: Long, load: SearchSourceLoad<List<Cuenta>>)
+
   fun onRead(read: SearchRead)
 
   fun onCandidateGeneration(request: SearchReadRequest?): Long
@@ -118,6 +131,7 @@ private data class CandidateSources(
     val read: SearchRead,
     val categories: SearchSourceLoad<List<Categoria>>,
     val etiquetas: SearchSourceLoad<List<Etiqueta>>,
+    val cuentas: SearchSourceLoad<List<Cuenta>>,
     val label: String,
 )
 
@@ -157,15 +171,20 @@ internal fun observeSearch(
               repositories.etiquetas.observeAll().sourceLoads().onEach {
                 receiver.onEtiquetas(reload, it)
               }
+          val cuentas =
+              repositories.cuentas.observeAll().sourceLoads().onEach {
+                receiver.onCuentas(reload, it)
+              }
           val reads = observeSearchReads(repositories, inputs, reload, receiver)
           val candidates =
               combine(
                       reads,
                       categories,
                       etiquetas,
+                      cuentas,
                       inputs.map { it.label to it.localeTag }.distinctUntilChanged(),
-                  ) { read, catalog, tags, presentation ->
-                    CandidateSources(read, catalog, tags, presentation.first)
+                  ) { read, catalog, tags, accounts, presentation ->
+                    CandidateSources(read, catalog, tags, accounts, presentation.first)
                   }
                   .mapLatest { it.toCandidates(dispatcher, receiver) }
           combine(
@@ -198,15 +217,15 @@ private fun observeSearchReads(
         receiver.onPreferences(reload, it)
       }
   return combine(preferences, inputs) { preference, input ->
-        val currency = (preference.data as? AppPreferencesState.Ready)?.value?.monedaPrincipal
-        val criteria = currency?.let(input::criteria)
+        val primary = (preference.data as? AppPreferencesState.Ready)?.value?.monedaPrincipal
+        val criteria = primary?.let { input.criteria(input.viewedMoneda(it)) }
         criteria?.takeIf { input.reload == reload }?.let { SearchReadRequest(it, reload) }
       }
       .distinctUntilChanged()
       .flatMapLatest { request ->
         if (request == null) flowOf(SearchRead(null, SearchSourceLoad.Loading))
         else
-            repositories.movimientos.observeFiltered(request.criteria).sourceLoads().map { load ->
+            repositories.actividades.observeFiltered(request.criteria).sourceLoads().map { load ->
               SearchRead(
                   request,
                   load,
@@ -219,29 +238,34 @@ private fun observeSearchReads(
       .onEach(receiver::onRead)
 }
 
+private fun CandidateSources.failure(): SearchFailure? =
+    categories.failure?.let { SearchFailure.Repository(SearchSource.Categories, it) }
+        ?: etiquetas.failure?.let { SearchFailure.Repository(SearchSource.Etiquetas, it) }
+        ?: cuentas.failure?.let { SearchFailure.Repository(SearchSource.Cuentas, it) }
+        ?: read.load.failure?.let { SearchFailure.Repository(SearchSource.Movimientos, it) }
+
 private suspend fun CandidateSources.toCandidates(
     dispatcher: CoroutineDispatcher,
     receiver: SearchObservationReceiver,
 ): CandidateFrame {
   val generation = receiver.onCandidateGeneration(read.request)
   val pending = CandidateFrame(read.request, generation)
-  val failure =
-      categories.failure?.let { SearchFailure.Repository(SearchSource.Categories, it) }
-          ?: etiquetas.failure?.let { SearchFailure.Repository(SearchSource.Etiquetas, it) }
-          ?: read.load.failure?.let { SearchFailure.Repository(SearchSource.Movimientos, it) }
+  val failure = failure()
   val request = read.request
   val snapshot = read.load.data
   val catalog = categories.data
   val tags = etiquetas.data
+  val accounts = cuentas.data
   return when {
     failure != null -> pending.copy(failure = failure)
-    request == null || snapshot == null || catalog == null || tags == null -> pending
+    request == null || snapshot == null || catalog == null || tags == null || accounts == null ->
+        pending
     else ->
         withContext(dispatcher) {
           CandidateFrame(
               request,
               generation,
-              buildSearchCandidates(snapshot.movimientos, catalog, tags, label),
+              buildSearchCandidates(snapshot.actividades, catalog, tags, label, accounts),
               requireNotNull(read.years),
           )
         }

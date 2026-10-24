@@ -12,5 +12,6 @@ internal enum class SearchSource {
   Preferences,
   Categories,
   Etiquetas,
+  Cuentas,
   Movimientos,
 }

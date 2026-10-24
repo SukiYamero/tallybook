@@ -16,7 +16,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.dp
 import com.kurobello.tallybook.core.model.DataError
-import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.SearchTipo
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.search.viewmodel.SearchDateFailure
@@ -112,7 +112,7 @@ class SearchScreenTest {
             filters =
                 searchTestState.filters.copy(
                     preset = SearchDatePreset.Last7Days,
-                    tipo = TipoMovimiento.GASTO,
+                    tipo = SearchTipo.GASTO,
                     categoryIds = setOf("food", "missing"),
                 )
         )
