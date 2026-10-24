@@ -332,7 +332,8 @@ read-modify-write, background scheduler or automatic conflict merge in this deli
   parent backup ID, local revision, capture instant, declared counts, catalog version, and exact data.
   Preserve movimiento ID, tipo, integer minor units, moneda, civil fecha, categoria ID, descripcion and
   createdAt. Include persisted category data and primary currency. Do not copy tokens, navigation,
-  drafts, transient Undo or entire database files/WALs.
+  drafts, transient Undo or entire database files/WALs. Accounts, transfers, payment method, change
+  stamps and tombstones join the envelope as defined by [Wave 5](wave-5/README.md#domain-rules).
 - UTF-8 JSON is versioned independently of the SQL schema. Decode Long values without floating-point
   conversion; dates remain civil ISO strings. A checked payload digest detects transport corruption;
   it is neither end-to-end encryption nor proof against malicious alteration. Use existing available

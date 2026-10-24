@@ -14,6 +14,8 @@ accepted scope, integration details and verification boundaries.
 | Custom categories | DONE | [Custom categories](custom-categories.md) |
 | Movimiento title and day-grouped Search | DONE | [Movimiento title](movimiento-title.md) |
 | Single category and tags | DONE | [Tags](tags.md) |
+| Sync-ready persistence (change stamps and tombstones) | PLANNED | [Wave 5](../tasks/wave-5/README.md) |
+| Accounts, payment method and transfers | PLANNED | [Wave 5](../tasks/wave-5/README.md) |
 
 ## Status rules
 
