@@ -89,13 +89,7 @@ internal class ManagementFeedbackQueue(
     val kind =
         when (outcome) {
           is DataOutcome.Failure -> ManagementFeedbackKind.RestoreFailed
-          is DataOutcome.Success ->
-              when (outcome.data) {
-                RestoreResult.Restored,
-                RestoreResult.AlreadyPresent -> ManagementFeedbackKind.Restored
-                RestoreResult.Conflict -> ManagementFeedbackKind.RestoreConflict
-                RestoreResult.MissingCuenta -> ManagementFeedbackKind.RestoreFailed
-              }
+          is DataOutcome.Success -> restoreFeedbackKinds.getValue(outcome.data)
         }
     // Only a storage failure may succeed on retry; without its cuenta the snapshot is released so
     // the money never lands in another one.
@@ -112,6 +106,14 @@ internal class ManagementFeedbackQueue(
     }
   }
 }
+
+internal val restoreFeedbackKinds: Map<RestoreResult, ManagementFeedbackKind> =
+    mapOf(
+        RestoreResult.Restored to ManagementFeedbackKind.Restored,
+        RestoreResult.AlreadyPresent to ManagementFeedbackKind.Restored,
+        RestoreResult.Conflict to ManagementFeedbackKind.RestoreConflict,
+        RestoreResult.MissingCuenta to ManagementFeedbackKind.RestoreMissingCuenta,
+    )
 
 private fun ManagementFeedbackState.feedbackFor(token: Long, revision: Int): ManagementFeedback? =
     feedback?.takeIf {

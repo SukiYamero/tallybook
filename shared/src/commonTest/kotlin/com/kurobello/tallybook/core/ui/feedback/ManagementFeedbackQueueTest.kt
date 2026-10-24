@@ -157,7 +157,7 @@ class ManagementFeedbackQueueTest {
   fun missingCuentaAndConflictReleaseTheTransferSnapshotWithoutRetry() = runTest {
     val expectations =
         mapOf(
-            RestoreResult.MissingCuenta to ManagementFeedbackKind.RestoreFailed,
+            RestoreResult.MissingCuenta to ManagementFeedbackKind.RestoreMissingCuenta,
             RestoreResult.Conflict to ManagementFeedbackKind.RestoreConflict,
         )
     expectations.forEach { (result, kind) ->

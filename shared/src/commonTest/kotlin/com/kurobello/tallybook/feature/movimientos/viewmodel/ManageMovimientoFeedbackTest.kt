@@ -232,7 +232,7 @@ class ManageMovimientoFeedbackTest {
     f.feedback.onFeedbackAction(first.token, first.revision)
     runCurrent()
     val failed = assertNotNull(f.feedback.state.value.feedback)
-    assertEquals(ManagementFeedbackKind.RestoreFailed, failed.kind)
+    assertEquals(ManagementFeedbackKind.RestoreMissingCuenta, failed.kind)
     assertFalse(failed.hasAction)
 
     f.feedback.onFeedbackDismiss(failed.token, failed.revision)

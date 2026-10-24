@@ -212,7 +212,7 @@ class MovimientoUndoTest {
   }
 
   @Test
-  fun restoreWithoutItsCuentaReleasesSnapshotAsInformationalFailure() = runTest {
+  fun restoreWithoutItsCuentaReleasesSnapshotWithItsOwnFeedback() = runTest {
     val f = ManageMovimientoFixture(backgroundScope)
     f.viewModel.open("movement")
     runCurrent()
@@ -225,7 +225,7 @@ class MovimientoUndoTest {
     f.feedback.onFeedbackAction(feedback.token, feedback.revision)
     runCurrent()
     val failed = assertNotNull(f.feedback.state.value.feedback)
-    assertEquals(ManagementFeedbackKind.RestoreFailed, failed.kind)
+    assertEquals(ManagementFeedbackKind.RestoreMissingCuenta, failed.kind)
     assertNull(failed.deleted)
     assertFalse(failed.hasAction)
     f.feedback.onFeedbackAction(failed.token, failed.revision)

@@ -12,6 +12,7 @@ internal enum class ManagementFeedbackKind {
   Restored,
   RestoreFailed,
   RestoreConflict,
+  RestoreMissingCuenta,
 }
 
 /** A committed mutation held by its management sheet until that sheet is hidden. */

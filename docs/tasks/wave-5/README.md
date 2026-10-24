@@ -183,8 +183,9 @@ Proposed defaults, accepted unless the user objects during visual review:
   archived keeps it while untouched.
 - Restoring a deleted movimiento or transfer (one `RestoreResult` shared by both kinds):
   - into an archived account is allowed; the account stays archived;
-  - when an account no longer exists → `RestoreResult.MissingCuenta`: the existing restore-failed
-    informational feedback, the snapshot is released, and the money never moves to another account;
+  - when an account no longer exists → `RestoreResult.MissingCuenta`: its own warning feedback per
+    subject ("the account no longer exists", no Retry), the snapshot is released, and the money never
+    moves to another account;
   - when an account's currency now differs from the snapshot's currency → `RestoreResult.Conflict`.
 
 ### Transferencia (transfer between own accounts)

@@ -35,6 +35,7 @@ import tallybook.shared.generated.resources.movimiento_missing
 import tallybook.shared.generated.resources.movimiento_notification_close
 import tallybook.shared.generated.resources.movimiento_restore_conflict
 import tallybook.shared.generated.resources.movimiento_restore_error
+import tallybook.shared.generated.resources.movimiento_restore_missing_cuenta
 import tallybook.shared.generated.resources.movimiento_restored
 import tallybook.shared.generated.resources.movimiento_restoring
 import tallybook.shared.generated.resources.movimiento_undo
@@ -44,6 +45,7 @@ import tallybook.shared.generated.resources.transferencia_deleted
 import tallybook.shared.generated.resources.transferencia_missing
 import tallybook.shared.generated.resources.transferencia_restore_conflict
 import tallybook.shared.generated.resources.transferencia_restore_error
+import tallybook.shared.generated.resources.transferencia_restore_missing_cuenta
 import tallybook.shared.generated.resources.transferencia_restored
 import tallybook.shared.generated.resources.transferencia_restoring
 import tallybook.shared.generated.resources.transferencia_updated
@@ -133,12 +135,7 @@ private fun ManagementFeedback.toSnackbarMessage(): TallybookSnackbarMessage {
           else managementFeedbackMessages.getValue(subject).getValue(kind)
       )
   val actionLabel =
-      when {
-        !hasAction -> null
-        kind == ManagementFeedbackKind.Deleted -> stringResource(Res.string.movimiento_undo)
-        kind == ManagementFeedbackKind.RestoreFailed -> stringResource(Res.string.retry)
-        else -> null
-      }
+      managementFeedbackActions[kind]?.takeIf { hasAction }?.let { stringResource(it) }
   return TallybookSnackbarMessage(
       token,
       revision,
@@ -146,19 +143,26 @@ private fun ManagementFeedback.toSnackbarMessage(): TallybookSnackbarMessage {
       if (hasAction) TallybookSnackbarDuration.Long else TallybookSnackbarDuration.Short,
       actionLabel,
       isRestoring,
-      status = kind.snackbarStatus(),
+      status = managementFeedbackStatuses.getValue(kind),
   )
 }
 
-private fun ManagementFeedbackKind.snackbarStatus(): TallybookSnackbarStatus =
-    when (this) {
-      ManagementFeedbackKind.Saved,
-      ManagementFeedbackKind.Deleted,
-      ManagementFeedbackKind.Restored -> TallybookSnackbarStatus.Success
-      ManagementFeedbackKind.Missing,
-      ManagementFeedbackKind.RestoreConflict -> TallybookSnackbarStatus.Warning
-      ManagementFeedbackKind.RestoreFailed -> TallybookSnackbarStatus.Error
-    }
+internal val managementFeedbackActions: Map<ManagementFeedbackKind, StringResource> =
+    mapOf(
+        ManagementFeedbackKind.Deleted to Res.string.movimiento_undo,
+        ManagementFeedbackKind.RestoreFailed to Res.string.retry,
+    )
+
+internal val managementFeedbackStatuses: Map<ManagementFeedbackKind, TallybookSnackbarStatus> =
+    mapOf(
+        ManagementFeedbackKind.Saved to TallybookSnackbarStatus.Success,
+        ManagementFeedbackKind.Deleted to TallybookSnackbarStatus.Success,
+        ManagementFeedbackKind.Restored to TallybookSnackbarStatus.Success,
+        ManagementFeedbackKind.Missing to TallybookSnackbarStatus.Warning,
+        ManagementFeedbackKind.RestoreConflict to TallybookSnackbarStatus.Warning,
+        ManagementFeedbackKind.RestoreMissingCuenta to TallybookSnackbarStatus.Warning,
+        ManagementFeedbackKind.RestoreFailed to TallybookSnackbarStatus.Error,
+    )
 
 private val movimientoMessages: Map<ManagementFeedbackKind, StringResource> =
     mapOf(
@@ -168,6 +172,7 @@ private val movimientoMessages: Map<ManagementFeedbackKind, StringResource> =
         ManagementFeedbackKind.Restored to Res.string.movimiento_restored,
         ManagementFeedbackKind.RestoreFailed to Res.string.movimiento_restore_error,
         ManagementFeedbackKind.RestoreConflict to Res.string.movimiento_restore_conflict,
+        ManagementFeedbackKind.RestoreMissingCuenta to Res.string.movimiento_restore_missing_cuenta,
     )
 
 internal val managementFeedbackMessages:
@@ -182,6 +187,8 @@ internal val managementFeedbackMessages:
                 ManagementFeedbackKind.Restored to Res.string.transferencia_restored,
                 ManagementFeedbackKind.RestoreFailed to Res.string.transferencia_restore_error,
                 ManagementFeedbackKind.RestoreConflict to Res.string.transferencia_restore_conflict,
+                ManagementFeedbackKind.RestoreMissingCuenta to
+                    Res.string.transferencia_restore_missing_cuenta,
             ),
     )
 

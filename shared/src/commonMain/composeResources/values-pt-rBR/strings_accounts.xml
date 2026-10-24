@@ -100,4 +100,6 @@
         <item quantity="one">Para manter a movimentação ou transferência entre suas contas que a usa, arquive-a em vez de excluí-la.</item>
         <item quantity="other">Para manter as %1$d movimentações e transferências entre suas contas que a usam, arquive-a em vez de excluí-la.</item>
     </plurals>
+    <string name="movimiento_restore_missing_cuenta">Não conseguimos restaurar esta movimentação porque a conta dela não existe mais.</string>
+    <string name="transferencia_restore_missing_cuenta">Não conseguimos restaurar esta transferência entre contas porque uma das contas não existe mais.</string>
 </resources>

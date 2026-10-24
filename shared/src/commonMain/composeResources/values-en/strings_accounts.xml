@@ -100,4 +100,6 @@
         <item quantity="one">To keep the movement or transfer between your accounts that uses it, archive it instead of deleting it.</item>
         <item quantity="other">To keep the %1$d movements and transfers between your accounts that use it, archive it instead of deleting it.</item>
     </plurals>
+    <string name="movimiento_restore_missing_cuenta">We couldn’t restore this movement because its account no longer exists.</string>
+    <string name="transferencia_restore_missing_cuenta">We couldn’t restore this transfer between accounts because one of its accounts no longer exists.</string>
 </resources>

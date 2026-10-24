@@ -100,4 +100,6 @@
         <item quantity="one">Para conservar el movimiento o la transferencia entre tus cuentas que la usa, archívala en lugar de eliminarla.</item>
         <item quantity="other">Para conservar los %1$d movimientos y transferencias entre tus cuentas que la usan, archívala en lugar de eliminarla.</item>
     </plurals>
+    <string name="movimiento_restore_missing_cuenta">No pudimos restaurar el movimiento porque su cuenta ya no existe.</string>
+    <string name="transferencia_restore_missing_cuenta">No pudimos restaurar la transferencia entre cuentas porque una de sus cuentas ya no existe.</string>
 </resources>
