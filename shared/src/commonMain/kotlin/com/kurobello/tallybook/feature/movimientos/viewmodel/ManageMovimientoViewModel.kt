@@ -236,14 +236,16 @@ internal class ManageMovimientoViewModel(
       val update = changes.withoutDeletedEtiquetas()
       when (val outcome = movimientoRepository.update(session.movimientoId, update)) {
         is DataOutcome.Failure -> {
+          // Every refusal is invalid input; re-reading the cuenta tells a refused one apart.
           val rejected =
               outcome.error is DataError.InvalidInput &&
-                  !cuentaRepository.accepts(
-                      update.cuentaId,
-                      update.medio,
-                      update.monto.moneda,
-                      stored = session.edit?.original?.cuentaId,
-                  )
+                  (cuentaRepository.getById(update.cuentaId) as? DataOutcome.Success)
+                      ?.data
+                      ?.accepts(
+                          update.medio,
+                          update.monto.moneda,
+                          storedCuentaId = session.edit?.original?.cuentaId,
+                      ) != true
           updateSession(session.token) {
             copy(
                 isSubmitting = false,

@@ -331,13 +331,12 @@ internal class AddMovimientoViewModel(
             saved = true
           }
           is DataOutcome.Failure -> {
+            // Every refusal is invalid input; re-reading the cuenta tells a refused one apart.
             val rejected =
                 outcome.error is DataError.InvalidInput &&
-                    !repositories.cuentas.accepts(
-                        movement.cuentaId,
-                        movement.medio,
-                        movement.monto.moneda,
-                    )
+                    (repositories.cuentas.getById(movement.cuentaId) as? DataOutcome.Success)
+                        ?.data
+                        ?.accepts(movement.medio, movement.monto.moneda) != true
             uiState.update { current ->
               if (rejected) current.withRejectedCuenta()
               else current.copy(error = MovimientoFormError.SAVE_FAILED)
