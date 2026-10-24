@@ -21,8 +21,11 @@ import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -49,6 +52,31 @@ class TransferenciaRepositoryTest {
       assertEquals(DataOutcome.Success(null), repository.getById(deleted.id))
       assertEquals(DataOutcome.Success(listOf(newer, older)), repository.getAll())
       assertEquals(3, changeClock.issuedStamps.size)
+    }
+  }
+
+  @Test
+  fun `observeRecent lists the newest live rows up to the limit and follows writes`() = runTest {
+    withRepository { _, _, repository ->
+      val older = transferencia("older", COP_CASH, NEQUI)
+      val newer = transferencia("newer", NEQUI, NU, at = 1).copy(fecha = TODAY)
+      val newest = transferencia("newest", NEQUI, COP_CASH, at = 2).copy(fecha = TODAY)
+      for (row in listOf(older, newer, newest)) repository.insert(row)
+
+      val emissions = mutableListOf<DataOutcome<List<Transferencia>>>()
+      backgroundScope.launch { repository.observeRecent(2).collect { emissions += it } }
+      runCurrent()
+      repository.deleteAndCapture(newest.id)
+      runCurrent()
+
+      assertEquals<List<DataOutcome<List<Transferencia>>>>(
+          listOf(
+              DataOutcome.Success(listOf(newest, newer)),
+              DataOutcome.Success(listOf(newer, older)),
+          ),
+          emissions,
+      )
+      assertInvalid(repository.observeRecent(0).first())
     }
   }
 

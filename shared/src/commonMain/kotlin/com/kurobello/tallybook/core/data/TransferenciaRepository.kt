@@ -5,6 +5,7 @@ import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.Transferencia
 import com.kurobello.tallybook.core.model.TransferenciaUpdateResult
+import kotlinx.coroutines.flow.Flow
 
 interface TransferenciaRepository {
 
@@ -30,6 +31,9 @@ interface TransferenciaRepository {
 
   /** Live rows newest first, for CSV export and the future backup. */
   suspend fun getAll(): DataOutcome<List<Transferencia>>
+
+  /** The [limit] newest live rows in [getAll]'s order, emitted again after every write. */
+  fun observeRecent(limit: Int): Flow<DataOutcome<List<Transferencia>>>
 
   /**
    * The origin of the newest live transfer if active and not a credit card, else the [primary] cash

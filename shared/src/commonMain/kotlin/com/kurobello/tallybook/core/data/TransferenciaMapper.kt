@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.core.data
 
 import com.kurobello.tallybook.core.database.SelectAllTransferencias
+import com.kurobello.tallybook.core.database.SelectRecentTransferencias
 import com.kurobello.tallybook.core.database.SelectTransferenciaById
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.ChangeStamp
@@ -23,6 +24,18 @@ internal fun SelectTransferenciaById.toDomain(): Transferencia =
     )
 
 internal fun SelectAllTransferencias.toDomain(): Transferencia =
+    transferenciaOf(
+        id,
+        cuenta_origen_id,
+        cuenta_destino_id,
+        Money(monto_origen_minor, Moneda.valueOf(moneda_origen)),
+        Money(monto_destino_minor, Moneda.valueOf(moneda_destino)),
+        fecha,
+        descripcion,
+        created_at,
+    )
+
+internal fun SelectRecentTransferencias.toDomain(): Transferencia =
     transferenciaOf(
         id,
         cuenta_origen_id,

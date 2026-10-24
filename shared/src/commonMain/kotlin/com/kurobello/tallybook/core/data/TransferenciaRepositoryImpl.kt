@@ -1,5 +1,7 @@
 package com.kurobello.tallybook.core.data
 
+import app.cash.sqldelight.coroutines.asFlow
+import app.cash.sqldelight.coroutines.mapToList
 import com.kurobello.tallybook.core.database.SelectTransferenciaById
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.database.Transferencia as StoredTransferencia
@@ -15,9 +17,13 @@ import com.kurobello.tallybook.core.model.TransferenciaUpdateResult
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.todayIn
 
+@Suppress("TooManyFunctions")
 internal class TransferenciaRepositoryImpl(
     private val database: TallybookDatabase,
     private val dispatcher: CoroutineDispatcher,
@@ -160,6 +166,22 @@ internal class TransferenciaRepositoryImpl(
   override suspend fun getAll(): DataOutcome<List<Transferencia>> =
       runLocalDataOperation(dispatcher) {
         queries.selectAllTransferencias().executeAsList().map { it.toDomain() }
+      }
+
+  override fun observeRecent(limit: Int): Flow<DataOutcome<List<Transferencia>>> =
+      if (limit <= 0) {
+        flowOf(
+            DataOutcome.Failure(
+                DataError.InvalidInput("Recent transferencia limit must be positive")
+            )
+        )
+      } else {
+        queries
+            .selectRecentTransferencias(limit.toLong())
+            .asFlow()
+            .mapToList(dispatcher)
+            .map { rows -> rows.map { it.toDomain() } }
+            .asLocalDataOutcome()
       }
 
   override suspend fun defaultOrigin(primary: Moneda): DataOutcome<String?> =

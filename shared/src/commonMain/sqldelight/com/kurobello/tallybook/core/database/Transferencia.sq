@@ -66,6 +66,25 @@ JOIN cuenta AS destino ON destino.id = transferencia.cuenta_destino_id
 WHERE transferencia.deleted_at IS NULL
 ORDER BY transferencia.fecha DESC, transferencia.created_at DESC, transferencia.id DESC;
 
+selectRecentTransferencias:
+SELECT
+    transferencia.id,
+    transferencia.cuenta_origen_id,
+    transferencia.cuenta_destino_id,
+    transferencia.monto_origen_minor,
+    origen.moneda AS moneda_origen,
+    transferencia.monto_destino_minor,
+    destino.moneda AS moneda_destino,
+    transferencia.fecha,
+    transferencia.descripcion,
+    transferencia.created_at
+FROM transferencia
+JOIN cuenta AS origen ON origen.id = transferencia.cuenta_origen_id
+JOIN cuenta AS destino ON destino.id = transferencia.cuenta_destino_id
+WHERE transferencia.deleted_at IS NULL
+ORDER BY transferencia.fecha DESC, transferencia.created_at DESC, transferencia.id DESC
+LIMIT ?;
+
 -- Undo needs the row whatever its state, which selectTransferenciaById hides once it is a tombstone.
 selectStoredTransferenciaById:
 SELECT *

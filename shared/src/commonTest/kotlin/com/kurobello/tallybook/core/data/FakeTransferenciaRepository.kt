@@ -9,7 +9,9 @@ import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.Transferencia
 import com.kurobello.tallybook.core.model.TransferenciaRules
 import com.kurobello.tallybook.core.model.TransferenciaUpdateResult
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 
 /**
@@ -85,12 +87,13 @@ internal class FakeTransferenciaRepository(
   }
 
   override suspend fun getAll(): DataOutcome<List<Transferencia>> = outcome {
-    transferencias.value.sortedWith(
-        compareByDescending<Transferencia> { it.fecha }
-            .thenByDescending { it.createdAt }
-            .thenByDescending { it.id }
-    )
+    transferencias.value.sortedWith(RECENT_FIRST)
   }
+
+  override fun observeRecent(limit: Int): Flow<DataOutcome<List<Transferencia>>> =
+      transferencias.map { rows ->
+        outcome { rows.sortedWith(RECENT_FIRST).take(limit) }
+      }
 
   override suspend fun defaultOrigin(primary: Moneda): DataOutcome<String?> = outcome {
     val candidates =
@@ -128,3 +131,8 @@ internal class FakeTransferenciaRepository(
   private inline fun <T> outcome(block: () -> T): DataOutcome<T> =
       failure?.let { DataOutcome.Failure(it) } ?: DataOutcome.Success(block())
 }
+
+private val RECENT_FIRST =
+    compareByDescending<Transferencia> { it.fecha }
+        .thenByDescending { it.createdAt }
+        .thenByDescending { it.id }
