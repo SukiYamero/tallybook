@@ -26,6 +26,7 @@ import com.kurobello.tallybook.core.data.LocalDataBootstrapper
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
+import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.insertLegacy
@@ -371,8 +372,8 @@ class HistoryIntegrationTest {
     private val factory =
         PreferencesDataStoreFactory(
             object : PreferencesPathProvider {
-              override fun path() =
-                  fixture.directory.resolve("preferences.preferences_pb").toString()
+              override fun path(file: PreferencesFile) =
+                  fixture.directory.resolve(file.fileName).toString()
             },
             fixture.dispatcher,
         )

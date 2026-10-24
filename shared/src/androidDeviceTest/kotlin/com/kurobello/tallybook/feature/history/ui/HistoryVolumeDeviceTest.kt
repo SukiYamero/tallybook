@@ -34,6 +34,7 @@ import com.kurobello.tallybook.core.data.CategorySeedProvider
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
+import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.database.TallybookDatabase
@@ -220,7 +221,8 @@ class HistoryVolumeDeviceTest {
     private val factory =
         PreferencesDataStoreFactory(
             object : PreferencesPathProvider {
-              override fun path() = directory.resolve("preferences.preferences_pb").absolutePath
+              override fun path(file: PreferencesFile) =
+                  directory.resolve(file.fileName).absolutePath
             },
             Dispatchers.IO,
         )

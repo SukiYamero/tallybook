@@ -95,7 +95,7 @@ class AppPreferencesRepositoryTest {
   @Test
   fun `preferences maps a real storage read failure to a local error`() = runTest {
     val directory = createTempDirectory("tallybook-preferences-")
-    Files.createDirectory(directory.resolve(PREFERENCES_FILE_NAME))
+    Files.createDirectory(directory.resolve(PreferencesFile.APP.fileName))
     val factory =
         PreferencesDataStoreFactory(
             pathProvider = TestPreferencesPathProvider(directory.toString()),
@@ -200,5 +200,5 @@ class AppPreferencesRepositoryTest {
 private class TestPreferencesPathProvider(
     private val directory: String,
 ) : PreferencesPathProvider {
-  override fun path(): String = "$directory/$PREFERENCES_FILE_NAME"
+  override fun path(file: PreferencesFile): String = "$directory/${file.fileName}"
 }

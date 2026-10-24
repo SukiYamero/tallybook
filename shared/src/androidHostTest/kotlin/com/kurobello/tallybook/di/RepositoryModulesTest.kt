@@ -8,8 +8,8 @@ import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
 import com.kurobello.tallybook.core.data.MovimientoRepository
-import com.kurobello.tallybook.core.data.PREFERENCES_FILE_NAME
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
+import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
@@ -70,7 +70,7 @@ class RepositoryModulesTest {
 private class RepositoryTestPreferencesPathProvider(
     private val directory: String,
 ) : PreferencesPathProvider {
-  override fun path(): String = "$directory/$PREFERENCES_FILE_NAME"
+  override fun path(file: PreferencesFile): String = "$directory/${file.fileName}"
 }
 
 private class RepositoryTestDeviceLocaleProvider : DeviceLocaleProvider {

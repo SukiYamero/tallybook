@@ -15,14 +15,19 @@ class PreferencesDataStoreFactory(
 ) {
   private val scope = CoroutineScope(SupervisorJob() + dispatcher)
 
-  private val dataStore: DataStore<Preferences> by lazy {
-    PreferenceDataStoreFactory.createWithPath(
-        scope = scope,
-        produceFile = { pathProvider.path().toPath() },
-    )
-  }
+  // DataStore allows only one active instance per file in a process.
+  private val dataStores: Map<PreferencesFile, Lazy<DataStore<Preferences>>> =
+      PreferencesFile.entries.associateWith { file ->
+        lazy {
+          PreferenceDataStoreFactory.createWithPath(
+              scope = scope,
+              produceFile = { pathProvider.path(file).toPath() },
+          )
+        }
+      }
 
-  fun create(): DataStore<Preferences> = dataStore
+  fun create(file: PreferencesFile = PreferencesFile.APP): DataStore<Preferences> =
+      dataStores.getValue(file).value
 
   fun close() {
     scope.cancel()

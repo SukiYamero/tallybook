@@ -5,5 +5,6 @@ import android.content.Context
 class AndroidPreferencesPathProvider(
     private val context: Context,
 ) : PreferencesPathProvider {
-  override fun path(): String = context.filesDir.resolve(PREFERENCES_FILE_NAME).absolutePath
+  override fun path(file: PreferencesFile): String =
+      context.filesDir.resolve(file.fileName).absolutePath
 }

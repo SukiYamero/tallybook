@@ -12,6 +12,7 @@ import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
+import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.Categoria
@@ -66,7 +67,8 @@ internal class TagsViewModelGraphHostTest {
         val factory =
             PreferencesDataStoreFactory(
                 object : PreferencesPathProvider {
-                  override fun path() = directory.resolve("preferences.preferences_pb").toString()
+                  override fun path(file: PreferencesFile) =
+                      directory.resolve(file.fileName).toString()
                 },
                 dispatcher,
             )

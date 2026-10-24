@@ -7,7 +7,7 @@ import platform.Foundation.NSUserDomainMask
 
 @OptIn(ExperimentalForeignApi::class)
 class IosPreferencesPathProvider : PreferencesPathProvider {
-  override fun path(): String {
+  override fun path(file: PreferencesFile): String {
     val directory =
         requireNotNull(
             NSFileManager.defaultManager
@@ -20,6 +20,6 @@ class IosPreferencesPathProvider : PreferencesPathProvider {
                 )
                 ?.path,
         )
-    return "$directory/$PREFERENCES_FILE_NAME"
+    return "$directory/${file.fileName}"
   }
 }

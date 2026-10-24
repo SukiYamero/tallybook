@@ -10,6 +10,7 @@ import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
+import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
@@ -359,7 +360,7 @@ class FirstMovimientoIntegrationTest {
   private class TestPreferencesPathProvider(
       private val directory: String,
   ) : PreferencesPathProvider {
-    override fun path(): String = "$directory/tallybook.preferences_pb"
+    override fun path(file: PreferencesFile): String = "$directory/${file.fileName}"
   }
 
   private companion object {
