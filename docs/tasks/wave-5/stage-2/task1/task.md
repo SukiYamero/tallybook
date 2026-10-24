@@ -97,19 +97,29 @@ the gasto → ingreso switch (`DEBITO` → `TRANSFERENCIA`) as one function.
 
 ## TDD
 
-- [ ] RED: table-driven `MedioPagoTest` over every medio × tipo cuenta × tipo movimiento.
-- [ ] GREEN: lookup table and `allows`/switch.
-- [ ] RED/GREEN: `CuentaRulesTest` (trim, 30 chars, accent/case key equal to category behaviour,
+- [x] RED: table-driven `MedioPagoTest` over every medio × tipo cuenta × tipo movimiento.
+- [x] GREEN: lookup table and `allows`/switch.
+- [x] RED/GREEN: `CuentaRulesTest` (trim, 30 chars, accent/case key equal to category behaviour,
       `diaCorte` rules) and `TransferenciaRulesTest` (same account, zero, mismatch, future, cross-currency).
-- [ ] RED/GREEN: `CreditCycleTest`: d = 31 in April, 29/30/31 in February leap and non-leap, today on
+- [x] RED/GREEN: `CreditCycleTest`: d = 31 in April, 29/30/31 in February leap and non-leap, today on
       the statement day, today the day after, January ↔ December year change, null `diaCorte`.
-- [ ] Add the four `strings_accounts.xml`; `AccountsResourcesHostTest` reads one key per locale
+- [x] Add the four `strings_accounts.xml`; `AccountsResourcesHostTest` reads one key per locale
       through the generated `Res.string` accessor. If generation fails, stop and report: Stages 3–5
       must then sequence `strings.xml` edits instead.
-- [ ] Add the shared icon/label composables; a host resources test reads every type and medio label.
-- [ ] Add the wording glossary.
-- [ ] `./gradlew :shared:testAndroidHostTest --tests '*core.model*' --tests '*AccountsResources*'`,
+- [x] Add the shared icon/label composables; a host resources test reads every type and medio label.
+- [x] Add the wording glossary.
+- [x] `./gradlew :shared:testAndroidHostTest --tests '*core.model*' --tests '*AccountsResources*'`,
       `./gradlew :shared:compileKotlinIosSimulatorArm64`, `./gradlew detekt ktfmtCheck`.
+
+## Evidence
+
+- Resolved by Gradle: `components-resources` 1.11.1, `icons-lucide-cmp` 2.2.1.
+- The generated `Res.string.account_type_bank` reads `values{,-en,-es-rAR,-pt-rBR}/strings_accounts.commonMain.cvr`;
+  `AccountsResourcesHostTest` resolves every label per locale, so Stages 3–5 can add their own
+  `strings_<area>.xml`.
+- Lucide accessors verified in the artifact: `Wallet`, `Landmark`, `CreditCard` (account types);
+  `Banknote`, `WalletCards`, `Send`, `CreditCard` (medios). Two-way arrows stay free for transfers
+  between own accounts.
 
 ## Blocks
 

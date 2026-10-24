@@ -1,0 +1,9 @@
+<resources>
+    <string name="account_type_cash">Efectivo</string>
+    <string name="account_type_bank">Banco o billetera virtual</string>
+    <string name="account_type_credit_card">Tarjeta de crédito</string>
+    <string name="payment_method_cash">Efectivo</string>
+    <string name="payment_method_debit">Débito</string>
+    <string name="payment_method_transfer">Transferencia</string>
+    <string name="payment_method_credit">Crédito</string>
+</resources>

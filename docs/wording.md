@@ -60,3 +60,41 @@ sería inconsistente con el resto de la UI.
 Una o dos oraciones. Un opener razón-primero que se estira tres cláusulas pierde el punto — el usuario
 tiene que entender el "por qué" y la acción en una sola lectura, no parsear un párrafo para encontrar el
 botón que necesita tocar.
+
+## 7. Glosario: cuentas, medios de pago y transferencias
+
+"Transferencia" nombra dos cosas distintas en el producto y la copy no puede mezclarlas: el **medio de
+pago** (plata que se manda a otra persona o se recibe de ella, `MedioPago.TRANSFERENCIA`) y el
+**movimiento de plata entre las cuentas propias** (`Transferencia`), que no es ni gasto ni ingreso. Por
+eso:
+
+- La palabra sola ("Transferencia", "Transferência"; en inglés "Bank transfer") es siempre el medio de
+  pago. En inglés el medio no se acorta a "Transfer", para que no se lea como la acción interna.
+- La transferencia interna siempre lleva "entre cuentas" o "entre tus cuentas": acción "Mover entre
+  cuentas", sustantivo "Transferencia entre tus cuentas", y "Entre cuentas" como etiqueta corta donde no
+  entra más (chip de tipo en Búsqueda, filas de Historial).
+- Pagar una tarjeta es una transferencia interna ("Pagar tarjeta"): las compras ya se registraron como
+  gastos, así que la copy nunca lo presenta como un gasto nuevo.
+- La deuda de la tarjeta y el consumo del ciclo son estimaciones (el usuario puede no registrar todas las
+  compras) y siempre se rotulan así; nunca "Deuda" o "Saldo de la tarjeta" a secas.
+- Los nombres de cuenta son del usuario y no se traducen; solo la cuenta de efectivo por defecto nace
+  con el nombre del idioma vigente al crearla.
+
+| Concepto | `es` | `es-AR` | `en` | `pt-BR` |
+| --- | --- | --- | --- | --- |
+| Medio: efectivo | Efectivo | Efectivo | Cash | Dinheiro |
+| Medio: débito | Débito | Débito | Debit | Débito |
+| Medio: transferencia a/de terceros | Transferencia | Transferencia | Bank transfer | Transferência |
+| Medio: crédito | Crédito | Crédito | Credit | Crédito |
+| Tipo de cuenta: efectivo | Efectivo | Efectivo | Cash | Dinheiro |
+| Tipo de cuenta: banco o billetera | Banco o billetera | Banco o billetera virtual | Bank or wallet | Banco ou carteira digital |
+| Tipo de cuenta: tarjeta de crédito | Tarjeta de crédito | Tarjeta de crédito | Credit card | Cartão de crédito |
+| Acción de transferencia interna | Mover entre cuentas | Mover entre cuentas | Move between accounts | Mover entre contas |
+| Sustantivo de transferencia interna | Transferencia entre tus cuentas | Transferencia entre tus cuentas | Transfer between your accounts | Transferência entre suas contas |
+| Etiqueta corta de transferencia interna | Entre cuentas | Entre cuentas | Between accounts | Entre contas |
+| Pagar la tarjeta (transferencia interna) | Pagar tarjeta | Pagar tarjeta | Pay card | Pagar cartão |
+| Deuda estimada de la tarjeta | Deuda estimada | Deuda estimada | Estimated debt | Dívida estimada |
+| Consumo del ciclo actual | Consumo del ciclo | Consumo del ciclo | Spending this cycle | Gastos do ciclo |
+
+Los rótulos de medio y tipo de cuenta viven en `composeResources/values*/strings_accounts.xml`; las
+pantallas de cuentas agregan ahí sus claves nuevas en vez de tocar `strings.xml`.

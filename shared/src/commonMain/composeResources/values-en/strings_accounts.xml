@@ -1,0 +1,9 @@
+<resources>
+    <string name="account_type_cash">Cash</string>
+    <string name="account_type_bank">Bank or wallet</string>
+    <string name="account_type_credit_card">Credit card</string>
+    <string name="payment_method_cash">Cash</string>
+    <string name="payment_method_debit">Debit</string>
+    <string name="payment_method_transfer">Bank transfer</string>
+    <string name="payment_method_credit">Credit</string>
+</resources>
