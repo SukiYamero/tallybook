@@ -1,6 +1,5 @@
 package com.kurobello.tallybook.core.data
 
-import app.cash.sqldelight.Query
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import com.kurobello.tallybook.core.database.Movimiento_con_etiquetas as DatabaseMovimiento
@@ -22,8 +21,6 @@ import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
-import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.RestoreResult
@@ -39,7 +36,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 
 // Reads and identity-safe mutations share one storage/error boundary and legacy validation policy.
@@ -49,81 +45,6 @@ internal class MovimientoRepositoryImpl(
     private val dispatcher: CoroutineDispatcher,
     private val changeClock: ChangeClock,
 ) : MovimientoRepository {
-
-  override fun observeFiltered(
-      criteria: MovimientoReadCriteria
-  ): Flow<DataOutcome<MovimientoSearchSnapshot>> {
-    val categoryIds = criteria.categoryIds.sorted()
-    val etiquetaIds = criteria.etiquetaIds.sorted()
-    val invalidInput =
-        when {
-          categoryIds.any { it.isBlank() } ->
-              DataError.InvalidInput("Categoria ids must not be blank")
-          etiquetaIds.any { it.isBlank() } ->
-              DataError.InvalidInput("Etiqueta ids must not be blank")
-          else -> criteria.range?.let(::validateRange)
-        }
-    if (invalidInput != null) return flowOf(DataOutcome.Failure(invalidInput))
-    return flow {
-          val queries = database.movimientoQueries
-          emitAll(
-              filteredQuery(criteria, categoryIds, etiquetaIds).asFlow().map { invalidatedQuery ->
-                withContext(dispatcher) {
-                  val (rows, years) =
-                      database.transactionWithResult {
-                        invalidatedQuery.executeAsList() to
-                            queries.selectMovimientoYears(criteria.moneda.name).executeAsList()
-                      }
-                  val context = currentCoroutineContext()
-                  context.ensureActive()
-                  val movimientos = rows.map { row ->
-                    context.ensureActive()
-                    row.toDomain()
-                  }
-                  val persistedYears = years.map { year ->
-                    context.ensureActive()
-                    parseStoredYear(year)
-                  }
-                  context.ensureActive()
-                  MovimientoSearchSnapshot(movimientos, persistedYears)
-                }
-              }
-          )
-        }
-        .flowOn(dispatcher)
-        .asLocalDataOutcome()
-  }
-
-  // Each combination of the optional id sets has its own query: an empty IN list cannot mean "no
-  // restriction".
-  private fun filteredQuery(
-      criteria: MovimientoReadCriteria,
-      categoryIds: List<String>,
-      etiquetaIds: List<String>,
-  ): Query<DatabaseMovimiento> {
-    val queries = database.movimientoQueries
-    val moneda = criteria.moneda.name
-    val start = criteria.range?.start?.toString()
-    val end = criteria.range?.end?.toString()
-    val tipo = criteria.tipo?.name
-    return when {
-      categoryIds.isEmpty() && etiquetaIds.isEmpty() ->
-          queries.selectFilteredMovimientos(moneda, start, end, tipo)
-      etiquetaIds.isEmpty() ->
-          queries.selectFilteredMovimientosByCategory(moneda, start, end, tipo, categoryIds)
-      categoryIds.isEmpty() ->
-          queries.selectFilteredMovimientosByEtiqueta(moneda, start, end, tipo, etiquetaIds)
-      else ->
-          queries.selectFilteredMovimientosByCategoryAndEtiqueta(
-              moneda,
-              start,
-              end,
-              tipo,
-              categoryIds,
-              etiquetaIds,
-          )
-    }
-  }
 
   override fun observeRange(
       moneda: Moneda,
@@ -664,7 +585,7 @@ private fun validateReferences(
       else -> null
     }
 
-private fun parseStoredYear(value: String): Int {
+internal fun parseStoredYear(value: String): Int {
   val canonicalDate = "$value-01-01"
   val date = LocalDate.parse(canonicalDate)
   require(date.toString() == canonicalDate) {
@@ -673,7 +594,7 @@ private fun parseStoredYear(value: String): Int {
   return date.year
 }
 
-private fun validateRange(range: MovimientoDateRange): DataError.InvalidInput? =
+internal fun validateRange(range: MovimientoDateRange): DataError.InvalidInput? =
     if (
         range.start.year != range.end.year &&
             (range.start.year < 0 || range.end.year > MAX_FOUR_DIGIT_YEAR)

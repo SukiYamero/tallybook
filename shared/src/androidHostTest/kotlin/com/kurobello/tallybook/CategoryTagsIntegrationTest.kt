@@ -1,6 +1,7 @@
 package com.kurobello.tallybook
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.kurobello.tallybook.core.data.ActividadRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedCatalog
 import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
@@ -47,6 +48,7 @@ class CategoryTagsIntegrationTest {
       val etiquetas =
           EtiquetaRepositoryImpl(database, dispatcher, ids, FixedClock, TestChangeClock())
       val movimientos = MovimientoRepositoryImpl(database, dispatcher, TestChangeClock())
+      val actividades = ActividadRepositoryImpl(database, dispatcher)
       assertEquals(
           DataOutcome.Success(Unit),
           categorias.ensureSeeded(
@@ -75,11 +77,11 @@ class CategoryTagsIntegrationTest {
 
       val byTag = MovimientoReadCriteria(Moneda.COP, etiquetaIds = setOf(empresa.id))
       val byParent = MovimientoReadCriteria(Moneda.COP, categoryIds = setOf("cat_comida"))
-      assertEquals(listOf(movimiento), movimientos.read(byTag))
-      assertEquals(listOf(movimiento), movimientos.read(byParent))
+      assertEquals(listOf(movimiento), actividades.read(byTag))
+      assertEquals(listOf(movimiento), actividades.read(byParent))
       assertEquals(
           emptyList(),
-          movimientos.read(MovimientoReadCriteria(Moneda.COP, categoryIds = setOf("cat_cafe"))),
+          actividades.read(MovimientoReadCriteria(Moneda.COP, categoryIds = setOf("cat_cafe"))),
       )
       assertEquals(
           DataOutcome.Success(mapOf(empresa.id to 1L, viaje.id to 1L)),
@@ -88,7 +90,7 @@ class CategoryTagsIntegrationTest {
 
       val observed = mutableListOf<DataOutcome<MovimientoSearchSnapshot>>()
       backgroundScope.launch {
-        movimientos.observeFiltered(MovimientoReadCriteria(Moneda.COP)).collect(observed::add)
+        actividades.observeFiltered(MovimientoReadCriteria(Moneda.COP)).collect(observed::add)
       }
       testScheduler.runCurrent()
       assertEquals(DataOutcome.Success(Unit), etiquetas.delete(empresa.id))
@@ -99,13 +101,13 @@ class CategoryTagsIntegrationTest {
           listOf(remaining),
           assertIs<DataOutcome.Success<MovimientoSearchSnapshot>>(observed.last()).data.movimientos,
       )
-      assertEquals(emptyList(), movimientos.read(byTag))
+      assertEquals(emptyList(), actividades.read(byTag))
       assertEquals(DataOutcome.Success(listOf(viaje)), etiquetas.getAll())
       assertEquals(DataOutcome.Success(1L), categorias.countMovimientos("cat_restaurante"))
     }
   }
 
-  private suspend fun MovimientoRepositoryImpl.read(
+  private suspend fun ActividadRepositoryImpl.read(
       criteria: MovimientoReadCriteria
   ): List<Movimiento> =
       assertIs<DataOutcome.Success<MovimientoSearchSnapshot>>(observeFiltered(criteria).first())

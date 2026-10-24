@@ -8,6 +8,7 @@ import app.cash.sqldelight.db.SqlPreparedStatement
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.MovimientoQueries
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.model.Actividad
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.Cuenta
@@ -20,6 +21,7 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
+import com.kurobello.tallybook.core.model.SearchTipo
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -28,6 +30,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Instant
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
@@ -48,7 +51,7 @@ class SearchRepositoryTest {
         JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
           createSchemaWithReferences(driver, listOf("food", "food-child"))
           val repository =
-              MovimientoRepositoryImpl(
+              SearchStore(
                   TallybookDatabase(driver),
                   StandardTestDispatcher(testScheduler),
                   TestChangeClock(),
@@ -68,8 +71,7 @@ class SearchRepositoryTest {
               )
           for (row in rows) assertEquals(DataOutcome.Success(Unit), repository.insert(row))
 
-          val base =
-              MovimientoReadCriteria(Moneda.COP, september, TipoMovimiento.GASTO, setOf("food"))
+          val base = MovimientoReadCriteria(Moneda.COP, september, SearchTipo.GASTO, setOf("food"))
           val selected =
               assertIs<DataOutcome.Success<MovimientoSearchSnapshot>>(
                       repository.observeFiltered(base).first()
@@ -87,7 +89,7 @@ class SearchRepositoryTest {
               listOf(rows[8]),
               snapshot(
                       repository,
-                      MovimientoReadCriteria(Moneda.COP, tipo = TipoMovimiento.INGRESO),
+                      MovimientoReadCriteria(Moneda.COP, tipo = SearchTipo.INGRESO),
                   )
                   .movimientos,
           )
@@ -98,7 +100,7 @@ class SearchRepositoryTest {
                       MovimientoReadCriteria(
                           Moneda.COP,
                           september,
-                          TipoMovimiento.GASTO,
+                          SearchTipo.GASTO,
                           setOf("food", "food-child"),
                       ),
                   )
@@ -119,7 +121,7 @@ class SearchRepositoryTest {
                       repository,
                       MovimientoReadCriteria(
                           Moneda.COP,
-                          tipo = TipoMovimiento.INGRESO,
+                          tipo = SearchTipo.INGRESO,
                           categoryIds = setOf("food-child"),
                       ),
                   )
@@ -213,7 +215,7 @@ class SearchRepositoryTest {
               repository,
               categoryIds = setOf("food"),
               etiquetaIds = tripOrWork,
-              tipo = TipoMovimiento.GASTO,
+              tipo = SearchTipo.GASTO,
           ),
       )
       assertEquals(
@@ -254,9 +256,9 @@ class SearchRepositoryTest {
 
       assertEquals(
           setOf("on-parent", "on-child", "on-sibling"),
-          ids(repository, setOf("food"), TipoMovimiento.GASTO),
+          ids(repository, setOf("food"), SearchTipo.GASTO),
       )
-      assertEquals(setOf("child-income"), ids(repository, setOf("food"), TipoMovimiento.INGRESO))
+      assertEquals(setOf("child-income"), ids(repository, setOf("food"), SearchTipo.INGRESO))
 
       database.categoriaQueries.insertCategoria(
           "late-child",
@@ -278,13 +280,13 @@ class SearchRepositoryTest {
         try {
           val database = createSchemaWithReferences(driver, listOf("food", "other"))
           val repository =
-              MovimientoRepositoryImpl(
+              SearchStore(
                   database,
                   StandardTestDispatcher(testScheduler),
                   TestChangeClock(),
               )
           val criteria =
-              MovimientoReadCriteria(Moneda.COP, september, TipoMovimiento.GASTO, setOf("food"))
+              MovimientoReadCriteria(Moneda.COP, september, SearchTipo.GASTO, setOf("food"))
           val emissions = mutableListOf<DataOutcome<MovimientoSearchSnapshot>>()
           val flow = repository.observeFiltered(criteria)
           val job = backgroundScope.launch { flow.collect(emissions::add) }
@@ -293,9 +295,9 @@ class SearchRepositoryTest {
               DataOutcome.Success(MovimientoSearchSnapshot(emptyList(), emptyList())),
               emissions.single(),
           )
-          assertEquals(1, driver.listeners)
+          assertEquals(2, driver.listeners)
           assertEquals(
-              setOf("movimiento", "cuenta", "movimiento_etiqueta", "categoria"),
+              setOf("movimiento", "cuenta", "movimiento_etiqueta", "categoria", "transferencia"),
               driver.listenerKeys,
           )
 
@@ -303,7 +305,9 @@ class SearchRepositoryTest {
           assertEquals(DataOutcome.Success(Unit), repository.insert(matching))
           runCurrent()
           assertEquals(
-              DataOutcome.Success(MovimientoSearchSnapshot(listOf(matching), listOf(2026))),
+              DataOutcome.Success(
+                  MovimientoSearchSnapshot(listOf(Actividad.DeMovimiento(matching)), listOf(2026))
+              ),
               emissions.last(),
           )
           assertEquals(
@@ -319,7 +323,12 @@ class SearchRepositoryTest {
           )
           runCurrent()
           assertEquals(
-              DataOutcome.Success(MovimientoSearchSnapshot(listOf(matching), listOf(2026, 2024))),
+              DataOutcome.Success(
+                  MovimientoSearchSnapshot(
+                      listOf(Actividad.DeMovimiento(matching)),
+                      listOf(2026, 2024),
+                  )
+              ),
               emissions.last(),
           )
           assertEquals(DataOutcome.Success(Unit), repository.delete(matching.id))
@@ -394,7 +403,7 @@ class SearchRepositoryTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       createSchemaWithReferences(driver, listOf("food"), listOf("tag"))
       val repository =
-          MovimientoRepositoryImpl(
+          SearchStore(
               TallybookDatabase(driver),
               StandardTestDispatcher(testScheduler),
               TestChangeClock(),
@@ -417,7 +426,7 @@ class SearchRepositoryTest {
                   ),
           )) {
         assertEquals(
-            MovimientoSearchSnapshot(listOf(live), listOf(2026)),
+            MovimientoSearchSnapshot(listOf(Actividad.DeMovimiento(live)), listOf(2026)),
             snapshot(repository, criteria),
             name,
         )
@@ -436,7 +445,7 @@ class SearchRepositoryTest {
               get() = error("invalid criteria must not access storage")
           }
       val repository =
-          MovimientoRepositoryImpl(
+          SearchStore(
               database,
               StandardTestDispatcher(testScheduler),
               TestChangeClock(),
@@ -473,7 +482,7 @@ class SearchRepositoryTest {
           val ids = listOf("quote' OR 1=1 --", "percent%", "underscore_", "unrelated")
           createSchemaWithReferences(driver, ids + "food")
           val repository =
-              MovimientoRepositoryImpl(
+              SearchStore(
                   TallybookDatabase(driver),
                   StandardTestDispatcher(testScheduler),
                   TestChangeClock(),
@@ -518,7 +527,7 @@ class SearchRepositoryTest {
     try {
       createSchemaWithReferences(driver, listOf("food"))
       val repository =
-          MovimientoRepositoryImpl(
+          SearchStore(
               TallybookDatabase(driver),
               StandardTestDispatcher(testScheduler),
               TestChangeClock(),
@@ -527,10 +536,10 @@ class SearchRepositoryTest {
       repository.insert(movimiento("excluded", "2024-01-01"))
       driver.readTransactions.clear()
       snapshot(repository, MovimientoReadCriteria(Moneda.COP, september))
-      assertEquals(2, driver.readTransactions.size)
+      assertEquals(3, driver.readTransactions.size)
       val rowTransaction = driver.readTransactions.first()
       assertTrue(rowTransaction != null)
-      assertTrue(driver.readTransactions.last() === rowTransaction)
+      assertTrue(driver.readTransactions.all { it === rowTransaction })
     } finally {
       driver.close()
     }
@@ -544,7 +553,7 @@ class SearchRepositoryTest {
           TallybookDatabase.Schema.create(driver)
           val database = TallybookDatabase(driver).apply { seedCashCuentas() }
           val repository =
-              MovimientoRepositoryImpl(
+              SearchStore(
                   database,
                   StandardTestDispatcher(testScheduler),
                   TestChangeClock(),
@@ -620,7 +629,7 @@ class SearchRepositoryTest {
                   }
               }
           val repository =
-              MovimientoRepositoryImpl(
+              SearchStore(
                   database,
                   StandardTestDispatcher(testScheduler),
                   TestChangeClock(),
@@ -648,7 +657,7 @@ class SearchRepositoryTest {
     try {
       createSchemaWithReferences(driver, listOf("food"))
       val repository =
-          MovimientoRepositoryImpl(
+          SearchStore(
               TallybookDatabase(driver),
               StandardTestDispatcher(testScheduler),
               TestChangeClock(),
@@ -680,7 +689,7 @@ class SearchRepositoryTest {
     try {
       createSchemaWithReferences(driver, listOf("sparse", "food"), listOf("trip"))
       val repository =
-          MovimientoRepositoryImpl(
+          SearchStore(
               TallybookDatabase(driver),
               StandardTestDispatcher(testScheduler),
               TestChangeClock(),
@@ -703,7 +712,7 @@ class SearchRepositoryTest {
               ),
               MovimientoReadCriteria(
                   Moneda.COP,
-                  tipo = TipoMovimiento.GASTO,
+                  tipo = SearchTipo.GASTO,
                   categoryIds = setOf("sparse"),
               ),
               MovimientoReadCriteria(Moneda.COP, etiquetaIds = setOf("trip")),
@@ -743,7 +752,7 @@ class SearchRepositoryTest {
   }
 
   private suspend fun TestScope.withHierarchy(
-      block: suspend (MovimientoRepository, TallybookDatabase) -> Unit
+      block: suspend (SearchStore, TallybookDatabase) -> Unit
   ) {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       TallybookDatabase.Schema.create(driver)
@@ -776,7 +785,7 @@ class SearchRepositoryTest {
         )
       }
       val repository =
-          MovimientoRepositoryImpl(
+          SearchStore(
               database,
               StandardTestDispatcher(testScheduler),
               TestChangeClock(),
@@ -797,9 +806,9 @@ class SearchRepositoryTest {
   }
 
   private suspend fun ids(
-      repository: MovimientoRepository,
+      repository: SearchStore,
       categoryIds: Set<String> = emptySet(),
-      tipo: TipoMovimiento? = null,
+      tipo: SearchTipo? = null,
       etiquetaIds: Set<String> = emptySet(),
   ): Set<String> =
       snapshot(
@@ -815,11 +824,24 @@ class SearchRepositoryTest {
           .map { it.id }
           .toSet()
 
-  private suspend fun snapshot(repository: MovimientoRepository, criteria: MovimientoReadCriteria) =
+  private suspend fun snapshot(repository: SearchStore, criteria: MovimientoReadCriteria) =
       assertIs<DataOutcome.Success<MovimientoSearchSnapshot>>(
               repository.observeFiltered(criteria).first()
           )
           .data
+
+  /** Movimiento writes and Search's activity reads over one database, as the app wires them. */
+  private class SearchStore(
+      database: TallybookDatabase,
+      dispatcher: CoroutineDispatcher,
+      changeClock: ChangeClock,
+      private val movimientos: MovimientoRepositoryImpl =
+          MovimientoRepositoryImpl(database, dispatcher, changeClock),
+      private val actividades: ActividadRepositoryImpl =
+          ActividadRepositoryImpl(database, dispatcher),
+  ) : MovimientoRepository by movimientos, ActividadRepository by actividades {
+    override fun observeYears(moneda: Moneda) = actividades.observeYears(moneda)
+  }
 
   private class TrackingDriver(private val delegate: SqlDriver) : SqlDriver by delegate {
     var listeners = 0

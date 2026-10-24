@@ -2,6 +2,7 @@ package com.kurobello.tallybook.core.data
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.model.Actividad
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
@@ -20,6 +21,7 @@ import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.RestoreResult
+import com.kurobello.tallybook.core.model.SearchTipo
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -279,10 +281,10 @@ class ReactiveRepositoryTest {
   @Test
   fun `update capture and restore invalidate home history and search observations`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-      createSchemaWithReferences(driver, listOf("other"))
+      val database = createSchemaWithReferences(driver, listOf("other"))
       val repository =
           MovimientoRepositoryImpl(
-              TallybookDatabase(driver),
+              database,
               StandardTestDispatcher(testScheduler),
               TestChangeClock(),
           )
@@ -297,7 +299,7 @@ class ReactiveRepositoryTest {
           MovimientoReadCriteria(
               Moneda.COP,
               range = range,
-              tipo = TipoMovimiento.GASTO,
+              tipo = SearchTipo.GASTO,
               categoryIds = setOf("cat_comida"),
           )
       val recent = mutableListOf<DataOutcome<List<Movimiento>>>()
@@ -317,7 +319,11 @@ class ReactiveRepositoryTest {
                 repository.observeRange(Moneda.COP, range).collect(history::add)
               },
               backgroundScope.launch { repository.observeYears(Moneda.COP).collect(years::add) },
-              backgroundScope.launch { repository.observeFiltered(criteria).collect(search::add) },
+              backgroundScope.launch {
+                ActividadRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+                    .observeFiltered(criteria)
+                    .collect(search::add)
+              },
           )
       try {
         testScheduler.runCurrent()
@@ -329,7 +335,9 @@ class ReactiveRepositoryTest {
             summary.last(),
         )
         assertEquals(
-            DataOutcome.Success(MovimientoSearchSnapshot(rows.reversed(), listOf(2026))),
+            DataOutcome.Success(
+                MovimientoSearchSnapshot(rows.reversed().map(Actividad::DeMovimiento), listOf(2026))
+            ),
             search.last(),
         )
         val changed =
@@ -372,7 +380,9 @@ class ReactiveRepositoryTest {
             summary.last(),
         )
         assertEquals(
-            DataOutcome.Success(MovimientoSearchSnapshot(remaining, listOf(2026, 2025))),
+            DataOutcome.Success(
+                MovimientoSearchSnapshot(remaining.map(Actividad::DeMovimiento), listOf(2026, 2025))
+            ),
             search.last(),
         )
         assertEquals(DataOutcome.Success(changed), repository.deleteAndCapture(changed.id))
@@ -385,7 +395,9 @@ class ReactiveRepositoryTest {
             summary.last(),
         )
         assertEquals(
-            DataOutcome.Success(MovimientoSearchSnapshot(remaining, listOf(2026))),
+            DataOutcome.Success(
+                MovimientoSearchSnapshot(remaining.map(Actividad::DeMovimiento), listOf(2026))
+            ),
             search.last(),
         )
         assertEquals(
@@ -403,7 +415,9 @@ class ReactiveRepositoryTest {
             summary.last(),
         )
         assertEquals(
-            DataOutcome.Success(MovimientoSearchSnapshot(remaining, listOf(2026, 2025))),
+            DataOutcome.Success(
+                MovimientoSearchSnapshot(remaining.map(Actividad::DeMovimiento), listOf(2026, 2025))
+            ),
             search.last(),
         )
         for (emissions in listOf(recent, summary, history, years, search)) assertEquals(

@@ -33,8 +33,6 @@ import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
-import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.RestoreResult
@@ -187,11 +185,6 @@ internal open class AddFakeMovimientos(
       moneda: Moneda,
       range: MovimientoDateRange,
   ): Flow<DataOutcome<MovimientoSummary>> = emptyFlow()
-
-  override fun observeFiltered(
-      criteria: MovimientoReadCriteria
-  ): Flow<DataOutcome<MovimientoSearchSnapshot>> =
-      error("Search reads are not expected in this fixture")
 
   override fun observeRange(
       moneda: Moneda,

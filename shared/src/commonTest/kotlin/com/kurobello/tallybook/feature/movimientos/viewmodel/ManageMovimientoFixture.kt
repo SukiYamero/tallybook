@@ -21,8 +21,6 @@ import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
-import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.RestoreResult
@@ -177,10 +175,6 @@ internal class ManagementRepository : MovimientoRepository {
   ): Flow<DataOutcome<List<Movimiento>>> = emptyFlow()
 
   override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> = emptyFlow()
-
-  override fun observeFiltered(
-      criteria: MovimientoReadCriteria
-  ): Flow<DataOutcome<MovimientoSearchSnapshot>> = emptyFlow()
 
   override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
       emptyFlow()

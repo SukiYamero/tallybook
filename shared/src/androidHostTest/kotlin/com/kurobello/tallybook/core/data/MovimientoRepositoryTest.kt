@@ -4,6 +4,7 @@ import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.model.Actividad
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.Cuenta
@@ -77,12 +78,14 @@ class MovimientoRepositoryTest {
   fun `delete leaves a tombstone stamped once that every read skips`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val changeClock = TestChangeClock()
+      val database = seeded(driver)
       val repository =
           MovimientoRepositoryImpl(
-              seeded(driver),
+              database,
               StandardTestDispatcher(testScheduler),
               changeClock,
           )
+      val actividades = ActividadRepositoryImpl(database, StandardTestDispatcher(testScheduler))
       val captured = movimiento("captured", titulo = "cafe", etiquetaIds = listOf("tag_a"))
       val deleted =
           movimiento("deleted", titulo = "taxi", etiquetaIds = listOf("tag_b"), at = LATER)
@@ -111,7 +114,7 @@ class MovimientoRepositoryTest {
       )
       assertEquals(
           DataOutcome.Success(MovimientoSearchSnapshot(emptyList(), emptyList())),
-          repository.observeFiltered(MovimientoReadCriteria(Moneda.COP)).first(),
+          actividades.observeFiltered(MovimientoReadCriteria(Moneda.COP)).first(),
       )
       assertEquals(DataOutcome.Success(emptyList()), repository.observeYears(Moneda.COP).first())
       assertEquals(DataOutcome.Success(noMoney), repository.observeSummary(Moneda.COP).first())
@@ -1181,7 +1184,9 @@ class MovimientoRepositoryTest {
         repository.observeRange(Moneda.COP, september).collect(inRange::add)
       }
       backgroundScope.launch {
-        repository.observeFiltered(MovimientoReadCriteria(Moneda.COP)).collect(filtered::add)
+        ActividadRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+            .observeFiltered(MovimientoReadCriteria(Moneda.COP))
+            .collect(filtered::add)
       }
       testScheduler.runCurrent()
 
@@ -1192,7 +1197,9 @@ class MovimientoRepositoryTest {
       assertEquals(DataOutcome.Success(listOf(updated)), recent.last())
       assertEquals(DataOutcome.Success(listOf(updated)), inRange.last())
       assertEquals(
-          DataOutcome.Success(MovimientoSearchSnapshot(listOf(updated), listOf(2026))),
+          DataOutcome.Success(
+              MovimientoSearchSnapshot(listOf(Actividad.DeMovimiento(updated)), listOf(2026))
+          ),
           filtered.last(),
       )
     }

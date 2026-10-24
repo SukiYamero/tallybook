@@ -1219,12 +1219,47 @@ class DatabaseSchemaTest {
                   },
               "selectFilteredMovimientos without filters" to
                   {
-                    queries.selectFilteredMovimientos("COP", null, null, null).executeAsList()
+                    queries
+                        .selectFilteredMovimientos(
+                            "COP",
+                            null,
+                            null,
+                            null,
+                            0,
+                            emptyList(),
+                            0,
+                            emptyList(),
+                        )
+                        .executeAsList()
                   },
               "selectFilteredMovimientos with range and tipo" to
                   {
                     queries
-                        .selectFilteredMovimientos("COP", "2026-01-01", "2026-12-31", "GASTO")
+                        .selectFilteredMovimientos(
+                            "COP",
+                            "2026-01-01",
+                            "2026-12-31",
+                            "GASTO",
+                            0,
+                            emptyList(),
+                            0,
+                            emptyList(),
+                        )
+                        .executeAsList()
+                  },
+              "selectFilteredMovimientos with cuenta and medio" to
+                  {
+                    queries
+                        .selectFilteredMovimientos(
+                            "COP",
+                            null,
+                            null,
+                            null,
+                            1,
+                            listOf("nequi"),
+                            1,
+                            listOf("DEBITO"),
+                        )
                         .executeAsList()
                   },
               "selectFilteredMovimientosByCategory" to
@@ -1235,6 +1270,10 @@ class DatabaseSchemaTest {
                             null,
                             null,
                             null,
+                            0,
+                            emptyList(),
+                            0,
+                            emptyList(),
                             listOf("cat_comida"),
                         )
                         .executeAsList()

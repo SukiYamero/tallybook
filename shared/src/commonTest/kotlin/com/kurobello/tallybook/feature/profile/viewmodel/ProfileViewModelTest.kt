@@ -24,7 +24,6 @@ import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
-import com.kurobello.tallybook.core.model.MovimientoReadCriteria
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
@@ -322,8 +321,6 @@ internal class ProfileFakeMovimientos : MovimientoRepository {
   override fun observeRange(moneda: Moneda, range: MovimientoDateRange) = unused()
 
   override fun observeYears(moneda: Moneda) = unused()
-
-  override fun observeFiltered(criteria: MovimientoReadCriteria) = unused()
 
   override fun observeCategoryHistory(limit: Int) = unused()
 
