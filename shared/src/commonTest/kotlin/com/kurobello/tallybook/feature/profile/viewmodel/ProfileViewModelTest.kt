@@ -9,7 +9,7 @@ import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.data.export.MovimientoCsvLabels
 import com.kurobello.tallybook.core.data.export.MovimientoExportSharer
-import com.kurobello.tallybook.core.data.export.MovimientoExportSource
+import com.kurobello.tallybook.core.data.export.RepositoryExportSource
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -326,7 +326,7 @@ private fun TestScope.profileViewModel(
         export =
             ProfileExportDependencies(
                 source =
-                    MovimientoExportSource(
+                    RepositoryExportSource(
                         movimientos = movimientos,
                         transferencias = transferencias,
                         cuentas = cuentas,
@@ -418,17 +418,9 @@ internal class ProfileFakeMovimientos : MovimientoRepository {
 
   override suspend fun getAll(): DataOutcome<List<Movimiento>> = result
 
-  override fun observeRecent(limit: Int) = unused()
-
   override fun observeRecent(moneda: Moneda, limit: Int) = unused()
 
-  override fun observeSummary(moneda: Moneda) = unused()
-
   override fun observeSummary(moneda: Moneda, range: MovimientoDateRange) = unused()
-
-  override fun observeRange(moneda: Moneda, range: MovimientoDateRange) = unused()
-
-  override fun observeYears(moneda: Moneda) = unused()
 
   override fun observeCategoryHistory(limit: Int) = unused()
 
@@ -441,8 +433,6 @@ internal class ProfileFakeMovimientos : MovimientoRepository {
   override suspend fun deleteAndCapture(id: String) = unused()
 
   override suspend fun restoreDeleted(movimiento: Movimiento) = unused()
-
-  override suspend fun delete(id: String) = unused()
 }
 
 internal object ProfileFakeCategorias : CategoriaRepository by UnsupportedCategoriaRepository {

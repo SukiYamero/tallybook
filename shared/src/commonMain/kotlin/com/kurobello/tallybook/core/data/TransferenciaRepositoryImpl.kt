@@ -2,13 +2,14 @@ package com.kurobello.tallybook.core.data
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
-import com.kurobello.tallybook.core.database.SelectTransferenciaById
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.database.Transferencia as StoredTransferencia
+import com.kurobello.tallybook.core.database.Transferencia_con_monedas as DatabaseTransferencia
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.TRANSFERENCIA_DESCRIPCION_MAX
 import com.kurobello.tallybook.core.model.Transferencia
@@ -242,13 +243,16 @@ private fun validateShape(transferencia: Transferencia): DataError.InvalidInput?
           DataError.InvalidInput("Transferencia cuentas must differ")
       transferencia.montoOrigen.minorUnits <= 0 || transferencia.montoDestino.minorUnits <= 0 ->
           DataError.InvalidInput("Transferencia amounts must be positive")
+      transferencia.montoOrigen.minorUnits > Money.MAX_MINOR_UNITS ||
+          transferencia.montoDestino.minorUnits > Money.MAX_MINOR_UNITS ->
+          DataError.InvalidInput("Transferencia amounts exceed the maximum")
       (transferencia.descripcion?.length ?: 0) > TRANSFERENCIA_DESCRIPCION_MAX ->
           DataError.InvalidInput("Transferencia descripcion is too long")
       else -> null
     }
 
 // An unreadable occupied ID must block restoration rather than become a retryable failure.
-private fun SelectTransferenciaById.isIdenticalTo(transferencia: Transferencia): Boolean =
+private fun DatabaseTransferencia.isIdenticalTo(transferencia: Transferencia): Boolean =
     try {
       toDomain() == transferencia
     } catch (_: IllegalArgumentException) {

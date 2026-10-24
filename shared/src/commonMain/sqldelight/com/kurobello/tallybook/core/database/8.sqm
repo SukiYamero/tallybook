@@ -1,0 +1,19 @@
+-- No table changes. sqlite_master keeps the view text verbatim, so it matches Transferencia.sq
+-- character for character and a migrated schema stays identical to a fresh install.
+CREATE VIEW transferencia_con_monedas AS
+SELECT
+    transferencia.id,
+    transferencia.cuenta_origen_id,
+    transferencia.cuenta_destino_id,
+    transferencia.monto_origen_minor,
+    origen.moneda AS moneda_origen,
+    transferencia.monto_destino_minor,
+    destino.moneda AS moneda_destino,
+    transferencia.fecha,
+    transferencia.descripcion,
+    transferencia.created_at
+FROM transferencia
+JOIN cuenta AS origen ON origen.id = transferencia.cuenta_origen_id
+JOIN cuenta AS destino ON destino.id = transferencia.cuenta_destino_id
+WHERE transferencia.deleted_at IS NULL;
+

@@ -8,12 +8,12 @@ import kotlin.test.assertFalse
 
 class AmountInputTest {
   @Test
-  fun amountPrefillRoundTripsExactCurrencyAndLongBoundaries() {
+  fun amountPrefillRoundTripsExactCurrencyAndTheDomainMaximum() {
     listOf(
             Money(1234, Moneda.COP),
             Money(1234, Moneda.USD),
             Money(1234, Moneda.CLP),
-            Money(Long.MAX_VALUE, Moneda.COP),
+            Money(Money.MAX_MINOR_UNITS, Moneda.COP),
             Money(1, Moneda.USD),
         )
         .forEach { amount ->
@@ -81,6 +81,21 @@ class AmountInputTest {
     }
   }
 
+  @Test
+  fun acceptsTheDomainMaximumAndRejectsAnythingAboveItAsOverflow() {
+    val cases =
+        listOf(
+            AmountCase("10000000000000", Moneda.USD, valid(Money.MAX_MINOR_UNITS, Moneda.USD)),
+            AmountCase("10000000000000.01", Moneda.USD, invalid(AmountInputError.OVERFLOW)),
+            AmountCase("1000000000000000", Moneda.CLP, valid(Money.MAX_MINOR_UNITS, Moneda.CLP)),
+            AmountCase("1000000000000001", Moneda.CLP, invalid(AmountInputError.OVERFLOW)),
+        )
+
+    cases.forEach { case ->
+      assertEquals(case.expected, parseAmountInput(case.raw, case.moneda), case.raw)
+    }
+  }
+
   private data class AmountCase(
       val raw: String,
       val moneda: Moneda,
@@ -89,4 +104,7 @@ class AmountInputTest {
 
   private fun invalid(reason: AmountInputError): AmountInputResult =
       AmountInputResult.Invalid(reason)
+
+  private fun valid(minorUnits: Long, moneda: Moneda): AmountInputResult =
+      AmountInputResult.Valid(Money(minorUnits, moneda))
 }

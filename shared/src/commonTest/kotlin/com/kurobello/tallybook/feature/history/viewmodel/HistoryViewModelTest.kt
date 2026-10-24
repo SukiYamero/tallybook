@@ -660,9 +660,6 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) :
   ): Flow<DataOutcome<MovimientoSearchSnapshot>> =
       error("Search reads are not expected in this fixture")
 
-  override fun observeRange(moneda: Moneda, range: MovimientoDateRange) =
-      range(moneda, range).observe()
-
   override fun observeActividadRange(
       moneda: Moneda,
       range: MovimientoDateRange,
@@ -680,8 +677,6 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) :
 
   override fun observeYears(moneda: Moneda) = years(moneda).observe()
 
-  override fun observeSummary(moneda: Moneda) = summary(moneda).observe()
-
   override fun observeSummary(
       moneda: Moneda,
       range: MovimientoDateRange,
@@ -690,8 +685,6 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) :
 
   override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
       error("Scoped recent reads are not expected in this fixture")
-
-  override fun observeRecent(limit: Int) = flow { emit(DataOutcome.Success(rows.take(limit))) }
 
   override suspend fun getAll() = DataOutcome.Success(rows)
 
@@ -767,8 +760,6 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) :
     publishRows()
     return DataOutcome.Success(RestoreResult.Restored)
   }
-
-  override suspend fun delete(id: String) = DataOutcome.Success(Unit)
 }
 
 @Suppress("LongParameterList")

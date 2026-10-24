@@ -77,20 +77,6 @@ SELECT *
 FROM movimiento_con_etiquetas
 ORDER BY fecha DESC, created_at DESC, id DESC;
 
--- SQLite date functions have a narrower year domain than the canonical LocalDate text we persist.
-selectMovimientoYears:
-SELECT DISTINCT substr(movimiento.fecha, 1, length(movimiento.fecha) - 6) AS movimiento_year
-FROM movimiento
-JOIN cuenta ON cuenta.id = movimiento.cuenta_id
-WHERE cuenta.moneda = ? AND movimiento.deleted_at IS NULL
-ORDER BY CAST(movimiento_year AS INTEGER) DESC;
-
-selectRecentMovimientos:
-SELECT *
-FROM movimiento_con_etiquetas
-ORDER BY fecha DESC, created_at DESC, id DESC
-LIMIT ?;
-
 selectRecentMovimientosByMoneda:
 SELECT *
 FROM movimiento_con_etiquetas
@@ -217,13 +203,6 @@ reviveMovimiento:
 UPDATE movimiento
 SET categoria_id = :categoria_id, updated_at = :stamp, deleted_at = NULL
 WHERE id = :id AND deleted_at IS NOT NULL;
-
-sumMovimientosByTipo:
-SELECT movimiento.tipo, SUM(movimiento.monto_minor) AS total_minor
-FROM movimiento
-JOIN cuenta ON cuenta.id = movimiento.cuenta_id
-WHERE cuenta.moneda = ? AND movimiento.deleted_at IS NULL
-GROUP BY movimiento.tipo;
 
 -- The same range filter as sumMovimientosPorCategoria, so it also searches movimiento_recent.
 sumMovimientosByTipoInRange:

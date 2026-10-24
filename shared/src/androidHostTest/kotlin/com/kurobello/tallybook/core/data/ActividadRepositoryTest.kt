@@ -24,19 +24,32 @@ import com.kurobello.tallybook.core.model.SearchTipo
 import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.model.Transferencia
+import java.io.File
+import java.util.Properties
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -267,6 +280,45 @@ class ActividadRepositoryTest {
       }
 
   @Test
+  fun `a read a newer write superseded never publishes its stale rows`() = runBlocking {
+    val file = File.createTempFile("tallybook-actividad", ".db")
+    val driver =
+        GatedDriver(
+            JdbcSqliteDriver(
+                "jdbc:sqlite:${file.absolutePath}",
+                Properties().apply { put("journal_mode", "WAL") },
+            )
+        )
+    val pool = Executors.newFixedThreadPool(3).asCoroutineDispatcher()
+    try {
+      val database = database(driver)
+      val repository = ActividadRepositoryImpl(database, pool)
+      val emissions = Channel<List<String>>(Channel.UNLIMITED)
+      val collector =
+          launch(pool) {
+            repository.observeActividadRange(Moneda.COP, september).collect {
+              emissions.send(success(it).map(Actividad::id))
+            }
+          }
+      assertTrue(driver.firstRowRead.await(5, TimeUnit.SECONDS))
+
+      database.insertLegacy(movimiento("late", "2026-09-15"))
+      // Released once the newer change cancelled the blocked read, or after a bound when nothing
+      // cancels it, so the stale snapshot reaches the assertion instead of a timeout.
+      withTimeoutOrNull(2_000) { while (!collector.hasCancelledDescendant()) delay(5) }
+      driver.release.countDown()
+
+      assertEquals(listOf("late"), withTimeout(5_000) { emissions.receive() })
+      collector.cancelAndJoin()
+    } finally {
+      driver.release.countDown()
+      pool.close()
+      driver.close()
+      file.delete()
+    }
+  }
+
+  @Test
   fun `rows of both kinds and years come from one transaction`() = runTest {
     val driver = TrackingDriver(JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY))
     try {
@@ -361,11 +413,13 @@ class ActividadRepositoryTest {
                     )
                   },
           )
+      var transferPlans = 0
       for ((name, read) in reads) {
         driver.reads.clear()
         read()
         val rowReads = driver.reads.filter { it.isRowRead }
         assertTrue(rowReads.isNotEmpty())
+        transferPlans += rowReads.count { it.isTransferencia }
         for (rowRead in rowReads) {
           val plan = driver.plan(rowRead)
           val index = if (rowRead.isTransferencia) "transferencia_recent" else "movimiento_recent"
@@ -376,6 +430,7 @@ class ActividadRepositoryTest {
           )
         }
       }
+      assertEquals(3, transferPlans)
     } finally {
       driver.close()
     }
@@ -464,13 +519,45 @@ class ActividadRepositoryTest {
     }
   }
 
+  private fun Job.hasCancelledDescendant(): Boolean = children.any {
+    it.isCancelled || it.hasCancelledDescendant()
+  }
+
+  /**
+   * Holds the first movimiento row read open after it ran, inside its read transaction, until
+   * [release]; WAL lets a write commit meanwhile without touching that read's snapshot.
+   */
+  private class GatedDriver(private val delegate: SqlDriver) : SqlDriver by delegate {
+    val firstRowRead = CountDownLatch(1)
+    val release = CountDownLatch(1)
+    private val gated = AtomicBoolean(false)
+
+    override fun <R> executeQuery(
+        identifier: Int?,
+        sql: String,
+        mapper: (SqlCursor) -> QueryResult<R>,
+        parameters: Int,
+        binders: (SqlPreparedStatement.() -> Unit)?,
+    ): QueryResult<R> {
+      val result = delegate.executeQuery(identifier, sql, mapper, parameters, binders)
+      if (
+          sql.trimStart().startsWith("SELECT movimiento_con_etiquetas.id") &&
+              gated.compareAndSet(false, true)
+      ) {
+        firstRowRead.countDown()
+        release.await()
+      }
+      return result
+    }
+  }
+
   private data class Read(
       val sql: String,
       val parameters: Int,
       val binders: (SqlPreparedStatement.() -> Unit)?,
   ) {
     val isTransferencia: Boolean
-      get() = sql.trimStart().startsWith("SELECT\n    transferencia.id")
+      get() = sql.trimStart().startsWith("SELECT transferencia_con_monedas.id")
 
     val isRowRead: Boolean
       get() = isTransferencia || sql.trimStart().startsWith("SELECT movimiento_con_etiquetas.id")

@@ -8,6 +8,8 @@ import app.cash.sqldelight.db.SqlPreparedStatement
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.MovimientoQueries
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.database.TransferenciaQueries
+import com.kurobello.tallybook.core.model.Actividad
 import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
@@ -18,6 +20,7 @@ import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.map
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -26,10 +29,14 @@ import kotlin.test.assertTrue
 import kotlin.time.Instant
 import kotlin.time.TimeSource
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
@@ -44,11 +51,7 @@ class HistoryRepositoryTest {
         JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
           createSchemaWithReferences(driver, listOf("food"))
           val repository =
-              MovimientoRepositoryImpl(
-                  TallybookDatabase(driver),
-                  StandardTestDispatcher(testScheduler),
-                  TestChangeClock(),
-              )
+              HistoryReads(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
           val rows =
               listOf(
                   movimiento("before", "2026-08-31"),
@@ -79,11 +82,7 @@ class HistoryRepositoryTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       createSchemaWithReferences(driver, listOf("food"))
       val repository =
-          MovimientoRepositoryImpl(
-              TallybookDatabase(driver),
-              StandardTestDispatcher(testScheduler),
-              TestChangeClock(),
-          )
+          HistoryReads(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
       val row = movimiento("selected", "2026-09-15")
       assertEquals(DataOutcome.Success(Unit), repository.insert(row))
 
@@ -113,13 +112,11 @@ class HistoryRepositoryTest {
           object : TallybookDatabase by real {
             override val movimientoQueries: MovimientoQueries
               get() = error("unsupported interval must not access storage")
+
+            override val transferenciaQueries: TransferenciaQueries
+              get() = error("unsupported interval must not access storage")
           }
-      val repository =
-          MovimientoRepositoryImpl(
-              database,
-              StandardTestDispatcher(testScheduler),
-              TestChangeClock(),
-          )
+      val repository = HistoryReads(database, StandardTestDispatcher(testScheduler))
       val intervals =
           listOf(
               MovimientoDateRange(LocalDate(-2, 1, 1), LocalDate(-1, 1, 1)),
@@ -141,11 +138,7 @@ class HistoryRepositoryTest {
         JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
           createSchemaWithReferences(driver, listOf("food"))
           val repository =
-              MovimientoRepositoryImpl(
-                  TallybookDatabase(driver),
-                  StandardTestDispatcher(testScheduler),
-                  TestChangeClock(),
-              )
+              HistoryReads(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
           for (year in listOf(-1, 0, 9999, 10000)) {
             val row = movimiento("year-$year", LocalDate(year, 2, 15).toString())
             assertEquals(DataOutcome.Success(Unit), repository.insert(row))
@@ -178,11 +171,7 @@ class HistoryRepositoryTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       createSchemaWithReferences(driver, listOf("food"))
       val repository =
-          MovimientoRepositoryImpl(
-              TallybookDatabase(driver),
-              StandardTestDispatcher(testScheduler),
-              TestChangeClock(),
-          )
+          HistoryReads(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
       assertEquals(DataOutcome.Success(emptyList()), repository.observeYears(Moneda.COP).first())
       for ((index, date) in
           listOf(
@@ -215,11 +204,7 @@ class HistoryRepositoryTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       createSchemaWithReferences(driver, listOf("food"))
       val repository =
-          MovimientoRepositoryImpl(
-              TallybookDatabase(driver),
-              StandardTestDispatcher(testScheduler),
-              TestChangeClock(),
-          )
+          HistoryReads(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
       val live = movimiento("live", "2026-09-15")
       for (row in listOf(live, movimiento("gone", "2026-09-16"), movimiento("old", "2024-01-01"))) {
         repository.insert(row)
@@ -243,11 +228,7 @@ class HistoryRepositoryTest {
         try {
           createSchemaWithReferences(driver, listOf("food"))
           val repository =
-              MovimientoRepositoryImpl(
-                  TallybookDatabase(driver),
-                  StandardTestDispatcher(testScheduler),
-                  TestChangeClock(),
-              )
+              HistoryReads(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
           val rangeEmissions = mutableListOf<DataOutcome<List<Movimiento>>>()
           val yearEmissions = mutableListOf<DataOutcome<List<Int>>>()
           val rangeJob = backgroundScope.launch {
@@ -265,7 +246,7 @@ class HistoryRepositoryTest {
               listOf<DataOutcome<List<Int>>>(DataOutcome.Success(emptyList())),
               yearEmissions,
           )
-          assertEquals(2, driver.listeners)
+          assertEquals(3, driver.listeners)
 
           val first = movimiento("first", "2026-09-15")
           assertEquals(DataOutcome.Success(Unit), repository.insert(first))
@@ -326,13 +307,12 @@ class HistoryRepositoryTest {
               object : TallybookDatabase by real {
                 override val movimientoQueries: MovimientoQueries
                   get() = if (unavailable) error("storage unavailable") else real.movimientoQueries
+
+                override val transferenciaQueries: TransferenciaQueries
+                  get() =
+                      if (unavailable) error("storage unavailable") else real.transferenciaQueries
               }
-          val repository =
-              MovimientoRepositoryImpl(
-                  database,
-                  StandardTestDispatcher(testScheduler),
-                  TestChangeClock(),
-              )
+          val repository = HistoryReads(database, StandardTestDispatcher(testScheduler))
           val range = repository.observeRange(Moneda.COP, september)
           val years = repository.observeYears(Moneda.COP)
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(range.first()).error)
@@ -353,13 +333,11 @@ class HistoryRepositoryTest {
           object : TallybookDatabase by real {
             override val movimientoQueries: MovimientoQueries
               get() = throw CancellationException("cancelled")
+
+            override val transferenciaQueries: TransferenciaQueries
+              get() = throw CancellationException("cancelled")
           }
-      val repository =
-          MovimientoRepositoryImpl(
-              database,
-              StandardTestDispatcher(testScheduler),
-              TestChangeClock(),
-          )
+      val repository = HistoryReads(database, StandardTestDispatcher(testScheduler))
       assertFailsWith<CancellationException> {
         repository.observeRange(Moneda.COP, september).first()
       }
@@ -371,12 +349,7 @@ class HistoryRepositoryTest {
   fun `closed storage emits local failure for both history reads`() = runTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     createSchemaWithReferences(driver, listOf("food"))
-    val repository =
-        MovimientoRepositoryImpl(
-            TallybookDatabase(driver),
-            StandardTestDispatcher(testScheduler),
-            TestChangeClock(),
-        )
+    val repository = HistoryReads(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
     driver.close()
 
     assertIs<DataError.Local>(
@@ -400,12 +373,7 @@ class HistoryRepositoryTest {
       JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
         createSchemaWithReferences(driver, listOf("food"))
         val database = TallybookDatabase(driver)
-        val repository =
-            MovimientoRepositoryImpl(
-                database,
-                StandardTestDispatcher(testScheduler),
-                TestChangeClock(),
-            )
+        val repository = HistoryReads(database, StandardTestDispatcher(testScheduler))
         repository.insert(movimiento("valid", "2026-09-01"))
         database.movimientoQueries.insertMovimiento(
             "invalid",
@@ -425,7 +393,6 @@ class HistoryRepositoryTest {
             assertIs<DataOutcome.Failure>(repository.observeRange(Moneda.COP, wholeYear).first())
         assertIs<IllegalArgumentException>(assertIs<DataError.Local>(failure.error).cause)
         assertIs<DataOutcome.Failure>(repository.getAll())
-        assertIs<DataOutcome.Failure>(repository.observeRecent(10).first())
       }
     }
   }
@@ -438,12 +405,7 @@ class HistoryRepositoryTest {
           JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
             createSchemaWithReferences(driver, listOf("food"))
             val database = TallybookDatabase(driver)
-            val repository =
-                MovimientoRepositoryImpl(
-                    database,
-                    StandardTestDispatcher(testScheduler),
-                    TestChangeClock(),
-                )
+            val repository = HistoryReads(database, StandardTestDispatcher(testScheduler))
             repository.insert(movimiento("valid", "2025-01-01"))
             database.movimientoQueries.insertMovimiento(
                 "invalid",
@@ -489,12 +451,7 @@ class HistoryRepositoryTest {
               "EFECTIVO",
               ChangeStamp.SEED.value,
           )
-          val repository =
-              MovimientoRepositoryImpl(
-                  database,
-                  StandardTestDispatcher(testScheduler),
-                  TestChangeClock(),
-              )
+          val repository = HistoryReads(database, StandardTestDispatcher(testScheduler))
 
           assertEquals(
               DataOutcome.Success(listOf(2026)),
@@ -512,17 +469,12 @@ class HistoryRepositoryTest {
         try {
           createSchemaWithReferences(driver, listOf("food"))
           val database = TallybookDatabase(driver)
-          val repository =
-              MovimientoRepositoryImpl(
-                  database,
-                  StandardTestDispatcher(testScheduler),
-                  TestChangeClock(),
-              )
+          val repository = HistoryReads(database, StandardTestDispatcher(testScheduler))
           val flow = repository.observeRange(Moneda.COP, september)
           val emissions = mutableListOf<DataOutcome<List<Movimiento>>>()
           val job = backgroundScope.launch { flow.collect(emissions::add) }
           runCurrent()
-          assertEquals(1, driver.listeners)
+          assertEquals(2, driver.listeners)
 
           database.movimientoQueries.insertMovimiento(
               "invalid",
@@ -544,7 +496,7 @@ class HistoryRepositoryTest {
           assertTrue(job.isCompleted)
           assertEquals(0, driver.listeners)
 
-          assertEquals(DataOutcome.Success(Unit), repository.delete("invalid"))
+          database.movimientoQueries.tombstoneMovimiento(ChangeStamp.SEED.value, "invalid")
           assertEquals(DataOutcome.Success(emptyList()), flow.first())
           runCurrent()
           assertEquals(0, driver.listeners)
@@ -554,7 +506,7 @@ class HistoryRepositoryTest {
       }
 
   @Test
-  fun `ten thousand selected month rows remain complete with indexed order and cancellable reads`() =
+  fun `ten thousand selected month rows remain complete with indexed plans and cancellable reads`() =
       runTest {
         val actualDriver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
         val driver = TrackingDriver(actualDriver)
@@ -607,12 +559,7 @@ class HistoryRepositoryTest {
               )
             }
           }
-          val repository =
-              MovimientoRepositoryImpl(
-                  database,
-                  StandardTestDispatcher(testScheduler),
-                  TestChangeClock(),
-              )
+          val repository = HistoryReads(database, StandardTestDispatcher(testScheduler))
           val started = TimeSource.Monotonic.markNow()
           val rows =
               assertIs<DataOutcome.Success<List<Movimiento>>>(
@@ -620,7 +567,7 @@ class HistoryRepositoryTest {
                   )
                   .data
           val elapsed = started.elapsedNow()
-          val rangeSql = requireNotNull(driver.lastSql)
+          val rangeRead = driver.reads.last { it.sql.trimStart().startsWith(MOVIMIENTO_ROWS) }
           assertEquals(10000, rows.size)
           assertEquals(10000, rows.map { it.id }.toSet().size)
           assertEquals("cop-09989", rows.first().id)
@@ -633,55 +580,37 @@ class HistoryRepositoryTest {
               }
           )
 
-          val rangePlan =
-              driver
-                  .executeQuery(
-                      null,
-                      "EXPLAIN QUERY PLAN $rangeSql",
-                      { cursor ->
-                        val details = mutableListOf<String>()
-                        while (cursor.next().value) details += requireNotNull(cursor.getString(3))
-                        QueryResult.Value(details)
-                      },
-                      3,
-                  ) {
-                    bindString(0, "COP")
-                    bindString(1, "2026-09-01")
-                    bindString(2, "2026-09-30")
-                  }
-                  .value
+          val rangePlan = driver.plan(rangeRead)
+          assertTrue(rangePlan.any { "movimiento_recent" in it }, "$rangePlan")
+          assertTrue(rangePlan.none { "TEMP B-TREE FOR ORDER BY" in it }, "$rangePlan")
           val yearStarted = TimeSource.Monotonic.markNow()
           assertEquals(
               DataOutcome.Success(listOf(2026)),
               repository.observeYears(Moneda.COP).first(),
           )
           val yearElapsed = yearStarted.elapsedNow()
-          val yearSql = requireNotNull(driver.lastSql)
-          val yearPlan =
-              driver
-                  .executeQuery(
-                      null,
-                      "EXPLAIN QUERY PLAN $yearSql",
-                      { cursor ->
-                        val details = mutableListOf<String>()
-                        while (cursor.next().value) details += requireNotNull(cursor.getString(3))
-                        QueryResult.Value(details)
-                      },
-                      1,
-                  ) {
-                    bindString(0, "COP")
-                  }
-                  .value
+          val yearPlan = driver.plan(driver.reads.last())
+          // Tombstones and other currencies stay out of the years read: live movimientos are
+          // reached
+          // through one of their partial indexes, never a scan of the whole table.
+          assertTrue(
+              yearPlan.any { it.matches(Regex("(SCAN|SEARCH) movimiento USING .*INDEX.*")) },
+              "$yearPlan",
+          )
+          assertTrue(yearPlan.none { it == "SCAN movimiento" }, "$yearPlan")
           println(
               "History repository fixture: selected=10000 excludedCurrency=4000 excludedDate=4000 read=$elapsed years=$yearElapsed rangePlan=$rangePlan yearPlan=$yearPlan"
           )
 
-          driver.cancelAfterRows = 10
-          assertFailsWith<CancellationException> {
-            repository.observeRange(Moneda.COP, september).first()
+          val emissions = mutableListOf<DataOutcome<List<Movimiento>>>()
+          lateinit var collector: Job
+          driver.onRow = { visited -> if (visited == 10) collector.cancel() }
+          collector = backgroundScope.launch {
+            repository.observeRange(Moneda.COP, september).collect(emissions::add)
           }
-          assertEquals(10, driver.visitedRows)
           runCurrent()
+          assertTrue(collector.isCancelled)
+          assertEquals(emptyList(), emissions)
           assertEquals(0, driver.listeners)
         } finally {
           driver.close()
@@ -692,12 +621,10 @@ class HistoryRepositoryTest {
     var listeners = 0
       private set
 
-    var lastSql: String? = null
-      private set
+    val reads = mutableListOf<Read>()
 
-    var cancelAfterRows: Int? = null
-    var visitedRows = 0
-      private set
+    var onRow: ((visited: Int) -> Unit)? = null
+    private var visitedRows = 0
 
     override fun <R> executeQuery(
         identifier: Int?,
@@ -706,7 +633,7 @@ class HistoryRepositoryTest {
         parameters: Int,
         binders: (SqlPreparedStatement.() -> Unit)?,
     ): QueryResult<R> {
-      if (sql.trimStart().startsWith("SELECT")) lastSql = sql
+      if (sql.trimStart().startsWith("SELECT")) reads += Read(sql, parameters, binders)
       visitedRows = 0
       return delegate.executeQuery(
           identifier,
@@ -718,8 +645,7 @@ class HistoryRepositoryTest {
                     val next = cursor.next()
                     if (next.value) {
                       visitedRows += 1
-                      if (visitedRows == cancelAfterRows)
-                          throw CancellationException("read cancelled")
+                      onRow?.invoke(visitedRows)
                     }
                     return next
                   }
@@ -731,6 +657,21 @@ class HistoryRepositoryTest {
       )
     }
 
+    fun plan(read: Read): List<String> =
+        delegate
+            .executeQuery(
+                null,
+                "EXPLAIN QUERY PLAN ${read.sql}",
+                { cursor ->
+                  val details = mutableListOf<String>()
+                  while (cursor.next().value) details += requireNotNull(cursor.getString(3))
+                  QueryResult.Value(details)
+                },
+                read.parameters,
+                read.binders,
+            )
+            .value
+
     override fun addListener(vararg queryKeys: String, listener: Query.Listener) {
       delegate.addListener(*queryKeys, listener = listener)
       listeners += 1
@@ -741,6 +682,12 @@ class HistoryRepositoryTest {
       listeners -= 1
     }
   }
+
+  private data class Read(
+      val sql: String,
+      val parameters: Int,
+      val binders: (SqlPreparedStatement.() -> Unit)?,
+  )
 
   private fun movimiento(
       id: String,
@@ -763,5 +710,31 @@ class HistoryRepositoryTest {
 
   private companion object {
     val september = MovimientoDateRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30))
+    const val MOVIMIENTO_ROWS = "SELECT movimiento_con_etiquetas.id"
   }
+}
+
+/**
+ * History's reads through [ActividadRepositoryImpl], narrowed to movimientos because no fixture
+ * here stores a transfer, with the writes the tests need.
+ */
+private class HistoryReads(database: TallybookDatabase, dispatcher: CoroutineDispatcher) {
+  private val writer = MovimientoRepositoryImpl(database, dispatcher, TestChangeClock())
+  private val reader = ActividadRepositoryImpl(database, dispatcher)
+
+  suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> = writer.insert(movimiento)
+
+  suspend fun delete(id: String): DataOutcome<Unit> = writer.deleteAndCapture(id).map {}
+
+  suspend fun getAll(): DataOutcome<List<Movimiento>> = writer.getAll()
+
+  fun observeRange(
+      moneda: Moneda,
+      range: MovimientoDateRange,
+  ): Flow<DataOutcome<List<Movimiento>>> =
+      reader.observeActividadRange(moneda, range).map { outcome ->
+        outcome.map { rows -> rows.map { assertIs<Actividad.DeMovimiento>(it).movimiento } }
+      }
+
+  fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> = reader.observeYears(moneda)
 }

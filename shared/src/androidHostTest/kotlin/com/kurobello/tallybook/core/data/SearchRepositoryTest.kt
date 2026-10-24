@@ -331,13 +331,13 @@ class SearchRepositoryTest {
               ),
               emissions.last(),
           )
-          assertEquals(DataOutcome.Success(Unit), repository.delete(matching.id))
+          assertEquals(DataOutcome.Success(matching), repository.deleteAndCapture(matching.id))
           runCurrent()
           val noResults =
               assertIs<DataOutcome.Success<MovimientoSearchSnapshot>>(emissions.last()).data
           assertEquals(emptyList(), noResults.movimientos)
           assertTrue(noResults.hasCurrencyData)
-          assertEquals(DataOutcome.Success(Unit), repository.delete("excluded"))
+          assertIs<DataOutcome.Success<Movimiento?>>(repository.deleteAndCapture("excluded"))
           runCurrent()
           assertEquals(
               DataOutcome.Success(MovimientoSearchSnapshot(emptyList(), emptyList())),
@@ -579,7 +579,7 @@ class SearchRepositoryTest {
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(emissions.last()).error)
           assertTrue(job.isCompleted)
           assertEquals(0, driver.listeners)
-          repository.delete("invalid")
+          database.movimientoQueries.tombstoneMovimiento(ChangeStamp.SEED.value, "invalid")
           assertEquals(
               MovimientoSearchSnapshot(emptyList(), emptyList()),
               snapshot(repository, MovimientoReadCriteria(Moneda.COP, september)),
@@ -599,7 +599,7 @@ class SearchRepositoryTest {
               ChangeStamp.SEED.value,
           )
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(flow.first()).error)
-          repository.delete("invalid-year")
+          database.movimientoQueries.tombstoneMovimiento(ChangeStamp.SEED.value, "invalid-year")
           assertEquals(
               DataOutcome.Success(MovimientoSearchSnapshot(emptyList(), emptyList())),
               flow.first(),

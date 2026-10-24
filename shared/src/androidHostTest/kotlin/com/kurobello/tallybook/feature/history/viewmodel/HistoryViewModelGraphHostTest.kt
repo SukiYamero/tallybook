@@ -40,6 +40,7 @@ import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
@@ -217,7 +218,7 @@ internal class HistoryViewModelGraphHostTest {
           assertEquals(
               Money(-250, Moneda.USD),
               assertIs<DataOutcome.Success<MovimientoSummary>>(
-                      movimientos.observeSummary(Moneda.USD).first()
+                      movimientos.observeSummary(Moneda.USD, allDates).first()
                   )
                   .data
                   .balance,
@@ -331,3 +332,5 @@ private fun row(id: String, date: LocalDate, moneda: Moneda) =
         Cuenta.defaultCashId(moneda),
         MedioPago.EFECTIVO,
     )
+
+private val allDates = MovimientoDateRange(LocalDate(2000, 1, 1), LocalDate(2100, 12, 31))

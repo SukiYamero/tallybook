@@ -4,18 +4,17 @@ import app.cash.sqldelight.Query
 import app.cash.sqldelight.coroutines.asFlow
 import com.kurobello.tallybook.core.database.Movimiento_con_etiquetas as DatabaseMovimiento
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.database.Transferencia_con_monedas as DatabaseTransferencia
 import com.kurobello.tallybook.core.model.Actividad
 import com.kurobello.tallybook.core.model.ActividadRecentOrder
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
-import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
-import com.kurobello.tallybook.core.model.Transferencia
-import kotlin.time.Instant
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
@@ -24,9 +23,9 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.LocalDate
+import kotlinx.coroutines.yield
 
 internal class ActividadRepositoryImpl(
     private val database: TallybookDatabase,
@@ -49,7 +48,6 @@ internal class ActividadRepositoryImpl(
               start,
               end,
               moneda.name,
-              ::transferenciaRow,
           )
       rereading(movimientos, transferencias) {
         val (movimientoRows, transferenciaRows) =
@@ -92,7 +90,6 @@ internal class ActividadRepositoryImpl(
               criteria.range?.end?.toString(),
               cuentaFilter,
               cuentaIds,
-              ::transferenciaRow,
           )
       // Both queries are observed whatever the criteria exclude, so a write to either table
       // re-reads the years the snapshot carries.
@@ -186,19 +183,24 @@ internal class ActividadRepositoryImpl(
       flow { emitAll(source()) }.flowOn(dispatcher).asLocalDataOutcome()
 
   /**
-   * Runs [read] once and again whenever a table behind [queries] changes. [read] checks
-   * cancellation while mapping, and a read finishing after its collector left never publishes.
+   * Runs [read] once and again whenever a table behind [queries] changes. A newer change cancels
+   * the read in flight, which checks cancellation while mapping, and a read finishing after it was
+   * superseded or its collector left never publishes.
    */
+  @OptIn(ExperimentalCoroutinesApi::class)
   private fun <T> rereading(vararg queries: Query<*>, read: suspend () -> T): Flow<T> =
       combine(queries.map { it.asFlow() }) {}
-          .map {
+          .mapLatest {
+            // mapLatest starts this block undispatched, and a blocking read never suspends: without
+            // yielding first, the next change could not arrive to cancel it.
+            yield()
             withContext(dispatcher) { read().also { currentCoroutineContext().ensureActive() } }
           }
 
   private suspend fun merge(
       moneda: Moneda,
       movimientos: List<DatabaseMovimiento>,
-      transferencias: List<Transferencia>,
+      transferencias: List<DatabaseTransferencia>,
   ): List<Actividad> {
     val context = currentCoroutineContext()
     context.ensureActive()
@@ -207,9 +209,9 @@ internal class ActividadRepositoryImpl(
           context.ensureActive()
           Actividad.DeMovimiento(row.toDomain())
         } +
-            transferencias.mapNotNull { transferencia ->
+            transferencias.mapNotNull { row ->
               context.ensureActive()
-              Actividad.DeTransferencia.of(transferencia, moneda)
+              Actividad.DeTransferencia.of(row.toDomain(), moneda)
             }
     return if (transferencias.isEmpty()) rows else rows.sortedWith(ActividadRecentOrder)
   }
@@ -233,27 +235,3 @@ private class MovimientoFilterArgs(criteria: MovimientoReadCriteria, val cuentaI
   val medios = criteria.medios.map { it.name }.sorted()
   val medioFilter = if (medios.isEmpty()) 0L else 1L
 }
-
-@Suppress("LongParameterList")
-private fun transferenciaRow(
-    id: String,
-    cuentaOrigenId: String,
-    cuentaDestinoId: String,
-    montoOrigenMinor: Long,
-    monedaOrigen: String,
-    montoDestinoMinor: Long,
-    monedaDestino: String,
-    fecha: String,
-    descripcion: String?,
-    createdAt: String,
-): Transferencia =
-    Transferencia(
-        id = id,
-        cuentaOrigenId = cuentaOrigenId,
-        cuentaDestinoId = cuentaDestinoId,
-        montoOrigen = Money(montoOrigenMinor, Moneda.valueOf(monedaOrigen)),
-        montoDestino = Money(montoDestinoMinor, Moneda.valueOf(monedaDestino)),
-        fecha = LocalDate.parse(fecha),
-        descripcion = descripcion,
-        createdAt = Instant.parse(createdAt),
-    )

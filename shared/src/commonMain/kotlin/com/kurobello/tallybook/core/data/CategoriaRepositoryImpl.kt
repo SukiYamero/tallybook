@@ -252,7 +252,7 @@ private fun CategoriaQueries.findDuplicate(nombre: String, excludingId: String?)
 
 private fun unknownCategoria(id: String) = DataError.InvalidInput("Unknown categoria $id")
 
-private fun com.kurobello.tallybook.core.database.Categoria.toDomain(): Categoria =
+internal fun com.kurobello.tallybook.core.database.Categoria.toDomain(): Categoria =
     Categoria(
         id = id,
         nombre = nombre,

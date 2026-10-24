@@ -19,6 +19,8 @@ import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.TransferenciaRepository
 import com.kurobello.tallybook.core.data.export.MovimientoCsvLabels
 import com.kurobello.tallybook.core.data.export.MovimientoExportSharer
+import com.kurobello.tallybook.core.data.export.MovimientoExportSource
+import com.kurobello.tallybook.core.data.export.RepositoryExportSource
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -79,6 +81,9 @@ internal class ProfileViewModelGraphHostTest {
             single<CategoriaRepository> { ProfileFakeCategorias }
             single<CuentaRepository> { FakeCuentaRepository() }
             single<TransferenciaRepository> { FakeTransferenciaRepository() }
+            single<MovimientoExportSource> {
+              RepositoryExportSource(get(), get(), get(), get(), get())
+            }
             single<MovimientoExportSharer> { sharer }
             single<Clock> {
               object : Clock {

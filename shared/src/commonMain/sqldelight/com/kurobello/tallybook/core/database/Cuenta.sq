@@ -70,3 +70,13 @@ SELECT
     + (SELECT COUNT(*) FROM transferencia WHERE cuenta_origen_id = :id AND deleted_at IS NULL)
     + (SELECT COUNT(*) FROM transferencia WHERE cuenta_destino_id = :id AND deleted_at IS NULL)
     AS reference_count;
+
+-- The one definition of a referenced cuenta, read by both the type and currency locks and the
+-- screens that disable those fields. Each arm walks its own partial index in order, so the UNION
+-- merges without a sort.
+selectReferencedCuentaIds:
+SELECT cuenta_id FROM movimiento WHERE deleted_at IS NULL
+UNION
+SELECT cuenta_origen_id FROM transferencia WHERE deleted_at IS NULL
+UNION
+SELECT cuenta_destino_id FROM transferencia WHERE deleted_at IS NULL;

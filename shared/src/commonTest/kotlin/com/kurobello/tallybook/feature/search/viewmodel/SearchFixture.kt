@@ -194,24 +194,13 @@ internal class SearchMovimientos : MovimientoRepository, ActividadRepository {
     }
   }
 
-  override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> =
-      error("Unexpected read")
-
   override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
-      error("Unexpected read")
-
-  override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> =
       error("Unexpected read")
 
   override fun observeSummary(
       moneda: Moneda,
       range: MovimientoDateRange,
   ): Flow<DataOutcome<MovimientoSummary>> = error("Unexpected read")
-
-  override fun observeRange(
-      moneda: Moneda,
-      range: MovimientoDateRange,
-  ): Flow<DataOutcome<List<Movimiento>>> = error("Unexpected read")
 
   override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> = error("Unexpected read")
 
@@ -276,8 +265,6 @@ internal class SearchMovimientos : MovimientoRepository, ActividadRepository {
     restore()
     return DataOutcome.Success(RestoreResult.Restored)
   }
-
-  override suspend fun delete(id: String) = DataOutcome.Success(Unit)
 }
 
 private fun MovimientoReadCriteria.accepts(movimiento: Movimiento): Boolean =

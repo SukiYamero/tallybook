@@ -157,24 +157,13 @@ internal class ManagementRepository : MovimientoRepository {
     return restoreResult
   }
 
-  override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = emptyFlow()
-
   override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
       emptyFlow()
-
-  override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> = emptyFlow()
 
   override fun observeSummary(
       moneda: Moneda,
       range: MovimientoDateRange,
   ): Flow<DataOutcome<MovimientoSummary>> = emptyFlow()
-
-  override fun observeRange(
-      moneda: Moneda,
-      range: MovimientoDateRange,
-  ): Flow<DataOutcome<List<Movimiento>>> = emptyFlow()
-
-  override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> = emptyFlow()
 
   override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
       emptyFlow()
@@ -184,9 +173,6 @@ internal class ManagementRepository : MovimientoRepository {
 
   override suspend fun getAll(): DataOutcome<List<Movimiento>> =
       DataOutcome.Success(listOfNotNull(current))
-
-  override suspend fun delete(id: String): DataOutcome<Unit> =
-      error("Management must capture deletion")
 }
 
 internal fun managementCategoria(id: String = "food", parent: String? = null) =

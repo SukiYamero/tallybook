@@ -13,6 +13,12 @@ interface CuentaRepository {
   /** Live cuentas, archived included, oldest first. */
   fun observeAll(): Flow<DataOutcome<List<Cuenta>>>
 
+  /**
+   * Ids of the cuentas live movimientos or transferencias reference: the ones whose moneda and tipo
+   * [update] refuses to change.
+   */
+  fun observeReferencedIds(): Flow<DataOutcome<Set<String>>>
+
   suspend fun getById(id: String): DataOutcome<Cuenta?>
 
   /**
@@ -23,8 +29,9 @@ interface CuentaRepository {
   suspend fun create(draft: CuentaDraft): DataOutcome<CuentaWrite>
 
   /**
-   * Same rules as [create], ignoring the cuenta itself. Changing the moneda while live movimientos
-   * or transferencias reference the cuenta returns [CuentaWrite.CurrencyLocked].
+   * Same rules as [create], ignoring the cuenta itself. Changing the moneda of a referenced or
+   * [Cuenta.isDefaultCash] cuenta returns [CuentaWrite.CurrencyLocked]; changing the tipo of a
+   * referenced one returns [CuentaWrite.TypeLocked].
    */
   suspend fun update(id: String, draft: CuentaDraft): DataOutcome<CuentaWrite>
 

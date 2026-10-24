@@ -127,8 +127,8 @@ class DatabaseSchemaTest {
             sumsBefore,
             listOf("CLP", "COP", "USD")
                 .flatMap { moneda ->
-                  database.movimientoQueries.sumMovimientosByTipo(moneda).executeAsList().map {
-                    "$moneda ${it.tipo} ${it.total_minor}"
+                  database.movimientoQueries.totalsByTipo(moneda).map { (tipo, total) ->
+                    "$moneda $tipo $total"
                   }
                 }
                 .sorted(),
@@ -160,6 +160,47 @@ class DatabaseSchemaTest {
                   .restoreDeleted(clpSnapshot)
             },
         )
+        assertEquals(freshSchema(), driver.schemaObjects())
+      }
+
+  @Test
+  fun `migration from schema 8 adds the live transfer view and keeps every transfer`() =
+      withSnapshot(version = 8) { driver ->
+        val seed = ChangeStamp.SEED.value
+        driver.execute(
+            null,
+            "INSERT INTO cuenta(id, nombre, tipo, moneda, created_at, updated_at) VALUES " +
+                "('cop', 'Efectivo', 'EFECTIVO', 'COP', '2026-01-01T00:00:00Z', '$seed'), " +
+                "('usd', 'Chase', 'BANCO', 'USD', '2026-01-01T00:00:00Z', '$seed')",
+            0,
+        )
+        driver.execute(
+            null,
+            "INSERT INTO transferencia(id, cuenta_origen_id, cuenta_destino_id, " +
+                "monto_origen_minor, monto_destino_minor, fecha, created_at, updated_at, " +
+                "deleted_at) VALUES " +
+                "('live', 'cop', 'usd', 400000, 10000, '2026-02-01', '2026-02-01T00:00:00Z', " +
+                "'$seed', NULL), " +
+                "('gone', 'usd', 'cop', 100, 4000, '2026-02-02', '2026-02-02T00:00:00Z', " +
+                "'$seed', '$seed')",
+            0,
+        )
+
+        TallybookDatabase.Schema.migrate(
+            driver,
+            oldVersion = 8,
+            newVersion = TallybookDatabase.Schema.version,
+        )
+
+        assertEquals(
+            listOf("live cop 400000 COP usd 10000 USD"),
+            driver.queryStrings(
+                "SELECT id || ' ' || cuenta_origen_id || ' ' || monto_origen_minor || ' ' || " +
+                    "moneda_origen || ' ' || cuenta_destino_id || ' ' || " +
+                    "monto_destino_minor || ' ' || moneda_destino FROM transferencia_con_monedas"
+            ),
+        )
+        assertEquals(listOf("gone", "live"), driver.queryStrings("SELECT id FROM transferencia"))
         assertEquals(freshSchema(), driver.schemaObjects())
       }
 
@@ -689,8 +730,8 @@ class DatabaseSchemaTest {
             driver.queryStrings("SELECT name FROM pragma_index_info('movimiento_recent')"),
         )
         assertEquals(
-            listOf("movimiento_con_etiquetas"),
-            driver.queryStrings("SELECT name FROM sqlite_master WHERE type = 'view'"),
+            listOf("movimiento_con_etiquetas", "transferencia_con_monedas"),
+            driver.queryStrings("SELECT name FROM sqlite_master WHERE type = 'view' ORDER BY name"),
         )
         assertEquals(
             listOf(
@@ -719,6 +760,11 @@ class DatabaseSchemaTest {
               0,
           )
           .value
+
+  private fun MovimientoQueries.totalsByTipo(moneda: String): Map<String, Long?> =
+      sumMovimientosByTipoInRange(moneda, "0000-01-01", "9999-12-31").executeAsList().associate {
+        it.tipo to it.total_minor
+      }
 
   private fun SqlDriver.stampsOf(table: String): List<String> =
       queryStrings("SELECT id || ' ' || updated_at FROM $table ORDER BY id")
@@ -887,7 +933,7 @@ class DatabaseSchemaTest {
   }
 
   @Test
-  fun `selectRecentMovimientos uses fecha then created at then id and obeys limit`() {
+  fun `selectRecentMovimientosByMoneda uses fecha then created at then id and obeys limit`() {
     val db = inMemoryDatabase()
     db.insert(id = "a", montoMinor = 100, fecha = "2026-09-03", createdAt = "2026-09-03T12:00:00Z")
     db.insert(id = "c", montoMinor = 100, fecha = "2026-09-03", createdAt = "2026-09-03T12:00:00Z")
@@ -896,12 +942,14 @@ class DatabaseSchemaTest {
 
     assertEquals(
         listOf("c", "a", "b"),
-        db.movimientoQueries.selectRecentMovimientos(3).executeAsList().map { it.id },
+        db.movimientoQueries.selectRecentMovimientosByMoneda("COP", 3).executeAsList().map {
+          it.id
+        },
     )
   }
 
   @Test
-  fun `sumMovimientosByTipo filters by moneda before summing`() {
+  fun `sumMovimientosByTipoInRange filters by moneda before summing`() {
     val db = inMemoryDatabase()
     db.insert(id = "gasto", montoMinor = 500, moneda = "COP")
     db.insert(id = "ingreso", tipo = "INGRESO", montoMinor = 2_000, moneda = "COP")
@@ -909,9 +957,7 @@ class DatabaseSchemaTest {
 
     assertEquals(
         mapOf("GASTO" to 500L, "INGRESO" to 2_000L),
-        db.movimientoQueries.sumMovimientosByTipo("COP").executeAsList().associate {
-          it.tipo to it.total_minor
-        },
+        db.movimientoQueries.totalsByTipo("COP"),
     )
   }
 
@@ -1024,9 +1070,7 @@ class DatabaseSchemaTest {
     )
     assertEquals(
         mapOf("GASTO" to 1_500L),
-        db.movimientoQueries.sumMovimientosByTipo("COP").executeAsList().associate {
-          it.tipo to it.total_minor
-        },
+        db.movimientoQueries.totalsByTipo("COP"),
     )
   }
 
@@ -1122,16 +1166,17 @@ class DatabaseSchemaTest {
       val categorias = db.categoriaQueries
       val etiquetas = db.etiquetaQueries
 
-      assertEquals(listOf("2026"), movimientos.selectMovimientoYears("COP").executeAsList())
+      assertEquals(
+          listOf("2026"),
+          db.transferenciaQueries.selectActividadYears("COP").executeAsList(),
+      )
       assertEquals(
           listOf("cafe"),
           movimientos.selectCategoryHistory(10).executeAsList().map { it.titulo },
       )
       assertEquals(
           mapOf("GASTO" to 100L),
-          movimientos.sumMovimientosByTipo("COP").executeAsList().associate {
-            it.tipo to it.total_minor
-          },
+          movimientos.totalsByTipo("COP"),
       )
       assertEquals(
           listOf(Triple("cat_live", "GASTO", 100L)),

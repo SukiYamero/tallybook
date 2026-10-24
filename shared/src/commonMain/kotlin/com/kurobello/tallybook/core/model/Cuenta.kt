@@ -35,8 +35,37 @@ data class Cuenta(
   val moneda: Moneda
     get() = saldoInicial.moneda
 
+  /** The seeded cash cuenta of its currency, whose moneda never changes. */
+  val isDefaultCash: Boolean
+    get() = id == defaultCashId(moneda)
+
+  /**
+   * Why a movimiento cannot point at this cuenta with [medio] in [moneda], or null when it can. An
+   * archived cuenta only passes as [storedCuentaId], the one an edited movimiento already keeps.
+   */
+  fun rejectionFor(
+      medio: MedioPago,
+      moneda: Moneda,
+      storedCuentaId: String? = null,
+  ): CuentaRejection? =
+      when {
+        archivada && id != storedCuentaId -> CuentaRejection.ARCHIVED
+        tipo !in medio.compatibleTipos -> CuentaRejection.MEDIO_MISMATCH
+        moneda != this.moneda -> CuentaRejection.MONEDA_MISMATCH
+        else -> null
+      }
+
+  fun accepts(medio: MedioPago, moneda: Moneda, storedCuentaId: String? = null): Boolean =
+      rejectionFor(medio, moneda, storedCuentaId) == null
+
   companion object {
     /** Deterministic so two installations seeding the same default produce the same entity. */
     fun defaultCashId(moneda: Moneda): String = "cuenta_efectivo_${moneda.name.lowercase()}"
   }
+}
+
+enum class CuentaRejection {
+  ARCHIVED,
+  MEDIO_MISMATCH,
+  MONEDA_MISMATCH,
 }

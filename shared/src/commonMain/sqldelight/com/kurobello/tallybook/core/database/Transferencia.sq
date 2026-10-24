@@ -26,118 +26,73 @@ WHERE deleted_at IS NULL;
 CREATE INDEX transferencia_recent ON transferencia(fecha DESC, created_at DESC, id DESC)
 WHERE deleted_at IS NULL;
 
+-- Every read of a live transfer goes through this view, so one projection and one mapper serve them
+-- all. Inner joins: a transfer whose cuenta is gone has no currency to read its amounts in; a
+-- tombstoned cuenta still owns its transfers' currency.
+CREATE VIEW transferencia_con_monedas AS
+SELECT
+    transferencia.id,
+    transferencia.cuenta_origen_id,
+    transferencia.cuenta_destino_id,
+    transferencia.monto_origen_minor,
+    origen.moneda AS moneda_origen,
+    transferencia.monto_destino_minor,
+    destino.moneda AS moneda_destino,
+    transferencia.fecha,
+    transferencia.descripcion,
+    transferencia.created_at
+FROM transferencia
+JOIN cuenta AS origen ON origen.id = transferencia.cuenta_origen_id
+JOIN cuenta AS destino ON destino.id = transferencia.cuenta_destino_id
+WHERE transferencia.deleted_at IS NULL;
+
 insertTransferencia:
 INSERT INTO transferencia(id, cuenta_origen_id, cuenta_destino_id, monto_origen_minor, monto_destino_minor, fecha, descripcion, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 
--- Inner joins: a transfer whose cuenta is gone has no currency to read its amounts in.
 selectTransferenciaById:
-SELECT
-    transferencia.id,
-    transferencia.cuenta_origen_id,
-    transferencia.cuenta_destino_id,
-    transferencia.monto_origen_minor,
-    origen.moneda AS moneda_origen,
-    transferencia.monto_destino_minor,
-    destino.moneda AS moneda_destino,
-    transferencia.fecha,
-    transferencia.descripcion,
-    transferencia.created_at
-FROM transferencia
-JOIN cuenta AS origen ON origen.id = transferencia.cuenta_origen_id
-JOIN cuenta AS destino ON destino.id = transferencia.cuenta_destino_id
-WHERE transferencia.id = ? AND transferencia.deleted_at IS NULL;
+SELECT *
+FROM transferencia_con_monedas
+WHERE id = ?;
 
 selectAllTransferencias:
-SELECT
-    transferencia.id,
-    transferencia.cuenta_origen_id,
-    transferencia.cuenta_destino_id,
-    transferencia.monto_origen_minor,
-    origen.moneda AS moneda_origen,
-    transferencia.monto_destino_minor,
-    destino.moneda AS moneda_destino,
-    transferencia.fecha,
-    transferencia.descripcion,
-    transferencia.created_at
-FROM transferencia
-JOIN cuenta AS origen ON origen.id = transferencia.cuenta_origen_id
-JOIN cuenta AS destino ON destino.id = transferencia.cuenta_destino_id
-WHERE transferencia.deleted_at IS NULL
-ORDER BY transferencia.fecha DESC, transferencia.created_at DESC, transferencia.id DESC;
+SELECT *
+FROM transferencia_con_monedas
+ORDER BY fecha DESC, created_at DESC, id DESC;
 
 selectRecentTransferencias:
-SELECT
-    transferencia.id,
-    transferencia.cuenta_origen_id,
-    transferencia.cuenta_destino_id,
-    transferencia.monto_origen_minor,
-    origen.moneda AS moneda_origen,
-    transferencia.monto_destino_minor,
-    destino.moneda AS moneda_destino,
-    transferencia.fecha,
-    transferencia.descripcion,
-    transferencia.created_at
-FROM transferencia
-JOIN cuenta AS origen ON origen.id = transferencia.cuenta_origen_id
-JOIN cuenta AS destino ON destino.id = transferencia.cuenta_destino_id
-WHERE transferencia.deleted_at IS NULL
-ORDER BY transferencia.fecha DESC, transferencia.created_at DESC, transferencia.id DESC
+SELECT *
+FROM transferencia_con_monedas
+ORDER BY fecha DESC, created_at DESC, id DESC
 LIMIT ?;
 
 -- Activity reads: a transfer belongs to every currency one of its sides is in. History's range uses
 -- the same inclusive bounds as selectMovimientosInRange, so it seeks transferencia_recent.
 selectTransferenciasInRange:
-SELECT
-    transferencia.id,
-    transferencia.cuenta_origen_id,
-    transferencia.cuenta_destino_id,
-    transferencia.monto_origen_minor,
-    origen.moneda AS moneda_origen,
-    transferencia.monto_destino_minor,
-    destino.moneda AS moneda_destino,
-    transferencia.fecha,
-    transferencia.descripcion,
-    transferencia.created_at
-FROM transferencia
-JOIN cuenta AS origen ON origen.id = transferencia.cuenta_origen_id
-JOIN cuenta AS destino ON destino.id = transferencia.cuenta_destino_id
-WHERE transferencia.deleted_at IS NULL
-  AND transferencia.fecha >= :start_date
-  AND transferencia.fecha <= :end_date
-  AND (origen.moneda = :moneda OR destino.moneda = :moneda)
-ORDER BY transferencia.fecha DESC, transferencia.created_at DESC, transferencia.id DESC;
+SELECT *
+FROM transferencia_con_monedas
+WHERE fecha >= :start_date
+  AND fecha <= :end_date
+  AND (moneda_origen = :moneda OR moneda_destino = :moneda)
+ORDER BY fecha DESC, created_at DESC, id DESC;
 
 -- Search's read; like the movimiento filters, :cuenta_filter switches the cuenta set, which matches
 -- either side.
 selectFilteredTransferencias:
-SELECT
-    transferencia.id,
-    transferencia.cuenta_origen_id,
-    transferencia.cuenta_destino_id,
-    transferencia.monto_origen_minor,
-    origen.moneda AS moneda_origen,
-    transferencia.monto_destino_minor,
-    destino.moneda AS moneda_destino,
-    transferencia.fecha,
-    transferencia.descripcion,
-    transferencia.created_at
-FROM transferencia
-JOIN cuenta AS origen ON origen.id = transferencia.cuenta_origen_id
-JOIN cuenta AS destino ON destino.id = transferencia.cuenta_destino_id
-WHERE transferencia.deleted_at IS NULL
-  AND (origen.moneda = :moneda OR destino.moneda = :moneda)
-  AND (:start_date IS NULL OR transferencia.fecha >= :start_date)
-  AND (:end_date IS NULL OR transferencia.fecha <= :end_date)
+SELECT *
+FROM transferencia_con_monedas
+WHERE (moneda_origen = :moneda OR moneda_destino = :moneda)
+  AND (:start_date IS NULL OR fecha >= :start_date)
+  AND (:end_date IS NULL OR fecha <= :end_date)
   AND (
       :cuenta_filter = 0
-      OR +transferencia.cuenta_origen_id IN :cuenta_ids
-      OR +transferencia.cuenta_destino_id IN :cuenta_ids
+      OR +cuenta_origen_id IN :cuenta_ids
+      OR +cuenta_destino_id IN :cuenta_ids
   )
-ORDER BY transferencia.fecha DESC, transferencia.created_at DESC, transferencia.id DESC;
+ORDER BY fecha DESC, created_at DESC, id DESC;
 
--- Like selectMovimientoYears, the year is cut from the text because SQLite date functions have a
--- narrower year domain; UNION keeps a year once whichever kind has it.
+-- The year is cut from the text because SQLite date functions have a narrower year domain than the
+-- canonical LocalDate text persisted; UNION keeps a year once whichever kind has it.
 selectActividadYears:
 SELECT actividad_year
 FROM (
@@ -146,12 +101,9 @@ FROM (
     JOIN cuenta ON cuenta.id = movimiento.cuenta_id
     WHERE cuenta.moneda = :moneda AND movimiento.deleted_at IS NULL
     UNION
-    SELECT substr(transferencia.fecha, 1, length(transferencia.fecha) - 6)
-    FROM transferencia
-    JOIN cuenta AS origen ON origen.id = transferencia.cuenta_origen_id
-    JOIN cuenta AS destino ON destino.id = transferencia.cuenta_destino_id
-    WHERE transferencia.deleted_at IS NULL
-      AND (origen.moneda = :moneda OR destino.moneda = :moneda)
+    SELECT substr(fecha, 1, length(fecha) - 6)
+    FROM transferencia_con_monedas
+    WHERE moneda_origen = :moneda OR moneda_destino = :moneda
 )
 ORDER BY CAST(actividad_year AS INTEGER) DESC;
 

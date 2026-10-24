@@ -266,7 +266,7 @@ internal class NavigationMovimientos : MovimientoRepository, ActividadRepository
   ): Flow<DataOutcome<List<Actividad>>> =
       observeRange(moneda, range).map { outcome -> outcome.map { it.map(Actividad::DeMovimiento) } }
 
-  override fun observeRange(
+  private fun observeRange(
       moneda: Moneda,
       range: MovimientoDateRange,
   ): Flow<DataOutcome<List<Movimiento>>> = flow {
@@ -306,23 +306,8 @@ internal class NavigationMovimientos : MovimientoRepository, ActividadRepository
         }
       }
 
-  override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = flow {
-    activeRecent.incrementAndGet()
-    try {
-      emitAll(rows.map { DataOutcome.Success(it.sortedWith(navigationStorageOrder).take(limit)) })
-    } finally {
-      activeRecent.decrementAndGet()
-    }
-  }
-
   override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> = rows.map {
     DataOutcome.Success(it.map { row -> row.fecha.year }.distinct())
-  }
-
-  override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> = rows.map {
-    DataOutcome.Success(
-        MovimientoSummary(Money(0, moneda), Money(it.sumOf { row -> row.monto.minorUnits }, moneda))
-    )
   }
 
   override fun observeSummary(
@@ -391,11 +376,6 @@ internal class NavigationMovimientos : MovimientoRepository, ActividadRepository
     val values = rows.value + movimiento
     rows.value = values
     return DataOutcome.Success(RestoreResult.Restored)
-  }
-
-  override suspend fun delete(id: String): DataOutcome<Unit> {
-    rows.value = rows.value.filter { it.id != id }
-    return DataOutcome.Success(Unit)
   }
 
   override suspend fun getAll(): DataOutcome<List<Movimiento>> = DataOutcome.Success(rows.value)

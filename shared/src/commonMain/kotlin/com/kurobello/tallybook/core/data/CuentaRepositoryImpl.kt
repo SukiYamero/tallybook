@@ -12,6 +12,7 @@ import com.kurobello.tallybook.core.model.CuentaRules
 import com.kurobello.tallybook.core.model.CuentaWrite
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.Money
 import kotlin.time.Clock
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
@@ -34,6 +35,14 @@ internal class CuentaRepositoryImpl(
           .asFlow()
           .mapToList(dispatcher)
           .map { rows -> rows.map { it.toDomain() } }
+          .asLocalDataOutcome()
+
+  override fun observeReferencedIds(): Flow<DataOutcome<Set<String>>> =
+      queries
+          .selectReferencedCuentaIds()
+          .asFlow()
+          .mapToList(dispatcher)
+          .map { it.toSet() }
           .asLocalDataOutcome()
 
   override suspend fun getById(id: String): DataOutcome<Cuenta?> =
@@ -89,12 +98,11 @@ internal class CuentaRepositoryImpl(
                     diaCorte = clean.diaCorte,
                 )
             val duplicate = queries.findDuplicate(clean, excludingId = id)
-            val referenced by lazy { queries.references(id) > 0L }
+            val referenced by lazy { id in queries.selectReferencedCuentaIds().executeAsList() }
             DataOutcome.Success(
                 when {
                   duplicate != null -> CuentaWrite.Duplicate(duplicate)
-                  updated.moneda != current.moneda &&
-                      (referenced || id == Cuenta.defaultCashId(current.moneda)) ->
+                  updated.moneda != current.moneda && (current.isDefaultCash || referenced) ->
                       CuentaWrite.CurrencyLocked
                   // Stored medios were checked against the current tipo, so it cannot move under
                   // them.
@@ -181,10 +189,11 @@ internal class CuentaRepositoryImpl(
 
 private fun normalize(draft: CuentaDraft): DataOutcome<CuentaDraft> {
   val errors = CuentaRules.validate(draft.nombre, draft.tipo, draft.diaCorte)
-  return if (errors.isValid) {
-    DataOutcome.Success(draft.copy(nombre = draft.nombre.trim()))
-  } else {
-    DataOutcome.Failure(DataError.InvalidInput("Invalid cuenta draft: $errors"))
+  return when {
+    !errors.isValid -> DataOutcome.Failure(DataError.InvalidInput("Invalid cuenta draft: $errors"))
+    draft.saldoInicial.minorUnits !in -Money.MAX_MINOR_UNITS..Money.MAX_MINOR_UNITS ->
+        DataOutcome.Failure(DataError.InvalidInput("Cuenta opening balance exceeds the maximum"))
+    else -> DataOutcome.Success(draft.copy(nombre = draft.nombre.trim()))
   }
 }
 

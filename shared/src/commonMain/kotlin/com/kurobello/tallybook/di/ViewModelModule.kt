@@ -3,7 +3,6 @@ package com.kurobello.tallybook.di
 import com.kurobello.tallybook.AppDisplayViewModel
 import com.kurobello.tallybook.AppStartupViewModel
 import com.kurobello.tallybook.core.data.CivilToday
-import com.kurobello.tallybook.core.data.export.MovimientoExportSource
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackViewModel
 import com.kurobello.tallybook.feature.accounts.viewmodel.AccountsViewModel
 import com.kurobello.tallybook.feature.accounts.viewmodel.QuickCuentaViewModel
@@ -100,7 +99,7 @@ internal val viewModelModule = module {
         preferencesRepository = get(),
         export =
             ProfileExportDependencies(
-                source = MovimientoExportSource(get(), get(), get(), get(), get()),
+                source = get(),
                 sharer = get(),
                 clock = get(),
                 timeZoneProvider = get(),
