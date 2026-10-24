@@ -75,4 +75,19 @@ class MedioPagoTest {
       }
     }
   }
+
+  @Test
+  fun everyTipoCuentaHasACompatibleDefaultMedio() {
+    val expected =
+        mapOf(
+            TipoCuenta.EFECTIVO to MedioPago.EFECTIVO,
+            TipoCuenta.BANCO to MedioPago.DEBITO,
+            TipoCuenta.CREDITO to MedioPago.CREDITO,
+        )
+
+    assertEquals(expected, TipoCuenta.entries.associateWith { it.defaultMedio })
+    for (tipo in TipoCuenta.entries) {
+      assertTrue(tipo in tipo.defaultMedio.compatibleTipos, "$tipo")
+    }
+  }
 }

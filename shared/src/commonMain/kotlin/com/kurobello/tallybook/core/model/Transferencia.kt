@@ -16,45 +16,55 @@ data class Transferencia(
     val createdAt: Instant,
 )
 
-enum class TransferenciaError {
-  SAME_CUENTA,
-  MONTO_ORIGEN_MONEDA,
-  MONTO_ORIGEN_NOT_POSITIVE,
-  MONTO_DESTINO_MONEDA,
-  MONTO_DESTINO_NOT_POSITIVE,
-  MONTOS_DIFFER,
-  FECHA_FUTURE,
-  DESCRIPCION_TOO_LONG,
+enum class TransferenciaMontoError {
+  WRONG_MONEDA,
+  NOT_POSITIVE,
+  DIFFERS_FROM_ORIGEN,
 }
 
-/** Returns the first failing field in form order, or null when the transfer can be saved. */
+data class TransferenciaErrors(
+    val sameCuenta: Boolean = false,
+    val montoOrigen: TransferenciaMontoError? = null,
+    val montoDestino: TransferenciaMontoError? = null,
+    val fechaFuture: Boolean = false,
+    val descripcionTooLong: Boolean = false,
+) {
+  val isValid: Boolean
+    get() = this == TransferenciaErrors()
+}
+
 object TransferenciaRules {
   fun validate(
       transferencia: Transferencia,
       origen: Cuenta,
       destino: Cuenta,
       today: LocalDate,
-  ): TransferenciaError? {
+  ): TransferenciaErrors {
     require(
         origen.id == transferencia.cuentaOrigenId && destino.id == transferencia.cuentaDestinoId
     ) {
       "Accounts must be the transferencia's origin and destination"
     }
-    val origenMonto = transferencia.montoOrigen
-    val destinoMonto = transferencia.montoDestino
-    return when {
-      transferencia.cuentaOrigenId == transferencia.cuentaDestinoId ->
-          TransferenciaError.SAME_CUENTA
-      origenMonto.moneda != origen.moneda -> TransferenciaError.MONTO_ORIGEN_MONEDA
-      origenMonto.minorUnits <= 0 -> TransferenciaError.MONTO_ORIGEN_NOT_POSITIVE
-      destinoMonto.moneda != destino.moneda -> TransferenciaError.MONTO_DESTINO_MONEDA
-      destinoMonto.minorUnits <= 0 -> TransferenciaError.MONTO_DESTINO_NOT_POSITIVE
-      origen.moneda == destino.moneda && origenMonto != destinoMonto ->
-          TransferenciaError.MONTOS_DIFFER
-      transferencia.fecha > today -> TransferenciaError.FECHA_FUTURE
-      (transferencia.descripcion?.length ?: 0) > TRANSFERENCIA_DESCRIPCION_MAX ->
-          TransferenciaError.DESCRIPCION_TOO_LONG
-      else -> null
-    }
+    val montoOrigen = transferencia.montoOrigen
+    val montoDestino = transferencia.montoDestino
+    return TransferenciaErrors(
+        sameCuenta = transferencia.cuentaOrigenId == transferencia.cuentaDestinoId,
+        montoOrigen = montoError(montoOrigen, origen.moneda),
+        montoDestino =
+            montoError(montoDestino, destino.moneda)
+                ?: TransferenciaMontoError.DIFFERS_FROM_ORIGEN.takeIf {
+                  origen.moneda == destino.moneda && montoDestino != montoOrigen
+                },
+        fechaFuture = transferencia.fecha > today,
+        descripcionTooLong =
+            (transferencia.descripcion?.length ?: 0) > TRANSFERENCIA_DESCRIPCION_MAX,
+    )
   }
+
+  private fun montoError(monto: Money, moneda: Moneda): TransferenciaMontoError? =
+      when {
+        monto.moneda != moneda -> TransferenciaMontoError.WRONG_MONEDA
+        monto.minorUnits <= 0 -> TransferenciaMontoError.NOT_POSITIVE
+        else -> null
+      }
 }

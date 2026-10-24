@@ -5,8 +5,20 @@ import kotlin.time.Instant
 enum class TipoCuenta {
   EFECTIVO,
   BANCO,
-  CREDITO,
+  CREDITO;
+
+  /** The medio implied when only the account is known, e.g. a sentence naming "Nequi". */
+  val defaultMedio: MedioPago
+    get() = defaultMedios.getValue(this)
 }
+
+// A map instead of a constructor argument: MedioPago's entries already reference TipoCuenta.
+private val defaultMedios: Map<TipoCuenta, MedioPago> =
+    mapOf(
+        TipoCuenta.EFECTIVO to MedioPago.EFECTIVO,
+        TipoCuenta.BANCO to MedioPago.DEBITO,
+        TipoCuenta.CREDITO to MedioPago.CREDITO,
+    )
 
 /**
  * [saldoInicial] is signed and stored as received: a credit card's opening debt is already negative

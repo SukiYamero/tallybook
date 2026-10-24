@@ -42,7 +42,10 @@ the shared type/medio icons and labels that Stages 3 and 4 both consume.
 ## Contracts
 
 ```kotlin
-enum class TipoCuenta { EFECTIVO, BANCO, CREDITO }
+enum class TipoCuenta {
+  EFECTIVO, BANCO, CREDITO;
+  val defaultMedio: MedioPago                   // EFECTIVO→EFECTIVO, BANCO→DEBITO, CREDITO→CREDITO
+}
 
 enum class MedioPago {
   EFECTIVO, DEBITO, TRANSFERENCIA, CREDITO;
@@ -65,7 +68,12 @@ data class Transferencia(
 )
 
 object CuentaRules { const val NOMBRE_MAX = 30; fun nombreKey(nombre: String, moneda: Moneda): String; fun validate(...) }
-object TransferenciaRules { fun validate(t: Transferencia, origen: Cuenta, destino: Cuenta, today: LocalDate): TransferenciaError? }
+/** Every failing field at once, like CuentaRules: the Stage 3 form shows all errors together. */
+data class TransferenciaErrors(
+    val sameCuenta: Boolean, val montoOrigen: TransferenciaMontoError?, val montoDestino: TransferenciaMontoError?,
+    val fechaFuture: Boolean, val descripcionTooLong: Boolean,
+) { val isValid: Boolean }
+object TransferenciaRules { fun validate(t: Transferencia, origen: Cuenta, destino: Cuenta, today: LocalDate): TransferenciaErrors }
 
 /** Inclusive civil range of the cycle containing [today]; calendar month when [diaCorte] is null. */
 fun creditCycle(today: LocalDate, diaCorte: Int?): MovimientoDateRange
@@ -75,7 +83,9 @@ data class CreditEstimate(val deuda: Money, val cycleSpending: Money, val cycle:
 ```
 
 Exact field names may adapt to existing conventions; the semantics may not. `MedioPago` also exposes
-the gasto → ingreso switch (`DEBITO` → `TRANSFERENCIA`) as one function.
+the gasto → ingreso switch (`DEBITO` → `TRANSFERENCIA`) as one function. `TipoCuenta.defaultMedio` is the single
+owner of the medio implied by an account type: Stage 2/task2 `defaultSelection` and the Stage 4 parser
+consume it instead of re-deriving it.
 
 ## Exact rules
 
