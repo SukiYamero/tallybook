@@ -61,6 +61,7 @@ internal fun MovimientoForm(
     interactionEnabled: Boolean = true,
     categoryCreation: CategoryPickerCreation? = null,
     onDeselectCategoria: (() -> Unit)? = null,
+    onCreateCuenta: (() -> Unit)? = null,
 ) {
   val fieldFocus = remember { MovimientoFieldFocus() }
   val categoryPicker = rememberMovimientoPicker(interactionEnabled)
@@ -108,6 +109,7 @@ internal fun MovimientoForm(
                 onDeselectCategoria = onDeselectCategoria,
                 onAddEtiqueta = etiquetaPicker.onOpen,
                 onChooseCuenta = cuentaPicker.onOpen,
+                onCreateCuenta = onCreateCuenta,
             ),
         fieldFocus = fieldFocus.copy(amountModifier = Modifier.revealWhenFocused()),
     )

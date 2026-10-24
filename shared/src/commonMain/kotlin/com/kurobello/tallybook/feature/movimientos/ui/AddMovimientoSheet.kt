@@ -33,6 +33,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookModalBottomSheet
 import com.kurobello.tallybook.core.ui.component.TallybookModalDialog
 import com.kurobello.tallybook.core.ui.component.rememberDismissGuard
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import com.kurobello.tallybook.feature.accounts.viewmodel.QuickCuentaViewModel
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoEffect
@@ -82,6 +83,7 @@ private fun AddMovimientoSheet(
     callbacks: ModalBottomSheetCallbacks,
     modifier: Modifier = Modifier,
     categoryCreation: CategoryPickerCreation? = null,
+    cuentaCreation: CuentaCreation? = null,
 ) {
   val dismissGuard =
       rememberDismissGuard(
@@ -96,7 +98,11 @@ private fun AddMovimientoSheet(
           etiqueta = rememberMovimientoPicker(interactionEnabled = !uiState.isSubmitting),
           cuenta = rememberMovimientoPicker(interactionEnabled = !uiState.isSubmitting),
       )
-  val pickers = pickerStates.callbacks
+  val pickers =
+      pickerStates.callbacks(
+          onCreateCuenta =
+              cuentaCreation?.let { creation -> { creation.start(uiState.cuentaField) } }
+      )
   val isSentence = uiState.step == AddMovimientoStep.PHRASE
   // Either surface also hides when the flow moves between them; only a closed session is final.
   val currentVisible by rememberUpdatedState(visible)
@@ -127,6 +133,7 @@ private fun AddMovimientoSheet(
       modifier = modifier,
   )
   EntryPickerSheets(uiState, actions, pickerStates, categoryCreation)
+  CuentaCreationSheet(cuentaCreation, uiState.cuentaField, actions::onCuentaSelected)
   DiscardEntryConfirmation(dismissGuard)
 }
 
@@ -172,7 +179,7 @@ private fun MovimientoSentenceDialog(
           onChooseCategoria = pickers.onChooseCategoria,
           onSuggestion = { actions.onSuggestionSelected(it.id) },
           etiquetas = actions.etiquetasCallbacks(onAdd = pickers.onAddEtiqueta),
-          cuenta = actions.cuentaCallbacks(onOpenPicker = pickers.onChooseCuenta),
+          cuenta = actions.cuentaCallbacks(pickers.onChooseCuenta, pickers.onCreateCuenta),
       )
   TallybookModalDialog(
       visible = visible,
@@ -231,6 +238,7 @@ private fun MovimientoReviewSheet(
             actions = actions,
             categoryCreation = categoryCreation,
             onDeselectCategoria = actions::onCategoriaCleared,
+            onCreateCuenta = pickers.onCreateCuenta,
         )
       } else SummaryStepContent(shown, actions, pickers)
     }
@@ -278,7 +286,7 @@ private fun SummaryStepContent(
               onChooseCategoria = pickers.onChooseCategoria,
               onSuggestion = { actions.onSuggestionSelected(it.id) },
               etiquetas = actions.etiquetasCallbacks(onAdd = pickers.onAddEtiqueta),
-              cuenta = actions.cuentaCallbacks(onOpenPicker = pickers.onChooseCuenta),
+              cuenta = actions.cuentaCallbacks(pickers.onChooseCuenta, pickers.onCreateCuenta),
               onEdit = actions::onEditMovimiento,
               onSave = actions::onSubmit,
           ),
@@ -307,9 +315,11 @@ internal fun AddMovimientoSheetRoute(
     viewModel: AddMovimientoViewModel = koinViewModel(),
     quickCategoryViewModel: QuickCategoryViewModel =
         rememberQuickCategoryViewModel(QUICK_CATEGORY_ADD_KEY),
+    quickCuentaViewModel: QuickCuentaViewModel = rememberQuickCuentaViewModel(QUICK_CUENTA_ADD_KEY),
 ) {
   val uiState by viewModel.uiState.collectAsStateWithLifecycle()
   val quickCategoryState by quickCategoryViewModel.uiState.collectAsStateWithLifecycle()
+  val quickCuentaState by quickCuentaViewModel.uiState.collectAsStateWithLifecycle()
   AddMovimientoSavedEffect(effects = viewModel.effects, onSaved = onDismiss)
   QuickCategorySelectionEffect(
       effects = quickCategoryViewModel.effects,
@@ -327,6 +337,13 @@ internal fun AddMovimientoSheetRoute(
       callbacks = ModalBottomSheetCallbacks(onDismiss = onDismiss, onHidden = onHidden),
       modifier = modifier,
       categoryCreation = CategoryPickerCreation(quickCategoryState, quickCategoryViewModel),
+      cuentaCreation =
+          CuentaCreation(
+              state = quickCuentaState,
+              actions = quickCuentaViewModel,
+              effects = quickCuentaViewModel.effects,
+              moneda = uiState.primaryMoneda ?: uiState.moneda,
+          ),
   )
 }
 

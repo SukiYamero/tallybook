@@ -8,6 +8,7 @@
     <string name="entry_cuenta_search_empty">No hay cuentas que coincidan con “%1$s”.</string>
     <string name="entry_cuenta_empty">Para usar este medio, crea una cuenta de tipo %1$s.</string>
     <string name="entry_cuenta_empty_any">Para guardar el movimiento, crea tu primera cuenta.</string>
+    <string name="entry_cuenta_new_title">Nueva cuenta</string>
     <string name="entry_cuenta_create">Crear cuenta</string>
     <string name="entry_cuenta_also">También mencionaste</string>
     <string name="entry_medio_required">Elige el medio de pago para guardar.</string>

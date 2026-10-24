@@ -46,6 +46,7 @@ import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import com.kurobello.tallybook.feature.accounts.viewmodel.QuickCuentaViewModel
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoRepositories
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
@@ -85,6 +86,7 @@ class AddMovimientoSheetRouteTest {
               onDismiss = { dismissCount += 1 },
               viewModel = viewModel,
               quickCategoryViewModel = quickCategoryViewModel(scope),
+              quickCuentaViewModel = QuickCuentaViewModel(FakeCuentaRepository(), scope),
           )
         }
       }
@@ -124,6 +126,7 @@ class AddMovimientoSheetRouteTest {
               onHidden = { hidden += 1 },
               viewModel = viewModel,
               quickCategoryViewModel = quickCategoryViewModel(scope),
+              quickCuentaViewModel = QuickCuentaViewModel(FakeCuentaRepository(), scope),
           )
         }
       }

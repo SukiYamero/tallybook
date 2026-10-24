@@ -699,6 +699,7 @@ private fun AddMovimientoRepositories.preferenceLoadStates(
 /** The live cuentas plus the defaults resolved against them, once the primary currency is known. */
 private data class CuentaCatalog(val cuentas: List<Cuenta>, val defaults: CuentaDefaults)
 
+@OptIn(ExperimentalCoroutinesApi::class)
 private fun AddMovimientoRepositories.cuentaLoadStates(
     preferences: LoadState<AppPreferencesState>
 ): Flow<LoadState<CuentaCatalog>?> {

@@ -10,6 +10,7 @@ internal data class EntryPickers(
     val onChooseCategoria: () -> Unit,
     val onAddEtiqueta: () -> Unit,
     val onChooseCuenta: () -> Unit,
+    val onCreateCuenta: (() -> Unit)? = null,
 )
 
 internal data class EntryPickerStates(
@@ -17,8 +18,8 @@ internal data class EntryPickerStates(
     val etiqueta: MovimientoPickerState,
     val cuenta: MovimientoPickerState,
 ) {
-  val callbacks: EntryPickers
-    get() = EntryPickers(category.onOpen, etiqueta.onOpen, cuenta.onOpen)
+  fun callbacks(onCreateCuenta: (() -> Unit)?): EntryPickers =
+      EntryPickers(category.onOpen, etiqueta.onOpen, cuenta.onOpen, onCreateCuenta)
 }
 
 /** The picker sheets the dialog and the review open, hidden while the form shows its own. */

@@ -83,11 +83,11 @@ draft's `moneda` becomes a derived getter from the selected account; no second s
 - [x] RED `CuentaSelectionStateTest`: compatible-account filtering, tipo switch, ownership layering over a resolved default (fallbacks themselves are tested in Stage 2/task2).
 - [x] RED `AddMovimientoCuentaTest`: defaults, user ownership, currency follows account, CLP scale error, Save persists medio/cuenta, Fill manually keeps user-picked medio/account.
 - [x] RED `ManageMovimientoCuentaTest` (after rebasing on Stage 3 commit A): same-currency options, untouched archived account, no-op, repository rejection mapping.
-- [x] GREEN; shared components with previews; device test for medio → account selection (quick-create pending).
+- [x] GREEN; shared components with previews; device test for medio → account selection and quick-create.
 - [x] `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosSimulatorArm64 detekt ktfmtCheck :androidApp:assembleDebug`.
-- [ ] Quick-create: waits for Stage 3/task1's `QuickCuentaViewModel` and `AccountForm` on this branch.
+- [x] Quick-create: `CuentaCreationSheet` hosts Stage 3's `QuickCuentaViewModel` + `AccountForm(QUICK)`; type from `quickCuentaTipo(medio)`, currency primary (editor: stored); the created or reused cuenta is selected once the catalog lists it.
 
-## Implementation record (quick-create pending)
+## Implementation record
 
 - `CuentaSelectionState` has a third owner, `DEFAULT`, besides `SENTENCE`/`USER`: clearing the
   sentence or Discard must return to the repository's selection, which neither of the other two

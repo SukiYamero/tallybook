@@ -8,6 +8,7 @@
     <string name="entry_cuenta_search_empty">No accounts match “%1$s”.</string>
     <string name="entry_cuenta_empty">To use this method, create a %1$s account.</string>
     <string name="entry_cuenta_empty_any">To save this movement, create your first account.</string>
+    <string name="entry_cuenta_new_title">New account</string>
     <string name="entry_cuenta_create">Create account</string>
     <string name="entry_cuenta_also">You also mentioned</string>
     <string name="entry_medio_required">Choose a payment method to save.</string>
