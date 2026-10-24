@@ -89,14 +89,14 @@ Both reads run movimiento and transfer selects inside **one** `transactionWithRe
 
 ## TDD
 
-- [ ] RED repository: one-snapshot activity read, cross-currency sides, tombstones excluded, AND/OR across new dimensions, transfer visibility conditions.
-- [ ] RED History projection/VM: ordering, totals unchanged, cross-currency presence, failures.
-- [ ] RED Search filters/session/saved state, including migration of the saved tipo.
-- [ ] RED currency selector: hidden with one currency, default primary, restoration, View movements of
+- [x] RED repository: one-snapshot activity read, cross-currency sides, tombstones excluded, AND/OR across new dimensions, transfer visibility conditions.
+- [x] RED History projection/VM: ordering, totals unchanged, cross-currency presence, failures.
+- [x] RED Search filters/session/saved state, including migration of the saved tipo.
+- [x] RED currency selector: hidden with one currency, default primary, restoration, View movements of
       a USD account lands on USD with the account filter.
-- [ ] GREEN; filter sheet UI, rows, View movements wiring; previews.
-- [ ] Add transfers to the scale fixture; compile device tests.
-- [ ] `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosSimulatorArm64 detekt ktfmtCheck :androidApp:assembleDebug`.
+- [x] GREEN; filter sheet UI, rows, View movements wiring; previews.
+- [x] Add transfers to the scale fixture; compile device tests.
+- [x] `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosSimulatorArm64 detekt ktfmtCheck :androidApp:assembleDebug`.
 
 ## Blocks
 

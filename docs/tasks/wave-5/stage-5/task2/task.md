@@ -65,10 +65,10 @@ fun buildMovimientoCsv(
 
 ## TDD
 
-- [ ] RED `MovimientoCsvTest`: header order, movimiento row with medio/account, same- and cross-currency transfer rows, CLP scale, merged ordering, escaping of an account name with a comma and quote.
-- [ ] RED `ProfileViewModelTest`: export includes transfers and accounts, excludes tombstones, failure of either read fails the export without a partial file.
-- [ ] GREEN; labels in four locales.
-- [ ] `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosSimulatorArm64 detekt ktfmtCheck :androidApp:assembleDebug`.
+- [x] RED `MovimientoCsvTest`: header order, movimiento row with medio/account, same- and cross-currency transfer rows, CLP scale, merged ordering, escaping of an account name with a comma and quote.
+- [x] RED `ProfileViewModelTest`: export includes transfers and accounts, excludes tombstones, failure of either read fails the export without a partial file.
+- [x] GREEN; labels in four locales.
+- [x] `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosSimulatorArm64 detekt ktfmtCheck :androidApp:assembleDebug`.
 - [ ] Physical check: export from Profile on the Xiaomi, open in a spreadsheet app, verify columns.
 
 ## Blocks

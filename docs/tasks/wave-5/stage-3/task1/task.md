@@ -99,14 +99,14 @@ which adds `cuentaIds` to `SearchFilterRequest`/`PrimaryNavigator.showSearchFilt
 
 ## TDD
 
-- [ ] RED: `AccountDraftStateTest` — normalization, 30-char cap, positive opening debt ↔ negative `saldoInicial` round trip (the only conversion), `diaCorte` only for credit, baseline dirtiness.
-- [ ] RED: `AccountsViewModelTest` — grouping/ordering, per-currency totals, credit estimates, every repository rejection mapped inline, retry, stale load rejection.
-- [ ] RED: `HomeViewModelTest` — total balance from the read model, month secondary values, month rollover on resume.
-- [ ] RED: `HomeViewModelTest` — no live primary-currency account: zero total in the primary currency, Accounts entry still enabled.
-- [ ] GREEN each; then screens, previews (light/dark), nav destination and Profile link.
-- [ ] Device tests: Profile → Accounts → back; create account from the sheet; Home card opens Accounts.
-- [ ] `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosSimulatorArm64 detekt ktfmtCheck :androidApp:assembleDebug`.
-- [ ] Device tests compile (`:shared:compileAndroidDeviceTestKotlinAndroid` or the task the wrapper lists); execution follows the backlog runner limits.
+- [x] RED: `AccountDraftStateTest` — normalization, 30-char cap, positive opening debt ↔ negative `saldoInicial` round trip (the only conversion), `diaCorte` only for credit, baseline dirtiness.
+- [x] RED: `AccountsViewModelTest` — grouping/ordering, per-currency totals, credit estimates, every repository rejection mapped inline, retry, stale load rejection.
+- [x] RED: `HomeViewModelTest` — total balance from the read model, month secondary values, month rollover on resume.
+- [x] RED: `HomeViewModelTest` — no live primary-currency account: zero total in the primary currency, Accounts entry still enabled.
+- [x] GREEN each; then screens, previews (light/dark), nav destination and Profile link.
+- [x] Device tests: Profile → Accounts → back; create account from the sheet; Home card opens Accounts.
+- [x] `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosSimulatorArm64 detekt ktfmtCheck :androidApp:assembleDebug`.
+- [x] Device tests compile (`:shared:compileAndroidDeviceTestKotlinAndroid` or the task the wrapper lists); execution follows the backlog runner limits.
 
 ## Blocks
 

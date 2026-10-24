@@ -90,11 +90,11 @@ internal sealed interface TransferEntry {
 
 ## TDD
 
-- [ ] Commit A RED: queue tests for mixed movimiento/transfer snapshots, arrival order, single claim, retry, release; existing feedback tests stay green unchanged in assertions.
-- [ ] Commit A GREEN, then run the movimiento management suite; push commit A and notify the orchestrator so Stage 4 can rebase.
-- [ ] Commit B RED: draft validation (same account, zero, future date, missing received amount), Pay card prefill (same and cross-currency origin), edit/delete/Undo through the queue, late callback rejection.
-- [ ] GREEN; form UI, previews, device test for create → delete → Undo.
-- [ ] `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosSimulatorArm64 detekt ktfmtCheck :androidApp:assembleDebug`.
+- [x] Commit A RED: queue tests for mixed movimiento/transfer snapshots, arrival order, single claim, retry, release; existing feedback tests stay green unchanged in assertions.
+- [x] Commit A GREEN, then run the movimiento management suite; push commit A and notify the orchestrator so Stage 4 can rebase.
+- [x] Commit B RED: draft validation (same account, zero, future date, missing received amount), Pay card prefill (same and cross-currency origin), edit/delete/Undo through the queue, late callback rejection.
+- [x] GREEN; form UI, previews, device test for create → delete → Undo.
+- [x] `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosSimulatorArm64 detekt ktfmtCheck :androidApp:assembleDebug`.
 
 ## Blocks
 
