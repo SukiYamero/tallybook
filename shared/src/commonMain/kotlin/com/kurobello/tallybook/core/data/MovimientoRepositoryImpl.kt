@@ -9,6 +9,7 @@ import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaRejection
 import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
@@ -402,24 +403,24 @@ internal class MovimientoRepositoryImpl(
   }
 
   // Checked inside the write transaction so an archive or delete cannot slip between check and
-  // write. A [stored] movimiento keeps its archived cuenta only while the edit leaves it untouched.
-  // A medio never outlives its cuenta's type: the type is locked while a live movimiento uses it.
+  // write. A medio never outlives its cuenta's type: the type is locked while a live movimiento
+  // uses it.
   private fun invalidCuenta(
       cuentaId: String,
       medio: MedioPago,
       monto: Money,
       stored: Movimiento? = null,
   ): DataError.InvalidInput? {
-    val cuenta = database.cuentaQueries.selectCuentaById(cuentaId).executeAsOneOrNull()?.toDomain()
-    val keepsCuenta = stored?.cuentaId == cuentaId
-    return when {
-      cuenta == null -> DataError.InvalidInput("Unknown cuenta $cuentaId")
-      cuenta.archivada && !keepsCuenta -> DataError.InvalidInput("Cuenta $cuentaId is archived")
-      cuenta.tipo !in medio.compatibleTipos ->
+    val cuenta =
+        database.cuentaQueries.selectCuentaById(cuentaId).executeAsOneOrNull()?.toDomain()
+            ?: return DataError.InvalidInput("Unknown cuenta $cuentaId")
+    return when (cuenta.rejectionFor(medio, monto.moneda, stored?.cuentaId)) {
+      null -> null
+      CuentaRejection.ARCHIVED -> DataError.InvalidInput("Cuenta $cuentaId is archived")
+      CuentaRejection.MEDIO_MISMATCH ->
           DataError.InvalidInput("Medio $medio does not fit a ${cuenta.tipo} cuenta")
-      monto.moneda != cuenta.moneda ->
+      CuentaRejection.MONEDA_MISMATCH ->
           DataError.InvalidInput("Movimiento currency must be its cuenta's ${cuenta.moneda}")
-      else -> null
     }
   }
 

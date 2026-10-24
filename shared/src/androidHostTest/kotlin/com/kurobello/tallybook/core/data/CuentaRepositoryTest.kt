@@ -26,6 +26,7 @@ import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -195,6 +196,29 @@ class CuentaRepositoryTest {
           )
         }
       }
+
+  @Test
+  fun `referenced ids follow live movimientos and transfers on either side`() = runTest {
+    withRepository { driver, database, _, repository ->
+      val nequi = repository.create(draft("Nequi", TipoCuenta.BANCO)).saved()
+      val nu = repository.create(draft("NU", TipoCuenta.CREDITO)).saved()
+      val emissions = mutableListOf<DataOutcome<Set<String>>>()
+      backgroundScope.launch { repository.observeReferencedIds().collect(emissions::add) }
+      testScheduler.runCurrent()
+      assertEquals(DataOutcome.Success(emptySet()), emissions.last())
+
+      database.insertLegacy(movimiento("mov", nequi.id))
+      database.insertTransferenciaRow(transferencia("out", COP_CASH.id, nu.id), SEED)
+      testScheduler.runCurrent()
+      assertEquals(DataOutcome.Success(setOf(nequi.id, COP_CASH.id, nu.id)), emissions.last())
+
+      driver.tombstone("movimiento", "mov")
+      driver.tombstone("transferencia", "out")
+      driver.notifyListeners("movimiento", "transferencia")
+      testScheduler.runCurrent()
+      assertEquals(DataOutcome.Success(emptySet()), emissions.last())
+    }
+  }
 
   @Test
   fun `a default cash cuenta keeps its currency even while unused`() = runTest {

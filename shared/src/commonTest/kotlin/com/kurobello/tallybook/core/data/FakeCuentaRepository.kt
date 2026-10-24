@@ -30,6 +30,10 @@ internal class FakeCuentaRepository(
 
   override fun observeAll(): Flow<DataOutcome<List<Cuenta>>> = cuentas.map { outcome { it } }
 
+  override fun observeReferencedIds(): Flow<DataOutcome<Set<String>>> = references.map { counts ->
+    outcome { counts.filterValues { it > 0L }.keys }
+  }
+
   override suspend fun getById(id: String): DataOutcome<Cuenta?> = outcome { find(id) }
 
   override suspend fun create(draft: CuentaDraft): DataOutcome<CuentaWrite> =
@@ -61,8 +65,7 @@ internal class FakeCuentaRepository(
       val duplicate = duplicateOf(clean, excludingId = id)
       when {
         duplicate != null -> CuentaWrite.Duplicate(duplicate)
-        updated.moneda != current.moneda &&
-            (referencesOf(id) > 0L || id == Cuenta.defaultCashId(current.moneda)) ->
+        updated.moneda != current.moneda && (current.isDefaultCash || referencesOf(id) > 0L) ->
             CuentaWrite.CurrencyLocked
         updated.tipo != current.tipo && referencesOf(id) > 0L -> CuentaWrite.TypeLocked
         else -> {

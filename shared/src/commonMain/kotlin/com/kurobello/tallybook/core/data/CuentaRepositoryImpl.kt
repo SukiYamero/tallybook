@@ -36,6 +36,14 @@ internal class CuentaRepositoryImpl(
           .map { rows -> rows.map { it.toDomain() } }
           .asLocalDataOutcome()
 
+  override fun observeReferencedIds(): Flow<DataOutcome<Set<String>>> =
+      queries
+          .selectReferencedCuentaIds()
+          .asFlow()
+          .mapToList(dispatcher)
+          .map { it.toSet() }
+          .asLocalDataOutcome()
+
   override suspend fun getById(id: String): DataOutcome<Cuenta?> =
       runLocalDataOperation(dispatcher) {
         queries.selectCuentaById(id).executeAsOneOrNull()?.toDomain()
@@ -89,12 +97,11 @@ internal class CuentaRepositoryImpl(
                     diaCorte = clean.diaCorte,
                 )
             val duplicate = queries.findDuplicate(clean, excludingId = id)
-            val referenced by lazy { queries.references(id) > 0L }
+            val referenced by lazy { id in queries.selectReferencedCuentaIds().executeAsList() }
             DataOutcome.Success(
                 when {
                   duplicate != null -> CuentaWrite.Duplicate(duplicate)
-                  updated.moneda != current.moneda &&
-                      (referenced || id == Cuenta.defaultCashId(current.moneda)) ->
+                  updated.moneda != current.moneda && (current.isDefaultCash || referenced) ->
                       CuentaWrite.CurrencyLocked
                   // Stored medios were checked against the current tipo, so it cannot move under
                   // them.
