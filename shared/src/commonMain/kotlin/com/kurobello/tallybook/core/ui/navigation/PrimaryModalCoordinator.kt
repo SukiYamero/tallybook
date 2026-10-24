@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSession
+import com.kurobello.tallybook.feature.transfers.viewmodel.TransferEntry
 
 internal interface DestinationModalController {
   val hasActiveSession: Boolean
@@ -18,6 +19,13 @@ internal interface MovimientoManagementController {
   fun open(id: String): Boolean
 }
 
+internal interface TransferManagementController {
+  val hasActiveSession: Boolean
+
+  fun open(entry: TransferEntry): Boolean
+}
+
+@Suppress("TooManyFunctions")
 internal class PrimaryModalCoordinator(
     private val creation: AddMovimientoSheetSession,
     private val isSearchSelected: () -> Boolean,
@@ -25,6 +33,8 @@ internal class PrimaryModalCoordinator(
   private var destinationModal: DestinationModalController? by mutableStateOf(null)
 
   private var management: MovimientoManagementController? by mutableStateOf(null)
+
+  private var transfer: TransferManagementController? by mutableStateOf(null)
 
   fun attachManagement(controller: MovimientoManagementController) {
     management = controller
@@ -37,6 +47,19 @@ internal class PrimaryModalCoordinator(
   fun tryOpenManagement(id: String): Boolean {
     if (!canStartModal) return false
     return management?.open(id) ?: false
+  }
+
+  fun attachTransfer(controller: TransferManagementController) {
+    transfer = controller
+  }
+
+  fun detachTransfer(controller: TransferManagementController) {
+    if (transfer === controller) transfer = null
+  }
+
+  fun tryOpenTransfer(entry: TransferEntry): Boolean {
+    if (!canStartModal) return false
+    return transfer?.open(entry) ?: false
   }
 
   fun dispatchFeedback(isForeground: Boolean, dispatch: () -> Unit): Boolean {
@@ -59,7 +82,8 @@ internal class PrimaryModalCoordinator(
     get() =
         creation.hasBeenOpened ||
             destinationModal?.hasActiveSession == true ||
-            management?.hasActiveSession == true
+            management?.hasActiveSession == true ||
+            transfer?.hasActiveSession == true
 
   fun attach(controller: DestinationModalController) {
     destinationModal = controller

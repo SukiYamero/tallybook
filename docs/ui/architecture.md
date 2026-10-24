@@ -755,8 +755,10 @@ management view models. `ManagementFeedbackViewModel` owns the single `Managemen
 an open management sheet blocks Undo claims and a claimed restore blocks new sheets.
 `ManageMovimientoViewModel` lives in the same owner, receives that queue on creation and owns the
 read generation, management session, editable draft, mutation and the pending committed outcome it
-enqueues once its sheet is hidden. The queue outlives every sheet so Undo does not depend on an
-entry or closing modal. The existing creation store/session remains separate.
+enqueues once its sheet is hidden. `ManageTransferenciaViewModel` (`feature/transfers`) lives in
+the same owner under the same contract for the transfer sheet (create, edit, delete); creating a
+transfer enqueues nothing, like movimiento creation. The queue outlives every sheet so Undo does not
+depend on an entry or closing modal. The existing creation store/session remains separate.
 
 The child uses the root parent's remembered creation extras and no saved-state registry.
 Supported Android configuration recreation retains the owner and claimed mutation; current iOS
@@ -764,8 +766,8 @@ ownership is scene-based and clears the child on active-scene disposal. Financia
 jobs and feedback tokens never enter saved state or preferences. A fresh process/scene starts closed.
 Host tests establish the actual owner/provider seam; physical iOS teardown is a separate runtime check.
 
-`PrimaryModalCoordinator` admits creation, management and the active destination's modal (Search
-filters, Profile option sheets) through one controller each, including loading, confirmations, submission
+`PrimaryModalCoordinator` admits creation, movimiento management, transfer management and the
+active destination's modal (Search filters, Profile option sheets) through one controller each, including loading, confirmations, submission
 and Closing. Primary navigation waits while a modal
 owns the window. During Undo restoration, tabs can change but all new modal sessions wait.
 Callbacks carry origin/token/revision; delayed callbacks cannot close a new session, duplicate feedback

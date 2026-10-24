@@ -33,6 +33,9 @@ import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewMo
 import com.kurobello.tallybook.feature.profile.ui.ProfileRoute
 import com.kurobello.tallybook.feature.search.ui.SearchRoute
 import com.kurobello.tallybook.feature.tags.ui.TagsRoute
+import com.kurobello.tallybook.feature.transfers.ui.TransferSheetRoute
+import com.kurobello.tallybook.feature.transfers.ui.recentTransferenciasContent
+import com.kurobello.tallybook.feature.transfers.viewmodel.TransferEntry
 import kotlinx.serialization.KSerializer
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -55,11 +58,16 @@ fun TallybookNavHost(
   val feedbackState by feedback.state.collectAsStateWithLifecycle()
   val management = rememberManageMovimientoViewModel(modals, managementOwner, feedback)
   val managementState by management.uiState.collectAsStateWithLifecycle()
+  val transfers = rememberManageTransferenciaViewModel(modals, managementOwner, feedback)
+  val transfersState by transfers.uiState.collectAsStateWithLifecycle()
   val navigator =
       remember(navigation, modals, developmentToolsEnabled) {
         PrimaryNavigator(navigation, modals, developmentToolsEnabled)
       }
   val openManagement = rememberOpenMovimiento(modals)
+  val openTransfer = rememberOpenTransfer(modals)
+  val openers =
+      remember(openManagement, openTransfer) { ManagementOpeners(openManagement, openTransfer) }
   PrimaryShell(
       state = navigation.value,
       onAdd = navigator::openCreation,
@@ -68,11 +76,18 @@ fun TallybookNavHost(
         ManagementFeedbackRoute(feedbackState, feedback, modals, clearance)
       },
   ) { clearance ->
-    PrimaryNavigationDisplay(navigator, clearance, openManagement)
+    PrimaryNavigationDisplay(navigator, clearance, openers)
   }
   AddMovimientoSessionRoute(sheetSession)
   ManageMovimientoRoute(managementState, management)
+  TransferSheetRoute(transfersState, transfers)
 }
+
+/** How primary destinations reopen records in the shell's management sheets. */
+private class ManagementOpeners(
+    val movimiento: (String) -> Unit,
+    val transfer: (TransferEntry) -> Unit,
+)
 
 @Composable
 private fun PrimaryShell(
@@ -102,13 +117,13 @@ private fun PrimaryShell(
 private fun PrimaryNavigationDisplay(
     navigator: PrimaryNavigator,
     clearance: Dp,
-    openManagement: (String) -> Unit,
+    openers: ManagementOpeners,
 ) {
   val state = navigator.state
   val entries =
       rememberPrimaryEntries(state) { destination ->
         NavEntry(destination, contentKey = primaryContentKey(destination)) {
-          PrimaryRoute(destination, navigator, clearance, openManagement)
+          PrimaryRoute(destination, navigator, clearance, openers)
         }
       }
   NavDisplay(
@@ -125,9 +140,10 @@ private fun PrimaryRoute(
     destination: Destination,
     navigator: PrimaryNavigator,
     clearance: Dp,
-    openManagement: (String) -> Unit,
+    openers: ManagementOpeners,
 ) {
   val state = navigator.state
+  val openManagement = openers.movimiento
   when (destination) {
     Home ->
         HomeRoute(
@@ -173,14 +189,25 @@ private fun PrimaryRoute(
             onBack = navigator::back,
             onShowTag = { id -> navigator.showSearchFilter(etiquetaIds = setOf(id)) },
         )
-    Accounts ->
-        AccountsRoute(
-            modals = navigator.modals,
-            active = state.secondary == Accounts,
-            onBack = navigator::back,
-            onTransfer = null,
-        )
+    Accounts -> AccountsDestination(navigator, openers.transfer)
   }
+}
+
+@Composable
+private fun AccountsDestination(
+    navigator: PrimaryNavigator,
+    openTransfer: (TransferEntry) -> Unit,
+) {
+  AccountsRoute(
+      modals = navigator.modals,
+      active = navigator.state.secondary == Accounts,
+      onBack = navigator::back,
+      onTransfer = { origenId, destinoId, prefill ->
+        openTransfer(TransferEntry.New(origenId, destinoId, prefill))
+      },
+      trailingContent =
+          recentTransferenciasContent { id -> openTransfer(TransferEntry.Existing(id)) },
+  )
 }
 
 @Composable

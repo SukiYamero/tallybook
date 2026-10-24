@@ -2,6 +2,7 @@ package com.kurobello.tallybook.feature.accounts.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -44,8 +45,10 @@ import tallybook.shared.generated.resources.account_updated
 
 /**
  * [onTransfer] opens the transfer between the user's accounts once the account sheet hid; while it
- * is null the sheet offers no transfer actions.
+ * is null the sheet offers no transfer actions. [trailingContent] follows the accounts while no
+ * search narrows them.
  */
+@Suppress("LongParameterList")
 @Composable
 internal fun AccountsRoute(
     modals: PrimaryModalCoordinator,
@@ -53,6 +56,7 @@ internal fun AccountsRoute(
     onBack: () -> Unit,
     onTransfer: ((origenId: String?, destinoId: String?, prefill: Money?) -> Unit)?,
     modifier: Modifier = Modifier,
+    trailingContent: LazyListScope.() -> Unit = {},
 ) {
   val viewModel: AccountsViewModel = koinViewModel()
   val state = viewModel.uiState.collectAsStateWithLifecycle()
@@ -100,7 +104,13 @@ internal fun AccountsRoute(
     }
   }
   Box(modifier = modifier.fillMaxSize()) {
-    AccountsScreen(uiState, actions, onBack, canTransfer = onTransfer != null)
+    AccountsScreen(
+        uiState,
+        actions,
+        onBack,
+        canTransfer = onTransfer != null,
+        trailingContent = trailingContent,
+    )
     TallybookScreenSnackbar(
         message = snackbar,
         isActive = uiState.sheet == null,

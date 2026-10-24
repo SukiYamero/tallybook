@@ -57,6 +57,7 @@ import tallybook.shared.generated.resources.loading
 import tallybook.shared.generated.resources.retry
 import tallybook.shared.generated.resources.search_clear_query
 
+@Suppress("LongParameterList")
 @Composable
 internal fun AccountsScreen(
     uiState: AccountsUiState,
@@ -64,6 +65,7 @@ internal fun AccountsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     canTransfer: Boolean = false,
+    trailingContent: LazyListScope.() -> Unit = {},
 ) {
   TallybookScreenFrame(modifier = modifier) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -89,6 +91,7 @@ internal fun AccountsScreen(
           verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space10),
       ) {
         accountsContent(uiState, actions)
+        if (uiState.content is AccountsContent.Ready && uiState.query.isBlank()) trailingContent()
       }
     }
   }
