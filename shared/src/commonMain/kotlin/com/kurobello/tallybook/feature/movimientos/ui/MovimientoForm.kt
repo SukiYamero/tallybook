@@ -16,7 +16,6 @@ import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
-import com.kurobello.tallybook.core.text.AmountInputError
 import com.kurobello.tallybook.core.ui.component.TallybookProgressIndicator
 import com.kurobello.tallybook.core.ui.component.TallybookSheetForm
 import com.kurobello.tallybook.core.ui.component.TallybookText
@@ -28,11 +27,6 @@ import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormState
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.add_movimiento_pane_title
-import tallybook.shared.generated.resources.amount_malformed
-import tallybook.shared.generated.resources.amount_not_positive
-import tallybook.shared.generated.resources.amount_overflow
-import tallybook.shared.generated.resources.amount_required
-import tallybook.shared.generated.resources.amount_too_many_decimals
 import tallybook.shared.generated.resources.description_optional
 import tallybook.shared.generated.resources.loading
 import tallybook.shared.generated.resources.movimiento_accounts_error
@@ -173,16 +167,6 @@ private fun MovimientoValidationFocus(
     if (uiState.amountError != null) fieldFocus.amount.requestFocus()
   }
 }
-
-@Composable
-internal fun AmountInputError.message(): String =
-    when (this) {
-      AmountInputError.EMPTY -> stringResource(Res.string.amount_required)
-      AmountInputError.MALFORMED -> stringResource(Res.string.amount_malformed)
-      AmountInputError.NOT_POSITIVE -> stringResource(Res.string.amount_not_positive)
-      AmountInputError.TOO_MANY_DECIMALS -> stringResource(Res.string.amount_too_many_decimals)
-      AmountInputError.OVERFLOW -> stringResource(Res.string.amount_overflow)
-    }
 
 @Composable
 internal fun MovimientoFormErrorMessage(

@@ -25,6 +25,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookFieldMessageContent
 import com.kurobello.tallybook.core.ui.component.TallybookInputLabel
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextField
+import com.kurobello.tallybook.core.ui.component.message
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.transfers.viewmodel.TransferDraftState
 import com.kurobello.tallybook.feature.transfers.viewmodel.TransferFormActions
@@ -32,11 +33,6 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.amount
-import tallybook.shared.generated.resources.amount_malformed
-import tallybook.shared.generated.resources.amount_not_positive
-import tallybook.shared.generated.resources.amount_overflow
-import tallybook.shared.generated.resources.amount_required
-import tallybook.shared.generated.resources.amount_too_many_decimals
 import tallybook.shared.generated.resources.date
 import tallybook.shared.generated.resources.description_optional
 import tallybook.shared.generated.resources.future_date_not_allowed
@@ -196,7 +192,7 @@ private fun TransferAmountField(
     onValueChange: (String) -> Unit,
     modifier: Modifier,
 ) {
-  val message = error?.let { TallybookFieldMessage.Error(amountMessage(it)) }
+  val message = error?.let { TallybookFieldMessage.Error(it.message()) }
   TallybookAmountInput(
       value = value,
       onValueChange = onValueChange,
@@ -265,15 +261,3 @@ private fun TransferDescripcionField(
 @Composable
 private fun labelWithMoneda(label: StringResource, moneda: Moneda): String =
     stringResource(Res.string.transfer_with_moneda, stringResource(label), moneda.name)
-
-@Composable
-private fun amountMessage(error: AmountInputError): String =
-    stringResource(
-        when (error) {
-          AmountInputError.EMPTY -> Res.string.amount_required
-          AmountInputError.MALFORMED -> Res.string.amount_malformed
-          AmountInputError.NOT_POSITIVE -> Res.string.amount_not_positive
-          AmountInputError.TOO_MANY_DECIMALS -> Res.string.amount_too_many_decimals
-          AmountInputError.OVERFLOW -> Res.string.amount_overflow
-        }
-    )
