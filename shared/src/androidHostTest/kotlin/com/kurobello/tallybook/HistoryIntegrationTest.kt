@@ -252,7 +252,7 @@ class HistoryIntegrationTest {
       runCurrent()
       val historical = graph.history.uiState.value.selection
       assertEquals(1, graph.period.movementCount)
-      assertEquals(DataOutcome.Success(Unit), graph.movimientos.delete("prior-year"))
+      assertEquals("prior-year", graph.movimientos.deleteAndCapture("prior-year").capturedId())
       runCurrent()
       assertEquals(0, graph.period.movementCount)
       assertEquals(historical, graph.history.uiState.value.selection)
@@ -260,7 +260,7 @@ class HistoryIntegrationTest {
       graph.history.onYearSelected(2026)
       runCurrent()
       assertTrue(2024 in graph.history.uiState.value.availableYears)
-      assertEquals(DataOutcome.Success(Unit), graph.movimientos.delete("missing"))
+      assertEquals("missing", graph.movimientos.deleteAndCapture("missing").capturedId())
       runCurrent()
       assertEquals(emptyList(), graph.history.uiState.value.years.persisted)
       assertEquals(
@@ -656,3 +656,6 @@ class HistoryIntegrationTest {
 
 private val HistoryRowUi.movimientoTitle: String
   get() = assertIs<HistoryMovimientoRowUi>(this).title
+
+private fun DataOutcome<Movimiento?>.capturedId(): String? =
+    assertIs<DataOutcome.Success<Movimiento?>>(this).data?.id

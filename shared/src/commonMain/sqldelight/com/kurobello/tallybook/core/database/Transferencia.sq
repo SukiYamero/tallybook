@@ -91,8 +91,8 @@ WHERE (moneda_origen = :moneda OR moneda_destino = :moneda)
   )
 ORDER BY fecha DESC, created_at DESC, id DESC;
 
--- Like selectMovimientoYears, the year is cut from the text because SQLite date functions have a
--- narrower year domain; UNION keeps a year once whichever kind has it.
+-- The year is cut from the text because SQLite date functions have a narrower year domain than the
+-- canonical LocalDate text persisted; UNION keeps a year once whichever kind has it.
 selectActividadYears:
 SELECT actividad_year
 FROM (

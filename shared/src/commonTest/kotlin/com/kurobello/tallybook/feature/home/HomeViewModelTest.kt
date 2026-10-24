@@ -609,9 +609,6 @@ class HomeViewModelTest {
     var summarySubscriptions = 0
       private set
 
-    override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> =
-        error("Home recent reads must include principal currency")
-
     override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
         flow {
           recentRequests += moneda to limit
@@ -636,9 +633,6 @@ class HomeViewModelTest {
 
     val summaryRanges = mutableListOf<Pair<Moneda, MovimientoDateRange>>()
 
-    override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> =
-        error("Home reads the current month, not the all-time summary")
-
     override fun observeSummary(
         moneda: Moneda,
         range: MovimientoDateRange,
@@ -647,15 +641,6 @@ class HomeViewModelTest {
       summarySubscriptions += 1
       emitAll(summaryValues.filterNotNull())
     }
-
-    override fun observeRange(
-        moneda: Moneda,
-        range: MovimientoDateRange,
-    ): Flow<DataOutcome<List<Movimiento>>> =
-        error("History range reads are not expected in this fixture")
-
-    override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> =
-        error("History year reads are not expected in this fixture")
 
     override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
         error("Category history reads are not expected in this fixture")
@@ -681,8 +666,6 @@ class HomeViewModelTest {
         DataOutcome.Failure(
             DataError.InvalidInput("This Home fixture has no persistent movimiento store")
         )
-
-    override suspend fun delete(id: String): DataOutcome<Unit> = DataOutcome.Success(Unit)
 
     fun emitRecent(value: DataOutcome<List<Movimiento>>) {
       recentValues.value = value

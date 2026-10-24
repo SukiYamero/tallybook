@@ -335,7 +335,12 @@ class HistoryVolumeDeviceTest {
       assertEquals(
           1_400_000L,
           assertIs<DataOutcome.Success<MovimientoSummary>>(
-                  movimientos.observeSummary(Moneda.COP).first()
+                  movimientos
+                      .observeSummary(
+                          Moneda.COP,
+                          MovimientoDateRange(LocalDate(2000, 1, 1), LocalDate(2100, 12, 31)),
+                      )
+                      .first()
               )
               .data
               .gastos

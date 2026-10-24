@@ -127,8 +127,8 @@ class DatabaseSchemaTest {
             sumsBefore,
             listOf("CLP", "COP", "USD")
                 .flatMap { moneda ->
-                  database.movimientoQueries.sumMovimientosByTipo(moneda).executeAsList().map {
-                    "$moneda ${it.tipo} ${it.total_minor}"
+                  database.movimientoQueries.totalsByTipo(moneda).map { (tipo, total) ->
+                    "$moneda $tipo $total"
                   }
                 }
                 .sorted(),
@@ -761,6 +761,11 @@ class DatabaseSchemaTest {
           )
           .value
 
+  private fun MovimientoQueries.totalsByTipo(moneda: String): Map<String, Long?> =
+      sumMovimientosByTipoInRange(moneda, "0000-01-01", "9999-12-31").executeAsList().associate {
+        it.tipo to it.total_minor
+      }
+
   private fun SqlDriver.stampsOf(table: String): List<String> =
       queryStrings("SELECT id || ' ' || updated_at FROM $table ORDER BY id")
 
@@ -928,7 +933,7 @@ class DatabaseSchemaTest {
   }
 
   @Test
-  fun `selectRecentMovimientos uses fecha then created at then id and obeys limit`() {
+  fun `selectRecentMovimientosByMoneda uses fecha then created at then id and obeys limit`() {
     val db = inMemoryDatabase()
     db.insert(id = "a", montoMinor = 100, fecha = "2026-09-03", createdAt = "2026-09-03T12:00:00Z")
     db.insert(id = "c", montoMinor = 100, fecha = "2026-09-03", createdAt = "2026-09-03T12:00:00Z")
@@ -937,12 +942,14 @@ class DatabaseSchemaTest {
 
     assertEquals(
         listOf("c", "a", "b"),
-        db.movimientoQueries.selectRecentMovimientos(3).executeAsList().map { it.id },
+        db.movimientoQueries.selectRecentMovimientosByMoneda("COP", 3).executeAsList().map {
+          it.id
+        },
     )
   }
 
   @Test
-  fun `sumMovimientosByTipo filters by moneda before summing`() {
+  fun `sumMovimientosByTipoInRange filters by moneda before summing`() {
     val db = inMemoryDatabase()
     db.insert(id = "gasto", montoMinor = 500, moneda = "COP")
     db.insert(id = "ingreso", tipo = "INGRESO", montoMinor = 2_000, moneda = "COP")
@@ -950,9 +957,7 @@ class DatabaseSchemaTest {
 
     assertEquals(
         mapOf("GASTO" to 500L, "INGRESO" to 2_000L),
-        db.movimientoQueries.sumMovimientosByTipo("COP").executeAsList().associate {
-          it.tipo to it.total_minor
-        },
+        db.movimientoQueries.totalsByTipo("COP"),
     )
   }
 
@@ -1065,9 +1070,7 @@ class DatabaseSchemaTest {
     )
     assertEquals(
         mapOf("GASTO" to 1_500L),
-        db.movimientoQueries.sumMovimientosByTipo("COP").executeAsList().associate {
-          it.tipo to it.total_minor
-        },
+        db.movimientoQueries.totalsByTipo("COP"),
     )
   }
 
@@ -1163,16 +1166,17 @@ class DatabaseSchemaTest {
       val categorias = db.categoriaQueries
       val etiquetas = db.etiquetaQueries
 
-      assertEquals(listOf("2026"), movimientos.selectMovimientoYears("COP").executeAsList())
+      assertEquals(
+          listOf("2026"),
+          db.transferenciaQueries.selectActividadYears("COP").executeAsList(),
+      )
       assertEquals(
           listOf("cafe"),
           movimientos.selectCategoryHistory(10).executeAsList().map { it.titulo },
       )
       assertEquals(
           mapOf("GASTO" to 100L),
-          movimientos.sumMovimientosByTipo("COP").executeAsList().associate {
-            it.tipo to it.total_minor
-          },
+          movimientos.totalsByTipo("COP"),
       )
       assertEquals(
           listOf(Triple("cat_live", "GASTO", 100L)),

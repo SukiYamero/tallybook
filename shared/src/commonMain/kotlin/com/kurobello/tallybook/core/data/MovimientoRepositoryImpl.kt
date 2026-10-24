@@ -47,67 +47,6 @@ internal class MovimientoRepositoryImpl(
     private val changeClock: ChangeClock,
 ) : MovimientoRepository {
 
-  override fun observeRange(
-      moneda: Moneda,
-      range: MovimientoDateRange,
-  ): Flow<DataOutcome<List<Movimiento>>> {
-    validateRange(range)?.let {
-      return flowOf(DataOutcome.Failure(it))
-    }
-    return flow {
-          emitAll(
-              database.movimientoQueries
-                  .selectMovimientosInRange(
-                      moneda.name,
-                      range.start.toString(),
-                      range.end.toString(),
-                  )
-                  .asFlow()
-                  .mapToList(dispatcher)
-                  .map { rows ->
-                    rows.map { row ->
-                      currentCoroutineContext().ensureActive()
-                      row.toDomain()
-                    }
-                  }
-          )
-        }
-        .flowOn(dispatcher)
-        .asLocalDataOutcome()
-  }
-
-  override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> =
-      flow {
-            emitAll(
-                database.movimientoQueries
-                    .selectMovimientoYears(moneda.name)
-                    .asFlow()
-                    .mapToList(dispatcher)
-                    .map { rows ->
-                      rows.map { row ->
-                        currentCoroutineContext().ensureActive()
-                        parseStoredYear(row)
-                      }
-                    }
-            )
-          }
-          .flowOn(dispatcher)
-          .asLocalDataOutcome()
-
-  override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> =
-      if (limit <= 0) {
-        flowOf(
-            DataOutcome.Failure(DataError.InvalidInput("Recent movimiento limit must be positive"))
-        )
-      } else {
-        database.movimientoQueries
-            .selectRecentMovimientos(limit.toLong())
-            .asFlow()
-            .mapToList(dispatcher)
-            .map { rows -> rows.map { it.toDomain() } }
-            .asLocalDataOutcome()
-      }
-
   override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
       if (limit <= 0) {
         flowOf(
@@ -154,14 +93,6 @@ internal class MovimientoRepositoryImpl(
             .flowOn(dispatcher)
             .asLocalDataOutcome()
       }
-
-  override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> =
-      database.movimientoQueries
-          .sumMovimientosByTipo(moneda.name)
-          .asFlow()
-          .mapToList(dispatcher)
-          .map { rows -> summaryOf(moneda, rows.associate { it.tipo to it.total_minor }) }
-          .asLocalDataOutcome()
 
   override fun observeSummary(
       moneda: Moneda,
@@ -451,19 +382,6 @@ internal class MovimientoRepositoryImpl(
             validateReferences(changes.categoriaId, changes.etiquetaIds)
                 ?: validateTitle(changes.titulo)
                 ?: validateDescription(changes.descripcion)
-      }
-
-  override suspend fun delete(id: String): DataOutcome<Unit> =
-      runLocalDataOperation(dispatcher) {
-        database.transaction {
-          val queries = database.movimientoQueries
-          if (queries.selectMovimientoById(id).executeAsOneOrNull() != null) {
-            check(
-                queries.tombstoneMovimiento(stamp = changeClock.next().value, id = id).value == 1L
-            )
-          }
-          queries.deleteMovimientoEtiquetas(id)
-        }
       }
 
   override suspend fun defaultSelection(

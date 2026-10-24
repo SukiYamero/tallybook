@@ -93,34 +93,31 @@ class MovimientoRepositoryTest {
       repository.insert(deleted)
 
       assertEquals(DataOutcome.Success(captured), repository.deleteAndCapture(captured.id))
-      assertEquals(DataOutcome.Success(Unit), repository.delete(deleted.id))
+      assertEquals(DataOutcome.Success(deleted), repository.deleteAndCapture(deleted.id))
 
       val (captureStamp, deleteStamp) = changeClock.issuedStamps.drop(2).map { it.value }
       assertEquals(captureStamp to captureStamp, driver.storedStamps("movimiento", captured.id))
       assertEquals(deleteStamp to deleteStamp, driver.storedStamps("movimiento", deleted.id))
       assertEquals(emptyList(), linkRows(driver))
       val september = MovimientoDateRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30))
-      val noMoney = MovimientoSummary(Money(0, Moneda.COP), Money(0, Moneda.COP))
       assertEquals(DataOutcome.Success(emptyList()), repository.getAll())
       assertEquals(DataOutcome.Success(null), repository.getById(captured.id))
-      assertEquals(DataOutcome.Success(emptyList()), repository.observeRecent(5).first())
       assertEquals(
           DataOutcome.Success(emptyList()),
           repository.observeRecent(Moneda.COP, 5).first(),
       )
       assertEquals(
           DataOutcome.Success(emptyList()),
-          repository.observeRange(Moneda.COP, september).first(),
+          actividades.observeActividadRange(Moneda.COP, september).first(),
       )
       assertEquals(
           DataOutcome.Success(MovimientoSearchSnapshot(emptyList(), emptyList())),
           actividades.observeFiltered(MovimientoReadCriteria(Moneda.COP)).first(),
       )
-      assertEquals(DataOutcome.Success(emptyList()), repository.observeYears(Moneda.COP).first())
-      assertEquals(DataOutcome.Success(noMoney), repository.observeSummary(Moneda.COP).first())
+      assertEquals(DataOutcome.Success(emptyList()), actividades.observeYears(Moneda.COP).first())
       assertEquals(DataOutcome.Success(emptyList()), repository.observeCategoryHistory(5).first())
 
-      assertEquals(DataOutcome.Success(Unit), repository.delete(deleted.id))
+      assertEquals(DataOutcome.Success(null), repository.deleteAndCapture(deleted.id))
       assertEquals(DataOutcome.Success(null), repository.deleteAndCapture(captured.id))
       assertEquals(4, changeClock.issuedStamps.size)
     }
@@ -232,7 +229,7 @@ class MovimientoRepositoryTest {
           )
       val row = movimiento("reused", etiquetaIds = listOf("tag_a"))
       repository.insert(row)
-      repository.delete(row.id)
+      repository.deleteAndCapture(row.id)
       val tombstone = driver.storedStamps("movimiento", row.id)
       val replacement =
           row.copy(monto = Money(900, Moneda.COP), etiquetaIds = listOf("tag_b"), createdAt = LATER)
@@ -419,7 +416,7 @@ class MovimientoRepositoryTest {
 
     repository.insert(movimiento)
 
-    assertEquals(DataOutcome.Success(Unit), repository.delete(movimiento.id))
+    assertIs<DataOutcome.Success<Movimiento?>>(repository.deleteAndCapture(movimiento.id))
     assertEquals(DataOutcome.Success(emptyList()), repository.getAll())
     assertEquals(emptyList(), linkRows(driver))
     driver.close()
@@ -592,32 +589,23 @@ class MovimientoRepositoryTest {
       }
 
   @Test
-  fun `capture preserves an unreadable row and old delete still removes it idempotently`() =
-      runTest {
-        JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-          val database = seeded(driver)
-          val repository =
-              MovimientoRepositoryImpl(
-                  database,
-                  StandardTestDispatcher(testScheduler),
-                  TestChangeClock(),
-              )
-          insertUnreadable(database, "corrupt")
-          assertLocal(repository.deleteAndCapture("corrupt"))
-          assertEquals(
-              "corrupt",
-              database.movimientoQueries.selectMovimientoById("corrupt").executeAsOne().id,
+  fun `capture preserves an unreadable row`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      val database = seeded(driver)
+      val repository =
+          MovimientoRepositoryImpl(
+              database,
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
           )
-          assertEquals(DataOutcome.Success(Unit), repository.delete("corrupt"))
-          insertUnreadable(database, "")
-          assertEquals(DataOutcome.Success(Unit), repository.delete(""))
-          for (id in listOf("corrupt", "", " ", "absent")) assertEquals(
-              DataOutcome.Success(Unit),
-              repository.delete(id),
-          )
-          assertEquals(DataOutcome.Success(emptyList()), repository.getAll())
-        }
-      }
+      insertUnreadable(database, "corrupt")
+      assertLocal(repository.deleteAndCapture("corrupt"))
+      assertEquals(
+          "corrupt",
+          database.movimientoQueries.selectMovimientoById("corrupt").executeAsOne().id,
+      )
+    }
+  }
 
   @Test
   fun `delete and restore reproduce every stored field and stable tied order`() = runTest {
@@ -1158,7 +1146,7 @@ class MovimientoRepositoryTest {
       )
       assertEquals(DataOutcome.Success(row), repository.getById(row.id))
 
-      assertEquals(DataOutcome.Success(Unit), repository.delete(row.id))
+      assertEquals(DataOutcome.Success(row), repository.deleteAndCapture(row.id))
       assertEquals(listOf("other:tag_a:0"), linkRows(driver))
     }
   }
@@ -1177,16 +1165,15 @@ class MovimientoRepositoryTest {
       repository.insert(row)
       val september = MovimientoDateRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30))
       val recent = mutableListOf<DataOutcome<List<Movimiento>>>()
-      val inRange = mutableListOf<DataOutcome<List<Movimiento>>>()
+      val inRange = mutableListOf<DataOutcome<List<Actividad>>>()
       val filtered = mutableListOf<DataOutcome<MovimientoSearchSnapshot>>()
       backgroundScope.launch { repository.observeRecent(Moneda.COP, 5).collect(recent::add) }
+      val actividades = ActividadRepositoryImpl(database, StandardTestDispatcher(testScheduler))
       backgroundScope.launch {
-        repository.observeRange(Moneda.COP, september).collect(inRange::add)
+        actividades.observeActividadRange(Moneda.COP, september).collect(inRange::add)
       }
       backgroundScope.launch {
-        ActividadRepositoryImpl(database, StandardTestDispatcher(testScheduler))
-            .observeFiltered(MovimientoReadCriteria(Moneda.COP))
-            .collect(filtered::add)
+        actividades.observeFiltered(MovimientoReadCriteria(Moneda.COP)).collect(filtered::add)
       }
       testScheduler.runCurrent()
 
@@ -1195,7 +1182,7 @@ class MovimientoRepositoryTest {
 
       val updated = row.copy(etiquetaIds = listOf("tag_a", "tag_b"))
       assertEquals(DataOutcome.Success(listOf(updated)), recent.last())
-      assertEquals(DataOutcome.Success(listOf(updated)), inRange.last())
+      assertEquals(DataOutcome.Success(listOf(Actividad.DeMovimiento(updated))), inRange.last())
       assertEquals(
           DataOutcome.Success(
               MovimientoSearchSnapshot(listOf(Actividad.DeMovimiento(updated)), listOf(2026))

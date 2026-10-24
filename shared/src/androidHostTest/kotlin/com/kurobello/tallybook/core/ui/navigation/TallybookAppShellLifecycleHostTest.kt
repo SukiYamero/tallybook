@@ -546,7 +546,7 @@ private class ShellMovimientos : MovimientoRepository, ActividadRepository {
   ): Flow<DataOutcome<MovimientoSearchSnapshot>> =
       error("Search reads are not expected in this fixture")
 
-  override fun observeRange(
+  private fun observeRange(
       moneda: Moneda,
       range: MovimientoDateRange,
   ): Flow<DataOutcome<List<Movimiento>>> = flow {
@@ -586,23 +586,8 @@ private class ShellMovimientos : MovimientoRepository, ActividadRepository {
         }
       }
 
-  override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = flow {
-    activeRecent += 1
-    try {
-      emitAll(rows.map { DataOutcome.Success(it.sortedWith(shellStorageOrder).take(limit)) })
-    } finally {
-      activeRecent -= 1
-    }
-  }
-
   override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> = rows.map {
     DataOutcome.Success(it.map { row -> row.fecha.year }.distinct())
-  }
-
-  override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> = rows.map {
-    DataOutcome.Success(
-        MovimientoSummary(Money(0, moneda), Money(it.sumOf { row -> row.monto.minorUnits }, moneda))
-    )
   }
 
   override fun observeSummary(
@@ -671,11 +656,6 @@ private class ShellMovimientos : MovimientoRepository, ActividadRepository {
     val values = rows.value + movimiento
     rows.value = values
     return DataOutcome.Success(RestoreResult.Restored)
-  }
-
-  override suspend fun delete(id: String): DataOutcome<Unit> {
-    rows.value = rows.value.filter { it.id != id }
-    return DataOutcome.Success(Unit)
   }
 
   override suspend fun getAll(): DataOutcome<List<Movimiento>> = DataOutcome.Success(rows.value)

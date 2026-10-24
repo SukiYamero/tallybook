@@ -17,27 +17,13 @@ import kotlinx.coroutines.flow.Flow
 @Suppress("TooManyFunctions")
 interface MovimientoRepository {
 
-  fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>>
-
   fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>>
-
-  fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>>
 
   /** Ingresos and gastos in [moneda] dated inside [range], e.g. Home's current month. */
   fun observeSummary(
       moneda: Moneda,
       range: MovimientoDateRange,
   ): Flow<DataOutcome<MovimientoSummary>>
-
-  /**
-   * Cross-year intervals require unsigned four-digit years because SQLite compares fecha as text.
-   */
-  fun observeRange(moneda: Moneda, range: MovimientoDateRange): Flow<DataOutcome<List<Movimiento>>>
-
-  /**
-   * Year metadata validates the canonical ISO year, without deserializing the remaining row fields.
-   */
-  fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>>
 
   /** Newest-first titles with their category, the training data for category suggestions. */
   fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>>
@@ -57,8 +43,6 @@ interface MovimientoRepository {
    * snapshot's medio or currency; an archived cuenta still takes it back.
    */
   suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<RestoreResult>
-
-  suspend fun delete(id: String): DataOutcome<Unit>
 
   /**
    * The medio and live, active cuenta a new [tipo] movimiento starts with: the last used pair, then

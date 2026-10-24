@@ -177,23 +177,10 @@ internal open class AddFakeMovimientos(
   override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
       error("Scoped recent reads are not expected in this fixture")
 
-  override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = emptyFlow()
-
-  override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> = emptyFlow()
-
   override fun observeSummary(
       moneda: Moneda,
       range: MovimientoDateRange,
   ): Flow<DataOutcome<MovimientoSummary>> = emptyFlow()
-
-  override fun observeRange(
-      moneda: Moneda,
-      range: MovimientoDateRange,
-  ): Flow<DataOutcome<List<Movimiento>>> =
-      error("History range reads are not expected in this fixture")
-
-  override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> =
-      error("History year reads are not expected in this fixture")
 
   val history =
       MutableStateFlow<DataOutcome<List<CategoryHistoryRow>>>(DataOutcome.Success(emptyList()))
@@ -257,8 +244,6 @@ internal open class AddFakeMovimientos(
     inserted.addAll(values)
     return DataOutcome.Success(RestoreResult.Restored)
   }
-
-  override suspend fun delete(id: String): DataOutcome<Unit> = DataOutcome.Success(Unit)
 }
 
 internal class AddSuspendedMovimientos : AddFakeMovimientos() {
