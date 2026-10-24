@@ -107,7 +107,6 @@ class HistoryViewModelTest {
     assertEquals(1, content.value.movementCount)
     assertEquals(Money(-100, Moneda.USD), content.value.summary.balance)
     assertEquals(1, fixture.preferences.source.starts)
-    assertEquals(0, fixture.movimientos.summary(Moneda.USD).starts)
     assertEquals(1, fixture.movimientos.activeRanges)
     first.cancel()
     runCurrent()
@@ -141,7 +140,6 @@ class HistoryViewModelTest {
     assertEquals(0, fixture.movimientos.activeRanges)
     assertEquals(0, fixture.preferences.source.active)
     assertEquals(0, fixture.categorias.source.active)
-    assertEquals(0, fixture.movimientos.activeSummaries)
     assertEquals(0, fixture.movimientos.activeYears)
     fixture.movimientos.insert(movimiento("hidden", LocalDate(2024, 2, 23)))
     var firstState: HistoryUiState? = null
@@ -176,10 +174,8 @@ class HistoryViewModelTest {
     fixture.movimientos
         .range(Moneda.USD, MovimientoDateRange(TODAY, TODAY))
         .emit(DataOutcome.Success(listOf(movimiento("today", TODAY))))
-    fixture.movimientos.summary(Moneda.USD).emit(DataOutcome.Failure(failure))
     runCurrent()
     assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
-    assertEquals(0, fixture.movimientos.summary(Moneda.USD).starts)
   }
 
   @Test
@@ -236,7 +232,6 @@ class HistoryViewModelTest {
             .value
             .movementCount,
     )
-    assertEquals(0, fixture.movimientos.summary(Moneda.USD).starts)
     assertEquals(1, fixture.movimientos.years(Moneda.USD).starts)
     assertEquals(1, fixture.categorias.source.starts)
     val afterSelection = states.size
@@ -299,9 +294,6 @@ class HistoryViewModelTest {
             )
         )
     )
-    fixture.movimientos
-        .summary(Moneda.USD)
-        .emit(DataOutcome.Failure(DataError.Local(ArithmeticException())))
     runCurrent()
     assertEquals(
         HistoryFailure.CalculationOverflow,
@@ -316,7 +308,6 @@ class HistoryViewModelTest {
     val failure = DataError.Local(IllegalStateException())
     val categoryFixture = HistoryFixture(this)
     categoryFixture.movimientos.range(Moneda.USD, MovimientoDateRange(TODAY, TODAY)).emit(null)
-    categoryFixture.movimientos.summary(Moneda.USD).emit(null)
     categoryFixture.categorias.source.emit(DataOutcome.Failure(failure))
     val categoryVm = categoryFixture.create()
     backgroundScope.launch { categoryVm.uiState.collect {} }
@@ -603,13 +594,9 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) :
   ): DataOutcome<CuentaSelection?> = error("Default selections are not expected in this fixture")
 
   private val ranges = mutableMapOf<ReadKey, HistorySource<List<Movimiento>>>()
-  private val summaries = mutableMapOf<Moneda, HistorySource<MovimientoSummary>>()
   private val metadata = mutableMapOf<Moneda, HistorySource<List<Int>>>()
   val activeRanges
     get() = ranges.values.sumOf { it.active }
-
-  val activeSummaries
-    get() = summaries.values.sumOf { it.active }
 
   val activeYears
     get() = metadata.values.sumOf { it.active }
@@ -621,9 +608,6 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) :
       ranges.getOrPut(ReadKey(moneda, range)) {
         HistorySource(DataOutcome.Success(filtered(moneda, range)))
       }
-
-  fun summary(moneda: Moneda) =
-      summaries.getOrPut(moneda) { HistorySource(DataOutcome.Success(summaryFor(moneda))) }
 
   fun years(moneda: Moneda) =
       metadata.getOrPut(moneda) {
@@ -638,22 +622,6 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) :
       rows
           .filter { it.monto.moneda == moneda && it.fecha >= range.start && it.fecha <= range.end }
           .sortedByDescending { it.fecha }
-
-  private fun summaryFor(moneda: Moneda) =
-      MovimientoSummary(
-          Money(
-              rows
-                  .filter { it.monto.moneda == moneda && it.tipo == TipoMovimiento.INGRESO }
-                  .sumOf { it.monto.minorUnits },
-              moneda,
-          ),
-          Money(
-              rows
-                  .filter { it.monto.moneda == moneda && it.tipo == TipoMovimiento.GASTO }
-                  .sumOf { it.monto.minorUnits },
-              moneda,
-          ),
-      )
 
   override fun observeFiltered(
       criteria: MovimientoReadCriteria
@@ -701,7 +669,6 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) :
     ranges.forEach { (key, source) ->
       source.emit(DataOutcome.Success(filtered(key.moneda, key.range)))
     }
-    summaries.forEach { (moneda, source) -> source.emit(DataOutcome.Success(summaryFor(moneda))) }
     metadata.forEach { (moneda, source) ->
       source.emit(
           DataOutcome.Success(
