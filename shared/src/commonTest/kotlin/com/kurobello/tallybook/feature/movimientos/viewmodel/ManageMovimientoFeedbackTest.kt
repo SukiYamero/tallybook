@@ -1,5 +1,10 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.RestoreResult
@@ -20,6 +25,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.TimeZone
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ManageMovimientoFeedbackTest {
@@ -177,6 +183,38 @@ class ManageMovimientoFeedbackTest {
     val restored = assertNotNull(f.feedback.state.value.feedback)
     f.feedback.onFeedbackDismiss(restored.token, restored.revision)
     assertEquals(ManagementFeedbackKind.Deleted, f.feedback.state.value.feedback?.kind)
+  }
+
+  @Test
+  fun clearingTheViewModelWithAnOpenSessionFreesItsSlot() = runTest {
+    val f = ManageMovimientoFixture(backgroundScope)
+    deleteAndHide(f, managementMovimiento())
+    val undo = assertNotNull(f.feedback.state.value.feedback)
+    val store = ViewModelStore()
+    val viewModel =
+        ViewModelProvider.create(
+                store,
+                viewModelFactory {
+                  initializer {
+                    ManageMovimientoViewModel(
+                        ManageMovimientoRepositories(f.repository, f.categorias, f.etiquetas),
+                        f.clock,
+                        TimeZoneProvider { TimeZone.UTC },
+                        f.feedback,
+                        backgroundScope,
+                    )
+                  }
+                },
+            )[ManageMovimientoViewModel::class]
+    f.repository.current = managementMovimiento().copy(id = "second")
+    assertTrue(viewModel.open("second"))
+    assertEquals(1, f.feedback.state.value.openSessions)
+
+    store.clear()
+    assertEquals(0, f.feedback.state.value.openSessions)
+    f.feedback.onFeedbackAction(undo.token, undo.revision)
+    runCurrent()
+    assertEquals(1, f.repository.restores)
   }
 
   @Test

@@ -1,5 +1,10 @@
 package com.kurobello.tallybook.core.ui.feedback
 
+internal enum class ManagementSubject {
+  Movimiento,
+  Transferencia,
+}
+
 internal enum class ManagementFeedbackKind {
   Saved,
   Deleted,
@@ -11,6 +16,7 @@ internal enum class ManagementFeedbackKind {
 
 /** A committed mutation held by its management sheet until that sheet is hidden. */
 internal data class ManagementOutcome(
+    val subject: ManagementSubject,
     val kind: ManagementFeedbackKind,
     val deleted: DeletedSnapshot? = null,
 )
@@ -18,6 +24,7 @@ internal data class ManagementOutcome(
 internal data class ManagementFeedback(
     val token: Long,
     val revision: Int = 0,
+    val subject: ManagementSubject,
     val kind: ManagementFeedbackKind,
     val isRestoring: Boolean = false,
     val deleted: DeletedSnapshot? = null,

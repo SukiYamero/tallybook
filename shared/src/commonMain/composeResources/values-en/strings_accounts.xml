@@ -7,4 +7,11 @@
     <string name="payment_method_transfer">Bank transfer</string>
     <string name="payment_method_credit">Credit</string>
     <string name="movimiento_accounts_error">We couldn’t load your accounts. What you entered is still here. Try loading them again.</string>
+    <string name="transferencia_updated">Transfer between accounts updated</string>
+    <string name="transferencia_deleted">Transfer between accounts deleted</string>
+    <string name="transferencia_missing">This transfer between accounts is no longer available.</string>
+    <string name="transferencia_restored">Transfer between accounts restored</string>
+    <string name="transferencia_restore_error">We couldn’t restore this transfer between accounts. Try again.</string>
+    <string name="transferencia_restore_conflict">We couldn’t restore this version. The current transfer between accounts was kept.</string>
+    <string name="transferencia_restoring">Restoring transfer between accounts</string>
 </resources>

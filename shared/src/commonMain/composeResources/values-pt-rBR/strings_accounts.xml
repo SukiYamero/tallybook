@@ -7,4 +7,11 @@
     <string name="payment_method_transfer">Transferência</string>
     <string name="payment_method_credit">Crédito</string>
     <string name="movimiento_accounts_error">Não conseguimos carregar suas contas. O que você informou continua aqui. Tente carregar de novo.</string>
+    <string name="transferencia_updated">Transferência entre contas atualizada</string>
+    <string name="transferencia_deleted">Transferência entre contas excluída</string>
+    <string name="transferencia_missing">Esta transferência entre contas não está mais disponível.</string>
+    <string name="transferencia_restored">Transferência entre contas restaurada</string>
+    <string name="transferencia_restore_error">Não conseguimos restaurar esta transferência entre contas. Tente novamente.</string>
+    <string name="transferencia_restore_conflict">Não conseguimos restaurar esta versão. A transferência entre contas atual foi mantida.</string>
+    <string name="transferencia_restoring">Restaurando transferência entre contas</string>
 </resources>

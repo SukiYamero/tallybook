@@ -32,9 +32,17 @@ class ManagementFeedbackQueueTest {
     val f = QueueFixture(backgroundScope)
     val movimiento = DeletedSnapshot.OfMovimiento(managementMovimiento())
     val transferencia = DeletedSnapshot.OfTransferencia(queueTransferencia())
-    f.enqueue(ManagementOutcome(ManagementFeedbackKind.Deleted, movimiento))
-    f.enqueue(ManagementOutcome(ManagementFeedbackKind.Deleted, transferencia))
-    f.enqueue(ManagementOutcome(ManagementFeedbackKind.Saved))
+    f.enqueue(
+        ManagementOutcome(ManagementSubject.Movimiento, ManagementFeedbackKind.Deleted, movimiento)
+    )
+    f.enqueue(
+        ManagementOutcome(
+            ManagementSubject.Transferencia,
+            ManagementFeedbackKind.Deleted,
+            transferencia,
+        )
+    )
+    f.enqueue(ManagementOutcome(ManagementSubject.Transferencia, ManagementFeedbackKind.Saved))
 
     val first = assertNotNull(f.queue.state.value.feedback)
     assertEquals(movimiento, first.deleted)
@@ -69,9 +77,16 @@ class ManagementFeedbackQueueTest {
   @Test
   fun onlyTheVisibleTokenClaimsItsSnapshotOnce() = runTest {
     val f = QueueFixture(backgroundScope)
-    f.enqueue(ManagementOutcome(ManagementFeedbackKind.Deleted, f.transferSnapshot))
     f.enqueue(
         ManagementOutcome(
+            ManagementSubject.Transferencia,
+            ManagementFeedbackKind.Deleted,
+            f.transferSnapshot,
+        )
+    )
+    f.enqueue(
+        ManagementOutcome(
+            ManagementSubject.Movimiento,
             ManagementFeedbackKind.Deleted,
             DeletedSnapshot.OfMovimiento(managementMovimiento()),
         )
@@ -108,7 +123,13 @@ class ManagementFeedbackQueueTest {
   @Test
   fun failedTransferRestoreKeepsItsSnapshotForRetryUnderAFreshRevision() = runTest {
     val f = QueueFixture(backgroundScope)
-    f.enqueue(ManagementOutcome(ManagementFeedbackKind.Deleted, f.transferSnapshot))
+    f.enqueue(
+        ManagementOutcome(
+            ManagementSubject.Transferencia,
+            ManagementFeedbackKind.Deleted,
+            f.transferSnapshot,
+        )
+    )
     val first = assertNotNull(f.queue.state.value.feedback)
     f.transferencias.restoreResult = managementFailure()
     f.queue.onFeedbackAction(first.token, first.revision)
@@ -141,7 +162,13 @@ class ManagementFeedbackQueueTest {
         )
     expectations.forEach { (result, kind) ->
       val f = QueueFixture(backgroundScope)
-      f.enqueue(ManagementOutcome(ManagementFeedbackKind.Deleted, f.transferSnapshot))
+      f.enqueue(
+          ManagementOutcome(
+              ManagementSubject.Transferencia,
+              ManagementFeedbackKind.Deleted,
+              f.transferSnapshot,
+          )
+      )
       val head = assertNotNull(f.queue.state.value.feedback)
       f.transferencias.restoreResult = DataOutcome.Success(result)
       f.queue.onFeedbackAction(head.token, head.revision)
@@ -159,8 +186,14 @@ class ManagementFeedbackQueueTest {
   @Test
   fun closeOrExpiryReleasesOnlyTheVisibleTokenAndAdvances() = runTest {
     val f = QueueFixture(backgroundScope)
-    f.enqueue(ManagementOutcome(ManagementFeedbackKind.Deleted, f.transferSnapshot))
-    f.enqueue(ManagementOutcome(ManagementFeedbackKind.Missing))
+    f.enqueue(
+        ManagementOutcome(
+            ManagementSubject.Transferencia,
+            ManagementFeedbackKind.Deleted,
+            f.transferSnapshot,
+        )
+    )
+    f.enqueue(ManagementOutcome(ManagementSubject.Transferencia, ManagementFeedbackKind.Missing))
     val head = assertNotNull(f.queue.state.value.feedback)
     val waiting = f.queue.state.value.feedbackQueue[1]
 
@@ -178,29 +211,96 @@ class ManagementFeedbackQueueTest {
   @Test
   fun openSessionBlocksClaimsAndAClaimedRestoreBlocksNewSessions() = runTest {
     val f = QueueFixture(backgroundScope)
-    f.enqueue(ManagementOutcome(ManagementFeedbackKind.Deleted, f.transferSnapshot))
+    f.enqueue(
+        ManagementOutcome(
+            ManagementSubject.Transferencia,
+            ManagementFeedbackKind.Deleted,
+            f.transferSnapshot,
+        )
+    )
     val head = assertNotNull(f.queue.state.value.feedback)
 
-    assertTrue(f.queue.openSession())
+    val session = assertNotNull(f.queue.openSession())
     f.queue.onFeedbackAction(head.token, head.revision)
     runCurrent()
     assertEquals(0, f.transferencias.restores)
     assertEquals(head, f.queue.state.value.feedback)
-    f.queue.closeSession(null)
+    session.close()
 
     f.transferencias.restoreGate = CompletableDeferred()
     f.queue.onFeedbackAction(head.token, head.revision)
-    assertFalse(f.queue.openSession())
+    assertNull(f.queue.openSession())
     f.transferencias.restoreGate?.complete(Unit)
     runCurrent()
-    assertTrue(f.queue.openSession())
+    assertNotNull(f.queue.openSession())
+  }
+
+  @Test
+  fun subjectSurvivesReleaseOfTheSnapshot() = runTest {
+    val f = QueueFixture(backgroundScope)
+    f.enqueue(
+        ManagementOutcome(
+            ManagementSubject.Transferencia,
+            ManagementFeedbackKind.Deleted,
+            f.transferSnapshot,
+        )
+    )
+    val head = assertNotNull(f.queue.state.value.feedback)
+    assertEquals(ManagementSubject.Transferencia, head.subject)
+    f.transferencias.restoreGate = CompletableDeferred()
+    f.queue.onFeedbackAction(head.token, head.revision)
+    assertEquals(ManagementSubject.Transferencia, f.queue.state.value.feedback?.subject)
+    f.transferencias.restoreResult = DataOutcome.Success(RestoreResult.Conflict)
+    f.transferencias.restoreGate?.complete(Unit)
+    runCurrent()
+
+    val released = assertNotNull(f.queue.state.value.feedback)
+    assertNull(released.deleted)
+    assertEquals(ManagementSubject.Transferencia, released.subject)
+  }
+
+  @Test
+  fun everyOpenSessionHoldsItsOwnSlotAndClosesOnlyOnce() = runTest {
+    val f = QueueFixture(backgroundScope)
+    f.enqueue(
+        ManagementOutcome(
+            ManagementSubject.Transferencia,
+            ManagementFeedbackKind.Deleted,
+            f.transferSnapshot,
+        )
+    )
+    val head = assertNotNull(f.queue.state.value.feedback)
+    val first = assertNotNull(f.queue.openSession())
+    val second = assertNotNull(f.queue.openSession())
+    assertEquals(2, f.queue.state.value.openSessions)
+
+    first.close(ManagementOutcome(ManagementSubject.Movimiento, ManagementFeedbackKind.Saved))
+    first.close(ManagementOutcome(ManagementSubject.Movimiento, ManagementFeedbackKind.Saved))
+    first.close()
+    assertEquals(1, f.queue.state.value.openSessions)
+    assertEquals(2, f.queue.state.value.feedbackQueue.size)
+    f.queue.onFeedbackAction(head.token, head.revision)
+    runCurrent()
+    assertEquals(0, f.transferencias.restores)
+
+    second.close()
+    assertEquals(0, f.queue.state.value.openSessions)
+    f.queue.onFeedbackAction(head.token, head.revision)
+    runCurrent()
+    assertEquals(1, f.transferencias.restores)
   }
 
   @Test
   fun clearReleasesTheWholeQueue() = runTest {
     val f = QueueFixture(backgroundScope)
-    f.enqueue(ManagementOutcome(ManagementFeedbackKind.Deleted, f.transferSnapshot))
-    f.enqueue(ManagementOutcome(ManagementFeedbackKind.Saved))
+    f.enqueue(
+        ManagementOutcome(
+            ManagementSubject.Transferencia,
+            ManagementFeedbackKind.Deleted,
+            f.transferSnapshot,
+        )
+    )
+    f.enqueue(ManagementOutcome(ManagementSubject.Transferencia, ManagementFeedbackKind.Saved))
     val head = assertNotNull(f.queue.state.value.feedback)
 
     f.queue.clear()
@@ -219,8 +319,7 @@ private class QueueFixture(scope: CoroutineScope) {
   val transferSnapshot = DeletedSnapshot.OfTransferencia(queueTransferencia())
 
   fun enqueue(outcome: ManagementOutcome) {
-    assertTrue(queue.openSession())
-    queue.closeSession(outcome)
+    assertNotNull(queue.openSession()).close(outcome)
   }
 }
 

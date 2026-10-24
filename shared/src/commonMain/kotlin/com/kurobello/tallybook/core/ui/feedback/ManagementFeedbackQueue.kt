@@ -33,23 +33,29 @@ internal class ManagementFeedbackQueue(
   val state: StateFlow<ManagementFeedbackState>
     field = MutableStateFlow(ManagementFeedbackState())
 
-  fun openSession(): Boolean {
+  /** Admits a management sheet, or returns null while a claimed restore runs. */
+  fun openSession(): ManagementSessionHandle? {
     var admitted = false
     state.update {
       admitted = !it.isRestoring
       if (admitted) it.copy(openSessions = it.openSessions + 1) else it
     }
-    return admitted
+    return if (admitted) ManagementSessionHandle(::closeSession) else null
   }
 
-  fun closeSession(outcome: ManagementOutcome?) {
+  private fun closeSession(outcome: ManagementOutcome?) {
     val feedback = outcome?.let {
-      ManagementFeedback(token = ++nextToken, kind = it.kind, deleted = it.deleted)
+      ManagementFeedback(
+          token = ++nextToken,
+          subject = it.subject,
+          kind = it.kind,
+          deleted = it.deleted,
+      )
     }
     state.update {
       it.copy(
           feedbackQueue = if (feedback == null) it.feedbackQueue else it.feedbackQueue + feedback,
-          openSessions = (it.openSessions - 1).coerceAtLeast(0),
+          openSessions = it.openSessions - 1,
       )
     }
   }
@@ -114,3 +120,14 @@ private fun ManagementFeedbackState.feedbackFor(token: Long, revision: Int): Man
 
 private fun ManagementFeedbackState.withHead(head: ManagementFeedback) =
     copy(feedbackQueue = listOf(head) + feedbackQueue.drop(1))
+
+/** One admitted management sheet; closing frees its slot and enqueues its committed outcome. */
+internal class ManagementSessionHandle(private val release: (ManagementOutcome?) -> Unit) {
+  private var isClosed = false
+
+  fun close(outcome: ManagementOutcome? = null) {
+    if (isClosed) return
+    isClosed = true
+    release(outcome)
+  }
+}

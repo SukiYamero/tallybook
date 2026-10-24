@@ -27,6 +27,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookSnackbarMessage
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarStatus
 import com.kurobello.tallybook.core.ui.navigation.PrimaryModalCoordinator
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.movimiento_deleted
@@ -39,6 +40,13 @@ import tallybook.shared.generated.resources.movimiento_restoring
 import tallybook.shared.generated.resources.movimiento_undo
 import tallybook.shared.generated.resources.movimiento_updated
 import tallybook.shared.generated.resources.retry
+import tallybook.shared.generated.resources.transferencia_deleted
+import tallybook.shared.generated.resources.transferencia_missing
+import tallybook.shared.generated.resources.transferencia_restore_conflict
+import tallybook.shared.generated.resources.transferencia_restore_error
+import tallybook.shared.generated.resources.transferencia_restored
+import tallybook.shared.generated.resources.transferencia_restoring
+import tallybook.shared.generated.resources.transferencia_updated
 
 @Composable
 internal fun ManagementFeedbackRoute(
@@ -53,7 +61,9 @@ internal fun ManagementFeedbackRoute(
   val canDeliver = {
     lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && viewport?.isScrimVisible != true
   }
-  val isUncovered = !modals.isContentCovered && viewport?.isScrimVisible != true
+  // The queue's own admission count covers the frame before a recreated controller re-attaches.
+  val isUncovered =
+      state.openSessions == 0 && !modals.isContentCovered && viewport?.isScrimVisible != true
   ManagementFeedbackHost(
       feedbackQueue = state.feedbackQueue,
       isActive = lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && isUncovered,
@@ -118,18 +128,10 @@ private fun ManagementFeedbackHost(
 @Composable
 private fun ManagementFeedback.toSnackbarMessage(): TallybookSnackbarMessage {
   val message =
-      if (isRestoring) stringResource(Res.string.movimiento_restoring)
-      else
-          stringResource(
-              when (kind) {
-                ManagementFeedbackKind.Saved -> Res.string.movimiento_updated
-                ManagementFeedbackKind.Deleted -> Res.string.movimiento_deleted
-                ManagementFeedbackKind.Missing -> Res.string.movimiento_missing
-                ManagementFeedbackKind.Restored -> Res.string.movimiento_restored
-                ManagementFeedbackKind.RestoreFailed -> Res.string.movimiento_restore_error
-                ManagementFeedbackKind.RestoreConflict -> Res.string.movimiento_restore_conflict
-              }
-          )
+      stringResource(
+          if (isRestoring) managementFeedbackRestoring.getValue(subject)
+          else managementFeedbackMessages.getValue(subject).getValue(kind)
+      )
   val actionLabel =
       when {
         !hasAction -> null
@@ -157,3 +159,34 @@ private fun ManagementFeedbackKind.snackbarStatus(): TallybookSnackbarStatus =
       ManagementFeedbackKind.RestoreConflict -> TallybookSnackbarStatus.Warning
       ManagementFeedbackKind.RestoreFailed -> TallybookSnackbarStatus.Error
     }
+
+private val movimientoMessages: Map<ManagementFeedbackKind, StringResource> =
+    mapOf(
+        ManagementFeedbackKind.Saved to Res.string.movimiento_updated,
+        ManagementFeedbackKind.Deleted to Res.string.movimiento_deleted,
+        ManagementFeedbackKind.Missing to Res.string.movimiento_missing,
+        ManagementFeedbackKind.Restored to Res.string.movimiento_restored,
+        ManagementFeedbackKind.RestoreFailed to Res.string.movimiento_restore_error,
+        ManagementFeedbackKind.RestoreConflict to Res.string.movimiento_restore_conflict,
+    )
+
+internal val managementFeedbackMessages:
+    Map<ManagementSubject, Map<ManagementFeedbackKind, StringResource>> =
+    mapOf(
+        ManagementSubject.Movimiento to movimientoMessages,
+        ManagementSubject.Transferencia to
+            mapOf(
+                ManagementFeedbackKind.Saved to Res.string.transferencia_updated,
+                ManagementFeedbackKind.Deleted to Res.string.transferencia_deleted,
+                ManagementFeedbackKind.Missing to Res.string.transferencia_missing,
+                ManagementFeedbackKind.Restored to Res.string.transferencia_restored,
+                ManagementFeedbackKind.RestoreFailed to Res.string.transferencia_restore_error,
+                ManagementFeedbackKind.RestoreConflict to Res.string.transferencia_restore_conflict,
+            ),
+    )
+
+internal val managementFeedbackRestoring: Map<ManagementSubject, StringResource> =
+    mapOf(
+        ManagementSubject.Movimiento to Res.string.movimiento_restoring,
+        ManagementSubject.Transferencia to Res.string.transferencia_restoring,
+    )

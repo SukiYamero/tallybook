@@ -22,6 +22,8 @@ import com.kurobello.tallybook.core.ui.feedback.DeletedSnapshot
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackKind
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackQueue
 import com.kurobello.tallybook.core.ui.feedback.ManagementOutcome
+import com.kurobello.tallybook.core.ui.feedback.ManagementSessionHandle
+import com.kurobello.tallybook.core.ui.feedback.ManagementSubject
 import kotlin.time.Clock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -50,12 +52,15 @@ internal class ManageMovimientoViewModel(
   private var categoryJob: Job? = null
   private var etiquetaJob: Job? = null
   private var pendingOutcome: ManagementOutcome? = null
+  private var feedbackSession: ManagementSessionHandle? = null
 
   val uiState: StateFlow<ManageMovimientoUiState>
     field = MutableStateFlow(ManageMovimientoUiState())
 
   override fun open(id: String): Boolean {
-    if (id.isBlank() || uiState.value.session != null || !feedback.openSession()) return false
+    val admission =
+        if (id.isBlank() || uiState.value.session != null) null else feedback.openSession()
+    feedbackSession = admission ?: return false
     val session = MovimientoManagementSession(token = ++nextToken, movimientoId = id)
     uiState.update { it.copy(session = session) }
     loadCategories(session.token)
@@ -202,7 +207,10 @@ internal class ManageMovimientoViewModel(
         is DataOutcome.Success ->
             when (outcome.data) {
               MovimientoUpdateResult.Updated ->
-                  close(session.token, ManagementOutcome(ManagementFeedbackKind.Saved))
+                  close(
+                      session.token,
+                      ManagementOutcome(ManagementSubject.Movimiento, ManagementFeedbackKind.Saved),
+                  )
               MovimientoUpdateResult.NotFound ->
                   updateSession(session.token) {
                     copy(isSubmitting = false, error = MovimientoManagementError.MissingOnSave)
@@ -254,6 +262,7 @@ internal class ManageMovimientoViewModel(
             close(
                 session.token,
                 ManagementOutcome(
+                    subject = ManagementSubject.Movimiento,
                     kind =
                         if (outcome.data == null) ManagementFeedbackKind.Missing
                         else ManagementFeedbackKind.Deleted,
@@ -271,7 +280,8 @@ internal class ManageMovimientoViewModel(
     val pending = pendingOutcome
     pendingOutcome = null
     uiState.update { it.copy(session = null) }
-    feedback.closeSession(pending)
+    feedbackSession?.close(pending)
+    feedbackSession = null
   }
 
   private fun requestLeaveEdit(session: MovimientoManagementSession): Boolean =
@@ -412,7 +422,8 @@ internal class ManageMovimientoViewModel(
   override fun onCleared() {
     stopReads()
     pendingOutcome = null
-    if (uiState.value.session != null) feedback.closeSession(null)
+    feedbackSession?.close()
+    feedbackSession = null
     uiState.value = ManageMovimientoUiState()
   }
 
