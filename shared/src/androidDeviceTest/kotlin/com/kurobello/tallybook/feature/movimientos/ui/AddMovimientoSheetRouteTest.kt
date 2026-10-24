@@ -27,8 +27,11 @@ import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
@@ -39,6 +42,7 @@ import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.ThemeMode
+import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoRepositories
@@ -203,6 +207,15 @@ class AddMovimientoSheetRouteTest {
   }
 
   private class FakeMovimientoRepository : MovimientoRepository {
+    override suspend fun defaultSelection(
+        primary: Moneda,
+        tipo: TipoMovimiento,
+        medio: MedioPago?,
+    ): DataOutcome<CuentaSelection?> =
+        DataOutcome.Success(
+            CuentaSelection(Cuenta.defaultCashId(primary), medio ?: MedioPago.EFECTIVO, primary)
+        )
+
     val inserted = mutableStateListOf<Movimiento>()
 
     override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
@@ -257,6 +270,8 @@ class AddMovimientoSheetRouteTest {
               etiquetaIds = changes.etiquetaIds,
               titulo = changes.titulo,
               descripcion = changes.descripcion,
+              cuentaId = changes.cuentaId,
+              medio = changes.medio,
           )
       val values = inserted.map { if (it.id == id) updated else it }
       inserted.clear()

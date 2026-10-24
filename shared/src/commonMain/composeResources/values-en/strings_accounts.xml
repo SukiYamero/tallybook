@@ -6,4 +6,5 @@
     <string name="payment_method_debit">Debit</string>
     <string name="payment_method_transfer">Bank transfer</string>
     <string name="payment_method_credit">Credit</string>
+    <string name="movimiento_accounts_error">We couldn’t load your accounts. What you entered is still here. Try loading them again.</string>
 </resources>

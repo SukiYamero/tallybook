@@ -1,0 +1,49 @@
+-- A move between two of the user's own cuentas: each side is in its own cuenta's currency, so a
+-- cross-currency transfer stores both amounts and never an exchange rate.
+-- updated_at has no DEFAULT so a write that forgets its ChangeStamp fails instead of becoming SEED.
+CREATE TABLE transferencia (
+    id TEXT NOT NULL PRIMARY KEY,
+    cuenta_origen_id TEXT NOT NULL,
+    cuenta_destino_id TEXT NOT NULL,
+    monto_origen_minor INTEGER NOT NULL CHECK (monto_origen_minor > 0),
+    monto_destino_minor INTEGER NOT NULL CHECK (monto_destino_minor > 0),
+    fecha TEXT NOT NULL,
+    descripcion TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT,
+    CHECK (cuenta_origen_id <> cuenta_destino_id)
+);
+
+-- Partial like movimiento's indexes: balances and reference checks read live rows per side, and
+-- activity reads follow the same recent order as movimiento_recent.
+CREATE INDEX transferencia_by_origen ON transferencia(cuenta_origen_id)
+WHERE deleted_at IS NULL;
+
+CREATE INDEX transferencia_by_destino ON transferencia(cuenta_destino_id)
+WHERE deleted_at IS NULL;
+
+CREATE INDEX transferencia_recent ON transferencia(fecha DESC, created_at DESC, id DESC)
+WHERE deleted_at IS NULL;
+
+insertTransferencia:
+INSERT INTO transferencia(id, cuenta_origen_id, cuenta_destino_id, monto_origen_minor, monto_destino_minor, fecha, descripcion, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Inner joins: a transfer whose cuenta is gone has no currency to read its amounts in.
+selectTransferenciaById:
+SELECT
+    transferencia.id,
+    transferencia.cuenta_origen_id,
+    transferencia.cuenta_destino_id,
+    transferencia.monto_origen_minor,
+    origen.moneda AS moneda_origen,
+    transferencia.monto_destino_minor,
+    destino.moneda AS moneda_destino,
+    transferencia.fecha,
+    transferencia.descripcion,
+    transferencia.created_at
+FROM transferencia
+JOIN cuenta AS origen ON origen.id = transferencia.cuenta_origen_id
+JOIN cuenta AS destino ON destino.id = transferencia.cuenta_destino_id
+WHERE transferencia.id = ? AND transferencia.deleted_at IS NULL;

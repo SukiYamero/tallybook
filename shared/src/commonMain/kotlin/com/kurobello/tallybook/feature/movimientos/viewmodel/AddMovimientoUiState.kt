@@ -2,6 +2,7 @@ package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -10,6 +11,7 @@ import kotlinx.datetime.LocalDate
 internal enum class MovimientoFormError {
   PREFERENCES_UNAVAILABLE,
   CATEGORIES_UNAVAILABLE,
+  ACCOUNTS_UNAVAILABLE,
   SAVE_FAILED,
 }
 
@@ -46,6 +48,8 @@ internal data class AddMovimientoUiState(
     val amountNeedsReview: Boolean = false,
     val today: LocalDate = fecha,
     val formOpenedFromSummary: Boolean = false,
+    /** The cuenta and medio the movimiento is saved with; [moneda] follows its currency. */
+    val cuentaSelection: CuentaSelection? = null,
 ) : MovimientoFormState {
   private val amountResult by lazy { parseAmountInput(amountInput, moneda) }
 

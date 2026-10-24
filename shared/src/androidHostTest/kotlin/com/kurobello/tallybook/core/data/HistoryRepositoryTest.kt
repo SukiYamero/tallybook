@@ -9,8 +9,10 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.MovimientoQueries
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.ChangeStamp
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -409,12 +411,13 @@ class HistoryRepositoryTest {
             "invalid",
             tipo,
             amount,
-            "COP",
             date,
             null,
             null,
             "2026-09-15T12:00:00Z",
             "food",
+            "cuenta_efectivo_cop",
+            "EFECTIVO",
             ChangeStamp.SEED.value,
         )
         val wholeYear = MovimientoDateRange(LocalDate(2026, 1, 1), LocalDate(2026, 12, 31))
@@ -446,12 +449,13 @@ class HistoryRepositoryTest {
                 "invalid",
                 "GASTO",
                 100,
-                "COP",
                 date,
                 null,
                 null,
                 "2026-09-15T12:00:00Z",
                 "food",
+                "cuenta_efectivo_cop",
+                "EFECTIVO",
                 ChangeStamp.SEED.value,
             )
 
@@ -476,12 +480,13 @@ class HistoryRepositoryTest {
               "invalid-row",
               "unknown",
               -1,
-              "COP",
               "2026-99-99",
               null,
               null,
               "not-an-instant",
               "food",
+              "cuenta_efectivo_cop",
+              "EFECTIVO",
               ChangeStamp.SEED.value,
           )
           val repository =
@@ -523,12 +528,13 @@ class HistoryRepositoryTest {
               "invalid",
               "GASTO",
               0,
-              "COP",
               "2026-09-15",
               null,
               null,
               "2026-09-15T12:00:00Z",
               "food",
+              "cuenta_efectivo_cop",
+              "EFECTIVO",
               ChangeStamp.SEED.value,
           )
           runCurrent()
@@ -562,12 +568,13 @@ class HistoryRepositoryTest {
                   "cop-${index.toString().padStart(5, '0')}",
                   "GASTO",
                   100,
-                  "COP",
                   "2026-09-$day",
                   "Lunch",
                   null,
                   "2026-09-15T12:00:00Z",
                   "food",
+                  "cuenta_efectivo_cop",
+                  "EFECTIVO",
                   ChangeStamp.SEED.value,
               )
             }
@@ -576,24 +583,26 @@ class HistoryRepositoryTest {
                   "usd-$index",
                   "GASTO",
                   100,
-                  "USD",
                   "2026-09-15",
                   null,
                   null,
                   "2026-09-15T12:00:00Z",
                   "food",
+                  "cuenta_efectivo_usd",
+                  "EFECTIVO",
                   ChangeStamp.SEED.value,
               )
               database.movimientoQueries.insertMovimiento(
                   "outside-$index",
                   "GASTO",
                   100,
-                  "COP",
                   if (index % 2 == 0) "2026-08-31" else "2026-10-01",
                   null,
                   null,
                   "2026-09-15T12:00:00Z",
                   "food",
+                  "cuenta_efectivo_cop",
+                  "EFECTIVO",
                   ChangeStamp.SEED.value,
               )
             }
@@ -748,6 +757,8 @@ class HistoryRepositoryTest {
           titulo = "Lunch",
           descripcion = null,
           createdAt = Instant.parse(createdAt),
+          cuentaId = Cuenta.defaultCashId(moneda),
+          medio = MedioPago.EFECTIVO,
       )
 
   private companion object {

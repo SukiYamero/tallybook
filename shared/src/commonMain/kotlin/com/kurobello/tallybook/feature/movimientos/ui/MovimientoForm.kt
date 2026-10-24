@@ -35,6 +35,7 @@ import tallybook.shared.generated.resources.amount_required
 import tallybook.shared.generated.resources.amount_too_many_decimals
 import tallybook.shared.generated.resources.description_optional
 import tallybook.shared.generated.resources.loading
+import tallybook.shared.generated.resources.movimiento_accounts_error
 import tallybook.shared.generated.resources.movimiento_categories_error
 import tallybook.shared.generated.resources.movimiento_preferences_error
 import tallybook.shared.generated.resources.movimiento_save_error
@@ -187,6 +188,12 @@ internal fun MovimientoFormErrorMessage(
     MovimientoFormError.CATEGORIES_UNAVAILABLE ->
         MovimientoFormRetryError(
             stringResource(Res.string.movimiento_categories_error),
+            onRetry,
+            interactionEnabled,
+        )
+    MovimientoFormError.ACCOUNTS_UNAVAILABLE ->
+        MovimientoFormRetryError(
+            stringResource(Res.string.movimiento_accounts_error),
             onRetry,
             interactionEnabled,
         )

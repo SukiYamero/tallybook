@@ -6,7 +6,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -103,6 +105,8 @@ private fun historyPreviewState(): HistoryUiState {
           "Lunch with Ana",
           null,
           Instant.parse("2026-09-15T12:00:00Z"),
+          Cuenta.defaultCashId(Moneda.COP),
+          MedioPago.EFECTIVO,
       )
   val summary = MovimientoSummary(Money(200_000, Moneda.COP), movement.monto)
   val content =

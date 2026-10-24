@@ -1,5 +1,7 @@
 package com.kurobello.tallybook.feature.history.ui
 
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -133,6 +135,8 @@ class HistoryPresentationTest {
             null,
             null,
             Instant.parse("2026-10-06T12:00:00Z"),
+            Cuenta.defaultCashId(Moneda.USD),
+            MedioPago.EFECTIVO,
         )
     val content =
         HistoryProjection.Content(

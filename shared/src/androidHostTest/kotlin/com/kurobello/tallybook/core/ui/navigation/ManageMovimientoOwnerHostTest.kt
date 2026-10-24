@@ -22,6 +22,7 @@ import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.seedCashCuentas
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Movimiento
@@ -180,6 +181,7 @@ private class ManagementOwnerSuite(val scope: TestScope) {
 
   init {
     TallybookDatabase.Schema.create(driver)
+    database.seedCashCuentas()
     Dispatchers.setMain(dispatcher)
     repository =
         OwnerMutationRepository(MovimientoRepositoryImpl(database, dispatcher, TestChangeClock()))

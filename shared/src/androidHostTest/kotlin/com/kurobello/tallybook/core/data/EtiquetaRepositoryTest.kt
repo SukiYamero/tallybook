@@ -4,6 +4,7 @@ import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.ChangeStamp
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.ETIQUETA_DESCRIPCION_MAX
@@ -283,7 +284,7 @@ class EtiquetaRepositoryTest {
     TallybookDatabase.Schema.create(driver)
     var nextId = 0
     try {
-      val database = TallybookDatabase(driver)
+      val database = TallybookDatabase(driver).apply { seedCashCuentas() }
       val repository =
           EtiquetaRepositoryImpl(
               database = database,
@@ -308,12 +309,13 @@ class EtiquetaRepositoryTest {
           id,
           "GASTO",
           1_000,
-          moneda.name,
           "2026-10-01",
           null,
           null,
           "2026-10-01T12:00:00Z",
           "cat_comida",
+          Cuenta.defaultCashId(moneda),
+          "EFECTIVO",
           ChangeStamp.SEED.value,
       )
       etiquetaIds.forEachIndexed { posicion, etiquetaId ->

@@ -33,7 +33,9 @@ import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -600,6 +602,8 @@ class HistoryScreenTest {
             "Lunch with Ana",
             null,
             Instant.parse("2026-09-15T12:00:00Z"),
+            Cuenta.defaultCashId(Moneda.COP),
+            MedioPago.EFECTIVO,
         )
     val summary = MovimientoSummary(Money(0, Moneda.COP), Money(100, Moneda.COP))
     val projection =

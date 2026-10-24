@@ -523,6 +523,8 @@ private fun Movimiento.toChanges() =
         etiquetaIds,
         titulo.normalizeOptionalTextOrNull(),
         descripcion.normalizeOptionalTextOrNull(),
+        cuentaId,
+        medio,
     )
 
 private fun String?.normalizeOptionalTextOrNull(): String? = this?.normalizeOptionalText()
@@ -541,5 +543,7 @@ private fun EditMovimientoUiState.toChangesOrNull(): MovimientoChanges? {
           etiquetaIds,
           titulo.normalizeOptionalText(),
           descripcion.normalizeOptionalText(),
+          original.cuentaId,
+          original.medio,
       )
 }

@@ -23,7 +23,9 @@ import androidx.compose.ui.unit.dp
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -281,6 +283,8 @@ class HomeScreenTest {
             titulo = null,
             descripcion = null,
             createdAt = Instant.parse("2026-09-15T00:00:00Z"),
+            cuentaId = Cuenta.defaultCashId(Moneda.COP),
+            medio = MedioPago.EFECTIVO,
         )
     val emptyState =
         HomeUiState.ready(

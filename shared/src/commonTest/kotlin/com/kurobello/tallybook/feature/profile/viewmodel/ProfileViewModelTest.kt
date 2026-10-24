@@ -13,9 +13,12 @@ import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -281,6 +284,12 @@ private class FakePreferences(initial: AppPreferences?) : AppPreferencesReposito
 }
 
 internal class ProfileFakeMovimientos : MovimientoRepository {
+  override suspend fun defaultSelection(
+      primary: Moneda,
+      tipo: TipoMovimiento,
+      medio: MedioPago?,
+  ): DataOutcome<CuentaSelection?> = error("Default selections are not expected in this fixture")
+
   var result: DataOutcome<List<Movimiento>> =
       DataOutcome.Success(
           listOf(
@@ -293,6 +302,8 @@ internal class ProfileFakeMovimientos : MovimientoRepository {
                   titulo = "café",
                   descripcion = null,
                   createdAt = Instant.parse("2026-10-14T12:00:00Z"),
+                  cuentaId = Cuenta.defaultCashId(Moneda.COP),
+                  medio = MedioPago.EFECTIVO,
                   etiquetaIds = listOf("empresa"),
               )
           )

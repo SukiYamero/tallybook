@@ -1,17 +1,19 @@
 -- monto_minor holds the amount in minor units, the same Long domain as Money.minorUnits; the decimal
 -- point comes from Moneda.scale, never from the column. Exact integers keep SUM() aggregation in
 -- SQLite instead of in Kotlin, which a TEXT or REAL column could not do without losing exactness.
+-- There is no currency column: the currency is cuenta.moneda, which the view exposes as monto_moneda.
 -- updated_at has no DEFAULT so a write that forgets its ChangeStamp fails instead of becoming SEED.
 CREATE TABLE movimiento (
     id TEXT NOT NULL PRIMARY KEY,
     tipo TEXT NOT NULL,
     monto_minor INTEGER NOT NULL,
-    monto_moneda TEXT NOT NULL,
     fecha TEXT NOT NULL,
     descripcion TEXT,
     created_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00Z',
     titulo TEXT,
     categoria_id TEXT NOT NULL,
+    cuenta_id TEXT NOT NULL,
+    medio_pago TEXT NOT NULL CHECK (medio_pago IN ('EFECTIVO', 'DEBITO', 'TRANSFERENCIA', 'CREDITO')),
     updated_at TEXT NOT NULL,
     deleted_at TEXT
 );
@@ -28,6 +30,9 @@ WHERE deleted_at IS NULL;
 CREATE INDEX movimiento_by_categoria ON movimiento(categoria_id)
 WHERE deleted_at IS NULL;
 
+CREATE INDEX movimiento_by_cuenta ON movimiento(cuenta_id)
+WHERE deleted_at IS NULL;
+
 -- The repository owns integrity because SQLite foreign keys are not enabled: both tables are always
 -- written in one transaction. posicion only keeps the user's display order.
 CREATE TABLE movimiento_etiqueta (
@@ -42,9 +47,11 @@ CREATE INDEX movimiento_etiqueta_etiqueta ON movimiento_etiqueta(etiqueta_id);
 -- Every read goes through this view so a row and its etiquetas come from one statement, hence one
 -- snapshot, and observers invalidate on both tables. group_concat order is unspecified on SQLite 3.32,
 -- so each id carries its posicion (unit separator) and the mapper sorts; groups use the record separator.
+-- The cuenta join only supplies the currency; a tombstoned cuenta still owns its movimientos' currency.
 CREATE VIEW movimiento_con_etiquetas AS
 SELECT
     movimiento.*,
+    cuenta.moneda AS monto_moneda,
     COALESCE(
         (
             SELECT group_concat(movimiento_etiqueta.posicion || char(31) || movimiento_etiqueta.etiqueta_id, char(30))
@@ -54,11 +61,12 @@ SELECT
         ''
     ) AS etiqueta_ids
 FROM movimiento
+JOIN cuenta ON cuenta.id = movimiento.cuenta_id
 WHERE movimiento.deleted_at IS NULL;
 
 insertMovimiento:
-INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, fecha, titulo, descripcion, created_at, categoria_id, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO movimiento(id, tipo, monto_minor, fecha, titulo, descripcion, created_at, categoria_id, cuenta_id, medio_pago, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 insertMovimientoEtiqueta:
 INSERT INTO movimiento_etiqueta(movimiento_id, etiqueta_id, posicion)
@@ -71,9 +79,10 @@ ORDER BY fecha DESC, created_at DESC, id DESC;
 
 -- SQLite date functions have a narrower year domain than the canonical LocalDate text we persist.
 selectMovimientoYears:
-SELECT DISTINCT substr(fecha, 1, length(fecha) - 6) AS movimiento_year
+SELECT DISTINCT substr(movimiento.fecha, 1, length(movimiento.fecha) - 6) AS movimiento_year
 FROM movimiento
-WHERE monto_moneda = ? AND deleted_at IS NULL
+JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+WHERE cuenta.moneda = ? AND movimiento.deleted_at IS NULL
 ORDER BY CAST(movimiento_year AS INTEGER) DESC;
 
 selectRecentMovimientos:
@@ -102,10 +111,12 @@ FROM movimiento_con_etiquetas
 WHERE id = ?;
 
 -- Undo needs the tombstone itself, which the view hides; tombstones own no links, so none are read.
+-- The left join keeps a row whose cuenta is gone, with no currency, so it never matches a snapshot.
 selectStoredMovimientoById:
-SELECT *
+SELECT movimiento.*, cuenta.moneda AS monto_moneda
 FROM movimiento
-WHERE id = ?;
+LEFT JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+WHERE movimiento.id = ?;
 
 selectMovimientosInRange:
 SELECT *
@@ -177,7 +188,7 @@ ORDER BY fecha DESC, created_at DESC, id DESC;
 
 updateMovimiento:
 UPDATE movimiento
-SET tipo = ?, monto_minor = ?, fecha = ?, titulo = ?, descripcion = ?, categoria_id = ?, updated_at = ?
+SET tipo = ?, monto_minor = ?, fecha = ?, titulo = ?, descripcion = ?, categoria_id = ?, cuenta_id = ?, medio_pago = ?, updated_at = ?
 WHERE id = ? AND deleted_at IS NULL;
 
 deleteMovimientoEtiquetas:
@@ -198,16 +209,46 @@ SET categoria_id = :categoria_id, updated_at = :stamp, deleted_at = NULL
 WHERE id = :id AND deleted_at IS NOT NULL;
 
 sumMovimientosByTipo:
-SELECT tipo, SUM(monto_minor) AS total_minor
+SELECT movimiento.tipo, SUM(movimiento.monto_minor) AS total_minor
 FROM movimiento
-WHERE monto_moneda = ? AND deleted_at IS NULL
-GROUP BY tipo;
+JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+WHERE cuenta.moneda = ? AND movimiento.deleted_at IS NULL
+GROUP BY movimiento.tipo;
 
 -- Grouped by tipo as well as categoria_id so gastos and ingresos in the same categoria never net
 -- each other out. Filtered by moneda because minor units of different currencies are different units
 -- and adding them is meaningless.
 sumMovimientosPorCategoria:
-SELECT categoria_id, tipo, SUM(monto_minor) AS total_minor
+SELECT movimiento.categoria_id, movimiento.tipo, SUM(movimiento.monto_minor) AS total_minor
 FROM movimiento
-WHERE monto_moneda = ? AND fecha BETWEEN ? AND ? AND deleted_at IS NULL
-GROUP BY categoria_id, tipo;
+JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+WHERE cuenta.moneda = ?
+  AND movimiento.fecha BETWEEN ? AND ?
+  AND movimiento.deleted_at IS NULL
+GROUP BY movimiento.categoria_id, movimiento.tipo;
+
+-- defaultSelection's fallback order as ranked candidates: 0 the newest live movimiento (with
+-- :medio when given), 1 the primary cash account, 2 the primary currency, 3 any other cuenta. The
+-- repository takes the first one compatible with the medio, so compatibility keeps MedioPago as its
+-- only owner. The first arm types medio_pago as nullable for the cuenta-only ranks.
+selectSelectionCandidates:
+SELECT candidate.rank, candidate.medio_pago, cuenta.id, cuenta.tipo, cuenta.moneda
+FROM (
+    SELECT
+        CASE WHEN cuenta.id = :cash_id THEN 1 WHEN cuenta.moneda = :primary THEN 2 ELSE 3 END AS rank,
+        cuenta.id AS cuenta_id,
+        CAST(NULL AS TEXT) AS medio_pago
+    FROM cuenta
+    UNION ALL
+    SELECT 0, latest.cuenta_id, latest.medio_pago
+    FROM (
+        SELECT movimiento.cuenta_id, movimiento.medio_pago
+        FROM movimiento
+        WHERE movimiento.deleted_at IS NULL AND (:medio IS NULL OR movimiento.medio_pago = :medio)
+        ORDER BY movimiento.created_at DESC, movimiento.id DESC
+        LIMIT 1
+    ) AS latest
+) AS candidate
+JOIN cuenta ON cuenta.id = candidate.cuenta_id
+WHERE cuenta.deleted_at IS NULL AND cuenta.archivada = 0
+ORDER BY candidate.rank, cuenta.created_at, cuenta.id;

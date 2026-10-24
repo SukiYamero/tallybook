@@ -3,6 +3,8 @@ package com.kurobello.tallybook.feature.history.viewmodel
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -370,6 +372,8 @@ class HistoryProjectionTest {
           titulo,
           null,
           Instant.parse("2026-09-15T12:00:00Z"),
+          Cuenta.defaultCashId(moneda),
+          MedioPago.EFECTIVO,
       )
 
   private companion object {

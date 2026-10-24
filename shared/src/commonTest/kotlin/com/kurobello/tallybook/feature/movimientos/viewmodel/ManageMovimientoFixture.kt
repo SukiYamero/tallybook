@@ -9,8 +9,11 @@ import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -77,6 +80,12 @@ internal class ManagementCategorias : CategoriaRepository by UnsupportedCategori
 }
 
 internal class ManagementRepository : MovimientoRepository {
+  override suspend fun defaultSelection(
+      primary: Moneda,
+      tipo: TipoMovimiento,
+      medio: MedioPago?,
+  ): DataOutcome<CuentaSelection?> = error("Default selections are not expected in this fixture")
+
   var current: Movimiento? = managementMovimiento()
   var readResult: DataOutcome<Movimiento?>? = null
   var updateResult: DataOutcome<MovimientoUpdateResult> =
@@ -118,6 +127,8 @@ internal class ManagementRepository : MovimientoRepository {
               etiquetaIds = changes.etiquetaIds,
               titulo = changes.titulo,
               descripcion = changes.descripcion,
+              cuentaId = changes.cuentaId,
+              medio = changes.medio,
           )
     }
     return updateResult
@@ -184,6 +195,8 @@ internal fun managementMovimiento() =
         "Lunch",
         null,
         Instant.parse("2026-09-15T10:00:00Z"),
+        Cuenta.defaultCashId(Moneda.USD),
+        MedioPago.EFECTIVO,
     )
 
 internal fun managementFailure() = DataOutcome.Failure(DataError.Local(IllegalStateException()))

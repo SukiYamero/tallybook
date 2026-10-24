@@ -37,7 +37,9 @@ import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.ChangeStamp
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -241,12 +243,13 @@ class SearchVolumeDeviceTest {
               row.id,
               row.tipo.name,
               row.monto.minorUnits,
-              row.monto.moneda.name,
               row.fecha.toString(),
               row.titulo,
               row.descripcion,
               row.createdAt.toString(),
               row.categoriaId,
+              Cuenta.defaultCashId(row.monto.moneda),
+              "EFECTIVO",
               ChangeStamp.SEED.value,
           )
         }
@@ -435,6 +438,8 @@ class SearchVolumeDeviceTest {
           if (index % 3 == 0) "Needle volume $id" else "Volume $id",
           null,
           Instant.parse(if (index % 2 == 0) "2026-09-15T12:00:00Z" else "2026-09-15T11:00:00Z"),
+          Cuenta.defaultCashId(Moneda.USD),
+          MedioPago.EFECTIVO,
       )
     }
 

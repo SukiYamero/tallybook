@@ -3,12 +3,14 @@ package com.kurobello.tallybook.di
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.CuentaSeedProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.maxStoredChangeStamp
+import com.kurobello.tallybook.core.data.seedDefaultCuenta
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import kotlinx.coroutines.CoroutineDispatcher
 import org.koin.core.qualifier.named
@@ -40,6 +42,7 @@ val repositoryModule = module {
     )
   }
   single { CategorySeedProvider() }
+  single { CuentaSeedProvider(clock = get()) }
   single {
     val database = get<TallybookDatabase>()
     val dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO))
@@ -48,6 +51,8 @@ val repositoryModule = module {
         preferencesRepository = get(),
         categoriaRepository = get(),
         categorySeedProvider = get(),
+        cuentaSeedProvider = get(),
+        seedDefaultCuenta = { database.seedDefaultCuenta(it, dispatcher) },
         changeClock = get(),
         storedMaxChangeStamp = { database.maxStoredChangeStamp(dispatcher) },
     )

@@ -10,8 +10,10 @@ import com.kurobello.tallybook.core.database.MovimientoQueries
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.ChangeStamp
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -293,7 +295,7 @@ class SearchRepositoryTest {
           )
           assertEquals(1, driver.listeners)
           assertEquals(
-              setOf("movimiento", "movimiento_etiqueta", "categoria"),
+              setOf("movimiento", "cuenta", "movimiento_etiqueta", "categoria"),
               driver.listenerKeys,
           )
 
@@ -339,24 +341,26 @@ class SearchRepositoryTest {
                   "transaction-$index",
                   "GASTO",
                   100,
-                  "COP",
                   "2026-09-15",
                   null,
                   null,
                   "2026-09-15T12:00:00Z",
                   "food",
+                  "cuenta_efectivo_cop",
+                  "EFECTIVO",
                   ChangeStamp.SEED.value,
               )
               database.movimientoQueries.insertMovimiento(
                   "old-$index",
                   "INGRESO",
                   100,
-                  "COP",
                   "2023-01-01",
                   null,
                   null,
                   "2026-09-15T12:00:00Z",
                   "other",
+                  "cuenta_efectivo_cop",
+                  "EFECTIVO",
                   ChangeStamp.SEED.value,
               )
             }
@@ -425,7 +429,7 @@ class SearchRepositoryTest {
   fun `invalid filter ids and unsupported cross year ranges never access storage`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       TallybookDatabase.Schema.create(driver)
-      val real = TallybookDatabase(driver)
+      val real = TallybookDatabase(driver).apply { seedCashCuentas() }
       val database =
           object : TallybookDatabase by real {
             override val movimientoQueries: MovimientoQueries
@@ -538,7 +542,7 @@ class SearchRepositoryTest {
         val driver = TrackingDriver(JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY))
         try {
           TallybookDatabase.Schema.create(driver)
-          val database = TallybookDatabase(driver)
+          val database = TallybookDatabase(driver).apply { seedCashCuentas() }
           val repository =
               MovimientoRepositoryImpl(
                   database,
@@ -553,12 +557,13 @@ class SearchRepositoryTest {
               "invalid",
               "GASTO",
               0,
-              "COP",
               "2026-09-15",
               null,
               null,
               "2026-09-15T12:00:00Z",
               "food",
+              "cuenta_efectivo_cop",
+              "EFECTIVO",
               ChangeStamp.SEED.value,
           )
           runCurrent()
@@ -575,12 +580,13 @@ class SearchRepositoryTest {
               "invalid-year",
               "GASTO",
               100,
-              "COP",
               "02026-09-15",
               null,
               null,
               "2026-09-15T12:00:00Z",
               "other",
+              "cuenta_efectivo_cop",
+              "EFECTIVO",
               ChangeStamp.SEED.value,
           )
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(flow.first()).error)
@@ -602,7 +608,7 @@ class SearchRepositoryTest {
         val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
         try {
           TallybookDatabase.Schema.create(driver)
-          val real = TallybookDatabase(driver)
+          val real = TallybookDatabase(driver).apply { seedCashCuentas() }
           var unavailable = true
           var cancelled = false
           val database =
@@ -741,7 +747,7 @@ class SearchRepositoryTest {
   ) {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       TallybookDatabase.Schema.create(driver)
-      val database = TallybookDatabase(driver)
+      val database = TallybookDatabase(driver).apply { seedCashCuentas() }
       val categories =
           listOf(
               Triple("food", "Food", null),
@@ -881,6 +887,8 @@ class SearchRepositoryTest {
           "Lunch",
           null,
           Instant.parse(createdAt),
+          Cuenta.defaultCashId(moneda),
+          MedioPago.EFECTIVO,
           etiquetaIds,
       )
 

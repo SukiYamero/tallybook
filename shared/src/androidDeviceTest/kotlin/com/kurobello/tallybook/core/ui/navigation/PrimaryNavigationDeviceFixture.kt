@@ -30,8 +30,11 @@ import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -173,6 +176,15 @@ internal class NavigationParent(restored: SavedState?) :
 }
 
 internal class NavigationMovimientos : MovimientoRepository {
+  override suspend fun defaultSelection(
+      primary: Moneda,
+      tipo: TipoMovimiento,
+      medio: MedioPago?,
+  ): DataOutcome<CuentaSelection?> =
+      DataOutcome.Success(
+          CuentaSelection(Cuenta.defaultCashId(primary), medio ?: MedioPago.EFECTIVO, primary)
+      )
+
   private val rows =
       MutableStateFlow(
           (1..60).map { index ->
@@ -185,6 +197,8 @@ internal class NavigationMovimientos : MovimientoRepository {
                 "Item $index",
                 null,
                 Instant.parse("2026-10-05T12:00:00Z"),
+                Cuenta.defaultCashId(Moneda.USD),
+                MedioPago.EFECTIVO,
             )
           }
       )
@@ -305,6 +319,8 @@ internal class NavigationMovimientos : MovimientoRepository {
             etiquetaIds = changes.etiquetaIds,
             titulo = changes.titulo,
             descripcion = changes.descripcion,
+            cuentaId = changes.cuentaId,
+            medio = changes.medio,
         )
     val values = rows.value.map { if (it.id == id) updated else it }
     rows.value = values

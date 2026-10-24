@@ -6,8 +6,10 @@ import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.ChangeStamp
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -93,12 +95,13 @@ class ReactiveRepositoryTest {
               "foreign-corrupt",
               "INVALID_TYPE",
               100,
-              "USD",
               "2026-09-16",
               null,
               null,
               "invalid-instant",
               "cat_comida",
+              "cuenta_efectivo_usd",
+              "EFECTIVO",
               ChangeStamp.SEED.value,
           )
           testScheduler.runCurrent()
@@ -111,12 +114,13 @@ class ReactiveRepositoryTest {
               "selected-corrupt",
               "GASTO",
               0,
-              "COP",
               "2026-09-16",
               null,
               null,
               first.createdAt.toString(),
               "cat_comida",
+              "cuenta_efectivo_cop",
+              "EFECTIVO",
               ChangeStamp.SEED.value,
           )
           testScheduler.runCurrent()
@@ -351,6 +355,8 @@ class ReactiveRepositoryTest {
                     changed.etiquetaIds,
                     changed.titulo,
                     changed.descripcion,
+                    changed.cuentaId,
+                    changed.medio,
                 ),
             ),
         )
@@ -424,5 +430,7 @@ class ReactiveRepositoryTest {
           titulo = "almuerzo",
           descripcion = null,
           createdAt = Instant.parse("2026-09-03T12:00:00Z"),
+          cuentaId = Cuenta.defaultCashId(monto.moneda),
+          medio = MedioPago.EFECTIVO,
       )
 }

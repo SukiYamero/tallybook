@@ -6,11 +6,14 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.ChangeStamp
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -21,6 +24,7 @@ import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -34,6 +38,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
 
@@ -342,6 +347,8 @@ class MovimientoRepositoryTest {
             titulo = "almuerzo",
             descripcion = null,
             createdAt = Instant.parse("2026-09-03T12:00:00Z"),
+            cuentaId = Cuenta.defaultCashId(Moneda.USD),
+            medio = MedioPago.EFECTIVO,
             etiquetaIds = listOf("tag_b", "tag_a"),
         )
 
@@ -370,6 +377,8 @@ class MovimientoRepositoryTest {
             titulo = null,
             descripcion = null,
             createdAt = Instant.parse("2026-09-04T12:00:00Z"),
+            cuentaId = Cuenta.defaultCashId(Moneda.COP),
+            medio = MedioPago.EFECTIVO,
         )
 
     assertIs<DataOutcome.Success<Unit>>(repository.insert(movimiento))
@@ -399,6 +408,8 @@ class MovimientoRepositoryTest {
             titulo = null,
             descripcion = null,
             createdAt = Instant.parse("2026-09-05T12:00:00Z"),
+            cuentaId = Cuenta.defaultCashId(Moneda.MXN),
+            medio = MedioPago.EFECTIVO,
             etiquetaIds = listOf("tag_a"),
         )
 
@@ -453,6 +464,8 @@ class MovimientoRepositoryTest {
                   listOf("tag_c"),
                   "updated",
                   "updated details",
+                  original.cuentaId,
+                  original.medio,
               )
           assertEquals(
               DataOutcome.Success(MovimientoUpdateResult.Updated),
@@ -930,12 +943,13 @@ class MovimientoRepositoryTest {
               "id$index",
               "GASTO",
               100,
-              "COP",
               "2026-01-01",
               "row $index",
               null,
               (base + index.seconds).toString(),
               "cat_comida",
+              "cuenta_efectivo_cop",
+              "EFECTIVO",
               ChangeStamp.SEED.value,
           )
         }
@@ -1183,6 +1197,159 @@ class MovimientoRepositoryTest {
     }
   }
 
+  @Test
+  fun `defaultSelection without history picks the primary cash account`() = runTest {
+    withSelectionFixture { repository, _, _ ->
+      assertEquals(
+          DataOutcome.Success(CuentaSelection(COP_CASH, MedioPago.EFECTIVO, Moneda.COP)),
+          repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO),
+      )
+    }
+  }
+
+  @Test
+  fun `defaultSelection keeps the last used medio and cuenta adapting the medio to the tipo`() =
+      runTest {
+        withSelectionFixture { repository, database, _ ->
+          database.insertLegacy(selectionRow("older", NU, MedioPago.CREDITO, at = 1))
+          database.insertLegacy(selectionRow("newest", NEQUI, MedioPago.DEBITO, at = 2))
+
+          assertEquals(
+              DataOutcome.Success(CuentaSelection(NEQUI, MedioPago.DEBITO, Moneda.COP)),
+              repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO),
+          )
+          assertEquals(
+              DataOutcome.Success(CuentaSelection(NEQUI, MedioPago.TRANSFERENCIA, Moneda.COP)),
+              repository.defaultSelection(Moneda.COP, TipoMovimiento.INGRESO),
+          )
+        }
+      }
+
+  @Test
+  fun `defaultSelection skips a last used cuenta that is archived tombstoned or incompatible`() =
+      runTest {
+        withSelectionFixture { repository, database, driver ->
+          database.insertLegacy(selectionRow("last", NEQUI, MedioPago.DEBITO, at = 2))
+          val expected =
+              DataOutcome.Success(CuentaSelection(COP_CASH, MedioPago.EFECTIVO, Moneda.COP))
+
+          driver.execute(null, "UPDATE cuenta SET archivada = 1 WHERE id = '$NEQUI'", 0)
+          assertEquals(expected, repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO))
+
+          driver.execute(null, "UPDATE cuenta SET archivada = 0 WHERE id = '$NEQUI'", 0)
+          driver.tombstone("cuenta", NEQUI)
+          assertEquals(expected, repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO))
+
+          driver.execute(
+              null,
+              "UPDATE cuenta SET deleted_at = NULL, tipo = 'CREDITO' WHERE id = '$NEQUI'",
+              0,
+          )
+          assertEquals(expected, repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO))
+        }
+      }
+
+  @Test
+  fun `defaultSelection ignores a tombstoned last movimiento`() = runTest {
+    withSelectionFixture { repository, database, driver ->
+      database.insertLegacy(selectionRow("kept", NU, MedioPago.CREDITO, at = 1))
+      database.insertLegacy(selectionRow("deleted", NEQUI, MedioPago.DEBITO, at = 2))
+      driver.tombstone("movimiento", "deleted")
+
+      assertEquals(
+          DataOutcome.Success(CuentaSelection(NU, MedioPago.CREDITO, Moneda.COP)),
+          repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO),
+      )
+    }
+  }
+
+  @Test
+  fun `defaultSelection without a primary cash account falls back by currency then creation`() =
+      runTest {
+        withSelectionFixture { repository, _, driver ->
+          driver.execute(null, "UPDATE cuenta SET archivada = 1 WHERE id = '$COP_CASH'", 0)
+          assertEquals(
+              DataOutcome.Success(CuentaSelection(NEQUI, MedioPago.DEBITO, Moneda.COP)),
+              repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO),
+          )
+          assertEquals(
+              DataOutcome.Success(CuentaSelection(USD_CASH, MedioPago.EFECTIVO, Moneda.USD)),
+              repository.defaultSelection(Moneda.MXN, TipoMovimiento.GASTO),
+          )
+        }
+      }
+
+  @Test
+  fun `defaultSelection with a medio uses the last cuenta used with it and its fallbacks`() =
+      runTest {
+        withSelectionFixture { repository, database, driver ->
+          database.insertLegacy(selectionRow("card", NU, MedioPago.CREDITO, at = 1))
+          database.insertLegacy(selectionRow("cash", COP_CASH, MedioPago.EFECTIVO, at = 2))
+
+          assertEquals(
+              DataOutcome.Success(CuentaSelection(NU, MedioPago.CREDITO, Moneda.COP)),
+              repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO, MedioPago.CREDITO),
+          )
+          assertEquals(
+              DataOutcome.Success(CuentaSelection(NEQUI, MedioPago.DEBITO, Moneda.COP)),
+              repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO, MedioPago.DEBITO),
+          )
+          assertEquals(
+              DataOutcome.Success(CuentaSelection(COP_CASH, MedioPago.EFECTIVO, Moneda.COP)),
+              repository.defaultSelection(Moneda.MXN, TipoMovimiento.INGRESO, MedioPago.EFECTIVO),
+          )
+          driver.tombstone("cuenta", NU)
+          assertEquals(
+              DataOutcome.Success(null),
+              repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO, MedioPago.CREDITO),
+          )
+          assertInvalid(
+              repository.defaultSelection(Moneda.COP, TipoMovimiento.INGRESO, MedioPago.DEBITO)
+          )
+        }
+      }
+
+  /** Cash in COP and USD, the Nequi bank and the NU card in COP, created in that order. */
+  private suspend fun TestScope.withSelectionFixture(
+      block: suspend (MovimientoRepository, TallybookDatabase, SqlDriver) -> Unit
+  ) {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      val database = seeded(driver)
+      driver.execute(null, "DELETE FROM cuenta", 0)
+      listOf(
+              cashCuenta(Moneda.COP, Instant.parse("2026-01-01T00:00:00Z")),
+              cashCuenta(Moneda.USD, Instant.parse("2026-01-02T00:00:00Z")),
+              selectionCuenta(NEQUI, TipoCuenta.BANCO, "2026-01-03T00:00:00Z"),
+              selectionCuenta(NU, TipoCuenta.CREDITO, "2026-01-04T00:00:00Z"),
+          )
+          .forEach { database.insertCuentaRow(it, ChangeStamp.SEED) }
+      block(
+          MovimientoRepositoryImpl(
+              database,
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          ),
+          database,
+          driver,
+      )
+    }
+  }
+
+  private fun selectionCuenta(id: String, tipo: TipoCuenta, createdAt: String) =
+      Cuenta(
+          id = id,
+          nombre = id,
+          tipo = tipo,
+          saldoInicial = Money(0, Moneda.COP),
+          diaCorte = null,
+          archivada = false,
+          createdAt = Instant.parse(createdAt),
+      )
+
+  private fun selectionRow(id: String, cuentaId: String, medio: MedioPago, at: Int) =
+      movimiento(id, at = Instant.parse("2026-09-05T12:00:00Z") + at.seconds)
+          .copy(cuentaId = cuentaId, medio = medio)
+
   private fun seeded(
       driver: SqlDriver,
       extraCategoriaIds: List<String> = emptyList(),
@@ -1214,19 +1381,30 @@ class MovimientoRepositoryTest {
   }
 
   private fun Movimiento.changes() =
-      MovimientoChanges(tipo, monto, fecha, categoriaId, etiquetaIds, titulo, descripcion)
+      MovimientoChanges(
+          tipo,
+          monto,
+          fecha,
+          categoriaId,
+          etiquetaIds,
+          titulo,
+          descripcion,
+          cuentaId,
+          medio,
+      )
 
   private fun insertUnreadable(database: TallybookDatabase, id: String) {
     database.movimientoQueries.insertMovimiento(
         id,
         "INVALID",
         500,
-        "COP",
         "2026-09-05",
         null,
         null,
         "invalid-instant",
         "cat_comida",
+        "cuenta_efectivo_cop",
+        "EFECTIVO",
         ChangeStamp.SEED.value,
     )
   }
@@ -1236,12 +1414,13 @@ class MovimientoRepositoryTest {
         row.id,
         row.tipo.name,
         row.monto.minorUnits,
-        row.monto.moneda.name,
         row.fecha.toString(),
         row.titulo,
         row.descripcion,
         row.createdAt.toString(),
         row.categoriaId,
+        Cuenta.defaultCashId(row.monto.moneda),
+        "EFECTIVO",
         ChangeStamp.SEED.value,
     )
     row.etiquetaIds.forEachIndexed { posicion, etiquetaId ->
@@ -1312,10 +1491,16 @@ class MovimientoRepositoryTest {
           titulo = titulo,
           descripcion = descripcion,
           createdAt = at,
+          cuentaId = Cuenta.defaultCashId(monto.moneda),
+          medio = MedioPago.EFECTIVO,
           etiquetaIds = etiquetaIds,
       )
 }
 
 private const val CATEGORY_HISTORY_BOUND = 1_000
+private const val NEQUI = "nequi"
+private const val NU = "nu"
+private val COP_CASH = Cuenta.defaultCashId(Moneda.COP)
+private val USD_CASH = Cuenta.defaultCashId(Moneda.USD)
 private val LATER = Instant.parse("2026-09-05T13:00:00Z")
 private val ETIQUETA_IDS = listOf("tag_a", "tag_b", "tag_c", "tag_d", "tag_e", "tag_f")

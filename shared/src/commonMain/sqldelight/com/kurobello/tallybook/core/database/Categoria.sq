@@ -70,12 +70,14 @@ SELECT bucket.categoria_id, COUNT(*) AS movimiento_count
 FROM (
     SELECT movimiento.categoria_id
     FROM movimiento
-    WHERE movimiento.monto_moneda = :moneda AND movimiento.deleted_at IS NULL
+    JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+    WHERE cuenta.moneda = :moneda AND movimiento.deleted_at IS NULL
     UNION ALL
     SELECT categoria.padre_id AS categoria_id
     FROM movimiento
+    JOIN cuenta ON cuenta.id = movimiento.cuenta_id
     JOIN categoria ON categoria.id = movimiento.categoria_id
-    WHERE movimiento.monto_moneda = :moneda
+    WHERE cuenta.moneda = :moneda
       AND movimiento.deleted_at IS NULL
       AND categoria.padre_id IS NOT NULL
 ) AS bucket

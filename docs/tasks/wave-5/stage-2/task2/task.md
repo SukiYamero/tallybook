@@ -96,23 +96,36 @@ suspend fun defaultSelection(primary: Moneda, medio: MedioPago? = null): DataOut
 
 ## TDD
 
-- [ ] RED: `migration from schema 7 assigns one cash account per currency and keeps every row` over a
+- [x] RED: `migration from schema 7 assigns one cash account per currency and keeps every row` over a
       `7.db` snapshot with COP, USD and CLP rows, one tombstoned row and etiqueta links; assert IDs,
       `medio_pago`, stamps untouched, view `monto_moneda`, per-currency `sumMovimientosByTipo` equal to
       the pre-migration sums, and links intact.
-- [ ] RED: fresh-schema test: `cuenta`/`transferencia` CHECK constraints reject an unknown `tipo`,
+- [x] RED: fresh-schema test: `cuenta`/`transferencia` CHECK constraints reject an unknown `tipo`,
       `dia_corte` 0/32, non-positive transfer amounts and origin = destination.
-- [ ] GREEN: `7.sqm`, DDL, view, generate `8.db`.
-- [ ] Rewrite the broken queries and the Kotlin plumbing; update construction sites mechanically.
-- [ ] Older migration tests (from 1–5) still pass through to v8.
-- [ ] RED/GREEN bootstrapper: fresh install seeds one cash account; restart and primary-currency change
+- [x] GREEN: `7.sqm`, DDL, view, generate `8.db`.
+- [x] Rewrite the broken queries and the Kotlin plumbing; update construction sites mechanically.
+- [x] Older migration tests (from 1–5) still pass through to v8.
+- [x] RED/GREEN bootstrapper: fresh install seeds one cash account; restart and primary-currency change
       seed none; the stamp seed read returns the max across all five tables.
-- [ ] RED/GREEN `defaultSelection` fallbacks: no history, archived/tombstoned last used, incompatible
+- [x] RED/GREEN `defaultSelection` fallbacks: no history, archived/tombstoned last used, incompatible
       last used, no primary-currency account, keyed by medio.
-- [ ] `FirstMovimientoIntegrationTest` creates a movimiento on a fresh install and sees it in Home.
-- [ ] `./gradlew :shared:testAndroidHostTest`, the SQLDelight migration verification task (discover
+- [x] `FirstMovimientoIntegrationTest` creates a movimiento on a fresh install and sees it in Home.
+- [x] `./gradlew :shared:testAndroidHostTest`, the SQLDelight migration verification task (discover
       with `./gradlew :shared:tasks --all`), `:shared:compileKotlinIosSimulatorArm64`,
       `:androidApp:assembleDebug`, `detekt ktfmtCheck`.
+
+## Implementation notes
+
+- `defaultSelection(primary, tipo, medio?)`: the tipo is required (task1's `TipoCuenta.defaultMedio`
+  and `MedioPago.forTipo`). `CuentaSelection` also carries the cuenta's `moneda`, because the
+  creation path must parse the amount in the selected cuenta's currency and no cuenta read exists
+  before task3. A `medio` that `tipo` does not allow is `InvalidInput`.
+- "Last used" with a `medio` is the newest live movimiento paid with that medio; without one, the
+  newest live movimiento, its medio adapted with `forTipo`. Compatibility is checked in Kotlin
+  against `MedioPago.compatibleTipos` over one ranked SQL read (`selectSelectionCandidates`).
+- No `cuenta` index besides the primary key: a handful of rows, reached by id from every join.
+- Insert/update do not yet check that the cuenta exists, is active, or matches the money's currency
+  (task3). A movimiento whose cuenta is missing is hidden by the view's inner join.
 
 ## Blocks
 

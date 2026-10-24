@@ -12,8 +12,11 @@ import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -502,6 +505,12 @@ private class HistoryCategorias : CategoriaRepository by UnsupportedCategoriaRep
 private data class ReadKey(val moneda: Moneda, val range: MovimientoDateRange)
 
 private class HistoryMovimientos(private var rows: List<Movimiento>) : MovimientoRepository {
+  override suspend fun defaultSelection(
+      primary: Moneda,
+      tipo: TipoMovimiento,
+      medio: MedioPago?,
+  ): DataOutcome<CuentaSelection?> = error("Default selections are not expected in this fixture")
+
   private val ranges = mutableMapOf<ReadKey, HistorySource<List<Movimiento>>>()
   private val summaries = mutableMapOf<Moneda, HistorySource<MovimientoSummary>>()
   private val metadata = mutableMapOf<Moneda, HistorySource<List<Int>>>()
@@ -618,6 +627,8 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) : Movimient
             etiquetaIds = changes.etiquetaIds,
             titulo = changes.titulo,
             descripcion = changes.descripcion,
+            cuentaId = changes.cuentaId,
+            medio = changes.medio,
         )
     val values = rows.map { if (it.id == id) updated else it }
     rows = values
@@ -666,4 +677,6 @@ private fun movimiento(
         null,
         null,
         Instant.parse("2026-10-05T00:00:00Z"),
+        Cuenta.defaultCashId(moneda),
+        MedioPago.EFECTIVO,
     )

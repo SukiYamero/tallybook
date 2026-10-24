@@ -21,8 +21,11 @@ import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
@@ -33,6 +36,7 @@ import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.ThemeMode
+import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.coroutines.CompletableDeferred
@@ -142,6 +146,22 @@ internal open class AddFakeMovimientos(
 ) : MovimientoRepository {
   val inserted = mutableListOf<Movimiento>()
 
+  /** Null resolves the primary cash cuenta, as a fresh install does. */
+  var selection: DataOutcome<CuentaSelection?>? = null
+  val selectionRequests = mutableListOf<Triple<Moneda, TipoMovimiento, MedioPago?>>()
+
+  override suspend fun defaultSelection(
+      primary: Moneda,
+      tipo: TipoMovimiento,
+      medio: MedioPago?,
+  ): DataOutcome<CuentaSelection?> {
+    selectionRequests += Triple(primary, tipo, medio)
+    return selection
+        ?: DataOutcome.Success(
+            CuentaSelection(Cuenta.defaultCashId(primary), medio ?: MedioPago.EFECTIVO, primary)
+        )
+  }
+
   override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
       error("Scoped recent reads are not expected in this fixture")
 
@@ -197,6 +217,8 @@ internal open class AddFakeMovimientos(
             etiquetaIds = changes.etiquetaIds,
             titulo = changes.titulo,
             descripcion = changes.descripcion,
+            cuentaId = changes.cuentaId,
+            medio = changes.medio,
         )
     val values = inserted.map { if (it.id == id) updated else it }
     inserted.clear()

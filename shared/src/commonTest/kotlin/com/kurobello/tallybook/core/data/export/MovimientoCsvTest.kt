@@ -3,7 +3,9 @@ package com.kurobello.tallybook.core.data.export
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -261,5 +263,7 @@ private fun movimiento(
         titulo = titulo,
         descripcion = descripcion,
         createdAt = Instant.fromEpochSeconds(createdAtSeconds),
+        cuentaId = Cuenta.defaultCashId(monto.moneda),
+        medio = MedioPago.EFECTIVO,
         etiquetaIds = etiquetaIds,
     )

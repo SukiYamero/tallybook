@@ -2,8 +2,11 @@ package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -172,9 +175,67 @@ class AddMovimientoViewModelTest {
             titulo = null,
             descripcion = "Salary September",
             createdAt = ADD_TEST_NOW,
+            cuentaId = Cuenta.defaultCashId(Moneda.USD),
+            medio = MedioPago.EFECTIVO,
         ),
         repository.inserted.single(),
     )
+  }
+
+  @Test
+  fun createsTheMovimientoInTheResolvedCashSelectionAndItsCurrency() = runTest {
+    val repository =
+        AddFakeMovimientos().apply {
+          selection =
+              DataOutcome.Success(
+                  CuentaSelection(Cuenta.defaultCashId(Moneda.USD), MedioPago.EFECTIVO, Moneda.USD)
+              )
+        }
+    val category = addTestCategoria("food")
+    val viewModel =
+        createAddViewModel(
+            movimientoRepository = repository,
+            categoriaRepository = AddFakeCategorias(DataOutcome.Success(listOf(category))),
+            preferencesRepository = addPreferences(Moneda.COP),
+            scope = backgroundScope,
+        )
+
+    runCurrent()
+    populateValidFields(viewModel, category)
+    viewModel.onSubmit()
+    runCurrent()
+
+    assertEquals(
+        listOf<Triple<Moneda, TipoMovimiento, MedioPago?>>(
+            Triple(Moneda.COP, TipoMovimiento.GASTO, MedioPago.EFECTIVO)
+        ),
+        repository.selectionRequests,
+    )
+    assertEquals(Moneda.USD, viewModel.uiState.value.moneda)
+    val inserted = repository.inserted.single()
+    assertEquals(com.kurobello.tallybook.core.model.Money(1234, Moneda.USD), inserted.monto)
+    assertEquals(Cuenta.defaultCashId(Moneda.USD), inserted.cuentaId)
+    assertEquals(MedioPago.EFECTIVO, inserted.medio)
+  }
+
+  @Test
+  fun aMissingCashSelectionBlocksEntryUntilARetryResolvesOne() = runTest {
+    val repository = AddFakeMovimientos().apply { selection = DataOutcome.Success(null) }
+    val category = addTestCategoria("food")
+    val viewModel = createValidViewModel(repository, category, backgroundScope)
+
+    runCurrent()
+    populateValidFields(viewModel, category)
+
+    assertEquals(MovimientoFormError.ACCOUNTS_UNAVAILABLE, viewModel.uiState.value.error)
+    assertFalse(viewModel.uiState.value.canSubmit)
+
+    repository.selection = null
+    viewModel.onRetryLoad()
+    runCurrent()
+
+    assertNull(viewModel.uiState.value.error)
+    assertTrue(viewModel.uiState.value.canSubmit)
   }
 
   @Test

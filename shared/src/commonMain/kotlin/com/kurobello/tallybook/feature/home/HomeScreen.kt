@@ -175,6 +175,11 @@ internal fun HomePopulatedPreview() {
           titulo = null,
           descripcion = null,
           createdAt = kotlin.time.Instant.parse("2026-09-15T00:00:00Z"),
+          cuentaId =
+              com.kurobello.tallybook.core.model.Cuenta.defaultCashId(
+                  com.kurobello.tallybook.core.model.Moneda.COP
+              ),
+          medio = com.kurobello.tallybook.core.model.MedioPago.EFECTIVO,
       )
   TallybookTheme {
     HomeScreen(

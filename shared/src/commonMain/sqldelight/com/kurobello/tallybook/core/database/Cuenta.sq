@@ -1,0 +1,31 @@
+-- moneda lives only here: a movimiento or transferencia gets its currency through its cuenta, so the
+-- two can never disagree. saldo_inicial_minor is signed, in that currency's minor units (a credit
+-- card's opening debt is negative). No index besides the primary key: an installation holds a
+-- handful of accounts, and every join reaches them by id.
+-- updated_at has no DEFAULT so a write that forgets its ChangeStamp fails instead of becoming SEED.
+CREATE TABLE cuenta (
+    id TEXT NOT NULL PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    tipo TEXT NOT NULL CHECK (tipo IN ('EFECTIVO', 'BANCO', 'CREDITO')),
+    moneda TEXT NOT NULL,
+    saldo_inicial_minor INTEGER NOT NULL DEFAULT 0,
+    dia_corte INTEGER CHECK (dia_corte BETWEEN 1 AND 31),
+    archivada INTEGER NOT NULL DEFAULT 0 CHECK (archivada IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT
+);
+
+insertCuenta:
+INSERT INTO cuenta(id, nombre, tipo, moneda, saldo_inicial_minor, dia_corte, archivada, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectCuentaById:
+SELECT *
+FROM cuenta
+WHERE id = ? AND deleted_at IS NULL;
+
+countLiveCuentas:
+SELECT COUNT(*)
+FROM cuenta
+WHERE deleted_at IS NULL;

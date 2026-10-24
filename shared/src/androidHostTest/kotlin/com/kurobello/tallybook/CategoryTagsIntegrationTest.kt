@@ -7,11 +7,14 @@ import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.TestChangeClock
+import com.kurobello.tallybook.core.data.seedCashCuentas
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.EtiquetaWrite
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -36,7 +39,7 @@ class CategoryTagsIntegrationTest {
   fun `one category and two tags filter by tag and parent and survive a tag deletion`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       TallybookDatabase.Schema.create(driver)
-      val database = TallybookDatabase(driver)
+      val database = TallybookDatabase(driver).apply { seedCashCuentas() }
       val dispatcher = StandardTestDispatcher(testScheduler)
       var nextId = 0
       val ids = IdGenerator { "id-${++nextId}" }
@@ -64,6 +67,8 @@ class CategoryTagsIntegrationTest {
               titulo = "Cena con clientes",
               descripcion = null,
               createdAt = Instant.parse("2026-10-10T21:00:00Z"),
+              cuentaId = Cuenta.defaultCashId(Moneda.COP),
+              medio = MedioPago.EFECTIVO,
               etiquetaIds = listOf(viaje.id, empresa.id),
           )
       assertEquals(DataOutcome.Success(Unit), movimientos.insert(movimiento))

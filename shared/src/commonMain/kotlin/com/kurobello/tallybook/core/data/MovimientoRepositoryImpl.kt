@@ -3,16 +3,20 @@ package com.kurobello.tallybook.core.data
 import app.cash.sqldelight.Query
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
-import com.kurobello.tallybook.core.database.Movimiento as StoredMovimiento
 import com.kurobello.tallybook.core.database.Movimiento_con_etiquetas as DatabaseMovimiento
+import com.kurobello.tallybook.core.database.SelectSelectionCandidates
+import com.kurobello.tallybook.core.database.SelectStoredMovimientoById as StoredMovimiento
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.ChangeStamp
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -23,6 +27,7 @@ import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.time.Instant
 import kotlinx.coroutines.CoroutineDispatcher
@@ -323,6 +328,8 @@ internal class MovimientoRepositoryImpl(
                         titulo = changes.titulo,
                         descripcion = changes.descripcion,
                         categoria_id = changes.categoriaId,
+                        cuenta_id = changes.cuentaId,
+                        medio_pago = changes.medio.name,
                         updated_at = changeClock.next().value,
                         id = id,
                     )
@@ -418,12 +425,13 @@ internal class MovimientoRepositoryImpl(
                 id = movimiento.id,
                 tipo = movimiento.tipo.name,
                 monto_minor = movimiento.monto.minorUnits,
-                monto_moneda = movimiento.monto.moneda.name,
                 fecha = movimiento.fecha.toString(),
                 titulo = movimiento.titulo,
                 descripcion = movimiento.descripcion,
                 created_at = movimiento.createdAt.toString(),
                 categoria_id = movimiento.categoriaId,
+                cuenta_id = movimiento.cuentaId,
+                medio_pago = movimiento.medio.name,
                 updated_at = stamp.value,
             )
             .value == 1L
@@ -500,6 +508,26 @@ internal class MovimientoRepositoryImpl(
         }
       }
 
+  override suspend fun defaultSelection(
+      primary: Moneda,
+      tipo: TipoMovimiento,
+      medio: MedioPago?,
+  ): DataOutcome<CuentaSelection?> {
+    if (medio != null && !medio.allows(tipo)) {
+      return DataOutcome.Failure(DataError.InvalidInput("Medio $medio does not allow $tipo"))
+    }
+    return runLocalDataOperation(dispatcher) {
+      database.movimientoQueries
+          .selectSelectionCandidates(
+              cash_id = Cuenta.defaultCashId(primary),
+              primary = primary.name,
+              medio = medio?.name,
+          )
+          .executeAsList()
+          .firstNotNullOfOrNull { it.toSelection(tipo, medio) }
+    }
+  }
+
   private fun validate(movimiento: Movimiento): DataError.InvalidInput? =
       when {
         movimiento.monto.minorUnits <= 0 ->
@@ -513,7 +541,34 @@ internal class MovimientoRepositoryImpl(
 }
 
 private fun Movimiento.changes(): MovimientoChanges =
-    MovimientoChanges(tipo, monto, fecha, categoriaId, etiquetaIds, titulo, descripcion)
+    MovimientoChanges(
+        tipo,
+        monto,
+        fecha,
+        categoriaId,
+        etiquetaIds,
+        titulo,
+        descripcion,
+        cuentaId,
+        medio,
+    )
+
+// A last used medio follows the tipo the way a draft does; any other candidate gets the medio its
+// cuenta type implies. Either way the pair must still be compatible, e.g. after a cuenta changed
+// type.
+private fun SelectSelectionCandidates.toSelection(
+    tipo: TipoMovimiento,
+    requested: MedioPago?,
+): CuentaSelection? {
+  val tipoCuenta = TipoCuenta.valueOf(this.tipo)
+  val medio =
+      requested
+          ?: medio_pago?.let { MedioPago.valueOf(it).forTipo(tipo) }
+          ?: tipoCuenta.defaultMedio(tipo)
+  return if (tipoCuenta in medio.compatibleTipos) {
+    CuentaSelection(cuentaId = id, medio = medio, moneda = Moneda.valueOf(moneda))
+  } else null
+}
 
 // An unreadable occupied ID must block restoration rather than become a retryable failure.
 private fun DatabaseMovimiento.isIdenticalTo(movimiento: Movimiento): Boolean =
@@ -531,6 +586,8 @@ private fun StoredMovimiento.holdsContentOf(snapshot: Movimiento): Boolean =
           monto_minor == snapshot.monto.minorUnits &&
           monto_moneda == snapshot.monto.moneda.name &&
           categoria_id == snapshot.categoriaId &&
+          cuenta_id == snapshot.cuentaId &&
+          medio_pago == snapshot.medio.name &&
           titulo == snapshot.titulo &&
           descripcion == snapshot.descripcion &&
           LocalDate.parse(fecha) == snapshot.fecha &&

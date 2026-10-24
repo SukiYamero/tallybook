@@ -1,26 +1,34 @@
 package com.kurobello.tallybook.core.data
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.AppLocale
+import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.ChangeStamp
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.ThemeMode
+import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.Transferencia
 import com.kurobello.tallybook.core.model.map
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
@@ -34,7 +42,7 @@ class LocalDataBootstrapperTest {
     val categoriaRepository = FakeCategoriaRepository(DataOutcome.Success(Unit))
     var resolvedResourceCount = 0
     val bootstrapper =
-        LocalDataBootstrapper(
+        bootstrapper(
             localeProvider = localeProvider,
             preferencesRepository = preferencesRepository,
             categoriaRepository = categoriaRepository,
@@ -43,8 +51,6 @@ class LocalDataBootstrapperTest {
                   resolvedResourceCount += 1
                   resource.key
                 },
-            changeClock = TestChangeClock(),
-            storedMaxChangeStamp = { DataOutcome.Success(null) },
         )
 
     assertEquals(DataOutcome.Success(Unit), bootstrapper.initialize())
@@ -60,13 +66,9 @@ class LocalDataBootstrapperTest {
     val failure = DataOutcome.Failure(DataError.Local(IllegalStateException("preferences failed")))
     val categoriaRepository = FakeCategoriaRepository(DataOutcome.Success(Unit))
     val bootstrapper =
-        LocalDataBootstrapper(
-            localeProvider = FakeDeviceLocaleProvider("es-CO"),
+        bootstrapper(
             preferencesRepository = FakePreferencesRepository(failure),
             categoriaRepository = categoriaRepository,
-            categorySeedProvider = CategorySeedProvider { resource -> resource.key },
-            changeClock = TestChangeClock(),
-            storedMaxChangeStamp = { DataOutcome.Success(null) },
         )
 
     assertEquals(failure, bootstrapper.initialize())
@@ -78,19 +80,100 @@ class LocalDataBootstrapperTest {
     val failure = DataOutcome.Failure(DataError.Local(IllegalStateException("categories failed")))
     val categoriaRepository = FakeCategoriaRepository(failure)
     val changeClock = TestChangeClock()
+    val seededCuentas = mutableListOf<Cuenta>()
     val bootstrapper =
-        LocalDataBootstrapper(
-            localeProvider = FakeDeviceLocaleProvider("es-CO"),
-            preferencesRepository = FakePreferencesRepository(DataOutcome.Success(Unit)),
+        bootstrapper(
             categoriaRepository = categoriaRepository,
-            categorySeedProvider = CategorySeedProvider { resource -> resource.key },
             changeClock = changeClock,
-            storedMaxChangeStamp = { DataOutcome.Success(null) },
+            seedDefaultCuenta = { cuenta ->
+              seededCuentas += cuenta
+              DataOutcome.Success(Unit)
+            },
         )
 
     assertEquals(failure, bootstrapper.initialize())
     assertEquals(1, categoriaRepository.seedCalls)
+    assertEquals(emptyList(), seededCuentas)
     assertEquals(0, changeClock.prepareCalls)
+  }
+
+  @Test
+  fun `initialize returns a cash cuenta seed failure before preparing the clock`() = runTest {
+    val failure = DataOutcome.Failure(DataError.Local(IllegalStateException("cuenta failed")))
+    val changeClock = TestChangeClock()
+    val bootstrapper = bootstrapper(changeClock = changeClock, seedDefaultCuenta = { failure })
+
+    assertEquals(failure, bootstrapper.initialize())
+    assertEquals(0, changeClock.prepareCalls)
+  }
+
+  @Test
+  fun `a fresh install seeds one cash cuenta in the stored primary currency`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      TallybookDatabase.Schema.create(driver)
+      val database = TallybookDatabase(driver)
+      val preferences = FakePreferencesRepository(DataOutcome.Success(Unit), stored = Moneda.USD)
+
+      assertEquals(
+          DataOutcome.Success(Unit),
+          databaseBootstrapper(database, preferences).initialize(),
+      )
+
+      assertEquals(listOf(Cuenta.defaultCashId(Moneda.USD)), database.liveCuentaIds())
+      assertEquals(
+          Cuenta(
+              id = Cuenta.defaultCashId(Moneda.USD),
+              nombre = "account_type_cash",
+              tipo = TipoCuenta.EFECTIVO,
+              saldoInicial = Money(0, Moneda.USD),
+              diaCorte = null,
+              archivada = false,
+              createdAt = NOW,
+          ),
+          database.cuentaQueries
+              .selectCuentaById(Cuenta.defaultCashId(Moneda.USD))
+              .executeAsOne()
+              .toDomain(),
+      )
+      assertEquals(
+          ChangeStamp.SEED.value to null,
+          driver.storedStamps("cuenta", Cuenta.defaultCashId(Moneda.USD)),
+      )
+    }
+  }
+
+  @Test
+  fun `a restart or a primary currency change seeds no further cuenta`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      TallybookDatabase.Schema.create(driver)
+      val database = TallybookDatabase(driver)
+      val preferences = FakePreferencesRepository(DataOutcome.Success(Unit), stored = Moneda.COP)
+      val bootstrapper = databaseBootstrapper(database, preferences)
+
+      bootstrapper.initialize()
+      assertEquals(DataOutcome.Success(Unit), bootstrapper.initialize())
+      preferences.setMonedaPrincipal(Moneda.MXN)
+      assertEquals(DataOutcome.Success(Unit), bootstrapper.initialize())
+
+      assertEquals(listOf(Cuenta.defaultCashId(Moneda.COP)), database.liveCuentaIds())
+    }
+  }
+
+  @Test
+  fun `a migrated cuenta in another currency prevents the fresh install seed`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      TallybookDatabase.Schema.create(driver)
+      val database = TallybookDatabase(driver)
+      database.insertCuentaRow(cashCuenta(Moneda.USD), ChangeStamp.SEED)
+      val preferences = FakePreferencesRepository(DataOutcome.Success(Unit), stored = Moneda.COP)
+
+      assertEquals(
+          DataOutcome.Success(Unit),
+          databaseBootstrapper(database, preferences).initialize(),
+      )
+
+      assertEquals(listOf(Cuenta.defaultCashId(Moneda.USD)), database.liveCuentaIds())
+    }
   }
 
   @Test
@@ -103,31 +186,68 @@ class LocalDataBootstrapperTest {
           stamp = ChangeStamp.of(epochMillis = 9_000, counter = 1, node = NODE),
       )
       database.insertLegacy(movimiento("deleted"), stamp = tombstoneStamp)
-      driver.execute(
-          null,
-          "UPDATE movimiento SET deleted_at = updated_at WHERE id = 'deleted'",
-          0,
-      )
+      driver.tombstone("movimiento", "deleted")
       val events = mutableListOf<String>()
       val changeClock = RecordingChangeClock(events)
       val bootstrapper =
-          LocalDataBootstrapper(
-              localeProvider = FakeDeviceLocaleProvider("es-CO"),
+          bootstrapper(
               preferencesRepository = FakePreferencesRepository(DataOutcome.Success(Unit), events),
               categoriaRepository = FakeCategoriaRepository(DataOutcome.Success(Unit), events),
-              categorySeedProvider = CategorySeedProvider { resource -> resource.key },
               changeClock = changeClock,
+              seedDefaultCuenta = {
+                events += "cuenta"
+                DataOutcome.Success(Unit)
+              },
               storedMaxChangeStamp = {
                 database.maxStoredChangeStamp(UnconfinedTestDispatcher(testScheduler))
               },
           )
 
       assertEquals(DataOutcome.Success(Unit), bootstrapper.initialize())
-      assertEquals(listOf("preferences", "seed", "prepare"), events)
+      assertEquals(listOf("preferences", "seed", "cuenta", "prepare"), events)
       assertEquals(
           listOf<DataOutcome<ChangeStamp?>>(DataOutcome.Success(tombstoneStamp)),
           changeClock.storedMaxima,
       )
+    }
+  }
+
+  @Test
+  fun `the stored maximum covers cuenta and transferencia stamps`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      val database = createSchemaWithReferences(driver)
+      database.insertLegacy(
+          movimiento("live"),
+          stamp = ChangeStamp.of(epochMillis = 9_000, counter = 0, node = NODE),
+      )
+      val cuentaStamp = ChangeStamp.of(epochMillis = 9_001, counter = 0, node = NODE)
+      database.insertCuentaRow(
+          cashCuenta(Moneda.COP).copy(id = "nequi", tipo = TipoCuenta.BANCO),
+          cuentaStamp,
+      )
+      val read: suspend () -> DataOutcome<ChangeStamp?> = {
+        database.maxStoredChangeStamp(UnconfinedTestDispatcher(testScheduler))
+      }
+
+      assertEquals(DataOutcome.Success(cuentaStamp), read())
+
+      val transferenciaStamp = ChangeStamp.of(epochMillis = 9_002, counter = 0, node = NODE)
+      database.insertTransferenciaRow(
+          Transferencia(
+              id = "move",
+              cuentaOrigenId = "nequi",
+              cuentaDestinoId = Cuenta.defaultCashId(Moneda.COP),
+              montoOrigen = Money(100, Moneda.COP),
+              montoDestino = Money(100, Moneda.COP),
+              fecha = LocalDate(2026, 10, 1),
+              descripcion = null,
+              createdAt = NOW,
+          ),
+          transferenciaStamp,
+      )
+      driver.tombstone("transferencia", "move")
+
+      assertEquals(DataOutcome.Success(transferenciaStamp), read())
     }
   }
 
@@ -138,11 +258,7 @@ class LocalDataBootstrapperTest {
       driver.execute(null, "UPDATE categoria SET updated_at = 'not a stamp'", 0)
       val changeClock = TestChangeClock()
       val bootstrapper =
-          LocalDataBootstrapper(
-              localeProvider = FakeDeviceLocaleProvider("es-CO"),
-              preferencesRepository = FakePreferencesRepository(DataOutcome.Success(Unit)),
-              categoriaRepository = FakeCategoriaRepository(DataOutcome.Success(Unit)),
-              categorySeedProvider = CategorySeedProvider { resource -> resource.key },
+          bootstrapper(
               changeClock = changeClock,
               storedMaxChangeStamp = {
                 database.maxStoredChangeStamp(UnconfinedTestDispatcher(testScheduler))
@@ -156,6 +272,48 @@ class LocalDataBootstrapperTest {
     }
   }
 
+  @Suppress("LongParameterList")
+  private fun bootstrapper(
+      localeProvider: DeviceLocaleProvider = FakeDeviceLocaleProvider("es-CO"),
+      preferencesRepository: AppPreferencesRepository =
+          FakePreferencesRepository(DataOutcome.Success(Unit)),
+      categoriaRepository: CategoriaRepository = FakeCategoriaRepository(DataOutcome.Success(Unit)),
+      categorySeedProvider: CategorySeedProvider = CategorySeedProvider { resource ->
+        resource.key
+      },
+      changeClock: ChangeClock = TestChangeClock(),
+      seedDefaultCuenta: suspend (Cuenta) -> DataOutcome<Unit> = { DataOutcome.Success(Unit) },
+      storedMaxChangeStamp: suspend () -> DataOutcome<ChangeStamp?> = { DataOutcome.Success(null) },
+  ) =
+      LocalDataBootstrapper(
+          localeProvider = localeProvider,
+          preferencesRepository = preferencesRepository,
+          categoriaRepository = categoriaRepository,
+          categorySeedProvider = categorySeedProvider,
+          cuentaSeedProvider = CuentaSeedProvider(FixedClock) { resource -> resource.key },
+          seedDefaultCuenta = seedDefaultCuenta,
+          changeClock = changeClock,
+          storedMaxChangeStamp = storedMaxChangeStamp,
+      )
+
+  private fun TestScope.databaseBootstrapper(
+      database: TallybookDatabase,
+      preferences: AppPreferencesRepository,
+  ): LocalDataBootstrapper {
+    val dispatcher = UnconfinedTestDispatcher(testScheduler)
+    return bootstrapper(
+        preferencesRepository = preferences,
+        seedDefaultCuenta = { database.seedDefaultCuenta(it, dispatcher) },
+        storedMaxChangeStamp = { database.maxStoredChangeStamp(dispatcher) },
+    )
+  }
+
+  private fun TallybookDatabase.liveCuentaIds(): List<String> =
+      Moneda.entries
+          .map(Cuenta::defaultCashId)
+          .filter { cuentaQueries.selectCuentaById(it).executeAsOneOrNull() != null }
+          .also { check(it.size.toLong() == cuentaQueries.countLiveCuentas().executeAsOne()) }
+
   private fun movimiento(id: String) =
       Movimiento(
           id = id,
@@ -165,8 +323,10 @@ class LocalDataBootstrapperTest {
           categoriaId = CATEGORIA_OTROS_ID,
           titulo = null,
           descripcion = null,
-          etiquetaIds = listOf("tag"),
           createdAt = Instant.parse("2026-10-01T12:00:00Z"),
+          cuentaId = Cuenta.defaultCashId(Moneda.COP),
+          medio = MedioPago.EFECTIVO,
+          etiquetaIds = listOf("tag"),
       )
 
   private class RecordingChangeClock(private val events: MutableList<String>) : ChangeClock {
@@ -184,8 +344,13 @@ class LocalDataBootstrapperTest {
     override fun next(): ChangeStamp = error("Bootstrap never issues a stamp")
   }
 
+  private object FixedClock : Clock {
+    override fun now(): Instant = NOW
+  }
+
   private companion object {
     const val NODE = "0123456789abcdef"
+    val NOW: Instant = Instant.parse("2026-10-24T09:00:00Z")
   }
 
   private class FakeDeviceLocaleProvider(
@@ -202,13 +367,23 @@ class LocalDataBootstrapperTest {
   private class FakePreferencesRepository(
       private val initializeResult: DataOutcome<Unit>,
       private val events: MutableList<String> = mutableListOf(),
+      private var stored: Moneda? = null,
   ) : AppPreferencesRepository {
-    override val preferences: Flow<DataOutcome<AppPreferencesState>> = emptyFlow()
+    override val preferences: Flow<DataOutcome<AppPreferencesState>> = flow {
+      val moneda = stored
+      emit(
+          DataOutcome.Success(
+              if (moneda == null) AppPreferencesState.Uninitialized
+              else AppPreferencesState.Ready(AppPreferences(moneda))
+          )
+      )
+    }
     val initializedWith = mutableListOf<Moneda>()
 
     override suspend fun initialize(monedaPrincipal: Moneda): DataOutcome<Unit> {
       events += "preferences"
       initializedWith += monedaPrincipal
+      if (initializeResult is DataOutcome.Success && stored == null) stored = monedaPrincipal
       return initializeResult
     }
 
@@ -218,8 +393,10 @@ class LocalDataBootstrapperTest {
     override suspend fun setAppLocale(appLocale: AppLocale?): DataOutcome<Unit> =
         DataOutcome.Success(Unit)
 
-    override suspend fun setMonedaPrincipal(moneda: Moneda): DataOutcome<Unit> =
-        DataOutcome.Success(Unit)
+    override suspend fun setMonedaPrincipal(moneda: Moneda): DataOutcome<Unit> {
+      stored = moneda
+      return DataOutcome.Success(Unit)
+    }
   }
 
   private class FakeCategoriaRepository(

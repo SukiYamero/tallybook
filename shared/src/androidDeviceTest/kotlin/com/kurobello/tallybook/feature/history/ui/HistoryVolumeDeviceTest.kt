@@ -40,6 +40,7 @@ import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.ChangeStamp
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.MovimientoDateRange
@@ -326,12 +327,13 @@ class HistoryVolumeDeviceTest {
           id,
           "GASTO",
           100,
-          currency,
           date,
           titulo,
           null,
           "2026-09-15T12:00:00Z",
           "cat_comida",
+          Cuenta.defaultCashId(Moneda.valueOf(currency)),
+          "EFECTIVO",
           ChangeStamp.SEED.value,
       )
     }

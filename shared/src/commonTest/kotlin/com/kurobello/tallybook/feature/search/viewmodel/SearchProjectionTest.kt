@@ -3,7 +3,9 @@ package com.kurobello.tallybook.feature.search.viewmodel
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -147,6 +149,8 @@ class SearchProjectionTest {
           titulo,
           descripcion,
           Instant.parse("2026-10-06T12:00:00Z"),
+          Cuenta.defaultCashId(Moneda.USD),
+          MedioPago.EFECTIVO,
           etiquetaIds,
       )
 }

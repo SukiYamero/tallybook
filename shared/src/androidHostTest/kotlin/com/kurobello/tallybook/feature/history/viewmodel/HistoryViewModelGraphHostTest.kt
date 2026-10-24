@@ -27,8 +27,11 @@ import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.insertLegacy
+import com.kurobello.tallybook.core.data.seedCashCuentas
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -87,7 +90,7 @@ internal class HistoryViewModelGraphHostTest {
         DriverManager.registerDriver(jdbc)
         val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
         TallybookDatabase.Schema.create(driver)
-        val database = TallybookDatabase(driver)
+        val database = TallybookDatabase(driver).apply { seedCashCuentas() }
         val directory = createTempDirectory("tallybook-history-vm-")
         val factory =
             PreferencesDataStoreFactory(
@@ -316,4 +319,6 @@ private fun row(id: String, date: LocalDate, moneda: Moneda) =
         null,
         null,
         Instant.parse("2026-10-05T00:00:00Z"),
+        Cuenta.defaultCashId(moneda),
+        MedioPago.EFECTIVO,
     )

@@ -12,9 +12,12 @@ import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -100,6 +103,12 @@ internal class SearchCategorias : CategoriaRepository by UnsupportedCategoriaRep
 }
 
 internal class SearchMovimientos : MovimientoRepository {
+  override suspend fun defaultSelection(
+      primary: Moneda,
+      tipo: TipoMovimiento,
+      medio: MedioPago?,
+  ): DataOutcome<CuentaSelection?> = error("Default selections are not expected in this fixture")
+
   var starts = 0
   var active = 0
   private var rows =
@@ -113,6 +122,8 @@ internal class SearchMovimientos : MovimientoRepository {
             text,
             null,
             Instant.parse("2026-10-06T12:00:00Z"),
+            Cuenta.defaultCashId(Moneda.USD),
+            MedioPago.EFECTIVO,
             if (index == 0) listOf("t_empresa") else emptyList(),
         )
       }
@@ -200,6 +211,8 @@ internal class SearchMovimientos : MovimientoRepository {
             etiquetaIds = changes.etiquetaIds,
             titulo = changes.titulo,
             descripcion = changes.descripcion,
+            cuentaId = changes.cuentaId,
+            medio = changes.medio,
         )
     val values = rows.map { if (it.id == id) updated else it }
     rows = values

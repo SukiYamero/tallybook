@@ -18,6 +18,7 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.CuentaSeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
@@ -31,14 +32,17 @@ import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.insertLegacy
+import com.kurobello.tallybook.core.data.seedDefaultCuenta
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -443,6 +447,8 @@ class HistoryIntegrationTest {
               preferences,
               categorias,
               CategorySeedProvider { it.key },
+              CuentaSeedProvider(fixture.clock) { it.key },
+              { database.seedDefaultCuenta(it, fixture.dispatcher) },
               TestChangeClock(),
               { DataOutcome.Success(null) },
           )
@@ -612,6 +618,8 @@ class HistoryIntegrationTest {
             titulo = title,
             descripcion = null,
             createdAt = Instant.parse("2026-09-20T12:00:00Z"),
+            cuentaId = Cuenta.defaultCashId(currency),
+            medio = MedioPago.EFECTIVO,
         )
 
     fun <T> assertSuccess(outcome: DataOutcome<T>): T =

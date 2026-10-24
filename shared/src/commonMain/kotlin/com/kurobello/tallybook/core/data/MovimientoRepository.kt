@@ -1,6 +1,8 @@
 package com.kurobello.tallybook.core.data
 
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
@@ -10,6 +12,7 @@ import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlinx.coroutines.flow.Flow
 
 // Typed lifecycle operations preserve one compatible contract for mutations and their observations.
@@ -51,4 +54,16 @@ interface MovimientoRepository {
   suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<MovimientoRestoreResult>
 
   suspend fun delete(id: String): DataOutcome<Unit>
+
+  /**
+   * The medio and live, active cuenta a new [tipo] movimiento starts with: the last used pair, then
+   * the [primary] cash cuenta, then any cuenta in [primary], then any cuenta, restricted to [medio]
+   * when given. Null only when no such cuenta is compatible with [medio]; a [medio] [tipo] does not
+   * allow is invalid input.
+   */
+  suspend fun defaultSelection(
+      primary: Moneda,
+      tipo: TipoMovimiento,
+      medio: MedioPago? = null,
+  ): DataOutcome<CuentaSelection?>
 }

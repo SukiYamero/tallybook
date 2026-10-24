@@ -13,10 +13,12 @@ import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.PhraseReviewFlag
@@ -35,6 +37,8 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onStart
@@ -102,17 +106,22 @@ internal class AddMovimientoViewModel(
   init {
     coroutineScope.launch {
       combine(
-              repositories.preferenceLoadStates(retryLoadRequests),
+              repositories.preferenceLoadStates(retryLoadRequests).flatMapLatest { preferences ->
+                repositories.selectionLoadStates(preferences, initialDraft.tipo).map { selection ->
+                  preferences to selection
+                }
+              },
               repositories.categoriaLoadStates(retryLoadRequests),
-          ) { preferences, categorias ->
-            LoadSnapshot.from(preferences, categorias)
+          ) { (preferences, selection), categorias ->
+            LoadSnapshot.from(preferences, selection, categorias)
           }
           .collect { snapshot ->
             preferredLocale.value = snapshot.appLocale
             uiState.update { current ->
               current
                   .copy(
-                      moneda = snapshot.moneda ?: current.moneda,
+                      moneda = snapshot.selection?.moneda ?: snapshot.moneda ?: current.moneda,
+                      cuentaSelection = snapshot.selection ?: current.cuentaSelection,
                       categorias = snapshot.categorias ?: current.categorias,
                       isLoading = snapshot.isLoading,
                       error =
@@ -556,6 +565,7 @@ private fun AddMovimientoUiState.toMovimientoOrNull(
 ): Movimiento? {
   val amount = (parseAmountInput(amountInput, moneda) as? AmountInputResult.Valid)?.money
   val categoriaId = effectiveCategoriaId
+  val selection = cuentaSelection ?: return null
   val isValid = fecha <= createdAt.toLocalDateTime(timeZone).date && !isLoading && error == null
   return if (amount == null || categoriaId == null || !isValid) null
   else
@@ -568,6 +578,8 @@ private fun AddMovimientoUiState.toMovimientoOrNull(
           titulo = titulo.normalizeOptionalText(),
           descripcion = descripcion.normalizeOptionalText(),
           createdAt = createdAt,
+          cuentaId = selection.cuentaId,
+          medio = selection.medio,
           etiquetaIds = selectedEtiquetas.map(Etiqueta::id),
       )
 }
@@ -581,6 +593,24 @@ private sealed interface LoadState<out T> {
 private fun AddMovimientoRepositories.preferenceLoadStates(
     retryRequests: Flow<Int>
 ): Flow<LoadState<AppPreferencesState>> = retryRequests.loadStates { preferences.preferences }
+
+// Until the entry offers medio and cuenta, every new movimiento is cash; the repository resolves
+// which cash cuenta. It waits for the primary currency, so it adds no state of its own before that.
+private fun AddMovimientoRepositories.selectionLoadStates(
+    preferences: LoadState<AppPreferencesState>,
+    tipo: TipoMovimiento,
+): Flow<LoadState<CuentaSelection?>?> {
+  val primary =
+      ((preferences as? LoadState.Value)?.outcome as? DataOutcome.Success)
+          ?.data
+          ?.let { it as? AppPreferencesState.Ready }
+          ?.value
+          ?.monedaPrincipal ?: return flowOf(null)
+  return flow {
+    emit(LoadState.Loading)
+    emit(LoadState.Value(movimientos.defaultSelection(primary, tipo, MedioPago.EFECTIVO)))
+  }
+}
 
 private fun AddMovimientoRepositories.categoriaLoadStates(
     retryRequests: Flow<Int>
@@ -598,6 +628,7 @@ private fun <T> Flow<Int>.loadStates(source: () -> Flow<DataOutcome<T>>): Flow<L
 private data class LoadSnapshot(
     val moneda: Moneda?,
     val appLocale: AppLocale?,
+    val selection: CuentaSelection?,
     val categorias: List<Categoria>?,
     val isLoading: Boolean,
     val error: MovimientoFormError?,
@@ -605,8 +636,10 @@ private data class LoadSnapshot(
   companion object {
     fun from(
         preferences: LoadState<AppPreferencesState>,
+        selection: LoadState<CuentaSelection?>?,
         categorias: LoadState<List<Categoria>>,
     ): LoadSnapshot {
+      val selectionOutcome = (selection as? LoadState.Value)?.outcome
       val loaded =
           (preferences as? LoadState.Value)
               ?.outcome
@@ -617,15 +650,22 @@ private data class LoadSnapshot(
       return LoadSnapshot(
           moneda = loaded?.monedaPrincipal,
           appLocale = loaded?.appLocale,
+          selection = (selectionOutcome as? DataOutcome.Success)?.data,
           categorias =
               (categorias as? LoadState.Value)?.outcome.let { it as? DataOutcome.Success }?.data,
-          isLoading = preferences is LoadState.Loading || categorias is LoadState.Loading,
+          isLoading =
+              preferences is LoadState.Loading ||
+                  selection is LoadState.Loading ||
+                  categorias is LoadState.Loading,
           error =
               when {
                 (preferences as? LoadState.Value)?.outcome is DataOutcome.Failure ->
                     MovimientoFormError.PREFERENCES_UNAVAILABLE
                 (categorias as? LoadState.Value)?.outcome is DataOutcome.Failure ->
                     MovimientoFormError.CATEGORIES_UNAVAILABLE
+                selectionOutcome is DataOutcome.Failure ||
+                    selectionOutcome is DataOutcome.Success && selectionOutcome.data == null ->
+                    MovimientoFormError.ACCOUNTS_UNAVAILABLE
                 else -> null
               },
       )

@@ -6,4 +6,5 @@
     <string name="payment_method_debit">Débito</string>
     <string name="payment_method_transfer">Transferencia</string>
     <string name="payment_method_credit">Crédito</string>
+    <string name="movimiento_accounts_error">No pudimos cargar tus cuentas. Lo que escribiste sigue aquí. Intenta cargarlas de nuevo.</string>
 </resources>
