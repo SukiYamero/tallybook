@@ -15,6 +15,8 @@ import androidx.savedstate.compose.LocalSavedStateRegistryOwner
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
+import com.kurobello.tallybook.core.data.CuentaRepository
+import com.kurobello.tallybook.core.data.CuentaRepositoryImpl
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.FakeTransferenciaRepository
@@ -196,6 +198,15 @@ private class ManagementOwnerSuite(val scope: TestScope) {
           module {
             single<MovimientoRepository> { repository }
             single<EtiquetaRepository> { FakeEtiquetaRepository() }
+            single<CuentaRepository> {
+              CuentaRepositoryImpl(
+                  database,
+                  dispatcher,
+                  IdGenerator { error("Not used by this test") },
+                  Clock.System,
+                  TestChangeClock(),
+              )
+            }
             single<TransferenciaRepository> { FakeTransferenciaRepository() }
             single<CategoriaRepository> {
               CategoriaRepositoryImpl(

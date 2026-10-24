@@ -21,6 +21,7 @@ import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.EditMovimientoDraftState
@@ -30,6 +31,7 @@ import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoDiscardTa
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoManagementError
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoManagementPhase
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoManagementSession
+import com.kurobello.tallybook.feature.movimientos.viewmodel.USD_CASH
 import com.kurobello.tallybook.feature.movimientos.viewmodel.managementCategoria
 import com.kurobello.tallybook.feature.movimientos.viewmodel.managementMovimiento
 import com.kurobello.tallybook.feature.movimientos.viewmodel.toDraft
@@ -145,6 +147,8 @@ class ManageMovimientoSheetTest {
                 listOf(managementCategoria()),
                 edit = form,
                 isCategoriesLoading = false,
+                cuentas = listOf(USD_CASH),
+                isCuentasLoading = false,
             ),
             actions,
         )
@@ -179,6 +183,8 @@ class ManageMovimientoSheetTest {
                 listOf(managementCategoria()),
                 edit = edit,
                 isCategoriesLoading = false,
+                cuentas = listOf(USD_CASH),
+                isCuentasLoading = false,
             ),
             actions,
         )
@@ -227,6 +233,8 @@ class ManageMovimientoSheetTest {
                 listOf(managementCategoria()),
                 edit = form,
                 isCategoriesLoading = false,
+                cuentas = listOf(USD_CASH),
+                isCuentasLoading = false,
             ),
             actions,
         )
@@ -296,6 +304,8 @@ class ManageMovimientoSheetTest {
                 listOf(managementCategoria()),
                 edit = form,
                 isCategoriesLoading = false,
+                cuentas = listOf(USD_CASH),
+                isCuentasLoading = false,
             ),
             actions,
         )
@@ -410,6 +420,10 @@ private class ManagementSheetActions : ManageMovimientoSheetActions {
   override fun onDescripcionChanged(value: String) = Unit
 
   override fun onRetryLoad() = Unit
+
+  override fun onMedioSelected(medio: MedioPago) = Unit
+
+  override fun onCuentaSelected(id: String) = Unit
 }
 
 private fun managementString(resource: StringResource, vararg args: Any) = runBlocking {

@@ -34,6 +34,7 @@ internal interface MovimientoFormState {
   val error: MovimientoFormError?
   val amountError: AmountInputError?
   val isCategoriaMissing: Boolean
+  val cuentaField: MovimientoCuentaUi
 
   /** The category the form presents, which is the Otros fallback while none is chosen. */
   val displayedCategoriaId: String?

@@ -54,6 +54,7 @@ internal data class MovimientoSummaryCallbacks(
     val onChooseCategoria: () -> Unit,
     val onSuggestion: (Categoria) -> Unit,
     val etiquetas: MovimientoEtiquetasCallbacks,
+    val cuenta: MovimientoCuentaCallbacks = MovimientoCuentaCallbacks.Inert,
     val onEdit: () -> Unit,
     val onSave: () -> Unit,
 )
@@ -112,6 +113,11 @@ internal fun MovimientoSummaryStep(
 
 @Composable
 private fun SummarySelection(summary: MovimientoSummaryUi, callbacks: MovimientoSummaryCallbacks) {
+  MovimientoCuentaField(
+      field = summary.cuenta,
+      callbacks = callbacks.cuenta,
+      enabled = !summary.isSubmitting,
+  )
   CategorySingleField(
       categoria = summary.categoria,
       deselectable = true,

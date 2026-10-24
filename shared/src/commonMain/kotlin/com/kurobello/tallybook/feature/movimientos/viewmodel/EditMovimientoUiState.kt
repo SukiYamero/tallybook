@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Movimiento
 import kotlinx.datetime.LocalDate
@@ -18,7 +19,27 @@ internal data class EditMovimientoUiState(
     override val error: MovimientoFormError? = null,
     val validationDate: LocalDate = maxSelectableDate,
     override val failedEtiquetaNombre: String? = null,
+    val cuentas: List<Cuenta> = emptyList(),
+    val cuentaRejected: Boolean = false,
 ) : MovimientoFormState {
+  /**
+   * The stored currency never changes; its cuenta stays offered, archived or not, while untouched.
+   */
+  override val cuentaField: MovimientoCuentaUi by lazy {
+    movimientoCuentaUi(
+        selection = CuentaSelectionState(draft.medio, draft.cuentaId, SelectionOwner.USER),
+        cuentas = cuentas,
+        tipo = tipo,
+        submitAttempted = submitAttempted,
+        cuentaRejected = cuentaRejected,
+        moneda = moneda,
+        kept =
+            cuentas
+                .firstOrNull { it.id == original.cuentaId }
+                ?.takeIf { draft.cuentaId == original.cuentaId },
+    )
+  }
+
   override val tipo
     get() = draft.tipo
 

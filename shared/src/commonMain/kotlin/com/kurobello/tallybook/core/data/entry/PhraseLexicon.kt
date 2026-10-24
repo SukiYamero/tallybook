@@ -2,6 +2,7 @@
 
 package com.kurobello.tallybook.core.data.entry
 
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlinx.datetime.DayOfWeek
 
@@ -330,3 +331,92 @@ internal val dayOfMonthMarkers: Set<String> = setOf("el", "dia", "on", "the")
 internal val monthConnectors: Set<String> = setOf("de", "del", "of")
 
 internal val ordinalSuffixes: Set<String> = setOf("th", "st", "nd", "rd")
+
+internal val medioWords: PhraseTable<MedioWord> =
+    PhraseTable(
+        phrases(
+            MedioWord.Explicit(MedioPago.EFECTIVO),
+            "efectivo",
+            "en efectivo",
+            "cash",
+            "en cash",
+            "in cash",
+            "with cash",
+            "dinheiro",
+            "em dinheiro",
+            "no dinheiro",
+            "dinheiro vivo",
+            "em especie",
+        ) +
+            phrases(
+                MedioWord.Explicit(MedioPago.DEBITO),
+                "con debito",
+                "tarjeta debito",
+                "tarjeta de debito",
+                "con la de debito",
+                "debit card",
+                "with debit",
+                "cartao de debito",
+            ) +
+            phrases(
+                MedioWord.Explicit(MedioPago.CREDITO),
+                "con credito",
+                "tarjeta credito",
+                "tarjeta de credito",
+                "con la de credito",
+                "credit card",
+                "with credit",
+                "cartao de credito",
+            ) +
+            phrases(
+                MedioWord.Explicit(MedioPago.TRANSFERENCIA),
+                "transferencia",
+                "por transferencia",
+                "con transferencia",
+                "by transfer",
+                "bank transfer",
+                "wire transfer",
+                "pix",
+                "por pix",
+                "via pix",
+                "no pix",
+                "pelo pix",
+            ) +
+            phrases(
+                MedioWord.AnyCard,
+                "con tarjeta",
+                "con la tarjeta",
+                "con mi tarjeta",
+                "with card",
+                "with a card",
+                "with my card",
+                "by card",
+                "no cartao",
+                "com cartao",
+                "com o cartao",
+                "com meu cartao",
+            ) +
+            // Category keywords that contain a method word but name what was bought or received.
+            phrases(MedioWord.NotMedio, "cash back", "petty cash", "transferencia recibida")
+    )
+
+internal val negationWords: Set<String> = setOf("no", "sin", "not", "without", "sem", "nao")
+
+// "sin tarjeta" and "sem cartão" negate a card without naming a method phrase.
+internal val cardNouns: Set<String> = setOf("tarjeta", "cartao", "card")
+
+/** First words of a method phrase that names the card itself rather than how it was used. */
+internal val cardLeadWords: Set<String> = setOf("tarjeta", "cartao", "credit", "debit")
+
+// A named card preceded by these is the thing being paid ("pago tarjeta de crédito", "fatura do
+// cartão"), not the payment method; the category suggester still needs those words.
+internal val cardObjectMarkers: Set<String> =
+    setOf("de", "del", "do", "da", "of", "pago", "pagar", "pay", "fatura", "factura", "cuota")
+
+internal val cardDeterminers: Set<String> = setOf("la", "el", "mi", "the", "my", "a", "o", "meu")
+
+// A determiner only makes the card an object when no preposition introduces it ("con mi tarjeta").
+internal val methodPrepositions: Set<String> =
+    setOf("con", "en", "por", "with", "by", "on", "in", "com", "em", "no", "na", "pelo", "via")
+
+internal val cardObjectFollowers: Set<String> = setOf("bill", "payment", "statement")

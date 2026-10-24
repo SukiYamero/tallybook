@@ -18,6 +18,8 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.CuentaRepository
+import com.kurobello.tallybook.core.data.CuentaRepositoryImpl
 import com.kurobello.tallybook.core.data.CuentaSeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepository
@@ -397,6 +399,14 @@ class HistoryIntegrationTest {
             TestChangeClock(),
         )
     val movimientos = MovimientoRepositoryImpl(database, fixture.dispatcher, TestChangeClock())
+    private val cuentas =
+        CuentaRepositoryImpl(
+            database,
+            fixture.dispatcher,
+            IdGenerator { error("Not used by this test") },
+            fixture.clock,
+            TestChangeClock(),
+        )
     private val etiquetas =
         EtiquetaRepositoryImpl(
             database,
@@ -434,6 +444,7 @@ class HistoryIntegrationTest {
               single<SaldoRepository> { SaldoRepositoryImpl(database, fixture.dispatcher) }
               single<CategoriaRepository> { categorias }
               single<EtiquetaRepository> { etiquetas }
+              single<CuentaRepository> { cuentas }
               single<Clock> { fixture.clock }
               single<TimeZoneProvider> { TimeZoneProvider { fixture.clock.zone } }
               single<IdGenerator> { IdGenerator { nextId } }

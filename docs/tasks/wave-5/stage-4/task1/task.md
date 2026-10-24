@@ -80,11 +80,30 @@ draft's `moneda` becomes a derived getter from the selected account; no second s
 
 ## TDD
 
-- [ ] RED `CuentaSelectionStateTest`: compatible-account filtering, tipo switch, ownership layering over a resolved default (fallbacks themselves are tested in Stage 2/task2).
-- [ ] RED `AddMovimientoCuentaTest`: defaults, user ownership, currency follows account, CLP scale error, Save persists medio/cuenta, Fill manually keeps user-picked medio/account.
-- [ ] RED `ManageMovimientoCuentaTest` (after rebasing on Stage 3 commit A): same-currency options, untouched archived account, no-op, repository rejection mapping.
-- [ ] GREEN; shared components with previews; device test for medio → account selection and quick-create.
-- [ ] `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosSimulatorArm64 detekt ktfmtCheck :androidApp:assembleDebug`.
+- [x] RED `CuentaSelectionStateTest`: compatible-account filtering, tipo switch, ownership layering over a resolved default (fallbacks themselves are tested in Stage 2/task2).
+- [x] RED `AddMovimientoCuentaTest`: defaults, user ownership, currency follows account, CLP scale error, Save persists medio/cuenta, Fill manually keeps user-picked medio/account.
+- [x] RED `ManageMovimientoCuentaTest` (after rebasing on Stage 3 commit A): same-currency options, untouched archived account, no-op, repository rejection mapping.
+- [x] GREEN; shared components with previews; device test for medio → account selection and quick-create.
+- [x] `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosSimulatorArm64 detekt ktfmtCheck :androidApp:assembleDebug`.
+- [x] Quick-create: `CuentaCreationSheet` hosts Stage 3's `QuickCuentaViewModel` + `AccountForm(QUICK)`; type from `quickCuentaTipo(medio)`, currency primary (editor: stored); the created or reused cuenta is selected once the catalog lists it.
+
+## Implementation record
+
+- `CuentaSelectionState` has a third owner, `DEFAULT`, besides `SENTENCE`/`USER`: clearing the
+  sentence or Discard must return to the repository's selection, which neither of the other two
+  owners describes.
+- The view models cache `defaultSelection` once without a medio and once per medio (read as gasto,
+  adapted with `forTipo`), re-read on every cuenta emission (`CuentaReads.kt`). The rules stay
+  synchronous, so the engine can resolve the sentence's currency before reading the amount. The
+  editor reads them with the stored currency as `primary`; a default in another currency is dropped.
+- With one compatible cuenta the field selects it (`MovimientoCuentaUi.selected`), so no fallback
+  of its own exists beyond "the only option".
+- A repository `InvalidInput` on Save re-reads the cuenta (`CuentaRepository.accepts`); only a cuenta
+  it no longer takes becomes the field error, anything else stays the shared save error.
+- Order: the form keeps its layout (tipo, **Medio, Account**, Category, Tags, date, amount, texts);
+  the review keeps Title after Amount and inserts Medio/Account before Category.
+- `MovimientoSentenceCallbacks.cuenta`/`MovimientoSummaryCallbacks.cuenta` default to an inert set so
+  the UI catalog (`core/ui/catalog`, not Stage 4's) keeps compiling unchanged.
 
 ## Blocks
 

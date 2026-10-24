@@ -4,8 +4,10 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.CategorySeedCatalog
+import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
@@ -13,6 +15,7 @@ import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
+import com.kurobello.tallybook.core.data.entry.CuentaMatcher
 import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.core.model.AppLocale
@@ -57,6 +60,7 @@ internal fun createAddViewModel(
     categoriaRepository: CategoriaRepository = AddFakeCategorias(DataOutcome.Success(emptyList())),
     preferencesRepository: AppPreferencesRepository = AddFakePreferences(),
     etiquetaRepository: EtiquetaRepository = FakeEtiquetaRepository(),
+    cuentaRepository: CuentaRepository = FakeCuentaRepository(addCashCuentas()),
     clock: Clock = AddFixedClock(ADD_TEST_NOW),
     timeZone: TimeZone = TimeZone.UTC,
     computationDispatcher: CoroutineDispatcher = UnconfinedTestDispatcher(),
@@ -69,6 +73,7 @@ internal fun createAddViewModel(
                 categorias = categoriaRepository,
                 movimientos = movimientoRepository,
                 etiquetas = etiquetaRepository,
+                cuentas = cuentaRepository,
             ),
         idGenerator = IdGenerator { "movement-id" },
         clock = clock,
@@ -78,6 +83,7 @@ internal fun createAddViewModel(
                 parser = MovimientoPhraseParser(),
                 suggester = CategorySuggester(CategoryKeywordDictionary.builtIn),
                 etiquetaMatcher = EtiquetaMatcher(),
+                cuentaMatcher = CuentaMatcher(),
                 localeProvider = AddFixedLocale,
                 computationDispatcher = computationDispatcher,
             ),
@@ -86,6 +92,9 @@ internal fun createAddViewModel(
 
 internal fun addPreferences(moneda: Moneda) =
     AddFakePreferences(DataOutcome.Success(AppPreferencesState.Ready(AppPreferences(moneda))))
+
+/** One default cash cuenta per moneda, which is what any primary currency resolves to. */
+internal fun addCashCuentas(): List<Cuenta> = Moneda.entries.map(::cashCuenta)
 
 internal fun addSeedCategorias(): List<Categoria> =
     CategorySeedCatalog.categories.map { Categoria(it.id, it.id, it.padreId, it.icono, it.color) }
@@ -148,6 +157,9 @@ internal open class AddFakeMovimientos(
 
   /** Null resolves the primary cash cuenta, as a fresh install does. */
   var selection: DataOutcome<CuentaSelection?>? = null
+
+  /** Per-medio answers; a medio without one resolves the primary cash cuenta only for EFECTIVO. */
+  val medioSelections = mutableMapOf<MedioPago, CuentaSelection?>()
   val selectionRequests = mutableListOf<Triple<Moneda, TipoMovimiento, MedioPago?>>()
 
   override suspend fun defaultSelection(
@@ -156,10 +168,12 @@ internal open class AddFakeMovimientos(
       medio: MedioPago?,
   ): DataOutcome<CuentaSelection?> {
     selectionRequests += Triple(primary, tipo, medio)
-    return selection
-        ?: DataOutcome.Success(
-            CuentaSelection(Cuenta.defaultCashId(primary), medio ?: MedioPago.EFECTIVO, primary)
-        )
+    val cash = CuentaSelection(Cuenta.defaultCashId(primary), MedioPago.EFECTIVO, primary)
+    return when {
+      medio == null -> selection ?: DataOutcome.Success(cash)
+      medio in medioSelections -> DataOutcome.Success(medioSelections[medio])
+      else -> DataOutcome.Success(cash.takeIf { medio == MedioPago.EFECTIVO })
+    }
   }
 
   override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =

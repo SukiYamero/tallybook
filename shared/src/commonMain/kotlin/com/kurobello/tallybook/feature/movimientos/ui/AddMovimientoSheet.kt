@@ -33,6 +33,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookModalBottomSheet
 import com.kurobello.tallybook.core.ui.component.TallybookModalDialog
 import com.kurobello.tallybook.core.ui.component.rememberDismissGuard
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import com.kurobello.tallybook.feature.accounts.viewmodel.QuickCuentaViewModel
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoEffect
@@ -82,6 +83,7 @@ private fun AddMovimientoSheet(
     callbacks: ModalBottomSheetCallbacks,
     modifier: Modifier = Modifier,
     categoryCreation: CategoryPickerCreation? = null,
+    cuentaCreation: CuentaCreation? = null,
 ) {
   val dismissGuard =
       rememberDismissGuard(
@@ -90,10 +92,17 @@ private fun AddMovimientoSheet(
           onDiscardChanges = actions::onDiscardChanges,
           onDismiss = callbacks.onDismiss,
       )
-  val categoryPicker = rememberMovimientoPicker(interactionEnabled = !uiState.isSubmitting)
-  val etiquetaPicker = rememberMovimientoPicker(interactionEnabled = !uiState.isSubmitting)
+  val pickerStates =
+      EntryPickerStates(
+          category = rememberMovimientoPicker(interactionEnabled = !uiState.isSubmitting),
+          etiqueta = rememberMovimientoPicker(interactionEnabled = !uiState.isSubmitting),
+          cuenta = rememberMovimientoPicker(interactionEnabled = !uiState.isSubmitting),
+      )
   val pickers =
-      EntryPickers(onChooseCategoria = categoryPicker.onOpen, onAddEtiqueta = etiquetaPicker.onOpen)
+      pickerStates.callbacks(
+          onCreateCuenta =
+              cuentaCreation?.let { creation -> { creation.start(uiState.cuentaField) } }
+      )
   val isSentence = uiState.step == AddMovimientoStep.PHRASE
   // Either surface also hides when the flow moves between them; only a closed session is final.
   val currentVisible by rememberUpdatedState(visible)
@@ -123,20 +132,8 @@ private fun AddMovimientoSheet(
           ),
       modifier = modifier,
   )
-  // The form hosts its own pickers; these serve the dialog and the review step.
-  MovimientoCategoryPickerSheet(
-      visible = categoryPicker.isVisible && uiState.step != AddMovimientoStep.FORM,
-      uiState = uiState,
-      onSelect = actions::onCategoriaSelected,
-      picker = categoryPicker,
-      creation = categoryCreation,
-  )
-  MovimientoEtiquetaPickerSheet(
-      visible = etiquetaPicker.isVisible && uiState.step != AddMovimientoStep.FORM,
-      uiState = uiState,
-      actions = actions,
-      picker = etiquetaPicker,
-  )
+  EntryPickerSheets(uiState, actions, pickerStates, categoryCreation)
+  CuentaCreationSheet(cuentaCreation, uiState.cuentaField, actions::onCuentaSelected)
   DiscardEntryConfirmation(dismissGuard)
 }
 
@@ -182,6 +179,7 @@ private fun MovimientoSentenceDialog(
           onChooseCategoria = pickers.onChooseCategoria,
           onSuggestion = { actions.onSuggestionSelected(it.id) },
           etiquetas = actions.etiquetasCallbacks(onAdd = pickers.onAddEtiqueta),
+          cuenta = actions.cuentaCallbacks(pickers.onChooseCuenta, pickers.onCreateCuenta),
       )
   TallybookModalDialog(
       visible = visible,
@@ -240,6 +238,7 @@ private fun MovimientoReviewSheet(
             actions = actions,
             categoryCreation = categoryCreation,
             onDeselectCategoria = actions::onCategoriaCleared,
+            onCreateCuenta = pickers.onCreateCuenta,
         )
       } else SummaryStepContent(shown, actions, pickers)
     }
@@ -287,6 +286,7 @@ private fun SummaryStepContent(
               onChooseCategoria = pickers.onChooseCategoria,
               onSuggestion = { actions.onSuggestionSelected(it.id) },
               etiquetas = actions.etiquetasCallbacks(onAdd = pickers.onAddEtiqueta),
+              cuenta = actions.cuentaCallbacks(pickers.onChooseCuenta, pickers.onCreateCuenta),
               onEdit = actions::onEditMovimiento,
               onSave = actions::onSubmit,
           ),
@@ -305,9 +305,6 @@ private fun SummaryStepContent(
   )
 }
 
-/** The pickers the sentence dialog and the review share; the form hosts its own. */
-private data class EntryPickers(val onChooseCategoria: () -> Unit, val onAddEtiqueta: () -> Unit)
-
 @Composable
 @Suppress("LongParameterList")
 internal fun AddMovimientoSheetRoute(
@@ -318,9 +315,11 @@ internal fun AddMovimientoSheetRoute(
     viewModel: AddMovimientoViewModel = koinViewModel(),
     quickCategoryViewModel: QuickCategoryViewModel =
         rememberQuickCategoryViewModel(QUICK_CATEGORY_ADD_KEY),
+    quickCuentaViewModel: QuickCuentaViewModel = rememberQuickCuentaViewModel(QUICK_CUENTA_ADD_KEY),
 ) {
   val uiState by viewModel.uiState.collectAsStateWithLifecycle()
   val quickCategoryState by quickCategoryViewModel.uiState.collectAsStateWithLifecycle()
+  val quickCuentaState by quickCuentaViewModel.uiState.collectAsStateWithLifecycle()
   AddMovimientoSavedEffect(effects = viewModel.effects, onSaved = onDismiss)
   QuickCategorySelectionEffect(
       effects = quickCategoryViewModel.effects,
@@ -338,6 +337,13 @@ internal fun AddMovimientoSheetRoute(
       callbacks = ModalBottomSheetCallbacks(onDismiss = onDismiss, onHidden = onHidden),
       modifier = modifier,
       categoryCreation = CategoryPickerCreation(quickCategoryState, quickCategoryViewModel),
+      cuentaCreation =
+          CuentaCreation(
+              state = quickCuentaState,
+              actions = quickCuentaViewModel,
+              effects = quickCuentaViewModel.effects,
+              moneda = uiState.primaryMoneda ?: uiState.moneda,
+          ),
   )
 }
 

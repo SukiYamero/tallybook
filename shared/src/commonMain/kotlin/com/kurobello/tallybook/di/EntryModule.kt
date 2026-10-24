@@ -4,6 +4,7 @@ import com.kurobello.tallybook.core.data.CategorySeedCatalog
 import com.kurobello.tallybook.core.data.entry.CategoryAppearanceSuggester
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
+import com.kurobello.tallybook.core.data.entry.CuentaMatcher
 import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoEntryEngine
@@ -16,12 +17,14 @@ internal val entryModule = module {
   single { CategoryKeywordDictionary.builtIn }
   single { CategorySuggester(get()) }
   single { EtiquetaMatcher() }
+  single { CuentaMatcher() }
   single { CategoryAppearanceSuggester(get(), CategorySeedCatalog.categories) }
   single {
     MovimientoEntryEngine(
         parser = get(),
         suggester = get(),
         etiquetaMatcher = get(),
+        cuentaMatcher = get(),
         localeProvider = get(),
         computationDispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.DEFAULT)),
     )

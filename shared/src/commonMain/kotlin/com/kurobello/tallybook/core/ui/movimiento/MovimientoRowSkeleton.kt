@@ -52,11 +52,13 @@ internal fun MovimientoRowSkeleton(modifier: Modifier = Modifier) {
             sampleText = "Movement details",
             style = TallybookTheme.typography.caption,
         )
-        TallybookSkeletonLine(
-            sampleText = "$ 000.000",
-            modifier = Modifier.padding(top = TallybookTheme.spacing.space4),
-            style = movementRowAmountStyle(),
-        )
+        MovimientoRowAmountLine(
+            icon = {
+              TallybookSkeleton(modifier = Modifier.size(TallybookTheme.dimensions.iconSmall))
+            }
+        ) {
+          TallybookSkeletonLine(sampleText = "$ 000.000", style = movementRowAmountStyle())
+        }
       }
     }
   }

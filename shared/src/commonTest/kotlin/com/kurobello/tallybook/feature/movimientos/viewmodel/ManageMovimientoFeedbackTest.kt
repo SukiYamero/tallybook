@@ -197,7 +197,12 @@ class ManageMovimientoFeedbackTest {
                 viewModelFactory {
                   initializer {
                     ManageMovimientoViewModel(
-                        ManageMovimientoRepositories(f.repository, f.categorias, f.etiquetas),
+                        ManageMovimientoRepositories(
+                            f.repository,
+                            f.categorias,
+                            f.etiquetas,
+                            f.cuentas,
+                        ),
                         f.clock,
                         TimeZoneProvider { TimeZone.UTC },
                         f.feedback,

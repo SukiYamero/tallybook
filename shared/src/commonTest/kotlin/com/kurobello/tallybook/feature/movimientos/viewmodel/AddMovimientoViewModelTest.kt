@@ -206,10 +206,8 @@ class AddMovimientoViewModelTest {
     runCurrent()
 
     assertEquals(
-        listOf<Triple<Moneda, TipoMovimiento, MedioPago?>>(
-            Triple(Moneda.COP, TipoMovimiento.GASTO, MedioPago.EFECTIVO)
-        ),
-        repository.selectionRequests,
+        Triple<Moneda, TipoMovimiento, MedioPago?>(Moneda.COP, TipoMovimiento.GASTO, null),
+        repository.selectionRequests.first(),
     )
     assertEquals(Moneda.USD, viewModel.uiState.value.moneda)
     val inserted = repository.inserted.single()
@@ -219,7 +217,7 @@ class AddMovimientoViewModelTest {
   }
 
   @Test
-  fun aMissingCashSelectionBlocksEntryUntilARetryResolvesOne() = runTest {
+  fun withoutADefaultSelectionSaveWaitsForTheUserToPickACuenta() = runTest {
     val repository = AddFakeMovimientos().apply { selection = DataOutcome.Success(null) }
     val category = addTestCategoria("food")
     val viewModel = createValidViewModel(repository, category, backgroundScope)
@@ -227,14 +225,12 @@ class AddMovimientoViewModelTest {
     runCurrent()
     populateValidFields(viewModel, category)
 
-    assertEquals(MovimientoFormError.ACCOUNTS_UNAVAILABLE, viewModel.uiState.value.error)
+    assertNull(viewModel.uiState.value.error)
+    assertNull(viewModel.uiState.value.cuentaField.selected)
     assertFalse(viewModel.uiState.value.canSubmit)
 
-    repository.selection = null
-    viewModel.onRetryLoad()
-    runCurrent()
+    viewModel.onCuentaSelected(Cuenta.defaultCashId(Moneda.USD))
 
-    assertNull(viewModel.uiState.value.error)
     assertTrue(viewModel.uiState.value.canSubmit)
   }
 
