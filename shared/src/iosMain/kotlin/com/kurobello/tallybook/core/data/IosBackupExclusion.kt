@@ -1,5 +1,6 @@
 package com.kurobello.tallybook.core.data
 
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCObjectVar
 import kotlinx.cinterop.alloc
@@ -13,7 +14,7 @@ import platform.Foundation.NSURL
 import platform.Foundation.NSURLIsExcludedFromBackupKey
 
 /** Application Support is part of iCloud and device backups unless a file opts out. */
-@OptIn(ExperimentalForeignApi::class)
+@OptIn(BetaInteropApi::class, ExperimentalForeignApi::class)
 class IosBackupExclusion(
     private val pathProvider: PreferencesPathProvider,
 ) : BackupExclusion {
