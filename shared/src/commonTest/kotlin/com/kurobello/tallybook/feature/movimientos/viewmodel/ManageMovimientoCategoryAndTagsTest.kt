@@ -4,6 +4,7 @@ import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -182,13 +183,13 @@ class ManageMovimientoCategoryAndTagsTest {
     f.viewModel.onConfirmDelete()
     runCurrent()
     f.viewModel.onSheetHidden(assertNotNull(f.viewModel.uiState.value.session).token)
-    val feedback = assertNotNull(f.viewModel.uiState.value.feedback)
-    f.viewModel.onFeedbackAction(feedback.token, feedback.revision)
+    val feedback = assertNotNull(f.feedback.state.value.feedback)
+    f.feedback.onFeedbackAction(feedback.token, feedback.revision)
     runCurrent()
 
     assertEquals("home", f.repository.restored?.categoriaId)
     assertEquals(listOf("trip", "work"), f.repository.restored?.etiquetaIds)
-    assertTrue(f.viewModel.uiState.value.feedback?.kind == MovimientoFeedbackKind.Restored)
+    assertTrue(f.feedback.state.value.feedback?.kind == ManagementFeedbackKind.Restored)
   }
 
   private fun TestScope.fixture(

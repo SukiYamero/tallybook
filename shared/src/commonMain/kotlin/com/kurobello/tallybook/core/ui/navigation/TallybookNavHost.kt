@@ -18,6 +18,7 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.serialization.NavBackStackSerializer
 import androidx.navigation3.ui.NavDisplay
 import com.kurobello.tallybook.core.ui.catalog.UiCatalogRoute
+import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackRoute
 import com.kurobello.tallybook.core.ui.layout.TallybookAppShell
 import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSession
 import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSessionLifecycle
@@ -26,7 +27,6 @@ import com.kurobello.tallybook.feature.history.ui.HistoryRoute
 import com.kurobello.tallybook.feature.home.HomeRoute
 import com.kurobello.tallybook.feature.movimientos.ui.AddMovimientoSheetRoute
 import com.kurobello.tallybook.feature.movimientos.ui.ManageMovimientoRoute
-import com.kurobello.tallybook.feature.movimientos.ui.MovimientoFeedbackRoute
 import com.kurobello.tallybook.feature.movimientos.ui.rememberOpenMovimiento
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
 import com.kurobello.tallybook.feature.profile.ui.ProfileRoute
@@ -49,7 +49,10 @@ fun TallybookNavHost(
           navigation.value.selected == Search && navigation.value.secondary == null
         }
       }
-  val management = rememberManageMovimientoViewModel(modals)
+  val managementOwner = rememberManagementOwner()
+  val feedback = managementFeedbackQueue(managementOwner)
+  val feedbackState by feedback.state.collectAsStateWithLifecycle()
+  val management = rememberManageMovimientoViewModel(modals, managementOwner, feedback)
   val managementState by management.uiState.collectAsStateWithLifecycle()
   val navigator =
       remember(navigation, modals, developmentToolsEnabled) {
@@ -61,7 +64,7 @@ fun TallybookNavHost(
       onAdd = navigator::openCreation,
       onSelect = navigator::select,
       overlay = { clearance ->
-        MovimientoFeedbackRoute(managementState, management, modals, clearance)
+        ManagementFeedbackRoute(feedbackState, feedback, modals, clearance)
       },
   ) { clearance ->
     PrimaryNavigationDisplay(navigator, clearance, openManagement)

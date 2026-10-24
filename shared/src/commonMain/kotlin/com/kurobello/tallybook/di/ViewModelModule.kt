@@ -2,6 +2,7 @@ package com.kurobello.tallybook.di
 
 import com.kurobello.tallybook.AppDisplayViewModel
 import com.kurobello.tallybook.AppStartupViewModel
+import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackViewModel
 import com.kurobello.tallybook.feature.categories.viewmodel.CategoriesViewModel
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryDateProvider
@@ -10,6 +11,7 @@ import com.kurobello.tallybook.feature.history.viewmodel.HistoryViewModel
 import com.kurobello.tallybook.feature.home.HomeViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoRepositories
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
+import com.kurobello.tallybook.feature.movimientos.viewmodel.ManageMovimientoRepositories
 import com.kurobello.tallybook.feature.movimientos.viewmodel.ManageMovimientoViewModel
 import com.kurobello.tallybook.feature.profile.viewmodel.ProfileExportDependencies
 import com.kurobello.tallybook.feature.profile.viewmodel.ProfileViewModel
@@ -63,12 +65,14 @@ internal val viewModelModule = module {
     )
   }
   viewModel {
+    ManagementFeedbackViewModel(movimientoRepository = get(), transferenciaRepository = get())
+  }
+  viewModel { parameters ->
     ManageMovimientoViewModel(
-        movimientoRepository = get(),
-        categoriaRepository = get(),
-        etiquetaRepository = get(),
+        repositories = ManageMovimientoRepositories(get(), get(), get()),
         clock = get(),
         timeZoneProvider = get(),
+        feedback = parameters.get(),
     )
   }
   viewModel { QuickCategoryViewModel(categoriaRepository = get(), suggester = get()) }

@@ -17,11 +17,13 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeTransferenciaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.TransferenciaRepository
 import com.kurobello.tallybook.core.data.seedCashCuentas
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.DataOutcome
@@ -29,9 +31,10 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.RestoreResult
+import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackKind
+import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackQueue
 import com.kurobello.tallybook.di.viewModelModule
 import com.kurobello.tallybook.feature.movimientos.viewmodel.ManageMovimientoViewModel
-import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFeedbackKind
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoManagementPhase
 import com.kurobello.tallybook.feature.movimientos.viewmodel.managementCategoria
 import com.kurobello.tallybook.feature.movimientos.viewmodel.managementMovimiento
@@ -91,7 +94,7 @@ internal class ManageMovimientoOwnerHostTest {
       next.viewModel.onSheetHidden(origin)
       next.viewModel.onSheetHidden(origin)
       assertEquals(1, repository.updates)
-      assertEquals(MovimientoFeedbackKind.Saved, next.viewModel.uiState.value.feedback?.kind)
+      assertEquals(ManagementFeedbackKind.Saved, next.feedback.state.value.feedback?.kind)
       assertEquals(
           2000L,
           assertNotNull((repository.getById("movement") as DataOutcome.Success).data)
@@ -111,18 +114,19 @@ internal class ManageMovimientoOwnerHostTest {
       first.viewModel.onConfirmDelete()
       settle()
       first.viewModel.onSheetHidden(assertNotNull(first.viewModel.uiState.value.session).token)
-      val undo = assertNotNull(first.viewModel.uiState.value.feedback)
+      val undo = assertNotNull(first.feedback.state.value.feedback)
       repository.restoreGate = CompletableDeferred()
-      first.viewModel.onFeedbackAction(undo.token, undo.revision)
+      first.feedback.onFeedbackAction(undo.token, undo.revision)
       settle()
       val next = recreate(first)
       assertSame(first.viewModel, next.viewModel)
-      next.viewModel.onFeedbackDismiss(undo.token, undo.revision)
-      next.viewModel.onFeedbackAction(undo.token, undo.revision)
+      assertSame(first.feedback, next.feedback)
+      next.feedback.onFeedbackDismiss(undo.token, undo.revision)
+      next.feedback.onFeedbackAction(undo.token, undo.revision)
       repository.restoreGate?.complete(Unit)
       settle()
       assertEquals(1, repository.restores)
-      assertEquals(MovimientoFeedbackKind.Restored, next.viewModel.uiState.value.feedback?.kind)
+      assertEquals(ManagementFeedbackKind.Restored, next.feedback.state.value.feedback?.kind)
       assertEquals(DataOutcome.Success(managementMovimiento()), repository.getById("movement"))
     }
   }
@@ -142,8 +146,9 @@ internal class ManageMovimientoOwnerHostTest {
       assertNull(first.viewModel.uiState.value.session)
       val next = attach()
       assertNotSame(first.viewModel, next.viewModel)
+      assertNotSame(first.feedback, next.feedback)
       assertNull(next.viewModel.uiState.value.session)
-      assertNull(next.viewModel.uiState.value.feedback)
+      assertNull(next.feedback.state.value.feedback)
       repository.writeGate?.complete(Unit)
       settle()
       assertEquals(DataOutcome.Success(managementMovimiento()), repository.getById("movement"))
@@ -191,6 +196,7 @@ private class ManagementOwnerSuite(val scope: TestScope) {
           module {
             single<MovimientoRepository> { repository }
             single<EtiquetaRepository> { FakeEtiquetaRepository() }
+            single<TransferenciaRepository> { FakeTransferenciaRepository() }
             single<CategoriaRepository> {
               CategoriaRepositoryImpl(
                   database,
@@ -288,6 +294,7 @@ private class ManagementOwnerHarness(
     koin: KoinApplication,
 ) {
   lateinit var viewModel: ManageMovimientoViewModel
+  lateinit var feedback: ManagementFeedbackQueue
   lateinit var owner: ViewModelStoreOwner
   private val clock = ManagementOwnerFrameClock()
   private val recomposer = Recomposer(scope.coroutineContext + clock)
@@ -302,13 +309,12 @@ private class ManagementOwnerHarness(
             LocalViewModelStoreOwner provides activity,
             LocalSavedStateRegistryOwner provides activity,
         ) {
-          val actualOwner = rememberManageMovimientoOwner()
-          val actualViewModel =
-              org.koin.compose.viewmodel.koinViewModel<ManageMovimientoViewModel>(
-                  viewModelStoreOwner = actualOwner
-              )
+          val actualOwner = rememberManagementOwner()
+          val actualFeedback = managementFeedbackQueue(actualOwner)
+          val actualViewModel = manageMovimientoViewModel(actualOwner, actualFeedback)
           SideEffect {
             owner = actualOwner
+            feedback = actualFeedback
             viewModel = actualViewModel
           }
         }

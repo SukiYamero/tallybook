@@ -748,11 +748,15 @@ dialogs consume Back before their parent management surface.
 
 ### Shell ownership and admission
 
-One `ManageMovimientoViewModel` lives in a remembered child ViewModel owner outside primary
-Navigation 3 entries. It owns the read generation, management session, editable draft, mutation,
-pending committed feedback and a transient FIFO feedback queue with per-token deleted snapshots.
-It outlives the sheet so Undo does not
-depend on an entry or closing modal. The existing creation store/session remains separate.
+One remembered child ViewModel owner outside primary Navigation 3 entries hosts the shell's
+management view models. `ManagementFeedbackViewModel` owns the single `ManagementFeedbackQueue`
+(`core/ui/feedback`): the transient FIFO of feedback tokens, each holding at most one
+`DeletedSnapshot` (movimiento or transferencia), the claim/restore cycle and session admission, so
+an open management sheet blocks Undo claims and a claimed restore blocks new sheets.
+`ManageMovimientoViewModel` lives in the same owner, receives that queue on creation and owns the
+read generation, management session, editable draft, mutation and the pending committed outcome it
+enqueues once its sheet is hidden. The queue outlives every sheet so Undo does not depend on an
+entry or closing modal. The existing creation store/session remains separate.
 
 The child uses the root parent's remembered creation extras and no saved-state registry.
 Supported Android configuration recreation retains the owner and claimed mutation; current iOS

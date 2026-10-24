@@ -26,8 +26,4 @@ internal interface ManageMovimientoSheetActions : MovimientoFormActions {
 @Stable
 internal interface ManageMovimientoActions : ManageMovimientoSheetActions {
   fun open(id: String): Boolean
-
-  fun onFeedbackAction(token: Long, revision: Int)
-
-  fun onFeedbackDismiss(token: Long, revision: Int)
 }

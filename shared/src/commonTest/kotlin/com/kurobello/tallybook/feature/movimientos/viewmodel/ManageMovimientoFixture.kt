@@ -3,6 +3,7 @@ package com.kurobello.tallybook.feature.movimientos.viewmodel
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeTransferenciaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
@@ -25,6 +26,7 @@ import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackViewModel
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.coroutines.CompletableDeferred
@@ -40,13 +42,13 @@ internal class ManageMovimientoFixture(scope: CoroutineScope) {
   val categorias = ManagementCategorias()
   val etiquetas = FakeEtiquetaRepository()
   val clock = ManagementClock()
+  val feedback = ManagementFeedbackViewModel(repository, FakeTransferenciaRepository(), scope).queue
   val viewModel =
       ManageMovimientoViewModel(
-          repository,
-          categorias,
-          etiquetas,
+          ManageMovimientoRepositories(repository, categorias, etiquetas),
           clock,
           TimeZoneProvider { TimeZone.UTC },
+          feedback,
           scope,
       )
 }

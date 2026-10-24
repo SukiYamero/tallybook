@@ -62,13 +62,4 @@ internal data class MovimientoManagementSession(
     get() = phase != MovimientoManagementPhase.Closing
 }
 
-internal data class ManageMovimientoUiState(
-    val session: MovimientoManagementSession? = null,
-    val feedbackQueue: List<MovimientoFeedback> = emptyList(),
-) {
-  val feedback: MovimientoFeedback?
-    get() = feedbackQueue.firstOrNull()
-
-  val isRestoring: Boolean
-    get() = feedback?.isRestoring == true
-}
+internal data class ManageMovimientoUiState(val session: MovimientoManagementSession? = null)

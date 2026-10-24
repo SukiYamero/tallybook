@@ -6,6 +6,7 @@ import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -117,7 +118,7 @@ class ManageMovimientoViewModelTest {
     assertEquals(MovimientoManagementPhase.Closing, f.viewModel.uiState.value.session?.phase)
     assertEquals(1, f.repository.reads)
     f.viewModel.onSheetHidden(assertNotNull(f.viewModel.uiState.value.session).token)
-    assertNull(f.viewModel.uiState.value.feedback)
+    assertNull(f.feedback.state.value.feedback)
   }
 
   @Test
@@ -186,12 +187,12 @@ class ManageMovimientoViewModelTest {
     runCurrent()
     assertEquals(1, f.repository.updates)
     assertEquals(MovimientoManagementPhase.Closing, f.viewModel.uiState.value.session?.phase)
-    assertNull(f.viewModel.uiState.value.feedback)
+    assertNull(f.feedback.state.value.feedback)
     f.viewModel.onSheetHidden(origin)
-    assertEquals(MovimientoFeedbackKind.Saved, f.viewModel.uiState.value.feedback?.kind)
-    val feedback = f.viewModel.uiState.value.feedback
+    assertEquals(ManagementFeedbackKind.Saved, f.feedback.state.value.feedback?.kind)
+    val feedback = f.feedback.state.value.feedback
     f.viewModel.onSheetHidden(origin)
-    assertEquals(feedback, f.viewModel.uiState.value.feedback)
+    assertEquals(feedback, f.feedback.state.value.feedback)
     assertEquals(managementMovimiento().createdAt, f.repository.current?.createdAt)
   }
 

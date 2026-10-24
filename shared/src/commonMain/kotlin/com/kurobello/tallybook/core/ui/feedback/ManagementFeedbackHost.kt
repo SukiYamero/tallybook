@@ -1,4 +1,4 @@
-package com.kurobello.tallybook.feature.movimientos.ui
+package com.kurobello.tallybook.core.ui.feedback
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -27,10 +27,6 @@ import com.kurobello.tallybook.core.ui.component.TallybookSnackbarMessage
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarStatus
 import com.kurobello.tallybook.core.ui.navigation.PrimaryModalCoordinator
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
-import com.kurobello.tallybook.feature.movimientos.viewmodel.ManageMovimientoActions
-import com.kurobello.tallybook.feature.movimientos.viewmodel.ManageMovimientoUiState
-import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFeedback
-import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFeedbackKind
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.movimiento_deleted
@@ -45,9 +41,9 @@ import tallybook.shared.generated.resources.movimiento_updated
 import tallybook.shared.generated.resources.retry
 
 @Composable
-internal fun MovimientoFeedbackRoute(
-    uiState: ManageMovimientoUiState,
-    actions: ManageMovimientoActions,
+internal fun ManagementFeedbackRoute(
+    state: ManagementFeedbackState,
+    queue: ManagementFeedbackQueue,
     modals: PrimaryModalCoordinator,
     bottomBarClearance: Dp,
 ) {
@@ -57,24 +53,23 @@ internal fun MovimientoFeedbackRoute(
   val canDeliver = {
     lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && viewport?.isScrimVisible != true
   }
-  val isUncovered =
-      uiState.session == null && !modals.isContentCovered && viewport?.isScrimVisible != true
-  MovimientoFeedbackHost(
-      feedbackQueue = uiState.feedbackQueue,
+  val isUncovered = !modals.isContentCovered && viewport?.isScrimVisible != true
+  ManagementFeedbackHost(
+      feedbackQueue = state.feedbackQueue,
       isActive = lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && isUncovered,
       bottomBarClearance = bottomBarClearance,
       onAction = { token, revision ->
-        modals.dispatchFeedback(canDeliver()) { actions.onFeedbackAction(token, revision) }
+        modals.dispatchFeedback(canDeliver()) { queue.onFeedbackAction(token, revision) }
       },
       onDismiss = { token, revision, _ ->
-        modals.dispatchFeedback(canDeliver()) { actions.onFeedbackDismiss(token, revision) }
+        modals.dispatchFeedback(canDeliver()) { queue.onFeedbackDismiss(token, revision) }
       },
   )
 }
 
 @Composable
-private fun MovimientoFeedbackHost(
-    feedbackQueue: List<MovimientoFeedback>,
+private fun ManagementFeedbackHost(
+    feedbackQueue: List<ManagementFeedback>,
     isActive: Boolean,
     bottomBarClearance: Dp,
     onAction: (Long, Int) -> Unit,
@@ -121,25 +116,25 @@ private fun MovimientoFeedbackHost(
 }
 
 @Composable
-private fun MovimientoFeedback.toSnackbarMessage(): TallybookSnackbarMessage {
+private fun ManagementFeedback.toSnackbarMessage(): TallybookSnackbarMessage {
   val message =
       if (isRestoring) stringResource(Res.string.movimiento_restoring)
       else
           stringResource(
               when (kind) {
-                MovimientoFeedbackKind.Saved -> Res.string.movimiento_updated
-                MovimientoFeedbackKind.Deleted -> Res.string.movimiento_deleted
-                MovimientoFeedbackKind.Missing -> Res.string.movimiento_missing
-                MovimientoFeedbackKind.Restored -> Res.string.movimiento_restored
-                MovimientoFeedbackKind.RestoreFailed -> Res.string.movimiento_restore_error
-                MovimientoFeedbackKind.RestoreConflict -> Res.string.movimiento_restore_conflict
+                ManagementFeedbackKind.Saved -> Res.string.movimiento_updated
+                ManagementFeedbackKind.Deleted -> Res.string.movimiento_deleted
+                ManagementFeedbackKind.Missing -> Res.string.movimiento_missing
+                ManagementFeedbackKind.Restored -> Res.string.movimiento_restored
+                ManagementFeedbackKind.RestoreFailed -> Res.string.movimiento_restore_error
+                ManagementFeedbackKind.RestoreConflict -> Res.string.movimiento_restore_conflict
               }
           )
   val actionLabel =
       when {
         !hasAction -> null
-        kind == MovimientoFeedbackKind.Deleted -> stringResource(Res.string.movimiento_undo)
-        kind == MovimientoFeedbackKind.RestoreFailed -> stringResource(Res.string.retry)
+        kind == ManagementFeedbackKind.Deleted -> stringResource(Res.string.movimiento_undo)
+        kind == ManagementFeedbackKind.RestoreFailed -> stringResource(Res.string.retry)
         else -> null
       }
   return TallybookSnackbarMessage(
@@ -153,12 +148,12 @@ private fun MovimientoFeedback.toSnackbarMessage(): TallybookSnackbarMessage {
   )
 }
 
-private fun MovimientoFeedbackKind.snackbarStatus(): TallybookSnackbarStatus =
+private fun ManagementFeedbackKind.snackbarStatus(): TallybookSnackbarStatus =
     when (this) {
-      MovimientoFeedbackKind.Saved,
-      MovimientoFeedbackKind.Deleted,
-      MovimientoFeedbackKind.Restored -> TallybookSnackbarStatus.Success
-      MovimientoFeedbackKind.Missing,
-      MovimientoFeedbackKind.RestoreConflict -> TallybookSnackbarStatus.Warning
-      MovimientoFeedbackKind.RestoreFailed -> TallybookSnackbarStatus.Error
+      ManagementFeedbackKind.Saved,
+      ManagementFeedbackKind.Deleted,
+      ManagementFeedbackKind.Restored -> TallybookSnackbarStatus.Success
+      ManagementFeedbackKind.Missing,
+      ManagementFeedbackKind.RestoreConflict -> TallybookSnackbarStatus.Warning
+      ManagementFeedbackKind.RestoreFailed -> TallybookSnackbarStatus.Error
     }

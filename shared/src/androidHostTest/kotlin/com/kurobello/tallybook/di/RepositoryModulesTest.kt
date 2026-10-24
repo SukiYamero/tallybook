@@ -19,6 +19,7 @@ import com.kurobello.tallybook.core.data.entry.CategorySuggester
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.core.database.DatabaseDriverFactory
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackViewModel
 import com.kurobello.tallybook.feature.home.HomeViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.ManageMovimientoViewModel
@@ -26,6 +27,7 @@ import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoEntryEngi
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertNotNull
+import org.koin.core.parameter.parametersOf
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
 
@@ -67,7 +69,10 @@ class RepositoryModulesTest {
       assertNotNull(application.koin.get<CategorySuggester>())
       assertNotNull(application.koin.get<MovimientoEntryEngine>())
       assertNotNull(application.koin.get<AddMovimientoViewModel>())
-      assertNotNull(application.koin.get<ManageMovimientoViewModel>())
+      val feedback = application.koin.get<ManagementFeedbackViewModel>()
+      assertNotNull(
+          application.koin.get<ManageMovimientoViewModel> { parametersOf(feedback.queue) }
+      )
     } finally {
       application.koin.get<PreferencesDataStoreFactory>().close()
       application.close()

@@ -14,11 +14,14 @@ import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
-import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.text.normalizeOptionalText
 import com.kurobello.tallybook.core.ui.component.DismissalDecision
 import com.kurobello.tallybook.core.ui.component.dismissalDecision
+import com.kurobello.tallybook.core.ui.feedback.DeletedSnapshot
+import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackKind
+import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackQueue
+import com.kurobello.tallybook.core.ui.feedback.ManagementOutcome
 import kotlin.time.Clock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -29,29 +32,30 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.todayIn
 
-// One owner serializes the sheet lifecycle and the Undo mutation that outlives that sheet.
 @Suppress("TooManyFunctions")
 internal class ManageMovimientoViewModel(
-    private val movimientoRepository: MovimientoRepository,
-    private val categoriaRepository: CategoriaRepository,
-    private val etiquetaRepository: EtiquetaRepository,
+    repositories: ManageMovimientoRepositories,
     private val clock: Clock,
     private val timeZoneProvider: TimeZoneProvider,
+    private val feedback: ManagementFeedbackQueue,
     scope: CoroutineScope? = null,
 ) : ViewModel(), ManageMovimientoActions {
+  private val movimientoRepository = repositories.movimientos
+  private val categoriaRepository = repositories.categorias
+  private val etiquetaRepository = repositories.etiquetas
   private val coroutineScope = scope ?: viewModelScope
   private var nextToken = 0L
   private var readGeneration = 0L
   private var readJob: Job? = null
   private var categoryJob: Job? = null
   private var etiquetaJob: Job? = null
-  private var pendingFeedback: PendingMovimientoFeedback? = null
+  private var pendingOutcome: ManagementOutcome? = null
 
   val uiState: StateFlow<ManageMovimientoUiState>
     field = MutableStateFlow(ManageMovimientoUiState())
 
   override fun open(id: String): Boolean {
-    if (id.isBlank() || uiState.value.session != null || uiState.value.isRestoring) return false
+    if (id.isBlank() || uiState.value.session != null || !feedback.openSession()) return false
     val session = MovimientoManagementSession(token = ++nextToken, movimientoId = id)
     uiState.update { it.copy(session = session) }
     loadCategories(session.token)
@@ -198,7 +202,7 @@ internal class ManageMovimientoViewModel(
         is DataOutcome.Success ->
             when (outcome.data) {
               MovimientoUpdateResult.Updated ->
-                  close(session.token, PendingMovimientoFeedback(MovimientoFeedbackKind.Saved))
+                  close(session.token, ManagementOutcome(ManagementFeedbackKind.Saved))
               MovimientoUpdateResult.NotFound ->
                   updateSession(session.token) {
                     copy(isSubmitting = false, error = MovimientoManagementError.MissingOnSave)
@@ -249,11 +253,11 @@ internal class ManageMovimientoViewModel(
         is DataOutcome.Success ->
             close(
                 session.token,
-                PendingMovimientoFeedback(
+                ManagementOutcome(
                     kind =
-                        if (outcome.data == null) MovimientoFeedbackKind.Missing
-                        else MovimientoFeedbackKind.Deleted,
-                    deleted = outcome.data,
+                        if (outcome.data == null) ManagementFeedbackKind.Missing
+                        else ManagementFeedbackKind.Deleted,
+                    deleted = outcome.data?.let(DeletedSnapshot::OfMovimiento),
                 ),
             )
       }
@@ -264,77 +268,11 @@ internal class ManageMovimientoViewModel(
     val session = uiState.value.session ?: return
     if (session.token != origin || session.phase != MovimientoManagementPhase.Closing) return
     stopReads()
-    val pending = pendingFeedback
-    pendingFeedback = null
-    if (pending != null) {
-      val feedback =
-          MovimientoFeedback(
-              token = ++nextToken,
-              kind = pending.kind,
-              deletedMovimiento = pending.deleted,
-          )
-      uiState.update { it.copy(session = null, feedbackQueue = it.feedbackQueue + feedback) }
-    } else uiState.update { it.copy(session = null) }
+    val pending = pendingOutcome
+    pendingOutcome = null
+    uiState.update { it.copy(session = null) }
+    feedback.closeSession(pending)
   }
-
-  override fun onFeedbackAction(token: Long, revision: Int) {
-    val current = uiState.value
-    val feedback =
-        feedbackFor(token, revision, current)?.takeIf { it.hasAction && current.session == null }
-            ?: return
-    val deleted = feedback.deletedMovimiento ?: return
-    val claimed = feedback.copy(revision = revision + 1, isRestoring = true)
-    if (
-        uiState.compareAndSet(
-            current,
-            current.copy(feedbackQueue = listOf(claimed) + current.feedbackQueue.drop(1)),
-        )
-    ) {
-      coroutineScope.launch {
-        val outcome = movimientoRepository.restoreDeleted(deleted)
-        val kind =
-            when (outcome) {
-              is DataOutcome.Failure -> MovimientoFeedbackKind.RestoreFailed
-              is DataOutcome.Success ->
-                  when (outcome.data) {
-                    RestoreResult.Restored,
-                    RestoreResult.AlreadyPresent -> MovimientoFeedbackKind.Restored
-                    RestoreResult.Conflict -> MovimientoFeedbackKind.RestoreConflict
-                    RestoreResult.MissingCuenta -> MovimientoFeedbackKind.RestoreFailed
-                  }
-            }
-        // Only a storage failure may succeed on retry; without its cuenta the snapshot is released
-        // so the money never lands in another one.
-        val retryable = outcome is DataOutcome.Failure
-        val completed =
-            claimed.copy(
-                revision = claimed.revision + 1,
-                kind = kind,
-                isRestoring = false,
-                deletedMovimiento = deleted.takeIf { retryable },
-            )
-        uiState.update { latest ->
-          if (latest.feedback == claimed)
-              latest.copy(feedbackQueue = listOf(completed) + latest.feedbackQueue.drop(1))
-          else latest
-        }
-      }
-    }
-  }
-
-  override fun onFeedbackDismiss(token: Long, revision: Int) {
-    val feedback = feedbackFor(token, revision) ?: return
-    uiState.update {
-      if (it.feedback == feedback) it.copy(feedbackQueue = it.feedbackQueue.drop(1)) else it
-    }
-  }
-
-  private fun feedbackFor(
-      token: Long,
-      revision: Int,
-      current: ManageMovimientoUiState = uiState.value,
-  ): MovimientoFeedback? =
-      current.feedback?.takeIf { it.token == token && it.revision == revision && !it.isRestoring }
 
   private fun requestLeaveEdit(session: MovimientoManagementSession): Boolean =
       when (dismissalDecision(session.hasUnsavedChanges)) {
@@ -447,8 +385,8 @@ internal class ManageMovimientoViewModel(
     }
   }
 
-  private fun close(token: Long, feedback: PendingMovimientoFeedback? = null) {
-    pendingFeedback = feedback
+  private fun close(token: Long, outcome: ManagementOutcome? = null) {
+    pendingOutcome = outcome
     readJob?.cancel()
     ++readGeneration
     updateSession(token) {
@@ -473,7 +411,8 @@ internal class ManageMovimientoViewModel(
 
   override fun onCleared() {
     stopReads()
-    pendingFeedback = null
+    pendingOutcome = null
+    if (uiState.value.session != null) feedback.closeSession(null)
     uiState.value = ManageMovimientoUiState()
   }
 
@@ -487,9 +426,10 @@ internal class ManageMovimientoViewModel(
   }
 }
 
-private data class PendingMovimientoFeedback(
-    val kind: MovimientoFeedbackKind,
-    val deleted: Movimiento? = null,
+internal data class ManageMovimientoRepositories(
+    val movimientos: MovimientoRepository,
+    val categorias: CategoriaRepository,
+    val etiquetas: EtiquetaRepository,
 )
 
 private val MovimientoManagementSession.canInteract: Boolean
