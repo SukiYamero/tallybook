@@ -1,9 +1,11 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
+import com.kurobello.tallybook.core.data.entry.SentenceSelection
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
-import com.kurobello.tallybook.core.model.CuentaSelection
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlinx.datetime.LocalDate
@@ -22,7 +24,6 @@ internal data class AddMovimientoUiState(
     override val tipo: TipoMovimiento,
     override val amountInput: String,
     override val fecha: LocalDate,
-    override val moneda: Moneda,
     override val categorias: List<Categoria>,
     override val categoriaId: String?,
     override val titulo: String,
@@ -48,10 +49,43 @@ internal data class AddMovimientoUiState(
     val amountNeedsReview: Boolean = false,
     val today: LocalDate = fecha,
     val formOpenedFromSummary: Boolean = false,
-    /** The cuenta and medio the movimiento is saved with; [moneda] follows its currency. */
-    val cuentaSelection: CuentaSelection? = null,
+    val cuentas: List<Cuenta> = emptyList(),
+    val primaryMoneda: Moneda? = null,
+    val cuentaDefaults: CuentaDefaults? = null,
+    /** The medio and cuenta the movimiento is saved with; [moneda] follows the cuenta. */
+    val cuentaChoice: CuentaSelectionState = CuentaSelectionState.NONE,
+    /** The last interpretation's medio and cuenta, whose alternatives stay offered. */
+    val sentenceSelection: SentenceSelection = SentenceSelection.EMPTY,
+    // While false the sentence owns the amount, so another cuenta's currency re-derives it.
+    val amountEdited: Boolean = false,
+    val cuentaRejected: Boolean = false,
 ) : MovimientoFormState {
+  /** The tipo medio options follow: the sentence's while it is being typed, the draft's after. */
+  val selectionTipo: TipoMovimiento
+    get() = if (step == AddMovimientoStep.PHRASE) detected.tipo else tipo
+
+  override val cuentaField: MovimientoCuentaUi by lazy {
+    movimientoCuentaUi(
+        selection = cuentaChoice,
+        cuentas = cuentas,
+        tipo = selectionTipo,
+        submitAttempted = submitAttempted && step != AddMovimientoStep.PHRASE,
+        cuentaRejected = cuentaRejected,
+        primaryMoneda = primaryMoneda,
+        suggestionIds = sentenceSelection.cuenta.alternativeIds,
+    )
+  }
+
+  override val moneda: Moneda
+    get() = monedaOf(cuentaField.selected)
+
   private val amountResult by lazy { parseAmountInput(amountInput, moneda) }
+
+  fun monedaOf(cuenta: Cuenta?): Moneda = cuenta?.moneda ?: primaryMoneda ?: Moneda.COP
+
+  /** The currency [choice] would leave the draft in, before it is applied. */
+  fun monedaOf(choice: CuentaSelectionState, tipo: TipoMovimiento): Moneda =
+      monedaOf(movimientoCuentaUi(choice, cuentas, tipo, false, false).selected)
 
   override val amountError: AmountInputError?
     get() = (amountResult as? AmountInputResult.Invalid)?.reason?.takeIf { submitAttempted }
@@ -76,6 +110,8 @@ internal data class AddMovimientoUiState(
     get() =
         amountResult is AmountInputResult.Valid &&
             effectiveCategoriaId != null &&
+            cuentaField.selected != null &&
+            cuentaField.effectiveMedio(tipo) != null &&
             !isLoading &&
             !isSubmitting &&
             error == null
@@ -110,6 +146,7 @@ internal data class AddMovimientoUiState(
             suggestions = suggestions,
             etiquetas = selectedEtiquetas,
             etiquetasLoad = etiquetasLoad,
+            cuenta = cuentaField,
             isEnabled = !isSubmitting,
             actionsEnabled = !isLoading && loadError == null,
         )
@@ -129,6 +166,7 @@ internal data class AddMovimientoUiState(
             suggestions = suggestions,
             etiquetas = selectedEtiquetas,
             etiquetasLoad = etiquetasLoad,
+            cuenta = cuentaField,
             isSubmitting = isSubmitting,
         )
 
@@ -143,8 +181,11 @@ internal data class MovimientoDraft(
     val etiquetaIds: List<String>,
     val titulo: String,
     val descripcion: String,
+    val cuentaId: String? = null,
+    val medio: MedioPago? = null,
 )
 
+/** Only a medio and cuenta picked by hand count as a draft change; defaults are not the user's. */
 internal fun AddMovimientoUiState.toDraft(): MovimientoDraft =
     MovimientoDraft(
         tipo = tipo,
@@ -154,4 +195,6 @@ internal fun AddMovimientoUiState.toDraft(): MovimientoDraft =
         etiquetaIds = etiquetaIds,
         titulo = titulo,
         descripcion = descripcion,
+        cuentaId = cuentaChoice.cuentaId.takeIf { cuentaChoice.owner == SelectionOwner.USER },
+        medio = cuentaChoice.medio.takeIf { cuentaChoice.owner == SelectionOwner.USER },
     )

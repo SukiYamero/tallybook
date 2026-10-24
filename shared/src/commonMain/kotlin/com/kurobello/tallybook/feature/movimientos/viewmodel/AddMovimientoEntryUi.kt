@@ -30,6 +30,7 @@ internal data class MovimientoSentenceUi(
     val suggestions: List<Categoria>,
     val etiquetas: List<Etiqueta>,
     val etiquetasLoad: EtiquetasLoad,
+    val cuenta: MovimientoCuentaUi,
     val isEnabled: Boolean,
     val actionsEnabled: Boolean,
 ) {
@@ -48,5 +49,6 @@ internal data class MovimientoSummaryUi(
     val suggestions: List<Categoria>,
     val etiquetas: List<Etiqueta>,
     val etiquetasLoad: EtiquetasLoad,
+    val cuenta: MovimientoCuentaUi,
     val isSubmitting: Boolean,
 )

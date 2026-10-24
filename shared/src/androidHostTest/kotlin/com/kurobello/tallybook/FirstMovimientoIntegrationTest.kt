@@ -5,6 +5,7 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
 import com.kurobello.tallybook.core.data.CivilToday
+import com.kurobello.tallybook.core.data.CuentaRepositoryImpl
 import com.kurobello.tallybook.core.data.CuentaSeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
@@ -20,6 +21,7 @@ import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.cashCuenta
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
+import com.kurobello.tallybook.core.data.entry.CuentaMatcher
 import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.core.data.insertCuentaRow
@@ -88,6 +90,14 @@ class FirstMovimientoIntegrationTest {
                   TestChangeClock(),
               )
           val movimientos = MovimientoRepositoryImpl(database, dispatcher, TestChangeClock())
+          val cuentas =
+              CuentaRepositoryImpl(
+                  database,
+                  dispatcher,
+                  IdGenerator { error("Not used by this test") },
+                  FixedClock(FIXED_INSTANT),
+                  TestChangeClock(),
+              )
           val etiquetas =
               EtiquetaRepositoryImpl(
                   database,
@@ -141,7 +151,13 @@ class FirstMovimientoIntegrationTest {
           val expenseForm =
               createMovimientoViewModel(
                   repositories =
-                      AddMovimientoRepositories(preferences, categorias, movimientos, etiquetas),
+                      AddMovimientoRepositories(
+                          preferences,
+                          categorias,
+                          movimientos,
+                          etiquetas,
+                          cuentas,
+                      ),
                   id = "expense",
                   scope = scopes.newScope(dispatcher),
                   dispatcher = dispatcher,
@@ -164,7 +180,13 @@ class FirstMovimientoIntegrationTest {
           val incomeForm =
               createMovimientoViewModel(
                   repositories =
-                      AddMovimientoRepositories(preferences, categorias, movimientos, etiquetas),
+                      AddMovimientoRepositories(
+                          preferences,
+                          categorias,
+                          movimientos,
+                          etiquetas,
+                          cuentas,
+                      ),
                   id = "income",
                   scope = scopes.newScope(dispatcher),
                   dispatcher = dispatcher,
@@ -276,6 +298,14 @@ class FirstMovimientoIntegrationTest {
                   TestChangeClock(),
               )
           val movimientos = MovimientoRepositoryImpl(database, dispatcher, TestChangeClock())
+          val cuentas =
+              CuentaRepositoryImpl(
+                  database,
+                  dispatcher,
+                  IdGenerator { error("Not used by this test") },
+                  FixedClock(FIXED_INSTANT),
+                  TestChangeClock(),
+              )
           val etiquetas =
               EtiquetaRepositoryImpl(
                   database,
@@ -300,7 +330,7 @@ class FirstMovimientoIntegrationTest {
           assertEquals(DataOutcome.Success(Unit), bootstrapper.initialize())
 
           val repositories =
-              AddMovimientoRepositories(preferences, categorias, movimientos, etiquetas)
+              AddMovimientoRepositories(preferences, categorias, movimientos, etiquetas, cuentas)
           val first =
               createMovimientoViewModel(
                   repositories,
@@ -372,6 +402,7 @@ class FirstMovimientoIntegrationTest {
                   parser = MovimientoPhraseParser(),
                   suggester = CategorySuggester(CategoryKeywordDictionary.builtIn),
                   etiquetaMatcher = EtiquetaMatcher(),
+                  cuentaMatcher = CuentaMatcher(),
                   localeProvider = FixedDeviceLocaleProvider("es-CO"),
                   computationDispatcher = dispatcher,
               ),

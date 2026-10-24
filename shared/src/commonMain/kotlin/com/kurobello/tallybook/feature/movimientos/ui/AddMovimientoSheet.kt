@@ -90,10 +90,13 @@ private fun AddMovimientoSheet(
           onDiscardChanges = actions::onDiscardChanges,
           onDismiss = callbacks.onDismiss,
       )
-  val categoryPicker = rememberMovimientoPicker(interactionEnabled = !uiState.isSubmitting)
-  val etiquetaPicker = rememberMovimientoPicker(interactionEnabled = !uiState.isSubmitting)
-  val pickers =
-      EntryPickers(onChooseCategoria = categoryPicker.onOpen, onAddEtiqueta = etiquetaPicker.onOpen)
+  val pickerStates =
+      EntryPickerStates(
+          category = rememberMovimientoPicker(interactionEnabled = !uiState.isSubmitting),
+          etiqueta = rememberMovimientoPicker(interactionEnabled = !uiState.isSubmitting),
+          cuenta = rememberMovimientoPicker(interactionEnabled = !uiState.isSubmitting),
+      )
+  val pickers = pickerStates.callbacks
   val isSentence = uiState.step == AddMovimientoStep.PHRASE
   // Either surface also hides when the flow moves between them; only a closed session is final.
   val currentVisible by rememberUpdatedState(visible)
@@ -123,20 +126,7 @@ private fun AddMovimientoSheet(
           ),
       modifier = modifier,
   )
-  // The form hosts its own pickers; these serve the dialog and the review step.
-  MovimientoCategoryPickerSheet(
-      visible = categoryPicker.isVisible && uiState.step != AddMovimientoStep.FORM,
-      uiState = uiState,
-      onSelect = actions::onCategoriaSelected,
-      picker = categoryPicker,
-      creation = categoryCreation,
-  )
-  MovimientoEtiquetaPickerSheet(
-      visible = etiquetaPicker.isVisible && uiState.step != AddMovimientoStep.FORM,
-      uiState = uiState,
-      actions = actions,
-      picker = etiquetaPicker,
-  )
+  EntryPickerSheets(uiState, actions, pickerStates, categoryCreation)
   DiscardEntryConfirmation(dismissGuard)
 }
 
@@ -182,6 +172,7 @@ private fun MovimientoSentenceDialog(
           onChooseCategoria = pickers.onChooseCategoria,
           onSuggestion = { actions.onSuggestionSelected(it.id) },
           etiquetas = actions.etiquetasCallbacks(onAdd = pickers.onAddEtiqueta),
+          cuenta = actions.cuentaCallbacks(onOpenPicker = pickers.onChooseCuenta),
       )
   TallybookModalDialog(
       visible = visible,
@@ -287,6 +278,7 @@ private fun SummaryStepContent(
               onChooseCategoria = pickers.onChooseCategoria,
               onSuggestion = { actions.onSuggestionSelected(it.id) },
               etiquetas = actions.etiquetasCallbacks(onAdd = pickers.onAddEtiqueta),
+              cuenta = actions.cuentaCallbacks(onOpenPicker = pickers.onChooseCuenta),
               onEdit = actions::onEditMovimiento,
               onSave = actions::onSubmit,
           ),
@@ -304,9 +296,6 @@ private fun SummaryStepContent(
       },
   )
 }
-
-/** The pickers the sentence dialog and the review share; the form hosts its own. */
-private data class EntryPickers(val onChooseCategoria: () -> Unit, val onAddEtiqueta: () -> Unit)
 
 @Composable
 @Suppress("LongParameterList")

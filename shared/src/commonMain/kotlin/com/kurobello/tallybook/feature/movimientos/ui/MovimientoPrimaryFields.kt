@@ -23,6 +23,8 @@ internal data class MovimientoSelectionCallbacks(
     val onChooseCategoria: () -> Unit,
     val onDeselectCategoria: (() -> Unit)?,
     val onAddEtiqueta: () -> Unit,
+    val onChooseCuenta: () -> Unit,
+    val onCreateCuenta: (() -> Unit)? = null,
 )
 
 internal data class MovimientoFieldFocus(
@@ -46,6 +48,16 @@ internal fun MovimientoPrimaryFields(
         enabled = interactionEnabled && !uiState.isSubmitting,
         onSelected = actions::onTipoChanged,
         modifier = Modifier.padding(top = TallybookTheme.spacing.space8),
+    )
+    Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
+    MovimientoCuentaField(
+        field = uiState.cuentaField,
+        callbacks =
+            actions.cuentaCallbacks(
+                onOpenPicker = selection.onChooseCuenta,
+                onCreateCuenta = selection.onCreateCuenta,
+            ),
+        enabled = interactionEnabled && !uiState.isSubmitting && !uiState.isLoading,
     )
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
     MovimientoCategoryField(

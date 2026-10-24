@@ -33,6 +33,7 @@ import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -40,7 +41,10 @@ import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoAction
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoEffect
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoStep
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoUiState
+import com.kurobello.tallybook.feature.movimientos.viewmodel.COP_CASH
+import com.kurobello.tallybook.feature.movimientos.viewmodel.CuentaSelectionState
 import com.kurobello.tallybook.feature.movimientos.viewmodel.EtiquetasLoad
+import com.kurobello.tallybook.feature.movimientos.viewmodel.SelectionOwner
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Instant
@@ -581,7 +585,10 @@ class AddMovimientoSheetTest {
           tipo = TipoMovimiento.GASTO,
           amountInput = "1",
           fecha = LocalDate(2026, 9, 15),
-          moneda = Moneda.COP,
+          primaryMoneda = Moneda.COP,
+          cuentas = listOf(COP_CASH),
+          cuentaChoice =
+              CuentaSelectionState(MedioPago.EFECTIVO, COP_CASH.id, SelectionOwner.DEFAULT),
           categorias = listOf(category, otros),
           categoriaId = category.id,
           titulo = "Gasté 1 en comida",
@@ -687,5 +694,9 @@ class AddMovimientoSheetTest {
       submitCount += 1
       onSubmitRequested()
     }
+
+    override fun onMedioSelected(medio: MedioPago) = Unit
+
+    override fun onCuentaSelected(id: String) = Unit
   }
 }

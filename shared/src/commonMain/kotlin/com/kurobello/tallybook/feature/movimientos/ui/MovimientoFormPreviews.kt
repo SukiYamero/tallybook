@@ -4,6 +4,7 @@ package com.kurobello.tallybook.feature.movimientos.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -50,7 +51,7 @@ private fun previewUiState(
         tipo = TipoMovimiento.GASTO,
         amountInput = "",
         fecha = LocalDate.parse("2026-09-15"),
-        moneda = Moneda.COP,
+        primaryMoneda = Moneda.COP,
         categorias = emptyList(),
         categoriaId = null,
         titulo = "",
@@ -102,4 +103,8 @@ private object PreviewAddMovimientoActions : AddMovimientoActions {
   override fun onRetryLoad() = Unit
 
   override fun onSubmit() = Unit
+
+  override fun onMedioSelected(medio: MedioPago) = Unit
+
+  override fun onCuentaSelected(id: String) = Unit
 }

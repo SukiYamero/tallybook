@@ -21,7 +21,7 @@ class AddMovimientoUiStateTest {
             tipo = TipoMovimiento.GASTO,
             amountInput = "20000",
             fecha = LocalDate(2026, 10, 16),
-            moneda = Moneda.COP,
+            primaryMoneda = Moneda.COP,
             categorias = listOf(cine),
             categoriaId = null,
             titulo = "Gasté 20000",

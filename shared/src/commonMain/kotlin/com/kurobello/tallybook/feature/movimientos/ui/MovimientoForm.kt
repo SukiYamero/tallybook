@@ -65,11 +65,15 @@ internal fun MovimientoForm(
   val fieldFocus = remember { MovimientoFieldFocus() }
   val categoryPicker = rememberMovimientoPicker(interactionEnabled)
   val etiquetaPicker = rememberMovimientoPicker(interactionEnabled)
+  val cuentaPicker = rememberMovimientoPicker(interactionEnabled)
   NavigationBackHandler(
       state = rememberNavigationEventState(NavigationEventInfo.None),
-      isBackEnabled = (categoryPicker.isVisible || etiquetaPicker.isVisible) && interactionEnabled,
+      isBackEnabled =
+          interactionEnabled &&
+              listOf(categoryPicker, etiquetaPicker, cuentaPicker).any { it.isVisible },
       onBackCompleted = {
         when {
+          cuentaPicker.isVisible -> cuentaPicker.onDismiss()
           etiquetaPicker.isVisible -> etiquetaPicker.onDismiss()
           categoryCreation?.state?.draft != null -> categoryCreation.actions.onClose()
           else -> categoryPicker.onDismiss()
@@ -103,6 +107,7 @@ internal fun MovimientoForm(
                 onChooseCategoria = categoryPicker.onOpen,
                 onDeselectCategoria = onDeselectCategoria,
                 onAddEtiqueta = etiquetaPicker.onOpen,
+                onChooseCuenta = cuentaPicker.onOpen,
             ),
         fieldFocus = fieldFocus.copy(amountModifier = Modifier.revealWhenFocused()),
     )
@@ -148,6 +153,12 @@ internal fun MovimientoForm(
       uiState = uiState,
       actions = actions,
       picker = etiquetaPicker,
+  )
+  MovimientoCuentaPickerSheet(
+      visible = interactionEnabled && cuentaPicker.isVisible,
+      field = uiState.cuentaField,
+      onSelect = actions::onCuentaSelected,
+      picker = cuentaPicker,
   )
 }
 

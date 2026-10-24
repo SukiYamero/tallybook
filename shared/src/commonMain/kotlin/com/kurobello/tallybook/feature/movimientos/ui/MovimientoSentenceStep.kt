@@ -63,6 +63,7 @@ internal data class MovimientoSentenceCallbacks(
     val onChooseCategoria: () -> Unit,
     val onSuggestion: (Categoria) -> Unit,
     val etiquetas: MovimientoEtiquetasCallbacks,
+    val cuenta: MovimientoCuentaCallbacks = MovimientoCuentaCallbacks.Inert,
 )
 
 /**
@@ -187,6 +188,11 @@ private fun DetectedArea(
         val monto = detected.monto
         if (monto == null) AmountNotDetected() else DetectedAmount(monto, detected.tipo)
       }
+      MovimientoCuentaField(
+          field = sentence.cuenta,
+          callbacks = callbacks.cuenta,
+          enabled = sentence.isEnabled && sentence.actionsEnabled,
+      )
       CategorySingleField(
           categoria = sentence.categoria,
           deselectable = true,

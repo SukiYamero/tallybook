@@ -2,6 +2,7 @@ package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
+import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.FakeTransferenciaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
@@ -41,11 +42,12 @@ internal class ManageMovimientoFixture(scope: CoroutineScope) {
   val repository = ManagementRepository()
   val categorias = ManagementCategorias()
   val etiquetas = FakeEtiquetaRepository()
+  val cuentas = FakeCuentaRepository(listOf(USD_CASH, USD_BANK, USD_CARD, COP_CASH, NU))
   val clock = ManagementClock()
   val feedback = ManagementFeedbackViewModel(repository, FakeTransferenciaRepository(), scope).queue
   val viewModel =
       ManageMovimientoViewModel(
-          ManageMovimientoRepositories(repository, categorias, etiquetas),
+          ManageMovimientoRepositories(repository, categorias, etiquetas, cuentas),
           clock,
           TimeZoneProvider { TimeZone.UTC },
           feedback,
@@ -82,11 +84,18 @@ internal class ManagementCategorias : CategoriaRepository by UnsupportedCategori
 }
 
 internal class ManagementRepository : MovimientoRepository {
+  /** Answers per medio; the editor reads them with the movimiento's currency as primary. */
+  val medioSelections = mutableMapOf<MedioPago?, CuentaSelection?>()
+  val selectionRequests = mutableListOf<Pair<Moneda, MedioPago?>>()
+
   override suspend fun defaultSelection(
       primary: Moneda,
       tipo: TipoMovimiento,
       medio: MedioPago?,
-  ): DataOutcome<CuentaSelection?> = error("Default selections are not expected in this fixture")
+  ): DataOutcome<CuentaSelection?> {
+    selectionRequests += primary to medio
+    return DataOutcome.Success(medioSelections[medio])
+  }
 
   var current: Movimiento? = managementMovimiento()
   var readResult: DataOutcome<Movimiento?>? = null

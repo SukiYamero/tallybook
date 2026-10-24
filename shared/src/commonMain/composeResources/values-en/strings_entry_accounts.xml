@@ -1,0 +1,16 @@
+<resources>
+    <string name="entry_medio_label">Payment method</string>
+    <string name="entry_cuenta_label">Account</string>
+    <string name="entry_cuenta_placeholder">Choose an account</string>
+    <string name="entry_cuenta_with_moneda">%1$s (%2$s)</string>
+    <string name="entry_cuenta_picker_title">Choose the account</string>
+    <string name="entry_cuenta_search">Search accounts</string>
+    <string name="entry_cuenta_search_empty">No accounts match “%1$s”.</string>
+    <string name="entry_cuenta_empty">To use this method, create a %1$s account.</string>
+    <string name="entry_cuenta_empty_any">To save this movement, create your first account.</string>
+    <string name="entry_cuenta_create">Create account</string>
+    <string name="entry_cuenta_also">You also mentioned</string>
+    <string name="entry_medio_required">Choose a payment method to save.</string>
+    <string name="entry_cuenta_required">Choose an account to save.</string>
+    <string name="entry_cuenta_unavailable">This account is no longer available. Your movement is still here: pick another one to save it.</string>
+</resources>

@@ -16,6 +16,14 @@ internal data class SentenceCuenta(val cuenta: Cuenta?, val alternativeIds: List
 /** [candidates] is non-empty only when [medio] is undecided. */
 internal data class SentenceMedio(val medio: MedioPago?, val candidates: Set<MedioPago>)
 
+/** What one sentence says about where the money went and how. */
+internal data class SentenceSelection(val cuenta: SentenceCuenta, val medio: SentenceMedio) {
+  companion object {
+    val EMPTY =
+        SentenceSelection(SentenceCuenta(null, emptyList()), SentenceMedio(null, emptySet()))
+  }
+}
+
 /**
  * The earliest named account wins. A name shared across currencies resolves to the [primary]
  * currency's account, otherwise it stays undecided.

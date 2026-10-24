@@ -91,8 +91,8 @@ the title remains the sentence as typed.
 - [x] RED parser tables per language: each medio phrase, ambiguous card, two method words, negated mentions, no medio, "transferí" verb, medio words removed from subject, interaction with amount/date tokens ("50 mil en efectivo ayer").
 - [x] RED `CuentaMatcherTest`: whole words, accents/case folding, multi-word names, overlapping names (earliest/longest), archived excluded, same name in two currencies (primary preferred / ambiguous), name equal to a tag.
 - [x] GREEN; refactor the shared sequence helper with `EtiquetaMatcherTest` green.
-- [ ] Integration (after task1): `AddMovimientoEntryFlowTest` for ownership transfer, clear sentence, Continue/Back, currency-dependent amount re-derivation (COP vs CLP account).
-- [ ] `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosSimulatorArm64 detekt ktfmtCheck`.
+- [x] Integration (after task1): `AddMovimientoSentenceCuentaTest` (sibling of `AddMovimientoEntryFlowTest`, already 750 lines) for ownership transfer, clear sentence, Continue/Back, currency-dependent amount re-derivation (COP vs CLP account).
+- [x] `./gradlew :shared:testAndroidHostTest :shared:compileKotlinIosSimulatorArm64 detekt ktfmtCheck`.
 
 ## Parser layer record (done; integration pending)
 
@@ -118,7 +118,14 @@ Pure layer in `core/data/entry`, tested by `MovimientoPhraseMedioTest`, `CuentaM
   ("no pix", "no cartão de crédito") are listed whole so the Spanish negator never cancels them.
 - Order inside the parser: tipo verbs → medio words → reserved spans → date → amount.
 
-### What the integration step needs (after task1)
+### Integration record
+
+Done in task1's commit: `MovimientoEntryEngine.interpret` matches cuentas first, parses with the
+reserved spans, resolves medio with the final tipo and re-parses when `SentenceCuentas.monedaFor`
+(the layered selection's currency) differs; `buildIndex` drops account names from history subjects
+too (point 4); a tipo change applies `forTipo` to the selection (point 5).
+
+### What the integration step needed (after task1)
 
 1. `MovimientoEntryEngine` gets a `CuentaMatcher` and the live `List<Cuenta>` plus the primary
    `Moneda` (or reuses task1's account list); `interpret` runs `match` → `resolveSentenceCuenta`

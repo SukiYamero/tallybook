@@ -1,0 +1,16 @@
+<resources>
+    <string name="entry_medio_label">Forma de pagamento</string>
+    <string name="entry_cuenta_label">Conta</string>
+    <string name="entry_cuenta_placeholder">Escolha uma conta</string>
+    <string name="entry_cuenta_with_moneda">%1$s (%2$s)</string>
+    <string name="entry_cuenta_picker_title">Escolha a conta</string>
+    <string name="entry_cuenta_search">Buscar contas</string>
+    <string name="entry_cuenta_search_empty">Nenhuma conta corresponde a “%1$s”.</string>
+    <string name="entry_cuenta_empty">Para usar esta forma, crie uma conta do tipo %1$s.</string>
+    <string name="entry_cuenta_empty_any">Para salvar a movimentação, crie sua primeira conta.</string>
+    <string name="entry_cuenta_create">Criar conta</string>
+    <string name="entry_cuenta_also">Você também mencionou</string>
+    <string name="entry_medio_required">Escolha a forma de pagamento para salvar.</string>
+    <string name="entry_cuenta_required">Escolha a conta para salvar.</string>
+    <string name="entry_cuenta_unavailable">Esta conta não está mais disponível. Sua movimentação continua aqui: escolha outra para salvá-la.</string>
+</resources>

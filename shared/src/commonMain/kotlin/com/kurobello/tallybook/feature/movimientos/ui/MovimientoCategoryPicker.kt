@@ -18,9 +18,11 @@ import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreOwner
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.ui.account.CuentaPickerSheet
 import com.kurobello.tallybook.core.ui.tag.EtiquetaPickerSheet
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryEffect
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
+import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoCuentaUi
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormState
 import kotlinx.coroutines.flow.Flow
@@ -105,6 +107,24 @@ internal fun MovimientoEtiquetaPickerSheet(
       onDismiss = picker.onDismiss,
       onBack = picker.onDismiss,
       failedCreateNombre = uiState.failedEtiquetaNombre,
+  )
+}
+
+/** The account picker every movimiento surface opens, over the field's compatible options. */
+@Composable
+internal fun MovimientoCuentaPickerSheet(
+    visible: Boolean,
+    field: MovimientoCuentaUi,
+    onSelect: (String) -> Unit,
+    picker: MovimientoPickerState,
+) {
+  CuentaPickerSheet(
+      visible = visible,
+      cuentas = field.options,
+      selectedId = field.selected?.id,
+      onSelect = onSelect,
+      onDismiss = picker.onDismiss,
+      primaryMoneda = field.primaryMoneda,
   )
 }
 

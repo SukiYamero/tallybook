@@ -6,12 +6,17 @@ import com.kurobello.tallybook.core.data.entry.CategoryHistoryEntry
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
 import com.kurobello.tallybook.core.data.entry.CategorySuggestion
 import com.kurobello.tallybook.core.data.entry.CategorySuggestionIndex
+import com.kurobello.tallybook.core.data.entry.CuentaMatcher
 import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
+import com.kurobello.tallybook.core.data.entry.SentenceSelection
 import com.kurobello.tallybook.core.data.entry.SuggestionConfidence
 import com.kurobello.tallybook.core.data.entry.incomeCategoryIds
+import com.kurobello.tallybook.core.data.entry.resolveSentenceCuenta
+import com.kurobello.tallybook.core.data.entry.resolveSentenceMedio
 import com.kurobello.tallybook.core.data.resolveDeviceLocale
 import com.kurobello.tallybook.core.model.AppLocale
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.model.Moneda
@@ -27,7 +32,21 @@ internal const val MAX_SUGGESTION_CHIPS = 3
 // The selected category is filtered out of the ranking, so keep one more to still fill the chips.
 private const val RANKING_LIMIT = MAX_SUGGESTION_CHIPS + 1
 
+/** [moneda] reads the amount until the sentence's own cuenta decides another currency. */
 internal data class PhraseContext(val moneda: Moneda, val locale: AppLocale, val today: LocalDate)
+
+/** The user's own names a sentence may mention: tags and accounts. */
+internal class SentenceCatalogs(val etiquetas: List<Etiqueta>, val cuentas: SentenceCuentas)
+
+/**
+ * The live cuentas a sentence may name. [monedaFor] is the currency the draft ends up in once the
+ * caller layers the detected medio and cuenta over its own selection.
+ */
+internal class SentenceCuentas(
+    val cuentas: List<Cuenta>,
+    val primary: Moneda,
+    val monedaFor: (SentenceSelection, TipoMovimiento) -> Moneda,
+)
 
 internal data class SuggestionQuery(val subject: String, val tipo: TipoMovimiento)
 
@@ -43,6 +62,7 @@ internal data class PhraseInterpretation(
     val ranking: List<CategorySuggestion>,
     val learnedCategoriaId: String?,
     val etiquetaIds: List<String>,
+    val sentence: SentenceSelection,
 ) {
   val preselectedCategoriaId: String?
     get() =
@@ -58,6 +78,7 @@ internal class MovimientoEntryEngine(
     private val parser: MovimientoPhraseParser,
     private val suggester: CategorySuggester,
     private val etiquetaMatcher: EtiquetaMatcher,
+    private val cuentaMatcher: CuentaMatcher,
     private val localeProvider: DeviceLocaleProvider,
     private val computationDispatcher: CoroutineDispatcher,
 ) {
@@ -67,19 +88,18 @@ internal class MovimientoEntryEngine(
 
   fun dictionaryIndex(now: Instant): CategorySuggestionIndex = suggester.index(emptyList(), now)
 
+  /** History subjects drop account names like live ones do, so learned subjects still match. */
   suspend fun buildIndex(
       history: List<CategoryHistoryRow>,
       context: PhraseContext,
       now: Instant,
+      cuentas: List<Cuenta>,
   ): CategorySuggestionIndex =
       withContext(computationDispatcher) {
         suggester.index(
             history.map { row ->
               CategoryHistoryEntry(
-                  subject =
-                      parser
-                          .parse(row.titulo, context.moneda, context.locale, context.today)
-                          .subject,
+                  subject = parse(row.titulo, context, context.moneda, cuentas).subject,
                   categoriaId = row.categoriaId,
                   createdAt = row.createdAt,
               )
@@ -93,19 +113,36 @@ internal class MovimientoEntryEngine(
       context: PhraseContext,
       index: CategorySuggestionIndex,
       candidates: SuggestionCandidates,
-      etiquetas: List<Etiqueta>,
+      catalogs: SentenceCatalogs,
   ): PhraseInterpretation =
-      withContext(computationDispatcher) { interpret(text, context, index, candidates, etiquetas) }
+      withContext(computationDispatcher) { interpret(text, context, index, candidates, catalogs) }
 
+  /**
+   * Account names are matched before parsing so their words never become an amount or a date. The
+   * amount is read again when the layered selection lands in another currency than [context]'s.
+   */
   fun interpret(
       text: String,
       context: PhraseContext,
       index: CategorySuggestionIndex,
       candidates: SuggestionCandidates,
-      etiquetas: List<Etiqueta>,
+      catalogs: SentenceCatalogs,
   ): PhraseInterpretation {
-    val parsed = parser.parse(text, context.moneda, context.locale, context.today)
-    val tipo = parsed.tipo ?: impliedTipo(parsed.subject, index, candidates)
+    val cuentas = catalogs.cuentas
+    val matches = cuentaMatcher.match(text, cuentas.cuentas)
+    val reserved = matches.map { it.start until it.endExclusive }
+    val sentenceCuenta = resolveSentenceCuenta(matches, cuentas.cuentas, cuentas.primary)
+    val first = parser.parse(text, context.moneda, context.locale, context.today, reserved)
+    val tipo = first.tipo ?: impliedTipo(first.subject, index, candidates)
+    val sentence =
+        SentenceSelection(
+            sentenceCuenta,
+            resolveSentenceMedio(first, tipo, sentenceCuenta.cuenta?.tipo),
+        )
+    val moneda = cuentas.monedaFor(sentence, tipo)
+    val parsed =
+        if (moneda == context.moneda) first
+        else parser.parse(text, moneda, context.locale, context.today, reserved)
     val query = SuggestionQuery(parsed.subject, tipo)
     val learned =
         index.learnedCategoria(query.subject, candidates.availableIds, candidates.excludedIds)
@@ -115,8 +152,21 @@ internal class MovimientoEntryEngine(
         query = query,
         ranking = rank(index, query, candidates),
         learnedCategoriaId = learned,
-        etiquetaIds = etiquetaMatcher.match(text, etiquetas).take(MAX_ETIQUETAS_POR_MOVIMIENTO),
+        etiquetaIds =
+            etiquetaMatcher.match(text, catalogs.etiquetas).take(MAX_ETIQUETAS_POR_MOVIMIENTO),
+        sentence = sentence,
     )
+  }
+
+  /** The sentence read in [moneda], e.g. to re-derive its amount for another cuenta. */
+  fun parse(
+      text: String,
+      context: PhraseContext,
+      moneda: Moneda,
+      cuentas: List<Cuenta>,
+  ): ParsedMovimientoPhrase {
+    val reserved = cuentaMatcher.match(text, cuentas).map { it.start until it.endExclusive }
+    return parser.parse(text, moneda, context.locale, context.today, reserved)
   }
 
   fun rank(

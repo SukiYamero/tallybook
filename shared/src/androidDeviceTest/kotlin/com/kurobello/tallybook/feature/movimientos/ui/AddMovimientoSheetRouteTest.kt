@@ -11,6 +11,7 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.CategorySeedCatalog
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
+import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
@@ -19,6 +20,7 @@ import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.data.entry.CategoryAppearanceSuggester
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
+import com.kurobello.tallybook.core.data.entry.CuentaMatcher
 import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.core.model.AppLocale
@@ -47,6 +49,7 @@ import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoRepositories
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
+import com.kurobello.tallybook.feature.movimientos.viewmodel.COP_CASH
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoEntryEngine
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -145,6 +148,7 @@ class AddMovimientoSheetRouteTest {
                   categorias = FakeCategoriaRepository(),
                   movimientos = movementRepository,
                   etiquetas = FakeEtiquetaRepository(),
+                  cuentas = FakeCuentaRepository(listOf(COP_CASH)),
               ),
           idGenerator = IdGenerator { "movement-id" },
           clock = FixedClock,
@@ -154,6 +158,7 @@ class AddMovimientoSheetRouteTest {
                   parser = MovimientoPhraseParser(),
                   suggester = CategorySuggester(CategoryKeywordDictionary.builtIn),
                   etiquetaMatcher = EtiquetaMatcher(),
+                  cuentaMatcher = CuentaMatcher(),
                   localeProvider = FixedDeviceLocale,
                   computationDispatcher = Dispatchers.Default,
               ),

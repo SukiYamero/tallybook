@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Movimiento
 
@@ -31,6 +32,10 @@ internal data class MovimientoManagementSession(
     val isCategoriesFailed: Boolean = false,
     val etiquetas: List<Etiqueta> = emptyList(),
     val etiquetasLoad: EtiquetasLoad = EtiquetasLoad.LOADING,
+    val cuentas: List<Cuenta> = emptyList(),
+    val isCuentasLoading: Boolean = true,
+    val isCuentasFailed: Boolean = false,
+    val cuentaDefaults: CuentaDefaults? = null,
     val edit: EditMovimientoDraftState? = null,
     val isSubmitting: Boolean = false,
     val isDeleteConfirmationVisible: Boolean = false,
@@ -46,12 +51,19 @@ internal data class MovimientoManagementSession(
           maxSelectableDate = it.maxSelectableDate,
           etiquetas = etiquetas,
           etiquetasLoad = etiquetasLoad,
-          isLoading = isCategoriesLoading,
+          isLoading = isCategoriesLoading || isCuentasLoading,
           isSubmitting = isSubmitting,
           submitAttempted = it.submitAttempted,
-          error = if (isCategoriesFailed) MovimientoFormError.CATEGORIES_UNAVAILABLE else it.error,
+          error =
+              when {
+                isCategoriesFailed -> MovimientoFormError.CATEGORIES_UNAVAILABLE
+                isCuentasFailed -> MovimientoFormError.ACCOUNTS_UNAVAILABLE
+                else -> it.error
+              },
           validationDate = it.validationDate,
           failedEtiquetaNombre = it.failedEtiquetaNombre,
+          cuentas = cuentas,
+          cuentaRejected = it.cuentaRejected,
       )
     }
 
