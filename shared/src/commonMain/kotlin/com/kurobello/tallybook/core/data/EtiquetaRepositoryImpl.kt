@@ -130,8 +130,10 @@ internal class EtiquetaRepositoryImpl(
               if (queries.selectEtiquetaById(id).executeAsOneOrNull() == null) {
                 DataOutcome.Failure(unknownEtiqueta(id))
               } else {
+                val stamp = changeClock.next().value
+                queries.touchMovimientosForEtiqueta(stamp = stamp, etiqueta_id = id)
                 queries.deleteLinksForEtiqueta(id)
-                check(queries.deleteEtiqueta(id).value == 1L)
+                check(queries.tombstoneEtiqueta(stamp = stamp, id = id).value == 1L)
                 DataOutcome.Success(Unit)
               }
             }

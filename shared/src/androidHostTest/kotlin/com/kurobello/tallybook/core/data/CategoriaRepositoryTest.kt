@@ -1,5 +1,6 @@
 package com.kurobello.tallybook.core.data
 
+import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
@@ -258,9 +259,78 @@ class CategoriaRepositoryTest {
     }
   }
 
+  @Test
+  fun `delete tombstones the categoria with one stamp and hides it from every read`() = runTest {
+    val changeClock = TestChangeClock()
+    withStorage(changeClock) { driver, database, repository ->
+      database.seed(comida)
+      val gym = repository.create(draft("Gym")).savedCategoria()
+      database.insertMovimiento("captured", Moneda.COP, gym.id)
+      driver.tombstone("movimiento", "captured")
+
+      assertEquals(DataOutcome.Success(0L), repository.countMovimientos(gym.id))
+      assertEquals(
+          DataOutcome.Success(emptyMap()),
+          repository.observeMovimientoCounts(Moneda.COP).first(),
+      )
+      assertEquals(DataOutcome.Success(CategoriaDelete.Deleted), repository.delete(gym.id))
+
+      assertEquals(2, changeClock.issuedStamps.size)
+      val stamp = changeClock.issuedStamps.last().value
+      assertEquals(stamp to stamp, driver.storedStamps("categoria", gym.id))
+      assertEquals(listOf(comida), repository.getAll().rows())
+      assertEquals(listOf(comida), repository.observeAll().first().rows())
+      assertInvalid(repository.update(gym.id, draft("Pilates")))
+      assertInvalid(repository.setOculta(gym.id, oculta = true))
+      assertInvalid(repository.delete(gym.id))
+      assertEquals(2, changeClock.issuedStamps.size)
+    }
+  }
+
+  @Test
+  fun `a deleted categoria name can be reused and gets a new id`() = runTest {
+    withRepository { _, repository ->
+      val gym = repository.create(draft("Gym")).savedCategoria()
+      repository.delete(gym.id)
+
+      val again = repository.create(draft(" gym ")).savedCategoria()
+
+      assertEquals(gym.copy(id = "custom-2", nombre = "gym"), again)
+      assertEquals(listOf(again), repository.getAll().rows())
+    }
+  }
+
+  @Test
+  fun `unchanged custom update and visibility writes issue no stamp`() = runTest {
+    val changeClock = TestChangeClock()
+    withStorage(changeClock) { driver, database, repository ->
+      database.seed(comida)
+      val gym = repository.create(draft("Gym", descripcion = "pesas")).savedCategoria()
+      val stored = driver.storedStamps("categoria", gym.id)
+
+      assertEquals(
+          DataOutcome.Success(CategoriaWrite.Saved(gym)),
+          repository.update(gym.id, draft(" Gym ", descripcion = " pesas ")),
+      )
+      assertEquals(DataOutcome.Success(Unit), repository.setOculta(comida.id, oculta = false))
+
+      assertEquals(1, changeClock.issuedStamps.size)
+      assertEquals(stored, driver.storedStamps("categoria", gym.id))
+      assertEquals(
+          ChangeStamp.SEED.value to null,
+          driver.storedStamps("categoria", comida.id),
+      )
+    }
+  }
+
   private suspend fun TestScope.withRepository(
       changeClock: ChangeClock = TestChangeClock(),
       block: suspend (TallybookDatabase, CategoriaRepository) -> Unit,
+  ) = withStorage(changeClock) { _, database, repository -> block(database, repository) }
+
+  private suspend fun TestScope.withStorage(
+      changeClock: ChangeClock = TestChangeClock(),
+      block: suspend (SqlDriver, TallybookDatabase, CategoriaRepository) -> Unit,
   ) {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     TallybookDatabase.Schema.create(driver)
@@ -274,7 +344,7 @@ class CategoriaRepositoryTest {
               IdGenerator { "custom-${++nextId}" },
               changeClock,
           )
-      block(database, repository)
+      block(driver, database, repository)
     } finally {
       driver.close()
     }

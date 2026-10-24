@@ -693,13 +693,18 @@ class DatabaseSchemaTest {
   }
 
   @Test
-  fun `deleteMovimiento removes the row`() {
+  fun `tombstoneMovimiento hides the row and keeps it stored with the stamp`() {
     val db = inMemoryDatabase()
     db.insert(id = "mov1", montoMinor = 100)
+    val stamp = ChangeStamp.of(epochMillis = 1, counter = 0, node = "00000000000000aa").value
 
-    db.movimientoQueries.deleteMovimiento("mov1")
+    assertEquals(1L, db.movimientoQueries.tombstoneMovimiento(stamp, "mov1").value)
+    assertEquals(0L, db.movimientoQueries.tombstoneMovimiento(stamp, "mov1").value)
 
     assertNull(db.movimientoQueries.selectMovimientoById("mov1").executeAsOneOrNull())
+    val stored = db.movimientoQueries.selectStoredMovimientoById("mov1").executeAsOne()
+    assertEquals(stamp to stamp, stored.updated_at to stored.deleted_at)
+    assertEquals(100L, stored.monto_minor)
   }
 
   @Test
@@ -849,6 +854,131 @@ class DatabaseSchemaTest {
           db.movimientoQueries.selectAllMovimientos().executeAsList().map { it.id },
       )
       assertNull(db.movimientoQueries.selectMovimientoById("tombstone").executeAsOneOrNull())
+    }
+  }
+
+  @Test
+  fun `direct table reads counts and aggregates skip tombstones`() {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      TallybookDatabase.Schema.create(driver)
+      val db = TallybookDatabase(driver)
+      for (id in listOf("cat_live", "cat_gone")) {
+        db.categoriaQueries.insertCategoria(id, id, null, "tag", "neutral", ChangeStamp.SEED.value)
+      }
+      for (id in listOf("tag_live", "tag_gone")) {
+        db.etiquetaQueries.insertEtiqueta(
+            id,
+            id,
+            null,
+            "2026-01-01T00:00:00Z",
+            ChangeStamp.SEED.value,
+        )
+      }
+      db.insert(
+          id = "live",
+          montoMinor = 100,
+          categoriaId = "cat_live",
+          etiquetaIds = listOf("tag_live"),
+          titulo = "cafe",
+      )
+      db.insert(
+          id = "gone",
+          tipo = "INGRESO",
+          montoMinor = 900,
+          fecha = "2024-09-03",
+          categoriaId = "cat_live",
+          etiquetaIds = listOf("tag_live"),
+          titulo = "taxi",
+          createdAt = "2026-09-04T12:00:00Z",
+      )
+      for ((table, id) in
+          listOf("movimiento" to "gone", "categoria" to "cat_gone", "etiqueta" to "tag_gone")) {
+        driver.execute(null, "UPDATE $table SET deleted_at = updated_at WHERE id = '$id'", 0)
+      }
+      val movimientos = db.movimientoQueries
+      val categorias = db.categoriaQueries
+      val etiquetas = db.etiquetaQueries
+
+      assertEquals(listOf("2026"), movimientos.selectMovimientoYears("COP").executeAsList())
+      assertEquals(
+          listOf("cafe"),
+          movimientos.selectCategoryHistory(10).executeAsList().map { it.titulo },
+      )
+      assertEquals(
+          mapOf("GASTO" to 100L),
+          movimientos.sumMovimientosByTipo("COP").executeAsList().associate {
+            it.tipo to it.total_minor
+          },
+      )
+      assertEquals(
+          listOf(Triple("cat_live", "GASTO", 100L)),
+          movimientos
+              .sumMovimientosPorCategoria("COP", "2024-01-01", "2026-12-31")
+              .executeAsList()
+              .map { Triple(it.categoria_id, it.tipo, it.total_minor) },
+      )
+      assertEquals(1L, categorias.countMovimientosForCategoria("cat_live").executeAsOne())
+      assertEquals(
+          mapOf("cat_live" to 1L),
+          categorias.countMovimientosPorCategoria("COP").executeAsList().associate {
+            it.categoria_id to it.movimiento_count
+          },
+      )
+      assertEquals(1L, etiquetas.countMovimientosForEtiqueta("tag_live").executeAsOne())
+      assertEquals(
+          mapOf("tag_live" to 1L),
+          etiquetas.countMovimientosPorEtiqueta("COP").executeAsList().associate {
+            it.etiqueta_id to it.movimiento_count
+          },
+      )
+      assertEquals(
+          listOf("cat_live"),
+          categorias.selectAllCategorias().executeAsList().map { it.id },
+      )
+      assertNull(categorias.selectCategoriaById("cat_gone").executeAsOneOrNull())
+      assertEquals(listOf("tag_live"), etiquetas.selectAllEtiquetas().executeAsList().map { it.id })
+      assertNull(etiquetas.selectEtiquetaById("tag_gone").executeAsOneOrNull())
+      assertEquals(
+          listOf("tag_live"),
+          etiquetas.selectExistingEtiquetaIds(listOf("tag_live", "tag_gone")).executeAsList(),
+      )
+    }
+  }
+
+  @Test
+  fun `live filtered counts and aggregates search the partial indexes`() {
+    val driver = PlanRecordingDriver(JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY))
+    try {
+      TallybookDatabase.Schema.create(driver)
+      val db = TallybookDatabase(driver)
+      val expected =
+          mapOf<String, Pair<() -> Any, String>>(
+              "sumMovimientosPorCategoria" to
+                  ({
+                    db.movimientoQueries
+                        .sumMovimientosPorCategoria("COP", "2026-09-01", "2026-09-30")
+                        .executeAsList()
+                  } to "SEARCH movimiento USING INDEX movimiento_recent (fecha>? AND fecha<?)"),
+              "countMovimientosForCategoria" to
+                  ({
+                    db.categoriaQueries.countMovimientosForCategoria("cat").executeAsOne()
+                  } to "SEARCH movimiento USING INDEX movimiento_by_categoria (categoria_id=?)"),
+              "countMovimientosForEtiqueta" to
+                  ({
+                    db.etiquetaQueries.countMovimientosForEtiqueta("tag").executeAsOne()
+                  } to
+                      "SEARCH movimiento_etiqueta USING INDEX movimiento_etiqueta_etiqueta " +
+                          "(etiqueta_id=?)"),
+          )
+
+      expected.forEach { (name, readAndStep) ->
+        val (read, step) = readAndStep
+        val plan = driver.planOf(read)
+        assertTrue(step in plan, "$name: $plan")
+        assertTrue(plan.none { it == "SCAN movimiento" }, "$name: $plan")
+      }
+    } finally {
+      driver.close()
     }
   }
 

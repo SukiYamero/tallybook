@@ -19,6 +19,7 @@ import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
 import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
+import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
@@ -57,10 +58,238 @@ class MovimientoRepositoryTest {
       assertEquals(2, changeClock.issuedStamps.size)
       assertEquals(changeClock.issuedStamps.last().value, storedStamp())
 
-      repository.deleteAndCapture("mov")
-      repository.restoreDeleted(original)
-      assertEquals(3, changeClock.issuedStamps.size)
+      val captured = repository.deleteAndCapture("mov")
+      repository.restoreDeleted(
+          checkNotNull(assertIs<DataOutcome.Success<Movimiento?>>(captured).data)
+      )
+      assertEquals(4, changeClock.issuedStamps.size)
       assertEquals(changeClock.issuedStamps.last().value, storedStamp())
+    }
+  }
+
+  @Test
+  fun `delete leaves a tombstone stamped once that every read skips`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      val changeClock = TestChangeClock()
+      val repository =
+          MovimientoRepositoryImpl(
+              seeded(driver),
+              StandardTestDispatcher(testScheduler),
+              changeClock,
+          )
+      val captured = movimiento("captured", titulo = "cafe", etiquetaIds = listOf("tag_a"))
+      val deleted =
+          movimiento("deleted", titulo = "taxi", etiquetaIds = listOf("tag_b"), at = LATER)
+      repository.insert(captured)
+      repository.insert(deleted)
+
+      assertEquals(DataOutcome.Success(captured), repository.deleteAndCapture(captured.id))
+      assertEquals(DataOutcome.Success(Unit), repository.delete(deleted.id))
+
+      val (captureStamp, deleteStamp) = changeClock.issuedStamps.drop(2).map { it.value }
+      assertEquals(captureStamp to captureStamp, driver.storedStamps("movimiento", captured.id))
+      assertEquals(deleteStamp to deleteStamp, driver.storedStamps("movimiento", deleted.id))
+      assertEquals(emptyList(), linkRows(driver))
+      val september = MovimientoDateRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30))
+      val noMoney = MovimientoSummary(Money(0, Moneda.COP), Money(0, Moneda.COP))
+      assertEquals(DataOutcome.Success(emptyList()), repository.getAll())
+      assertEquals(DataOutcome.Success(null), repository.getById(captured.id))
+      assertEquals(DataOutcome.Success(emptyList()), repository.observeRecent(5).first())
+      assertEquals(
+          DataOutcome.Success(emptyList()),
+          repository.observeRecent(Moneda.COP, 5).first(),
+      )
+      assertEquals(
+          DataOutcome.Success(emptyList()),
+          repository.observeRange(Moneda.COP, september).first(),
+      )
+      assertEquals(
+          DataOutcome.Success(MovimientoSearchSnapshot(emptyList(), emptyList())),
+          repository.observeFiltered(MovimientoReadCriteria(Moneda.COP)).first(),
+      )
+      assertEquals(DataOutcome.Success(emptyList()), repository.observeYears(Moneda.COP).first())
+      assertEquals(DataOutcome.Success(noMoney), repository.observeSummary(Moneda.COP).first())
+      assertEquals(DataOutcome.Success(emptyList()), repository.observeCategoryHistory(5).first())
+
+      assertEquals(DataOutcome.Success(Unit), repository.delete(deleted.id))
+      assertEquals(DataOutcome.Success(null), repository.deleteAndCapture(captured.id))
+      assertEquals(4, changeClock.issuedStamps.size)
+    }
+  }
+
+  @Test
+  fun `restore revives the tombstone with a newer stamp and only surviving references`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      val changeClock = TestChangeClock()
+      val repository =
+          MovimientoRepositoryImpl(
+              seeded(driver, extraCategoriaIds = listOf("custom")),
+              StandardTestDispatcher(testScheduler),
+              changeClock,
+          )
+      val row =
+          movimiento(
+              "gone",
+              categoriaId = "custom",
+              etiquetaIds = listOf("tag_c", "tag_a", "tag_b"),
+          )
+      repository.insert(row)
+      assertEquals(DataOutcome.Success(row), repository.deleteAndCapture(row.id))
+      val deleteStamp = changeClock.issuedStamps.last()
+      driver.tombstone("categoria", "custom")
+      driver.tombstone("etiqueta", "tag_a")
+
+      assertEquals(
+          DataOutcome.Success(MovimientoRestoreResult.Restored),
+          repository.restoreDeleted(row),
+      )
+
+      val reviveStamp = changeClock.issuedStamps.last()
+      assertEquals(3, changeClock.issuedStamps.size)
+      assertTrue(reviveStamp > deleteStamp)
+      assertEquals(reviveStamp.value to null, driver.storedStamps("movimiento", row.id))
+      val revived =
+          row.copy(categoriaId = CATEGORIA_OTROS_ID, etiquetaIds = listOf("tag_c", "tag_b"))
+      assertEquals(DataOutcome.Success(listOf(revived)), repository.getAll())
+      assertEquals(listOf("gone:tag_b:1", "gone:tag_c:0"), linkRows(driver))
+      assertEquals(
+          DataOutcome.Success(MovimientoRestoreResult.AlreadyPresent),
+          repository.restoreDeleted(row),
+      )
+      assertEquals(
+          DataOutcome.Success(MovimientoRestoreResult.Conflict),
+          repository.restoreDeleted(row.copy(titulo = "otro")),
+      )
+      assertEquals(3, changeClock.issuedStamps.size)
+    }
+  }
+
+  @Test
+  fun `restore of a tombstone with different content is a conflict that keeps the tombstone`() =
+      runTest {
+        JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+          val changeClock = TestChangeClock()
+          val repository =
+              MovimientoRepositoryImpl(
+                  seeded(driver),
+                  StandardTestDispatcher(testScheduler),
+                  changeClock,
+              )
+          val row = movimiento("gone", titulo = "cafe", descripcion = "con leche")
+          repository.insert(row)
+          assertEquals(DataOutcome.Success(row), repository.deleteAndCapture(row.id))
+          val tombstone = driver.storedStamps("movimiento", row.id)
+
+          for (different in
+              listOf(
+                  row.copy(tipo = TipoMovimiento.INGRESO),
+                  row.copy(monto = Money(501, Moneda.COP)),
+                  row.copy(monto = Money(500, Moneda.CLP)),
+                  row.copy(fecha = LocalDate(2026, 9, 6)),
+                  row.copy(categoriaId = "cat_cine"),
+                  row.copy(titulo = null),
+                  row.copy(descripcion = "sola"),
+                  row.copy(createdAt = LATER),
+              )) {
+            assertEquals(
+                DataOutcome.Success(MovimientoRestoreResult.Conflict),
+                repository.restoreDeleted(different),
+            )
+          }
+
+          assertEquals(tombstone, driver.storedStamps("movimiento", row.id))
+          assertEquals(DataOutcome.Success(null), repository.getById(row.id))
+          assertEquals(2, changeClock.issuedStamps.size)
+          assertEquals(
+              DataOutcome.Success(MovimientoRestoreResult.Restored),
+              repository.restoreDeleted(row.copy(etiquetaIds = listOf("tag_a"))),
+          )
+          assertEquals(
+              DataOutcome.Success(row.copy(etiquetaIds = listOf("tag_a"))),
+              repository.getById(row.id),
+          )
+        }
+      }
+
+  @Test
+  fun `an insert reusing a tombstoned id takes the row over with its own content and stamp`() =
+      runTest {
+        JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+          val changeClock = TestChangeClock()
+          val repository =
+              MovimientoRepositoryImpl(
+                  seeded(driver),
+                  StandardTestDispatcher(testScheduler),
+                  changeClock,
+              )
+          val row = movimiento("reused", etiquetaIds = listOf("tag_a"))
+          repository.insert(row)
+          repository.delete(row.id)
+          val replacement =
+              row.copy(
+                  monto = Money(900, Moneda.COP),
+                  etiquetaIds = listOf("tag_b"),
+                  createdAt = LATER,
+              )
+
+          assertEquals(DataOutcome.Success(Unit), repository.insert(replacement))
+
+          val stamp = changeClock.issuedStamps.last().value
+          assertEquals(3, changeClock.issuedStamps.size)
+          assertEquals(stamp to null, driver.storedStamps("movimiento", row.id))
+          assertEquals(DataOutcome.Success(listOf(replacement)), repository.getAll())
+          assertEquals(listOf("reused:tag_b:0"), linkRows(driver))
+        }
+      }
+
+  @Test
+  fun `update of a tombstone is not found and leaves it untouched`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      val changeClock = TestChangeClock()
+      val repository =
+          MovimientoRepositoryImpl(
+              seeded(driver),
+              StandardTestDispatcher(testScheduler),
+              changeClock,
+          )
+      val row = movimiento("gone", etiquetaIds = listOf("tag_a"))
+      repository.insert(row)
+      repository.deleteAndCapture(row.id)
+      val tombstone = driver.storedStamps("movimiento", row.id)
+
+      assertEquals(
+          DataOutcome.Success(MovimientoUpdateResult.NotFound),
+          repository.update(row.id, row.changes().copy(titulo = "cena")),
+      )
+
+      assertEquals(tombstone, driver.storedStamps("movimiento", row.id))
+      assertEquals(emptyList(), linkRows(driver))
+      assertEquals(2, changeClock.issuedStamps.size)
+    }
+  }
+
+  @Test
+  fun `an update that changes nothing writes no stamp and notifies no observer`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      val database = seeded(driver)
+      val changeClock = TestChangeClock()
+      val repository =
+          MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler), changeClock)
+      val row = movimiento("same", titulo = "cafe", etiquetaIds = listOf("tag_b", "tag_a"))
+      repository.insert(row)
+      val stored = driver.storedStamps("movimiento", row.id)
+      var notifications = 0
+      database.movimientoQueries.selectAllMovimientos().addListener { notifications++ }
+
+      assertEquals(
+          DataOutcome.Success(MovimientoUpdateResult.Updated),
+          repository.update(row.id, row.changes()),
+      )
+
+      assertEquals(0, notifications)
+      assertEquals(stored, driver.storedStamps("movimiento", row.id))
+      assertEquals(1, changeClock.issuedStamps.size)
+      assertEquals(DataOutcome.Success(row), repository.getById(row.id))
     }
   }
 
@@ -425,7 +654,7 @@ class MovimientoRepositoryTest {
       val row = movimiento("gone", etiquetaIds = listOf("tag_c", "tag_a", "tag_b"))
       repository.insert(row)
       assertEquals(DataOutcome.Success(row), repository.deleteAndCapture(row.id))
-      database.etiquetaQueries.deleteEtiqueta("tag_a")
+      driver.tombstone("etiqueta", "tag_a")
 
       assertEquals(
           DataOutcome.Success(MovimientoRestoreResult.Restored),
@@ -537,21 +766,21 @@ class MovimientoRepositoryTest {
       repository.insert(row)
       driver.execute(
           null,
-          "CREATE TRIGGER block_delete BEFORE DELETE ON movimiento BEGIN SELECT RAISE(ABORT, 'blocked'); END",
+          "CREATE TRIGGER block_tombstone BEFORE UPDATE ON movimiento BEGIN SELECT RAISE(ABORT, 'blocked'); END",
           0,
       )
       assertLocal(repository.deleteAndCapture(row.id))
       assertEquals(DataOutcome.Success(row), repository.getById(row.id))
-      driver.execute(null, "DROP TRIGGER block_delete", 0)
+      driver.execute(null, "DROP TRIGGER block_tombstone", 0)
       assertEquals(DataOutcome.Success(row), repository.deleteAndCapture(row.id))
       driver.execute(
           null,
-          "CREATE TRIGGER block_insert BEFORE INSERT ON movimiento BEGIN SELECT RAISE(ABORT, 'blocked'); END",
+          "CREATE TRIGGER block_revive BEFORE UPDATE ON movimiento BEGIN SELECT RAISE(ABORT, 'blocked'); END",
           0,
       )
       assertLocal(repository.restoreDeleted(row))
       assertEquals(DataOutcome.Success(null), repository.getById(row.id))
-      driver.execute(null, "DROP TRIGGER block_insert", 0)
+      driver.execute(null, "DROP TRIGGER block_revive", 0)
       assertEquals(
           DataOutcome.Success(MovimientoRestoreResult.Restored),
           repository.restoreDeleted(row),

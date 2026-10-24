@@ -29,12 +29,13 @@ VALUES (:id, :nombre, NULL, :icono, :color, :descripcion, 'usuario', 0, :updated
 
 selectAllCategorias:
 SELECT *
-FROM categoria;
+FROM categoria
+WHERE deleted_at IS NULL;
 
 selectCategoriaById:
 SELECT *
 FROM categoria
-WHERE id = ?;
+WHERE id = ? AND deleted_at IS NULL;
 
 updateCategoriaNombre:
 UPDATE categoria
@@ -44,22 +45,23 @@ WHERE id = :id;
 updateCustomCategoria:
 UPDATE categoria
 SET nombre = :nombre, icono = :icono, color = :color, descripcion = :descripcion, updated_at = :updated_at
-WHERE id = :id AND origen = 'usuario';
+WHERE id = :id AND origen = 'usuario' AND deleted_at IS NULL;
 
 updateCategoriaOculta:
 UPDATE categoria
 SET oculta = :oculta, updated_at = :updated_at
-WHERE id = :id;
+WHERE id = :id AND deleted_at IS NULL;
 
-deleteCustomCategoria:
-DELETE FROM categoria
-WHERE id = :id AND origen = 'usuario';
+tombstoneCustomCategoria:
+UPDATE categoria
+SET updated_at = :stamp, deleted_at = :stamp
+WHERE id = :id AND origen = 'usuario' AND deleted_at IS NULL;
 
--- Any currency: a custom categoria can be deleted only while no movimiento references it at all.
+-- Any currency: a custom categoria can be deleted only while no live movimiento references it.
 countMovimientosForCategoria:
 SELECT COUNT(*)
 FROM movimiento
-WHERE categoria_id = ?;
+WHERE categoria_id = ? AND deleted_at IS NULL;
 
 -- The set selectFilteredMovimientosByCategory returns for one categoria: its own movimientos plus
 -- those of its children. A movimiento has one categoria, so it lands in at most one bucket per level.
@@ -68,11 +70,13 @@ SELECT bucket.categoria_id, COUNT(*) AS movimiento_count
 FROM (
     SELECT movimiento.categoria_id
     FROM movimiento
-    WHERE movimiento.monto_moneda = :moneda
+    WHERE movimiento.monto_moneda = :moneda AND movimiento.deleted_at IS NULL
     UNION ALL
     SELECT categoria.padre_id AS categoria_id
     FROM movimiento
     JOIN categoria ON categoria.id = movimiento.categoria_id
-    WHERE movimiento.monto_moneda = :moneda AND categoria.padre_id IS NOT NULL
+    WHERE movimiento.monto_moneda = :moneda
+      AND movimiento.deleted_at IS NULL
+      AND categoria.padre_id IS NOT NULL
 ) AS bucket
 GROUP BY bucket.categoria_id;

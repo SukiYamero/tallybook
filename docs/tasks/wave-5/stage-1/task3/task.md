@@ -19,7 +19,9 @@ row; deleting a tag bumps the movimientos that lose it; no-op writes issue no st
 - Modify `shared/src/commonMain/sqldelight/com/kurobello/tallybook/core/database/Movimiento.sq`:
   - replace `deleteMovimiento` with `tombstoneMovimiento(stamp, id)` (`... WHERE id = ? AND deleted_at IS NULL`);
   - add `selectStoredMovimientoById` (table row including tombstone state, no links) and
-    `reviveMovimiento(categoria_id, stamp, id)`;
+    `reviveMovimiento(<content fields>, stamp, id)`, which writes a row over its tombstone: Undo writes
+    the captured content, and an `insert` reusing a tombstoned ID takes the row over (newer write)
+    instead of failing on the primary key, as inserting after a hard delete did;
   - `updateMovimiento` adds `AND deleted_at IS NULL`;
   - direct table reads add `deleted_at IS NULL`: `selectMovimientoYears`, `selectCategoryHistory`,
     `sumMovimientosByTipo`, `sumMovimientosPorCategoria`.
@@ -77,18 +79,18 @@ How they apply to the current code:
 
 ## TDD implementation
 
-- [ ] RED: movimiento — delete leaves a tombstone (row present, `deleted_at = updated_at`, no links,
+- [x] RED: movimiento — delete leaves a tombstone (row present, `deleted_at = updated_at`, no links,
       absent from recent/range/filtered/years/summary/category history/getAll).
-- [ ] RED: restore — revive keeps ID and `createdAt`, issues a newer stamp, restores surviving tags only,
+- [x] RED: restore — revive keeps ID and `createdAt`, issues a newer stamp, restores surviving tags only,
       falls back to Otros when the categoria was tombstoned; tombstone with different content →
       `Conflict`; live identical → `AlreadyPresent`; live different → `Conflict`.
-- [ ] RED: update of a tombstone → `NotFound`; unchanged update writes nothing (stamp unchanged,
+- [x] RED: update of a tombstone → `NotFound`; unchanged update writes nothing (stamp unchanged,
       observers not re-emitted where the existing reactive tests can observe it).
-- [ ] RED: etiqueta delete bumps each affected live movimiento's `updated_at` to the delete stamp,
+- [x] RED: etiqueta delete bumps each affected live movimiento's `updated_at` to the delete stamp,
       removes links, tombstones the tag; a new tag with the same name gets a new ID.
-- [ ] RED: categoria delete tombstones; counts/observe exclude it; name reuse creates a new ID.
-- [ ] GREEN: implement query and repository changes.
-- [ ] Re-run Search/History/CSV/integration suites unchanged; re-check the `EXPLAIN QUERY PLAN` tests
+- [x] RED: categoria delete tombstones; counts/observe exclude it; name reuse creates a new ID.
+- [x] GREEN: implement query and repository changes.
+- [x] Re-run Search/History/CSV/integration suites unchanged; re-check the `EXPLAIN QUERY PLAN` tests
       from task2 against the direct-table aggregates touched here.
 - [ ] Checks below.
 

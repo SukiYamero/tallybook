@@ -209,6 +209,31 @@ class HistoryRepositoryTest {
   }
 
   @Test
+  fun `range and years skip tombstoned movimientos`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      createSchemaWithReferences(driver, listOf("food"))
+      val repository =
+          MovimientoRepositoryImpl(
+              TallybookDatabase(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
+      val live = movimiento("live", "2026-09-15")
+      for (row in listOf(live, movimiento("gone", "2026-09-16"), movimiento("old", "2024-01-01"))) {
+        repository.insert(row)
+      }
+      driver.tombstone("movimiento", "gone")
+      driver.tombstone("movimiento", "old")
+
+      assertEquals(
+          DataOutcome.Success(listOf(live)),
+          repository.observeRange(Moneda.COP, september).first(),
+      )
+      assertEquals(DataOutcome.Success(listOf(2026)), repository.observeYears(Moneda.COP).first())
+    }
+  }
+
+  @Test
   fun `active range and year collectors emit after insert and delete and unregister on cancellation`() =
       runTest {
         val actualDriver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)

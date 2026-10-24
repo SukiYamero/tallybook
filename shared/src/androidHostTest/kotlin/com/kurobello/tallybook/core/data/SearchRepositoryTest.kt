@@ -362,9 +362,9 @@ class SearchRepositoryTest {
             }
             runCurrent()
             database.transaction {
-              database.movimientoQueries.deleteMovimiento("transaction-$index")
+              database.movimientoQueries.tombstoneMovimiento(tombstoneStamp, "transaction-$index")
               database.movimientoQueries.deleteMovimientoEtiquetas("transaction-$index")
-              database.movimientoQueries.deleteMovimiento("old-$index")
+              database.movimientoQueries.tombstoneMovimiento(tombstoneStamp, "old-$index")
               database.movimientoQueries.deleteMovimientoEtiquetas("old-$index")
             }
             runCurrent()
@@ -383,6 +383,42 @@ class SearchRepositoryTest {
           driver.close()
         }
       }
+
+  @Test
+  fun `filtered snapshots and their years skip tombstoned movimientos`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      createSchemaWithReferences(driver, listOf("food"), listOf("tag"))
+      val repository =
+          MovimientoRepositoryImpl(
+              TallybookDatabase(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
+      val live = movimiento("live", "2026-09-15", etiquetaIds = listOf("tag"))
+      repository.insert(live)
+      repository.insert(movimiento("gone", "2024-09-15", etiquetaIds = listOf("tag")))
+      driver.tombstone("movimiento", "gone")
+
+      for ((name, criteria) in
+          mapOf(
+              "unfiltered" to MovimientoReadCriteria(Moneda.COP),
+              "category" to MovimientoReadCriteria(Moneda.COP, categoryIds = setOf("food")),
+              "etiqueta" to MovimientoReadCriteria(Moneda.COP, etiquetaIds = setOf("tag")),
+              "both" to
+                  MovimientoReadCriteria(
+                      Moneda.COP,
+                      categoryIds = setOf("food"),
+                      etiquetaIds = setOf("tag"),
+                  ),
+          )) {
+        assertEquals(
+            MovimientoSearchSnapshot(listOf(live), listOf(2026)),
+            snapshot(repository, criteria),
+            name,
+        )
+      }
+    }
+  }
 
   @Test
   fun `invalid filter ids and unsupported cross year ranges never access storage`() = runTest {
@@ -856,6 +892,8 @@ class SearchRepositoryTest {
   ) = movimiento(id, fecha, tipo = tipo, categoryId = categoryId, etiquetaIds = etiquetaIds)
 
   private companion object {
+    val tombstoneStamp =
+        ChangeStamp.of(epochMillis = 1, counter = 0, node = "00000000000000aa").value
     val september = MovimientoDateRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30))
   }
 }

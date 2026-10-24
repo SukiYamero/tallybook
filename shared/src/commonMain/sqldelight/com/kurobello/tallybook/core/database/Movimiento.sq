@@ -18,11 +18,13 @@ CREATE TABLE movimiento (
 
 -- The stable recent order matches this index so SQLite can scan it without a temporary sort, and fecha
 -- leads for date-range reads. It is partial, so only a query whose WHERE implies deleted_at IS NULL can
--- use it; every read through movimiento_con_etiquetas does.
+-- use it: every read through movimiento_con_etiquetas does, and the direct aggregates repeat the filter
+-- so sumMovimientosPorCategoria still searches its fecha range here.
 CREATE INDEX movimiento_recent ON movimiento(fecha DESC, created_at DESC, id DESC)
 WHERE deleted_at IS NULL;
 
 -- Not movimiento_categoria: indexes share the table namespace, and schema 5 had a table with that name.
+-- Partial like movimiento_recent, so countMovimientosForCategoria filters deleted_at to search it.
 CREATE INDEX movimiento_by_categoria ON movimiento(categoria_id)
 WHERE deleted_at IS NULL;
 
@@ -71,7 +73,7 @@ ORDER BY fecha DESC, created_at DESC, id DESC;
 selectMovimientoYears:
 SELECT DISTINCT substr(fecha, 1, length(fecha) - 6) AS movimiento_year
 FROM movimiento
-WHERE monto_moneda = ?
+WHERE monto_moneda = ? AND deleted_at IS NULL
 ORDER BY CAST(movimiento_year AS INTEGER) DESC;
 
 selectRecentMovimientos:
@@ -90,13 +92,19 @@ LIMIT ?;
 selectCategoryHistory:
 SELECT titulo, categoria_id, created_at
 FROM movimiento
-WHERE titulo IS NOT NULL AND trim(titulo) <> ''
+WHERE titulo IS NOT NULL AND trim(titulo) <> '' AND deleted_at IS NULL
 ORDER BY created_at DESC, id DESC
 LIMIT ?;
 
 selectMovimientoById:
 SELECT *
 FROM movimiento_con_etiquetas
+WHERE id = ?;
+
+-- Undo needs the tombstone itself, which the view hides; tombstones own no links, so none are read.
+selectStoredMovimientoById:
+SELECT *
+FROM movimiento
 WHERE id = ?;
 
 selectMovimientosInRange:
@@ -170,20 +178,31 @@ ORDER BY fecha DESC, created_at DESC, id DESC;
 updateMovimiento:
 UPDATE movimiento
 SET tipo = ?, monto_minor = ?, fecha = ?, titulo = ?, descripcion = ?, categoria_id = ?, updated_at = ?
-WHERE id = ?;
+WHERE id = ? AND deleted_at IS NULL;
 
 deleteMovimientoEtiquetas:
 DELETE FROM movimiento_etiqueta
 WHERE movimiento_id = ?;
 
-deleteMovimiento:
-DELETE FROM movimiento
-WHERE id = ?;
+tombstoneMovimiento:
+UPDATE movimiento
+SET updated_at = :stamp, deleted_at = :stamp
+WHERE id = :id AND deleted_at IS NULL;
+
+-- A write onto a tombstoned id is a newer change to that row, so it takes the row over instead of
+-- failing on the primary key: Undo writes the captured content (categoria possibly falling back to
+-- Otros), and an insert reusing the id writes its own.
+reviveMovimiento:
+UPDATE movimiento
+SET tipo = :tipo, monto_minor = :monto_minor, monto_moneda = :monto_moneda, fecha = :fecha,
+    titulo = :titulo, descripcion = :descripcion, created_at = :created_at,
+    categoria_id = :categoria_id, updated_at = :stamp, deleted_at = NULL
+WHERE id = :id AND deleted_at IS NOT NULL;
 
 sumMovimientosByTipo:
 SELECT tipo, SUM(monto_minor) AS total_minor
 FROM movimiento
-WHERE monto_moneda = ?
+WHERE monto_moneda = ? AND deleted_at IS NULL
 GROUP BY tipo;
 
 -- Grouped by tipo as well as categoria_id so gastos and ingresos in the same categoria never net
@@ -192,5 +211,5 @@ GROUP BY tipo;
 sumMovimientosPorCategoria:
 SELECT categoria_id, tipo, SUM(monto_minor) AS total_minor
 FROM movimiento
-WHERE monto_moneda = ? AND fecha BETWEEN ? AND ?
+WHERE monto_moneda = ? AND fecha BETWEEN ? AND ? AND deleted_at IS NULL
 GROUP BY categoria_id, tipo;

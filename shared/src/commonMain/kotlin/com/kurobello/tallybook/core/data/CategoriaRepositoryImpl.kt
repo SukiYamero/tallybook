@@ -202,7 +202,8 @@ internal class CategoriaRepositoryImpl(
                   if (count > 0L) {
                     DataOutcome.Success(CategoriaDelete.InUse(count))
                   } else {
-                    check(queries.deleteCustomCategoria(id).value == 1L)
+                    val stamp = changeClock.next().value
+                    check(queries.tombstoneCustomCategoria(stamp = stamp, id = id).value == 1L)
                     DataOutcome.Success(CategoriaDelete.Deleted)
                   }
                 }
