@@ -84,19 +84,19 @@ If injecting the database into the bootstrapper is rejected in review, pass a
 
 ## TDD implementation
 
-- [ ] RED: `DatabaseSchemaTest` — `migration from schema 6 backfills change stamps and keeps every row`
+- [x] RED: `DatabaseSchemaTest` — `migration from schema 6 backfills change stamps and keeps every row`
       from `6.db`: movimientos (with/without fraction, legacy default, pre-1970, out-of-range year),
       etiquetas with links, seeded and
       custom categorias; assert stamps, NULL tombstones, links intact, `schemaObjects()` equals
       `freshSchema()`.
-- [ ] GREEN: write DDL changes and `6.sqm`; generate `7.db`; confirm `verifyMigrations` passes.
-- [ ] RED: `EXPLAIN QUERY PLAN` assertions that `selectRecentMovimientosByMoneda` and
+- [x] GREEN: write DDL changes and `6.sqm`; generate `7.db`; confirm `verifyMigrations` passes.
+- [x] RED: `EXPLAIN QUERY PLAN` assertions that `selectRecentMovimientosByMoneda` and
       `selectFilteredMovimientos` scan `movimiento_recent` without `USE TEMP B-TREE FOR ORDER BY`.
-- [ ] GREEN: adjust only if the plan regressed (do not add `+` tricks without a failing plan test).
-- [ ] Plumb `ChangeClock` into the three repositories and the bootstrapper; switch test constructors to
+- [x] GREEN: adjust only if the plan regressed (do not add `+` tricks without a failing plan test).
+- [x] Plumb `ChangeClock` into the three repositories and the bootstrapper; switch test constructors to
       `TestChangeClock`; add a bootstrapper test proving `prepare` receives the stored maximum.
-- [ ] Add one write test per repository asserting a stamped insert/update reads back the issued stamp.
-- [ ] Checks below.
+- [x] Add one write test per repository asserting a stamped insert/update reads back the issued stamp.
+- [x] Checks below.
 
 ## Checks
 

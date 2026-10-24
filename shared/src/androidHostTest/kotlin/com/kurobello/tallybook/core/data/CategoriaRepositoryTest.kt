@@ -1,5 +1,6 @@
 package com.kurobello.tallybook.core.data
 
+import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
@@ -11,6 +12,7 @@ import com.kurobello.tallybook.core.model.CategoriaRules
 import com.kurobello.tallybook.core.model.CategoriaWrite
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
@@ -23,6 +25,50 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 
 class CategoriaRepositoryTest {
+
+  @Test
+  fun `seeding stores SEED while create update and hide store the stamp they issued`() = runTest {
+    val changeClock = TestChangeClock()
+    withRepository(changeClock) { database, repository ->
+      val storedStamp = { id: String ->
+        database.categoriaQueries.selectCategoriaById(id).executeAsOne().updated_at
+      }
+
+      repository.ensureSeeded(
+          listOf(Categoria("cat_comida", "Comida", null, CategoryIcon.TAG, CategoryTint.NEUTRAL))
+      )
+      assertEquals(ChangeStamp.SEED.value, storedStamp("cat_comida"))
+      assertEquals(emptyList(), changeClock.issuedStamps)
+
+      val created = repository.create(draft("Gimnasio")).savedCategoria()
+      assertEquals(changeClock.issuedStamps.single().value, storedStamp(created.id))
+
+      repository.update(created.id, draft("Gimnasio", descripcion = "pesas"))
+      assertEquals(2, changeClock.issuedStamps.size)
+      assertEquals(changeClock.issuedStamps.last().value, storedStamp(created.id))
+
+      repository.setOculta("cat_comida", oculta = true)
+      assertEquals(3, changeClock.issuedStamps.size)
+      assertEquals(changeClock.issuedStamps.last().value, storedStamp("cat_comida"))
+    }
+  }
+
+  @Test
+  fun `localizing seeded names keeps the SEED stamp and issues none`() = runTest {
+    val changeClock = TestChangeClock()
+    withRepository(changeClock) { database, repository ->
+      repository.ensureSeeded(listOf(comida))
+
+      assertEquals(
+          DataOutcome.Success(Unit),
+          repository.localizeSeeded(listOf(comida.copy(nombre = "Food"))),
+      )
+
+      val stored = database.categoriaQueries.selectCategoriaById(comida.id).executeAsOne()
+      assertEquals("Food" to ChangeStamp.SEED.value, stored.nombre to stored.updated_at)
+      assertEquals(emptyList(), changeClock.issuedStamps)
+    }
+  }
 
   @Test
   fun `getAll maps database rows to domain categorias`() = runTest {
@@ -230,8 +276,78 @@ class CategoriaRepositoryTest {
     }
   }
 
+  @Test
+  fun `delete tombstones the categoria with one stamp and hides it from every read`() = runTest {
+    val changeClock = TestChangeClock()
+    withStorage(changeClock) { driver, database, repository ->
+      database.seed(comida)
+      val gym = repository.create(draft("Gym")).savedCategoria()
+      database.insertMovimiento("captured", Moneda.COP, gym.id)
+      driver.tombstone("movimiento", "captured")
+
+      assertEquals(DataOutcome.Success(0L), repository.countMovimientos(gym.id))
+      assertEquals(
+          DataOutcome.Success(emptyMap()),
+          repository.observeMovimientoCounts(Moneda.COP).first(),
+      )
+      assertEquals(DataOutcome.Success(CategoriaDelete.Deleted), repository.delete(gym.id))
+
+      assertEquals(2, changeClock.issuedStamps.size)
+      val stamp = changeClock.issuedStamps.last().value
+      assertEquals(stamp to stamp, driver.storedStamps("categoria", gym.id))
+      assertEquals(listOf(comida), repository.getAll().rows())
+      assertEquals(listOf(comida), repository.observeAll().first().rows())
+      assertInvalid(repository.update(gym.id, draft("Pilates")))
+      assertInvalid(repository.setOculta(gym.id, oculta = true))
+      assertInvalid(repository.delete(gym.id))
+      assertEquals(2, changeClock.issuedStamps.size)
+    }
+  }
+
+  @Test
+  fun `a deleted categoria name can be reused and gets a new id`() = runTest {
+    withRepository { _, repository ->
+      val gym = repository.create(draft("Gym")).savedCategoria()
+      repository.delete(gym.id)
+
+      val again = repository.create(draft(" gym ")).savedCategoria()
+
+      assertEquals(gym.copy(id = "custom-2", nombre = "gym"), again)
+      assertEquals(listOf(again), repository.getAll().rows())
+    }
+  }
+
+  @Test
+  fun `unchanged custom update and visibility writes issue no stamp`() = runTest {
+    val changeClock = TestChangeClock()
+    withStorage(changeClock) { driver, database, repository ->
+      database.seed(comida)
+      val gym = repository.create(draft("Gym", descripcion = "pesas")).savedCategoria()
+      val stored = driver.storedStamps("categoria", gym.id)
+
+      assertEquals(
+          DataOutcome.Success(CategoriaWrite.Saved(gym)),
+          repository.update(gym.id, draft(" Gym ", descripcion = " pesas ")),
+      )
+      assertEquals(DataOutcome.Success(Unit), repository.setOculta(comida.id, oculta = false))
+
+      assertEquals(1, changeClock.issuedStamps.size)
+      assertEquals(stored, driver.storedStamps("categoria", gym.id))
+      assertEquals(
+          ChangeStamp.SEED.value to null,
+          driver.storedStamps("categoria", comida.id),
+      )
+    }
+  }
+
   private suspend fun TestScope.withRepository(
-      block: suspend (TallybookDatabase, CategoriaRepository) -> Unit
+      changeClock: ChangeClock = TestChangeClock(),
+      block: suspend (TallybookDatabase, CategoriaRepository) -> Unit,
+  ) = withStorage(changeClock) { _, database, repository -> block(database, repository) }
+
+  private suspend fun TestScope.withStorage(
+      changeClock: ChangeClock = TestChangeClock(),
+      block: suspend (SqlDriver, TallybookDatabase, CategoriaRepository) -> Unit,
   ) {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     TallybookDatabase.Schema.create(driver)
@@ -243,8 +359,9 @@ class CategoriaRepositoryTest {
               database,
               StandardTestDispatcher(testScheduler),
               IdGenerator { "custom-${++nextId}" },
+              changeClock,
           )
-      block(database, repository)
+      block(driver, database, repository)
     } finally {
       driver.close()
     }
@@ -258,6 +375,7 @@ class CategoriaRepositoryTest {
           it.padreId,
           it.icono.storageKey,
           it.color.storageKey,
+          ChangeStamp.SEED.value,
       )
     }
   }
@@ -277,6 +395,7 @@ class CategoriaRepositoryTest {
         null,
         "2026-10-01T12:00:00Z",
         categoriaId,
+        ChangeStamp.SEED.value,
     )
   }
 

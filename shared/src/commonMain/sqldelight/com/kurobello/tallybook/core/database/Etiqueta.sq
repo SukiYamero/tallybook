@@ -1,36 +1,52 @@
+-- updated_at has no DEFAULT so a write that forgets its ChangeStamp fails instead of becoming SEED.
 CREATE TABLE etiqueta (
     id TEXT NOT NULL PRIMARY KEY,
     nombre TEXT NOT NULL,
     descripcion TEXT,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT
 );
 
 selectAllEtiquetas:
 SELECT *
-FROM etiqueta;
+FROM etiqueta
+WHERE deleted_at IS NULL;
 
 selectEtiquetaById:
 SELECT *
 FROM etiqueta
-WHERE id = ?;
+WHERE id = ? AND deleted_at IS NULL;
 
 selectExistingEtiquetaIds:
 SELECT id
 FROM etiqueta
-WHERE id IN ?;
+WHERE id IN ? AND deleted_at IS NULL;
 
 insertEtiqueta:
-INSERT INTO etiqueta(id, nombre, descripcion, created_at)
-VALUES (?, ?, ?, ?);
+INSERT INTO etiqueta(id, nombre, descripcion, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?);
 
 updateEtiqueta:
 UPDATE etiqueta
-SET nombre = :nombre, descripcion = :descripcion
-WHERE id = :id;
+SET nombre = :nombre, descripcion = :descripcion, updated_at = :updated_at
+WHERE id = :id AND deleted_at IS NULL;
 
-deleteEtiqueta:
-DELETE FROM etiqueta
-WHERE id = ?;
+tombstoneEtiqueta:
+UPDATE etiqueta
+SET updated_at = :stamp, deleted_at = :stamp
+WHERE id = :id AND deleted_at IS NULL;
+
+-- A link belongs to its movimiento's aggregate, so losing one is a change to that movimiento.
+touchMovimientosForEtiqueta:
+UPDATE movimiento
+SET updated_at = :stamp
+WHERE deleted_at IS NULL
+  AND id IN (
+      SELECT movimiento_id
+      FROM movimiento_etiqueta
+      WHERE etiqueta_id = :etiqueta_id
+  );
 
 deleteLinksForEtiqueta:
 DELETE FROM movimiento_etiqueta
@@ -41,11 +57,12 @@ WHERE etiqueta_id = ?;
 countMovimientosForEtiqueta:
 SELECT COUNT(*)
 FROM movimiento_etiqueta
-WHERE etiqueta_id = ?;
+JOIN movimiento ON movimiento.id = movimiento_etiqueta.movimiento_id
+WHERE movimiento_etiqueta.etiqueta_id = ? AND movimiento.deleted_at IS NULL;
 
 countMovimientosPorEtiqueta:
 SELECT movimiento_etiqueta.etiqueta_id, COUNT(*) AS movimiento_count
 FROM movimiento_etiqueta
 JOIN movimiento ON movimiento.id = movimiento_etiqueta.movimiento_id
-WHERE movimiento.monto_moneda = ?
+WHERE movimiento.monto_moneda = ? AND movimiento.deleted_at IS NULL
 GROUP BY movimiento_etiqueta.etiqueta_id;

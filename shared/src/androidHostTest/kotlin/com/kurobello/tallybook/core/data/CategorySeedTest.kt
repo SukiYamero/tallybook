@@ -7,6 +7,7 @@ import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoriaDraft
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.DataOutcome
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -73,6 +74,7 @@ class CategorySeedTest {
           padre_id = null,
           icono = CategoryIcon.COFFEE.storageKey,
           color = CategoryTint.INFO.storageKey,
+          updated_at = ChangeStamp.SEED.value,
       )
 
       assertEquals(DataOutcome.Success(Unit), repository.ensureSeeded(seedCategorias()))
@@ -118,6 +120,7 @@ class CategorySeedTest {
               database,
               StandardTestDispatcher(testScheduler),
               IdGenerator { "cat_gym" },
+              TestChangeClock(),
           )
       repository.ensureSeeded(seedCategorias())
       repository.create(
@@ -165,6 +168,7 @@ class CategorySeedTest {
               database,
               dispatcher,
               IdGenerator { error("Not used by this test") },
+              TestChangeClock(),
           ),
       )
     } finally {

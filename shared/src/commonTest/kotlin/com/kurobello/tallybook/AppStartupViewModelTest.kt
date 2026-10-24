@@ -5,6 +5,7 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategorySeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
+import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -78,6 +79,8 @@ class AppStartupViewModelTest {
           preferencesRepository = preferences,
           categoriaRepository = SuccessfulCategoriaRepository(),
           categorySeedProvider = CategorySeedProvider { "Category" },
+          changeClock = TestChangeClock(),
+          storedMaxChangeStamp = { DataOutcome.Success(null) },
       )
 
   private open class FakePreferencesRepository(vararg outcomes: DataOutcome<Unit>) :

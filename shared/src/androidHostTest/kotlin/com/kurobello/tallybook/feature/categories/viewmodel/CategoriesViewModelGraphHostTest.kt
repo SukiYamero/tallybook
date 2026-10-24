@@ -12,7 +12,9 @@ import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
+import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
+import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.DataOutcome
@@ -65,13 +67,19 @@ internal class CategoriesViewModelGraphHostTest {
     val factory =
         PreferencesDataStoreFactory(
             object : PreferencesPathProvider {
-              override fun path() = directory.resolve("preferences.preferences_pb").toString()
+              override fun path(file: PreferencesFile) = directory.resolve(file.fileName).toString()
             },
             dispatcher,
         )
     val preferences = AppPreferencesRepositoryImpl(factory.create())
-    val movimientos = MovimientoRepositoryImpl(database, dispatcher)
-    val categorias = CategoriaRepositoryImpl(database, dispatcher, IdGenerator { "custom-gym" })
+    val movimientos = MovimientoRepositoryImpl(database, dispatcher, TestChangeClock())
+    val categorias =
+        CategoriaRepositoryImpl(
+            database,
+            dispatcher,
+            IdGenerator { "custom-gym" },
+            TestChangeClock(),
+        )
     val context = koinApplication {
       modules(
           viewModelModule,

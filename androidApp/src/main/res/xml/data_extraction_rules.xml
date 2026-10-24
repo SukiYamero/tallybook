@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The installation node must stay unique per device: restoring it elsewhere would let two
+     installations issue colliding change stamps. DataStore writes through a sibling .tmp file. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude
+            domain="file"
+            path="tallybook.device.preferences_pb" />
+        <exclude
+            domain="file"
+            path="tallybook.device.preferences_pb.tmp" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude
+            domain="file"
+            path="tallybook.device.preferences_pb" />
+        <exclude
+            domain="file"
+            path="tallybook.device.preferences_pb.tmp" />
+    </device-transfer>
+</data-extraction-rules>

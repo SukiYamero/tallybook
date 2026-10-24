@@ -24,6 +24,7 @@ internal class EtiquetaRepositoryImpl(
     private val dispatcher: CoroutineDispatcher,
     private val idGenerator: IdGenerator,
     private val clock: Clock,
+    private val changeClock: ChangeClock,
 ) : EtiquetaRepository {
 
   private val queries
@@ -74,6 +75,7 @@ internal class EtiquetaRepositoryImpl(
               etiqueta.nombre,
               etiqueta.descripcion,
               etiqueta.createdAt.toString(),
+              changeClock.next().value,
           )
           EtiquetaWrite.Saved(etiqueta)
         }
@@ -106,6 +108,7 @@ internal class EtiquetaRepositoryImpl(
                       queries.updateEtiqueta(
                           nombre = updated.nombre,
                           descripcion = updated.descripcion,
+                          updated_at = changeClock.next().value,
                           id = id,
                       )
                   check(written.value == 1L)
@@ -127,8 +130,10 @@ internal class EtiquetaRepositoryImpl(
               if (queries.selectEtiquetaById(id).executeAsOneOrNull() == null) {
                 DataOutcome.Failure(unknownEtiqueta(id))
               } else {
+                val stamp = changeClock.next().value
+                queries.touchMovimientosForEtiqueta(stamp = stamp, etiqueta_id = id)
                 queries.deleteLinksForEtiqueta(id)
-                check(queries.deleteEtiqueta(id).value == 1L)
+                check(queries.tombstoneEtiqueta(stamp = stamp, id = id).value == 1L)
                 DataOutcome.Success(Unit)
               }
             }

@@ -9,6 +9,7 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.MovimientoQueries
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
+import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
@@ -48,6 +49,7 @@ class SearchRepositoryTest {
               MovimientoRepositoryImpl(
                   TallybookDatabase(driver),
                   StandardTestDispatcher(testScheduler),
+                  TestChangeClock(),
               )
           val rows =
               listOf(
@@ -254,7 +256,14 @@ class SearchRepositoryTest {
       )
       assertEquals(setOf("child-income"), ids(repository, setOf("food"), TipoMovimiento.INGRESO))
 
-      database.categoriaQueries.insertCategoria("late-child", "Late", "other", "i", "c")
+      database.categoriaQueries.insertCategoria(
+          "late-child",
+          "Late",
+          "other",
+          "i",
+          "c",
+          ChangeStamp.SEED.value,
+      )
       repository.insert(movimiento("on-late", "2026-09-15", categoryId = "late-child"))
       assertEquals(setOf("on-unrelated", "on-late"), ids(repository, setOf("other")))
     }
@@ -266,7 +275,12 @@ class SearchRepositoryTest {
         val driver = TrackingDriver(JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY))
         try {
           val database = createSchemaWithReferences(driver, listOf("food", "other"))
-          val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+          val repository =
+              MovimientoRepositoryImpl(
+                  database,
+                  StandardTestDispatcher(testScheduler),
+                  TestChangeClock(),
+              )
           val criteria =
               MovimientoReadCriteria(Moneda.COP, september, TipoMovimiento.GASTO, setOf("food"))
           val emissions = mutableListOf<DataOutcome<MovimientoSearchSnapshot>>()
@@ -331,6 +345,7 @@ class SearchRepositoryTest {
                   null,
                   "2026-09-15T12:00:00Z",
                   "food",
+                  ChangeStamp.SEED.value,
               )
               database.movimientoQueries.insertMovimiento(
                   "old-$index",
@@ -342,13 +357,14 @@ class SearchRepositoryTest {
                   null,
                   "2026-09-15T12:00:00Z",
                   "other",
+                  ChangeStamp.SEED.value,
               )
             }
             runCurrent()
             database.transaction {
-              database.movimientoQueries.deleteMovimiento("transaction-$index")
+              database.movimientoQueries.tombstoneMovimiento(tombstoneStamp, "transaction-$index")
               database.movimientoQueries.deleteMovimientoEtiquetas("transaction-$index")
-              database.movimientoQueries.deleteMovimiento("old-$index")
+              database.movimientoQueries.tombstoneMovimiento(tombstoneStamp, "old-$index")
               database.movimientoQueries.deleteMovimientoEtiquetas("old-$index")
             }
             runCurrent()
@@ -359,14 +375,51 @@ class SearchRepositoryTest {
           }
           job.cancelAndJoin()
           assertEquals(0, driver.listeners)
-          assertEquals(DataOutcome.Success(Unit), repository.insert(matching))
-          assertEquals(listOf(matching), snapshot(repository, criteria).movimientos)
+          val again = matching.copy(id = "matching-again")
+          assertEquals(DataOutcome.Success(Unit), repository.insert(again))
+          assertEquals(listOf(again), snapshot(repository, criteria).movimientos)
           runCurrent()
           assertEquals(0, driver.listeners)
         } finally {
           driver.close()
         }
       }
+
+  @Test
+  fun `filtered snapshots and their years skip tombstoned movimientos`() = runTest {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      createSchemaWithReferences(driver, listOf("food"), listOf("tag"))
+      val repository =
+          MovimientoRepositoryImpl(
+              TallybookDatabase(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
+      val live = movimiento("live", "2026-09-15", etiquetaIds = listOf("tag"))
+      repository.insert(live)
+      repository.insert(movimiento("gone", "2024-09-15", etiquetaIds = listOf("tag")))
+      driver.tombstone("movimiento", "gone")
+
+      for ((name, criteria) in
+          mapOf(
+              "unfiltered" to MovimientoReadCriteria(Moneda.COP),
+              "category" to MovimientoReadCriteria(Moneda.COP, categoryIds = setOf("food")),
+              "etiqueta" to MovimientoReadCriteria(Moneda.COP, etiquetaIds = setOf("tag")),
+              "both" to
+                  MovimientoReadCriteria(
+                      Moneda.COP,
+                      categoryIds = setOf("food"),
+                      etiquetaIds = setOf("tag"),
+                  ),
+          )) {
+        assertEquals(
+            MovimientoSearchSnapshot(listOf(live), listOf(2026)),
+            snapshot(repository, criteria),
+            name,
+        )
+      }
+    }
+  }
 
   @Test
   fun `invalid filter ids and unsupported cross year ranges never access storage`() = runTest {
@@ -378,7 +431,12 @@ class SearchRepositoryTest {
             override val movimientoQueries: MovimientoQueries
               get() = error("invalid criteria must not access storage")
           }
-      val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+      val repository =
+          MovimientoRepositoryImpl(
+              database,
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val invalid =
           listOf(
               MovimientoReadCriteria(Moneda.COP, categoryIds = setOf("")),
@@ -414,6 +472,7 @@ class SearchRepositoryTest {
               MovimientoRepositoryImpl(
                   TallybookDatabase(driver),
                   StandardTestDispatcher(testScheduler),
+                  TestChangeClock(),
               )
           val dates = listOf("-0001-01-01", "0000-01-01", "+10000-01-01", "2026-01-01")
           for ((index, id) in ids.withIndex()) repository.insert(
@@ -455,7 +514,11 @@ class SearchRepositoryTest {
     try {
       createSchemaWithReferences(driver, listOf("food"))
       val repository =
-          MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
+          MovimientoRepositoryImpl(
+              TallybookDatabase(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       repository.insert(movimiento("selected", "2026-09-15"))
       repository.insert(movimiento("excluded", "2024-01-01"))
       driver.readTransactions.clear()
@@ -476,7 +539,12 @@ class SearchRepositoryTest {
         try {
           TallybookDatabase.Schema.create(driver)
           val database = TallybookDatabase(driver)
-          val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+          val repository =
+              MovimientoRepositoryImpl(
+                  database,
+                  StandardTestDispatcher(testScheduler),
+                  TestChangeClock(),
+              )
           val flow = repository.observeFiltered(MovimientoReadCriteria(Moneda.COP, september))
           val emissions = mutableListOf<DataOutcome<MovimientoSearchSnapshot>>()
           val job = backgroundScope.launch { flow.collect(emissions::add) }
@@ -491,6 +559,7 @@ class SearchRepositoryTest {
               null,
               "2026-09-15T12:00:00Z",
               "food",
+              ChangeStamp.SEED.value,
           )
           runCurrent()
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(emissions.last()).error)
@@ -512,6 +581,7 @@ class SearchRepositoryTest {
               null,
               "2026-09-15T12:00:00Z",
               "other",
+              ChangeStamp.SEED.value,
           )
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(flow.first()).error)
           repository.delete("invalid-year")
@@ -543,7 +613,12 @@ class SearchRepositoryTest {
                     return if (unavailable) error("unavailable") else real.movimientoQueries
                   }
               }
-          val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+          val repository =
+              MovimientoRepositoryImpl(
+                  database,
+                  StandardTestDispatcher(testScheduler),
+                  TestChangeClock(),
+              )
           val flow = repository.observeFiltered(MovimientoReadCriteria(Moneda.COP))
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(flow.first()).error)
           unavailable = false
@@ -567,7 +642,11 @@ class SearchRepositoryTest {
     try {
       createSchemaWithReferences(driver, listOf("food"))
       val repository =
-          MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
+          MovimientoRepositoryImpl(
+              TallybookDatabase(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       repository.insert(movimiento("selected", "2026-09-15"))
       val emissions = mutableListOf<DataOutcome<MovimientoSearchSnapshot>>()
       lateinit var job: Job
@@ -598,6 +677,7 @@ class SearchRepositoryTest {
           MovimientoRepositoryImpl(
               TallybookDatabase(driver),
               StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
           )
       for (index in 0..11) repository.insert(
           movimiento(
@@ -671,12 +751,30 @@ class SearchRepositoryTest {
               Triple(CATEGORIA_OTROS_ID, "Otros", null),
           )
       for ((id, nombre, padreId) in categories) {
-        database.categoriaQueries.insertCategoria(id, nombre, padreId, "icon", "color")
+        database.categoriaQueries.insertCategoria(
+            id,
+            nombre,
+            padreId,
+            "icon",
+            "color",
+            ChangeStamp.SEED.value,
+        )
       }
       for (id in listOf("trip", "work", "gift")) {
-        database.etiquetaQueries.insertEtiqueta(id, id, null, "2026-01-01T00:00:00Z")
+        database.etiquetaQueries.insertEtiqueta(
+            id,
+            id,
+            null,
+            "2026-01-01T00:00:00Z",
+            ChangeStamp.SEED.value,
+        )
       }
-      val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+      val repository =
+          MovimientoRepositoryImpl(
+              database,
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val rows =
           mapOf(
               "on-parent" to "food",
@@ -795,6 +893,8 @@ class SearchRepositoryTest {
   ) = movimiento(id, fecha, tipo = tipo, categoryId = categoryId, etiquetaIds = etiquetaIds)
 
   private companion object {
+    val tombstoneStamp =
+        ChangeStamp.of(epochMillis = 1, counter = 0, node = "00000000000000aa").value
     val september = MovimientoDateRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30))
   }
 }

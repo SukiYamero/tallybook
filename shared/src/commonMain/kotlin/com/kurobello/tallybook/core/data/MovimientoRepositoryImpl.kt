@@ -3,9 +3,11 @@ package com.kurobello.tallybook.core.data
 import app.cash.sqldelight.Query
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
+import com.kurobello.tallybook.core.database.Movimiento as StoredMovimiento
 import com.kurobello.tallybook.core.database.Movimiento_con_etiquetas as DatabaseMovimiento
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
+import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
@@ -40,6 +42,7 @@ import kotlinx.datetime.LocalDate
 internal class MovimientoRepositoryImpl(
     private val database: TallybookDatabase,
     private val dispatcher: CoroutineDispatcher,
+    private val changeClock: ChangeClock,
 ) : MovimientoRepository {
 
   override fun observeFiltered(
@@ -257,7 +260,7 @@ internal class MovimientoRepositoryImpl(
             if (missing != null) {
               DataOutcome.Failure(missing)
             } else {
-              insertRow(movimiento)
+              insertRow(movimiento, changeClock.next())
               DataOutcome.Success(Unit)
             }
           }
@@ -308,6 +311,9 @@ internal class MovimientoRepositoryImpl(
                 ?.let {
                   return@transactionWithResult DataOutcome.Failure(it)
                 }
+            if (current.changes() == changes) {
+              return@transactionWithResult DataOutcome.Success(MovimientoUpdateResult.Updated)
+            }
             check(
                 queries
                     .updateMovimiento(
@@ -317,6 +323,7 @@ internal class MovimientoRepositoryImpl(
                         titulo = changes.titulo,
                         descripcion = changes.descripcion,
                         categoria_id = changes.categoriaId,
+                        updated_at = changeClock.next().value,
                         id = id,
                     )
                     .value == 1L
@@ -342,7 +349,10 @@ internal class MovimientoRepositoryImpl(
               invalid != null -> DataOutcome.Failure(invalid)
               captured == null -> DataOutcome.Success(null)
               else -> {
-                check(queries.deleteMovimiento(id).value == 1L)
+                check(
+                    queries.tombstoneMovimiento(stamp = changeClock.next().value, id = id).value ==
+                        1L
+                )
                 queries.deleteMovimientoEtiquetas(id)
                 DataOutcome.Success(captured)
               }
@@ -360,30 +370,48 @@ internal class MovimientoRepositoryImpl(
     }
     return runLocalDataOperation(dispatcher) {
       database.transactionWithResult {
+        val queries = database.movimientoQueries
         val restorable = withSurvivingReferences(movimiento)
-        val existing =
-            database.movimientoQueries.selectMovimientoById(movimiento.id).executeAsOneOrNull()
-        if (existing == null) {
-          database.movimientoQueries.deleteMovimientoEtiquetas(movimiento.id)
-          insertRow(restorable)
-          MovimientoRestoreResult.Restored
-        } else {
-          // An unreadable occupied ID must block restoration rather than become a retryable
-          // failure.
-          val identical =
-              try {
-                existing.toDomain() == restorable
-              } catch (_: IllegalArgumentException) {
-                false
-              }
-          if (identical) MovimientoRestoreResult.AlreadyPresent
-          else MovimientoRestoreResult.Conflict
+        val live = queries.selectMovimientoById(movimiento.id).executeAsOneOrNull()
+        val tombstone =
+            if (live == null) {
+              queries.selectStoredMovimientoById(movimiento.id).executeAsOneOrNull()
+            } else null
+        when {
+          live != null ->
+              if (live.isIdenticalTo(restorable)) MovimientoRestoreResult.AlreadyPresent
+              else MovimientoRestoreResult.Conflict
+          tombstone == null -> {
+            queries.deleteMovimientoEtiquetas(movimiento.id)
+            insertRow(restorable, changeClock.next())
+            MovimientoRestoreResult.Restored
+          }
+          tombstone.holdsContentOf(movimiento) -> {
+            revive(restorable, changeClock.next())
+            MovimientoRestoreResult.Restored
+          }
+          else -> MovimientoRestoreResult.Conflict
         }
       }
     }
   }
 
-  private fun insertRow(movimiento: Movimiento) {
+  private fun revive(movimiento: Movimiento, stamp: ChangeStamp) {
+    val queries = database.movimientoQueries
+    check(
+        queries
+            .reviveMovimiento(
+                categoria_id = movimiento.categoriaId,
+                stamp = stamp.value,
+                id = movimiento.id,
+            )
+            .value == 1L
+    )
+    queries.deleteMovimientoEtiquetas(movimiento.id)
+    insertEtiquetas(movimiento.id, movimiento.etiquetaIds)
+  }
+
+  private fun insertRow(movimiento: Movimiento, stamp: ChangeStamp) {
     check(
         database.movimientoQueries
             .insertMovimiento(
@@ -396,6 +424,7 @@ internal class MovimientoRepositoryImpl(
                 descripcion = movimiento.descripcion,
                 created_at = movimiento.createdAt.toString(),
                 categoria_id = movimiento.categoriaId,
+                updated_at = stamp.value,
             )
             .value == 1L
     )
@@ -443,18 +472,7 @@ internal class MovimientoRepositoryImpl(
       else database.etiquetaQueries.selectExistingEtiquetaIds(ids).executeAsList().toSet()
 
   private fun validateRestorable(movimiento: Movimiento): DataError.InvalidInput? =
-      validateId(movimiento.id)
-          ?: validateChanges(
-              MovimientoChanges(
-                  movimiento.tipo,
-                  movimiento.monto,
-                  movimiento.fecha,
-                  movimiento.categoriaId,
-                  movimiento.etiquetaIds,
-                  movimiento.titulo,
-                  movimiento.descripcion,
-              )
-          )
+      validateId(movimiento.id) ?: validateChanges(movimiento.changes())
 
   private fun validateId(id: String): DataError.InvalidInput? =
       if (id.isBlank()) DataError.InvalidInput("Movimiento id must not be blank") else null
@@ -472,8 +490,13 @@ internal class MovimientoRepositoryImpl(
   override suspend fun delete(id: String): DataOutcome<Unit> =
       runLocalDataOperation(dispatcher) {
         database.transaction {
-          check(database.movimientoQueries.deleteMovimiento(id).value in 0L..1L)
-          database.movimientoQueries.deleteMovimientoEtiquetas(id)
+          val queries = database.movimientoQueries
+          if (queries.selectMovimientoById(id).executeAsOneOrNull() != null) {
+            check(
+                queries.tombstoneMovimiento(stamp = changeClock.next().value, id = id).value == 1L
+            )
+          }
+          queries.deleteMovimientoEtiquetas(id)
         }
       }
 
@@ -488,6 +511,33 @@ internal class MovimientoRepositoryImpl(
                 ?: validateDescription(movimiento.descripcion)
       }
 }
+
+private fun Movimiento.changes(): MovimientoChanges =
+    MovimientoChanges(tipo, monto, fecha, categoriaId, etiquetaIds, titulo, descripcion)
+
+// An unreadable occupied ID must block restoration rather than become a retryable failure.
+private fun DatabaseMovimiento.isIdenticalTo(movimiento: Movimiento): Boolean =
+    try {
+      toDomain() == movimiento
+    } catch (_: IllegalArgumentException) {
+      false
+    }
+
+// Links are left out because a tombstone owns none; text is parsed so a legacy spelling of the same
+// date or instant still matches the snapshot read from it.
+private fun StoredMovimiento.holdsContentOf(snapshot: Movimiento): Boolean =
+    try {
+      tipo == snapshot.tipo.name &&
+          monto_minor == snapshot.monto.minorUnits &&
+          monto_moneda == snapshot.monto.moneda.name &&
+          categoria_id == snapshot.categoriaId &&
+          titulo == snapshot.titulo &&
+          descripcion == snapshot.descripcion &&
+          LocalDate.parse(fecha) == snapshot.fecha &&
+          Instant.parse(created_at) == snapshot.createdAt
+    } catch (_: IllegalArgumentException) {
+      false
+    }
 
 private fun validateTitle(titulo: String?): DataError.InvalidInput? =
     if ((titulo?.length ?: 0) > MOVIMIENTO_TITLE_MAX_LENGTH) {

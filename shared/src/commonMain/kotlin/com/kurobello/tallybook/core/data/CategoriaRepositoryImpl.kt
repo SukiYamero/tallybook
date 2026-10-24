@@ -13,6 +13,7 @@ import com.kurobello.tallybook.core.model.CategoriaRules
 import com.kurobello.tallybook.core.model.CategoriaWrite
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
@@ -24,6 +25,7 @@ internal class CategoriaRepositoryImpl(
     private val database: TallybookDatabase,
     private val dispatcher: CoroutineDispatcher,
     private val idGenerator: IdGenerator,
+    private val changeClock: ChangeClock,
 ) : CategoriaRepository {
 
   private val queries
@@ -52,6 +54,7 @@ internal class CategoriaRepositoryImpl(
                 padre_id = categoria.padreId,
                 icono = categoria.icono.storageKey,
                 color = categoria.color.storageKey,
+                updated_at = ChangeStamp.SEED.value,
             )
           }
         }
@@ -102,6 +105,7 @@ internal class CategoriaRepositoryImpl(
               icono = categoria.icono.storageKey,
               color = categoria.color.storageKey,
               descripcion = categoria.descripcion,
+              updated_at = changeClock.next().value,
           )
           CategoriaWrite.Saved(categoria)
         }
@@ -140,6 +144,7 @@ internal class CategoriaRepositoryImpl(
                               icono = updated.icono.storageKey,
                               color = updated.color.storageKey,
                               descripcion = updated.descripcion,
+                              updated_at = changeClock.next().value,
                               id = id,
                           )
                           .value == 1L
@@ -166,8 +171,13 @@ internal class CategoriaRepositoryImpl(
               current.oculta == oculta -> DataOutcome.Success(Unit)
               else -> {
                 check(
-                    queries.updateCategoriaOculta(oculta = if (oculta) 1L else 0L, id = id).value ==
-                        1L
+                    queries
+                        .updateCategoriaOculta(
+                            oculta = if (oculta) 1L else 0L,
+                            updated_at = changeClock.next().value,
+                            id = id,
+                        )
+                        .value == 1L
                 )
                 DataOutcome.Success(Unit)
               }
@@ -192,7 +202,8 @@ internal class CategoriaRepositoryImpl(
                   if (count > 0L) {
                     DataOutcome.Success(CategoriaDelete.InUse(count))
                   } else {
-                    check(queries.deleteCustomCategoria(id).value == 1L)
+                    val stamp = changeClock.next().value
+                    check(queries.tombstoneCustomCategoria(stamp = stamp, id = id).value == 1L)
                     DataOutcome.Success(CategoriaDelete.Deleted)
                   }
                 }

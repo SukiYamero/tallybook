@@ -5,6 +5,7 @@ import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
@@ -41,7 +42,11 @@ class ReactiveRepositoryTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     createSchemaWithReferences(driver, listOf("other"))
     val repository =
-        MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
+        MovimientoRepositoryImpl(
+            TallybookDatabase(driver),
+            StandardTestDispatcher(testScheduler),
+            TestChangeClock(),
+        )
     val emissions = Channel<DataOutcome<List<Movimiento>>>(Channel.UNLIMITED)
     val collection = launch {
       repository.observeRecent(limit = 10).take(2).collect(emissions::send)
@@ -63,7 +68,12 @@ class ReactiveRepositoryTest {
         JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
           createSchemaWithReferences(driver, listOf("other"))
           val database = TallybookDatabase(driver)
-          val repository = MovimientoRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+          val repository =
+              MovimientoRepositoryImpl(
+                  database,
+                  StandardTestDispatcher(testScheduler),
+                  TestChangeClock(),
+              )
           val flow = repository.observeRecent(Moneda.COP, 2)
           val emissions = mutableListOf<DataOutcome<List<Movimiento>>>()
           val collector = backgroundScope.launch { flow.collect(emissions::add) }
@@ -89,6 +99,7 @@ class ReactiveRepositoryTest {
               null,
               "invalid-instant",
               "cat_comida",
+              ChangeStamp.SEED.value,
           )
           testScheduler.runCurrent()
           assertEquals(DataOutcome.Success(listOf(third, second)), emissions.last())
@@ -106,6 +117,7 @@ class ReactiveRepositoryTest {
               null,
               first.createdAt.toString(),
               "cat_comida",
+              ChangeStamp.SEED.value,
           )
           testScheduler.runCurrent()
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(emissions.last()).error)
@@ -120,7 +132,11 @@ class ReactiveRepositoryTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     createSchemaWithReferences(driver, listOf("other"))
     val repository =
-        MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
+        MovimientoRepositoryImpl(
+            TallybookDatabase(driver),
+            StandardTestDispatcher(testScheduler),
+            TestChangeClock(),
+        )
     driver.close()
     for (limit in listOf(0, -1)) {
       assertIs<DataError.InvalidInput>(
@@ -141,6 +157,7 @@ class ReactiveRepositoryTest {
             TallybookDatabase(driver),
             StandardTestDispatcher(testScheduler),
             IdGenerator { error("Not used by this test") },
+            TestChangeClock(),
         )
     val categoria =
         Categoria("cat_comida", "Comida", null, CategoryIcon.UTENSILS, CategoryTint.AMBER)
@@ -162,7 +179,11 @@ class ReactiveRepositoryTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     createSchemaWithReferences(driver, listOf("other"))
     val repository =
-        MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
+        MovimientoRepositoryImpl(
+            TallybookDatabase(driver),
+            StandardTestDispatcher(testScheduler),
+            TestChangeClock(),
+        )
 
     val outcome = repository.observeRecent(limit = 0).toList()
 
@@ -175,7 +196,11 @@ class ReactiveRepositoryTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     createSchemaWithReferences(driver, listOf("other"))
     val repository =
-        MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
+        MovimientoRepositoryImpl(
+            TallybookDatabase(driver),
+            StandardTestDispatcher(testScheduler),
+            TestChangeClock(),
+        )
 
     assertEquals(
         DataOutcome.Success(
@@ -191,7 +216,11 @@ class ReactiveRepositoryTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     createSchemaWithReferences(driver, listOf("other"))
     val repository =
-        MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
+        MovimientoRepositoryImpl(
+            TallybookDatabase(driver),
+            StandardTestDispatcher(testScheduler),
+            TestChangeClock(),
+        )
     repository.insert(movimiento("gasto", TipoMovimiento.GASTO, Money(500, Moneda.COP)))
     repository.insert(movimiento("ingreso", TipoMovimiento.INGRESO, Money(2_000, Moneda.COP)))
     repository.insert(movimiento("other", TipoMovimiento.INGRESO, Money(9_999, Moneda.USD)))
@@ -210,7 +239,11 @@ class ReactiveRepositoryTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     createSchemaWithReferences(driver, listOf("other"))
     val repository =
-        MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
+        MovimientoRepositoryImpl(
+            TallybookDatabase(driver),
+            StandardTestDispatcher(testScheduler),
+            TestChangeClock(),
+        )
     driver.close()
 
     assertIs<DataError.Local>(
@@ -223,7 +256,11 @@ class ReactiveRepositoryTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     createSchemaWithReferences(driver, listOf("other"))
     val repository =
-        MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
+        MovimientoRepositoryImpl(
+            TallybookDatabase(driver),
+            StandardTestDispatcher(testScheduler),
+            TestChangeClock(),
+        )
     val emissions = Channel<DataOutcome<List<Movimiento>>>(Channel.UNLIMITED)
     val collection = launch { repository.observeRecent(10).collect(emissions::send) }
 
@@ -240,7 +277,11 @@ class ReactiveRepositoryTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       createSchemaWithReferences(driver, listOf("other"))
       val repository =
-          MovimientoRepositoryImpl(TallybookDatabase(driver), StandardTestDispatcher(testScheduler))
+          MovimientoRepositoryImpl(
+              TallybookDatabase(driver),
+              StandardTestDispatcher(testScheduler),
+              TestChangeClock(),
+          )
       val rows =
           (1..7).map { day ->
             movimiento("row-$day", monto = Money(100, Moneda.COP))

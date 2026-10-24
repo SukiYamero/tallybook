@@ -6,6 +6,7 @@ import com.kurobello.tallybook.core.data.CategorySeedCatalog
 import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
+import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.DataOutcome
@@ -39,9 +40,10 @@ class CategoryTagsIntegrationTest {
       val dispatcher = StandardTestDispatcher(testScheduler)
       var nextId = 0
       val ids = IdGenerator { "id-${++nextId}" }
-      val categorias = CategoriaRepositoryImpl(database, dispatcher, ids)
-      val etiquetas = EtiquetaRepositoryImpl(database, dispatcher, ids, FixedClock)
-      val movimientos = MovimientoRepositoryImpl(database, dispatcher)
+      val categorias = CategoriaRepositoryImpl(database, dispatcher, ids, TestChangeClock())
+      val etiquetas =
+          EtiquetaRepositoryImpl(database, dispatcher, ids, FixedClock, TestChangeClock())
+      val movimientos = MovimientoRepositoryImpl(database, dispatcher, TestChangeClock())
       assertEquals(
           DataOutcome.Success(Unit),
           categorias.ensureSeeded(

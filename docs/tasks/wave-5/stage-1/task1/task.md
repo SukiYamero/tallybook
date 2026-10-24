@@ -38,7 +38,7 @@ receives its seed (the stored maximum) through a function supplied by task2.
 ## Contracts
 
 ```kotlin
-@JvmInline value class ChangeStamp(val value: String) : Comparable<ChangeStamp> {
+@JvmInline value class ChangeStamp private constructor(val value: String) : Comparable<ChangeStamp> {
   companion object {
     val SEED: ChangeStamp // "0000000000000-0000-0000000000000000"
     fun of(epochMillis: Long, counter: Int, node: String): ChangeStamp
@@ -51,7 +51,7 @@ interface ChangeClock {
    * Reads the node once and advances to the stored maximum; idempotent, never moves backward.
    * Called at startup and again after any dataset replacement (future Drive restore).
    */
-  suspend fun prepare(storedMax: suspend () -> ChangeStamp?)
+  suspend fun prepare(storedMax: suspend () -> DataOutcome<ChangeStamp?>): DataOutcome<Unit>
   /** Synchronous so repositories can call it inside a SQLDelight transaction. */
   fun next(): ChangeStamp
 }
@@ -59,7 +59,19 @@ interface ChangeClock {
 interface InstallationIdRepository {
   suspend fun nodeId(): DataOutcome<String> // 16 lowercase hex chars, created on first read
 }
+
+enum class PreferencesFile(val fileName: String) { APP, DEVICE }  // "tallybook[.device].preferences_pb"
+interface PreferencesPathProvider { fun path(file: PreferencesFile): String }
+fun interface BackupExclusion { fun exclude(file: PreferencesFile) } // throws okio.IOException
 ```
+
+- `ChangeStamp` is only built through `of`/`parse`, so an off-format value is unrepresentable.
+- `prepare` returns `DataOutcome` and takes a `DataOutcome` reader so a node or stored-max read
+  failure reaches `LocalDataBootstrapper` as `DataError.Local` instead of an exception; on failure the
+  clock stays unprepared. The task2 reader wraps `selectMaxChangeStamp` in `runLocalDataOperation`.
+- `PreferencesDataStoreFactory.create(file)` memoizes one DataStore per `PreferencesFile` on the
+  factory's single scope (`create()` keeps defaulting to `APP`); Koin binds the device store under
+  `named(PreferencesFile.DEVICE)`.
 
 `HybridChangeClock(clock: Clock, installationIds: InstallationIdRepository)` is the production
 implementation. `next()` before `prepare()` is a programming error (`check`), not a `DataOutcome`.
@@ -73,6 +85,11 @@ implementation. `next()` before `prepare()` is a programming error (`check`), no
   CAS loop on the last issued stamp; first confirm the status of `kotlin.concurrent.atomics` in Kotlin
   2.4.10 (experimental opt-in vs stable) per the external-API gate, and record the source link here.
   Do not hold a coroutine `Mutex` (not callable inside a transaction).
+  Verified: on Kotlin 2.4.10 `AtomicLong`/`updateAndFetch` still require
+  `@OptIn(ExperimentalAtomicApi::class)` (compiler error without it); the opt-in is confined to
+  `HybridChangeClock`. The state is one packed `Long` (`millis shl 16 or counter`), so `last + 1`
+  carries an overflow into millis. Source:
+  <https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.concurrent.atomics/-atomic-long/>.
 - Node ID: derived from `Uuid.random()` (64 bits as 16 hex), stored under one key in
   `tallybook.device.preferences_pb`. It is never placed in `AppPreferences` or the financial file.
 - Android: exclude `tallybook.device.preferences_pb` from both `<cloud-backup>` and
@@ -82,28 +99,32 @@ implementation. `next()` before `prepare()` is a programming error (`check`), no
 - iOS: Application Support is included in iCloud/device backups; set `isExcludedFromBackup` on the
   device file after creation so a restored iPhone generates a new node. Source:
   <https://developer.apple.com/documentation/foundation/urlresourcevalues/isexcludedfrombackup>.
+  Apple: "Some operations commonly made to user documents will cause this property to be reset";
+  DataStore 1.2.1 writes `<file>.tmp` and `atomicMove`s it over the file (verified in
+  `OkioStorageConnection`), so `InstallationIdRepositoryImpl` re-applies the exclusion on every
+  successful read, and the Android rules also exclude the `.tmp` sibling.
   Compile-only evidence on iOS; runtime stays in the iOS backlog item.
 
 ## TDD implementation
 
-- [ ] Contract commit first (unblocks task2): `ChangeStamp`, the `ChangeClock` interface and a
+- [x] Contract commit first (unblocks task2): `ChangeStamp`, the `ChangeClock` interface and a
       deterministic `TestChangeClock` fixture in `androidHostTest/.../core/data/` that is prepared on
       construction and issues increasing stamps from a fixed start.
-- [ ] RED: `ChangeStampTest` — `of` pads to 13 digits/4 hex, `parse` rejects wrong lengths/case/
+- [x] RED: `ChangeStampTest` — `of` pads to 13 digits/4 hex, `parse` rejects wrong lengths/case/
       separators, text order equals (millis, counter, node) order, `SEED` is the minimum.
-- [ ] GREEN: implement `ChangeStamp`.
-- [ ] RED: `ChangeClockTest` with a controllable `Clock` and fake node: strictly increasing on equal
+- [x] GREEN: implement `ChangeStamp`.
+- [x] RED: `ChangeClockTest` with a controllable `Clock` and fake node: strictly increasing on equal
       millis, on backward wall clock, on counter overflow; `prepare` with a stored max ahead of the wall
       clock continues after it; a second `prepare` with a higher stored max advances, with a lower one
       changes nothing; the node is read once; `next()` before `prepare` fails.
-- [ ] GREEN: implement `HybridChangeClock`.
-- [ ] RED/GREEN: `InstallationIdRepositoryTest` on a real temp-file DataStore — first read creates,
+- [x] GREEN: implement `HybridChangeClock`.
+- [x] RED/GREEN: `InstallationIdRepositoryTest` on a real temp-file DataStore — first read creates,
       second read and a recreated repository return the same ID; the financial preferences file is not
       touched.
-- [ ] Wire Koin (qualified device DataStore, `ChangeClock` single) and prove the graph resolves with one
+- [x] Wire Koin (qualified device DataStore, `ChangeClock` single) and prove the graph resolves with one
       DataStore instance per file.
-- [ ] Add the data extraction rules and manifest attribute; run `:androidApp:assembleDebug`.
-- [ ] Checks below.
+- [x] Add the data extraction rules and manifest attribute; run `:androidApp:assembleDebug`.
+- [x] Checks below.
 
 ## Checks
 

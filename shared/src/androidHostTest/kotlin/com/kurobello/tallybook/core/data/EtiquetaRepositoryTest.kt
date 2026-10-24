@@ -1,7 +1,9 @@
 package com.kurobello.tallybook.core.data
 
+import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.ETIQUETA_DESCRIPCION_MAX
@@ -20,6 +22,22 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 
 class EtiquetaRepositoryTest {
+
+  @Test
+  fun `create and update store the stamp their transaction issued`() = runTest {
+    val changeClock = TestChangeClock()
+    withRepository(changeClock) { database, repository ->
+      val created = repository.create("Viaje").saved()
+      val storedStamp = {
+        database.etiquetaQueries.selectEtiquetaById(created.id).executeAsOne().updated_at
+      }
+      assertEquals(changeClock.issuedStamps.single().value, storedStamp())
+
+      repository.update(created.id, "Viaje", "con Ana")
+      assertEquals(2, changeClock.issuedStamps.size)
+      assertEquals(changeClock.issuedStamps.last().value, storedStamp())
+    }
+  }
 
   @Test
   fun `create trims the name and lists etiquetas by name ignoring case and accents`() = runTest {
@@ -189,8 +207,77 @@ class EtiquetaRepositoryTest {
     }
   }
 
+  @Test
+  fun `delete stamps the tombstone and every live movimiento that loses the etiqueta alike`() =
+      runTest {
+        val changeClock = TestChangeClock()
+        withStorage(changeClock) { driver, database, repository ->
+          val empresa = repository.create("Empresa").saved()
+          val viaje = repository.create("Viaje").saved()
+          database.insertMovimiento("both", Moneda.COP, empresa.id, viaje.id)
+          database.insertMovimiento("only", Moneda.USD, empresa.id)
+          database.insertMovimiento("untouched", Moneda.COP, viaje.id)
+
+          assertEquals(DataOutcome.Success(Unit), repository.delete(empresa.id))
+
+          assertEquals(3, changeClock.issuedStamps.size)
+          val stamp = changeClock.issuedStamps.last().value
+          assertEquals(stamp to stamp, driver.storedStamps("etiqueta", empresa.id))
+          assertEquals(
+              mapOf(
+                  "both" to stamp,
+                  "only" to stamp,
+                  "untouched" to ChangeStamp.SEED.value,
+              ),
+              database.movimientoQueries.selectAllMovimientos().executeAsList().associate {
+                it.id to it.updated_at
+              },
+          )
+          assertEquals(listOf(viaje), repository.getAll().successData())
+          assertInvalid(repository.update(empresa.id, "Otra", descripcion = null))
+          assertInvalid(repository.delete(empresa.id))
+          assertEquals(3, changeClock.issuedStamps.size)
+        }
+      }
+
+  @Test
+  fun `a deleted etiqueta name can be reused and gets a new id`() = runTest {
+    withRepository { _, repository ->
+      val empresa = repository.create("Empresa").saved()
+      repository.delete(empresa.id)
+
+      val again = repository.create(" empresa ").saved()
+
+      assertEquals(Etiqueta("tag-2", "empresa", NOW), again)
+      assertEquals(listOf(again), repository.getAll().successData())
+      assertEquals(listOf(again), repository.observeAll().first().successData())
+    }
+  }
+
+  @Test
+  fun `counts skip tombstoned movimientos`() = runTest {
+    withStorage { driver, database, repository ->
+      val empresa = repository.create("Empresa").saved()
+      database.insertMovimiento("live", Moneda.COP, empresa.id)
+      database.insertMovimiento("tombstoned", Moneda.COP, empresa.id)
+      driver.tombstone("movimiento", "tombstoned")
+
+      assertEquals(
+          DataOutcome.Success(mapOf(empresa.id to 1L)),
+          repository.observeMovimientoCounts(Moneda.COP).first(),
+      )
+      assertEquals(DataOutcome.Success(1L), repository.countMovimientos(empresa.id))
+    }
+  }
+
   private suspend fun TestScope.withRepository(
-      block: suspend (TallybookDatabase, EtiquetaRepository) -> Unit
+      changeClock: ChangeClock = TestChangeClock(),
+      block: suspend (TallybookDatabase, EtiquetaRepository) -> Unit,
+  ) = withStorage(changeClock) { _, database, repository -> block(database, repository) }
+
+  private suspend fun TestScope.withStorage(
+      changeClock: ChangeClock = TestChangeClock(),
+      block: suspend (SqlDriver, TallybookDatabase, EtiquetaRepository) -> Unit,
   ) {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     TallybookDatabase.Schema.create(driver)
@@ -203,8 +290,9 @@ class EtiquetaRepositoryTest {
               dispatcher = StandardTestDispatcher(testScheduler),
               idGenerator = IdGenerator { "tag-${++nextId}" },
               clock = FixedClock,
+              changeClock = changeClock,
           )
-      block(database, repository)
+      block(driver, database, repository)
     } finally {
       driver.close()
     }
@@ -226,6 +314,7 @@ class EtiquetaRepositoryTest {
           null,
           "2026-10-01T12:00:00Z",
           "cat_comida",
+          ChangeStamp.SEED.value,
       )
       etiquetaIds.forEachIndexed { posicion, etiquetaId ->
         movimientoQueries.insertMovimientoEtiqueta(id, etiquetaId, posicion.toLong())

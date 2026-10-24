@@ -34,9 +34,12 @@ import com.kurobello.tallybook.core.data.CategorySeedProvider
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
+import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
+import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.MovimientoDateRange
@@ -220,17 +223,19 @@ class HistoryVolumeDeviceTest {
     private val factory =
         PreferencesDataStoreFactory(
             object : PreferencesPathProvider {
-              override fun path() = directory.resolve("preferences.preferences_pb").absolutePath
+              override fun path(file: PreferencesFile) =
+                  directory.resolve(file.fileName).absolutePath
             },
             Dispatchers.IO,
         )
     private val preferences = AppPreferencesRepositoryImpl(factory.create())
-    private val movimientos = MovimientoRepositoryImpl(database, Dispatchers.IO)
+    private val movimientos = MovimientoRepositoryImpl(database, Dispatchers.IO, TestChangeClock())
     private val categorias =
         CategoriaRepositoryImpl(
             database,
             Dispatchers.IO,
             IdGenerator { error("Not used by this test") },
+            TestChangeClock(),
         )
     private val scopeJob = SupervisorJob()
     private val scope = CoroutineScope(scopeJob + Dispatchers.Main.immediate)
@@ -327,6 +332,7 @@ class HistoryVolumeDeviceTest {
           null,
           "2026-09-15T12:00:00Z",
           "cat_comida",
+          ChangeStamp.SEED.value,
       )
     }
 
