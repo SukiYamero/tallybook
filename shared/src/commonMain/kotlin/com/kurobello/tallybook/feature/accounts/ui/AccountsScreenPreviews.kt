@@ -178,3 +178,15 @@ internal fun AccountFormDarkPreview() {
     )
   }
 }
+
+@Preview
+@Composable
+internal fun AccountFormLockedPreview() {
+  TallybookTheme(darkTheme = false) {
+    AccountForm(
+        state = AccountDraftState.forNew("Nequi", TipoCuenta.BANCO, Moneda.COP),
+        onDraftChanged = {},
+        locks = AccountFieldLocks(type = true, currency = true),
+    )
+  }
+}

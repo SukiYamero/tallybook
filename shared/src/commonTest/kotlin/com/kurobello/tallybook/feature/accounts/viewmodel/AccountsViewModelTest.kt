@@ -262,6 +262,56 @@ class AccountsViewModelTest {
   }
 
   @Test
+  fun aReferencedAccountLocksItsTypeAndCurrency() = runTest {
+    val fixture = AccountsFixture(this, listOf(EFECTIVO, NEQUI))
+    fixture.cuentas.references.value = mapOf(NEQUI.id to 2L)
+    val vm = fixture.create()
+    runCurrent()
+
+    vm.onOpenCuenta(NEQUI.id)
+
+    val sheet = assertNotNull(vm.uiState.value.sheet)
+    assertTrue(sheet.typeLocked)
+    assertTrue(sheet.currencyLocked)
+  }
+
+  @Test
+  fun anUnusedDefaultCashLocksOnlyItsCurrency() = runTest {
+    val fixture = AccountsFixture(this, listOf(EFECTIVO, NEQUI))
+    val vm = fixture.create()
+    runCurrent()
+
+    vm.onOpenCuenta(EFECTIVO.id)
+
+    val sheet = assertNotNull(vm.uiState.value.sheet)
+    assertFalse(sheet.typeLocked)
+    assertTrue(sheet.currencyLocked)
+  }
+
+  @Test
+  fun unusedAndNewAccountsLockNothingUntilAReferenceArrives() = runTest {
+    val fixture = AccountsFixture(this, listOf(EFECTIVO, NEQUI))
+    val vm = fixture.create()
+    runCurrent()
+
+    vm.onCreate()
+    assertFalse(assertNotNull(vm.uiState.value.sheet).currencyLocked)
+    vm.onDismissSheet()
+    vm.onSheetHidden()
+
+    vm.onOpenCuenta(NEQUI.id)
+    val unused = assertNotNull(vm.uiState.value.sheet)
+    assertFalse(unused.typeLocked)
+    assertFalse(unused.currencyLocked)
+
+    fixture.cuentas.references.value = mapOf(NEQUI.id to 1L)
+    runCurrent()
+    val referenced = assertNotNull(vm.uiState.value.sheet)
+    assertTrue(referenced.typeLocked)
+    assertTrue(referenced.currencyLocked)
+  }
+
+  @Test
   fun lockedCurrencyAndTypeRejectionsAreShownInline() = runTest {
     val fixture = AccountsFixture(this, listOf(EFECTIVO, NEQUI))
     fixture.cuentas.references.value = mapOf(NEQUI.id to 2L)

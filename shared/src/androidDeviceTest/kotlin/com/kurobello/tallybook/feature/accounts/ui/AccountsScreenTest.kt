@@ -56,6 +56,7 @@ import tallybook.shared.generated.resources.account_pay_card
 import tallybook.shared.generated.resources.account_transfer
 import tallybook.shared.generated.resources.account_type_bank
 import tallybook.shared.generated.resources.account_type_credit_card
+import tallybook.shared.generated.resources.account_type_locked
 import tallybook.shared.generated.resources.account_view_movements
 import tallybook.shared.generated.resources.accounts_archived_show
 import tallybook.shared.generated.resources.accounts_load_error
@@ -141,7 +142,7 @@ class AccountsScreenTest {
   @Test
   fun repositoryRejectionsShowOnTheirField() {
     val sheet =
-        AccountSheet.forEdit(NEQUI, credit = null).let {
+        AccountSheet.forEdit(NEQUI, credit = null, referenced = false).let {
           it.copy(draft = it.draft.copy(nombre = "Ahorros"))
         }
     val state =
@@ -160,10 +161,41 @@ class AccountsScreenTest {
   }
 
   @Test
+  fun aReferencedAccountShowsTypeAndCurrencyAsReadOnlyWithTheirReason() {
+    val sheet = AccountSheet.forEdit(NEQUI, credit = null, referenced = true)
+    show(mutableStateOf(listed.copy(sheet = sheet)), RecordingActions())
+
+    composeRule.onNodeWithText(text(Res.string.account_type_locked)).assertIsDisplayed()
+    composeRule.onNodeWithText(text(Res.string.account_currency_locked)).assertIsDisplayed()
+    composeRule
+        .onNode(hasText(text(Res.string.account_type_credit_card)) and hasClickAction())
+        .assertDoesNotExist()
+    composeRule.onNode(hasText("USD") and hasClickAction()).assertDoesNotExist()
+  }
+
+  @Test
+  fun anUnusedDefaultCashKeepsItsTypeChoicesButNotItsCurrency() {
+    val cash = cuenta(Cuenta.defaultCashId(Moneda.COP), "Efectivo", TipoCuenta.EFECTIVO)
+    show(
+        mutableStateOf(
+            listed.copy(sheet = AccountSheet.forEdit(cash, credit = null, referenced = false))
+        ),
+        RecordingActions(),
+    )
+
+    composeRule.onNodeWithText(text(Res.string.account_currency_locked)).assertIsDisplayed()
+    composeRule.onNode(hasText("USD") and hasClickAction()).assertDoesNotExist()
+    composeRule.onNodeWithText(text(Res.string.account_type_locked)).assertDoesNotExist()
+    composeRule
+        .onNode(hasText(text(Res.string.account_type_credit_card)) and hasClickAction())
+        .assertExists()
+  }
+
+  @Test
   fun anAccountInUseOffersArchivingInstead() {
     val actions = RecordingActions()
     val sheet =
-        AccountSheet.forEdit(NEQUI, credit = null)
+        AccountSheet.forEdit(NEQUI, credit = null, referenced = false)
             .copy(confirmation = AccountConfirmation.DeleteInUse(3L))
     show(mutableStateOf(listed.copy(sheet = sheet)), actions)
 
@@ -177,7 +209,8 @@ class AccountsScreenTest {
   @Test
   fun transferActionsAppearOnlyOnceATransferCanOpen() {
     val actions = RecordingActions()
-    val state = mutableStateOf(listed.copy(sheet = AccountSheet.forEdit(NU, CREDIT)))
+    val state =
+        mutableStateOf(listed.copy(sheet = AccountSheet.forEdit(NU, CREDIT, referenced = false)))
     val canTransfer = mutableStateOf(false)
     composeRule.setContent {
       TallybookTheme {
@@ -193,7 +226,7 @@ class AccountsScreenTest {
     composeRule.onNodeWithText(text(Res.string.account_pay_card)).performClick()
     composeRule.runOnIdle { assertEquals(listOf("transfer", "pay-card"), actions.calls) }
 
-    state.value = listed.copy(sheet = AccountSheet.forEdit(NEQUI, null))
+    state.value = listed.copy(sheet = AccountSheet.forEdit(NEQUI, null, referenced = false))
     composeRule.onNodeWithText(text(Res.string.account_pay_card)).assertDoesNotExist()
   }
 
@@ -201,7 +234,10 @@ class AccountsScreenTest {
   fun viewMovementsAppearsForAnArchivedAccountOnceSearchCanOpen() {
     val actions = RecordingActions()
     val archived = NEQUI.copy(archivada = true)
-    val state = mutableStateOf(listed.copy(sheet = AccountSheet.forEdit(archived, null)))
+    val state =
+        mutableStateOf(
+            listed.copy(sheet = AccountSheet.forEdit(archived, null, referenced = false))
+        )
     val canViewMovements = mutableStateOf(false)
     composeRule.setContent {
       TallybookTheme {

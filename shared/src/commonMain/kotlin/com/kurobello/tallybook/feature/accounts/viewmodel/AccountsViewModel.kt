@@ -17,6 +17,7 @@ import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoCuenta
+import com.kurobello.tallybook.core.model.andThen
 import com.kurobello.tallybook.core.model.fold
 import com.kurobello.tallybook.core.model.map
 import com.kurobello.tallybook.core.model.primaryMoneda
@@ -88,7 +89,9 @@ internal class AccountsViewModel(
               is AccountSheetRequest.New ->
                   AccountSheet.forNew(request.nombre, TipoCuenta.BANCO, loaded.primary)
               is AccountSheetRequest.Open ->
-                  loaded.find(request.id)?.let { AccountSheet.forEdit(it, loaded.credit[it.id]) }
+                  loaded.find(request.id)?.let {
+                    AccountSheet.forEdit(it, loaded.credit[it.id], it.id in loaded.referencedIds)
+                  }
             }
     if (sheet != null) uiState.update { it.copy(sheet = sheet) }
     return sheet != null
@@ -292,29 +295,25 @@ internal class AccountsViewModel(
     val estimates = currentDay.flatMapLatest { day: LocalDate ->
       saldos.observeCreditEstimates(day)
     }
-    return combine(primary, saldos.observeSaldos(), saldos.observeTotales(), estimates) {
-        moneda,
-        balances,
-        totals,
-        credit ->
+    return combine(
+        primary,
+        saldos.observeSaldos(),
+        saldos.observeTotales(),
+        estimates,
+        cuentas.observeReferencedIds(),
+    ) { moneda, balances, totals, credit, referenced ->
       moneda
-          .zip(balances) { m, b -> m to b }
-          .zip(totals.zip(credit) { t, c -> t to c }) { (m, b), (t, c) ->
-            AccountsSource.Ready(m, b, t, c)
+          .andThen { m ->
+            balances.andThen { b ->
+              totals.andThen { t ->
+                credit.andThen { c -> referenced.map { r -> AccountsSource.Ready(m, b, t, c, r) } }
+              }
+            }
           }
           .fold(onSuccess = { it }, onFailure = { AccountsSource.Failed })
     }
   }
 }
-
-private inline fun <A, B, R> DataOutcome<A>.zip(
-    other: DataOutcome<B>,
-    transform: (A, B) -> R,
-): DataOutcome<R> =
-    when (this) {
-      is DataOutcome.Failure -> this
-      is DataOutcome.Success -> other.map { transform(data, it) }
-    }
 
 private sealed interface AccountsSource {
   data object Loading : AccountsSource
@@ -326,6 +325,7 @@ private sealed interface AccountsSource {
       val saldos: List<CuentaSaldo>,
       val totales: Map<Moneda, Money>,
       val credit: Map<String, CreditEstimate>,
+      val referencedIds: Set<String>,
   ) : AccountsSource {
     fun find(id: String): Cuenta? = saldos.firstOrNull { it.cuenta.id == id }?.cuenta
 
@@ -381,5 +381,10 @@ private fun AccountSheet.refreshedFrom(loaded: AccountsSource): AccountSheet {
   val ready = loaded as? AccountsSource.Ready
   val stored = editing?.let { ready?.find(it.id) }
   return if (ready == null || stored == null) this
-  else copy(editing = stored, credit = ready.credit[stored.id])
+  else
+      copy(
+          editing = stored,
+          credit = ready.credit[stored.id],
+          referenced = stored.id in ready.referencedIds,
+      )
 }

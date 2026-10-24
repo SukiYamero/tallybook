@@ -78,16 +78,17 @@ internal sealed interface AccountConfirmation {
 }
 
 /**
- * The one open account sheet: a new account when [editing] is null. [editing] and [credit] follow
- * the source while open; [baseline] is what [draft] started from, to tell unsaved changes. A
- * closing sheet keeps the shell modal-owned until it reports it hid; [exit] then opens a transfer
- * or Search.
+ * The one open account sheet: a new account when [editing] is null. [editing], [credit] and
+ * [referenced] (live movimientos or transfers point at it) follow the source while open; [baseline]
+ * is what [draft] started from, to tell unsaved changes. A closing sheet keeps the shell
+ * modal-owned until it reports it hid; [exit] then opens a transfer or Search.
  */
 internal data class AccountSheet(
     val editing: Cuenta?,
     val draft: AccountDraftState,
     val baseline: AccountDraftState = draft,
     val credit: CreditEstimate? = null,
+    val referenced: Boolean = false,
     val pending: Boolean = false,
     val error: AccountSheetError? = null,
     val confirmation: AccountConfirmation? = null,
@@ -96,6 +97,13 @@ internal data class AccountSheet(
 ) {
   val hasUnsavedChanges: Boolean
     get() = !draft.sameContentAs(baseline)
+
+  /** Mirrors the repository's locks; its rejection still covers a reference added mid-save. */
+  val typeLocked: Boolean
+    get() = editing != null && referenced
+
+  val currencyLocked: Boolean
+    get() = editing != null && (referenced || editing.isDefaultCash)
 
   val isEditable: Boolean
     get() = !isClosing && !pending && confirmation == null
@@ -126,7 +134,12 @@ internal data class AccountSheet(
     fun forNew(nombre: String, tipo: TipoCuenta, moneda: Moneda) =
         AccountSheet(editing = null, draft = AccountDraftState.forNew(nombre, tipo, moneda))
 
-    fun forEdit(cuenta: Cuenta, credit: CreditEstimate?) =
-        AccountSheet(editing = cuenta, draft = AccountDraftState.forEdit(cuenta), credit = credit)
+    fun forEdit(cuenta: Cuenta, credit: CreditEstimate?, referenced: Boolean) =
+        AccountSheet(
+            editing = cuenta,
+            draft = AccountDraftState.forEdit(cuenta),
+            credit = credit,
+            referenced = referenced,
+        )
   }
 }

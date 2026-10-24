@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectableGroup
@@ -70,6 +71,10 @@ internal enum class AccountFormMode {
   QUICK,
 }
 
+/** Fields the stored account cannot change, shown read-only instead of as choices. */
+@Immutable
+internal data class AccountFieldLocks(val type: Boolean = false, val currency: Boolean = false)
+
 /** Rejections the repository returned for the current values, shown on their field. */
 @Immutable
 internal data class AccountFieldErrors(
@@ -92,6 +97,7 @@ internal fun AccountForm(
     mode: AccountFormMode = AccountFormMode.FULL,
     enabled: Boolean = true,
     errors: AccountFieldErrors = AccountFieldErrors(),
+    locks: AccountFieldLocks = AccountFieldLocks(),
     duplicateAction: (@Composable () -> Unit)? = null,
     revealFocusedInput: @Composable Modifier.() -> Modifier = { this },
 ) {
@@ -109,15 +115,27 @@ internal fun AccountForm(
       )
       if (errors.duplicate != null) duplicateAction?.invoke()
     }
-    if (mode == AccountFormMode.FULL) {
-      AccountTypeChoices(state.tipo, errors.typeLocked, enabled) { tipo ->
-        onDraftChanged { onTipo(tipo) }
+    when {
+      mode == AccountFormMode.QUICK -> PresetAccountType(state.tipo)
+      locks.type -> PresetAccountType(state.tipo, stringResource(Res.string.account_type_locked))
+      else ->
+          AccountTypeChoices(state.tipo, errors.typeLocked, enabled) { tipo ->
+            onDraftChanged { onTipo(tipo) }
+          }
+    }
+    if (locks.currency) {
+      ReadOnlyChoice(
+          stringResource(Res.string.account_currency_label),
+          reason =
+              if (mode == AccountFormMode.FULL) stringResource(Res.string.account_currency_locked)
+              else null,
+      ) {
+        TallybookText(state.moneda.name, style = TallybookTheme.typography.body)
       }
     } else {
-      PresetAccountType(state.tipo)
-    }
-    AccountCurrencyChoices(state.moneda, errors.currencyLocked, enabled) { moneda ->
-      onDraftChanged { onMoneda(moneda) }
+      AccountCurrencyChoices(state.moneda, errors.currencyLocked, enabled) { moneda ->
+        onDraftChanged { onMoneda(moneda) }
+      }
     }
     AccountSaldoField(state, enabled, onDraftChanged, Modifier.revealFocusedInput())
     if (mode == AccountFormMode.FULL && state.tipo == TipoCuenta.CREDITO) {
@@ -193,22 +211,34 @@ private fun AccountTypeChoices(
 }
 
 @Composable
-private fun PresetAccountType(tipo: TipoCuenta) {
+private fun PresetAccountType(tipo: TipoCuenta, reason: String? = null) {
+  ReadOnlyChoice(stringResource(Res.string.account_type_label), reason) {
+    CuentaTypeIcon(
+        tipo,
+        modifier = Modifier.size(TallybookTheme.dimensions.iconMedium),
+        contentDescription = null,
+        tint = TallybookTheme.colors.foreground.secondary,
+    )
+    TallybookText(stringResource(tipo.labelResource), style = TallybookTheme.typography.body)
+  }
+}
+
+/** A choice the user cannot change here: its label, the value, and why when there is a reason. */
+@Composable
+private fun ReadOnlyChoice(
+    label: String,
+    reason: String?,
+    value: @Composable RowScope.() -> Unit,
+) {
   Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.dimensions.fieldLabelSpacing)) {
-    TallybookInputLabel(stringResource(Res.string.account_type_label))
+    TallybookInputLabel(label)
     Row(
         modifier = Modifier.semantics(mergeDescendants = true) {},
         horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
         verticalAlignment = Alignment.CenterVertically,
-    ) {
-      CuentaTypeIcon(
-          tipo,
-          modifier = Modifier.size(TallybookTheme.dimensions.iconMedium),
-          contentDescription = null,
-          tint = TallybookTheme.colors.foreground.secondary,
-      )
-      TallybookText(stringResource(tipo.labelResource), style = TallybookTheme.typography.body)
-    }
+        content = value,
+    )
+    reason?.let { TallybookFieldMessageContent(TallybookFieldMessage.Supporting(it)) }
   }
 }
 

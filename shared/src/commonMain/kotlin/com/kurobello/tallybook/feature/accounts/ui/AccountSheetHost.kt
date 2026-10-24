@@ -135,6 +135,7 @@ private fun AccountSheetBody(
         onDraftChanged = actions::onDraftChanged,
         enabled = enabled,
         errors = sheet.fieldErrors,
+        locks = AccountFieldLocks(type = sheet.typeLocked, currency = sheet.currencyLocked),
         revealFocusedInput = { revealWhenFocused() },
     )
     sheet.error?.generalMessage?.let { AccountSheetErrorText(stringResource(it)) }
