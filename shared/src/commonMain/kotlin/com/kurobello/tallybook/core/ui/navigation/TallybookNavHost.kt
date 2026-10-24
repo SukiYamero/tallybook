@@ -209,9 +209,7 @@ private fun AccountsDestination(
       modals = navigator.modals,
       active = navigator.state.secondary == Accounts,
       onBack = navigator::back,
-      onTransfer = { origenId, destinoId, prefill ->
-        openTransfer(TransferEntry.New(origenId, destinoId, prefill))
-      },
+      onTransfer = openTransfer,
       onViewMovements = { cuentaId, moneda ->
         navigator.showSearchFilter(cuentaIds = setOf(cuentaId), moneda = moneda)
       },

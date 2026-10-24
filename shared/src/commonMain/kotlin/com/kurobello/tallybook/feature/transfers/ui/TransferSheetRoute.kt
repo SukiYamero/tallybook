@@ -35,12 +35,16 @@ import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.transfers.viewmodel.TransferActions
+import com.kurobello.tallybook.feature.transfers.viewmodel.TransferEntry
 import com.kurobello.tallybook.feature.transfers.viewmodel.TransferError
 import com.kurobello.tallybook.feature.transfers.viewmodel.TransferPhase
+import com.kurobello.tallybook.feature.transfers.viewmodel.TransferPurpose
 import com.kurobello.tallybook.feature.transfers.viewmodel.TransferSession
 import com.kurobello.tallybook.feature.transfers.viewmodel.TransferUiState
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.account_pay_card
 import tallybook.shared.generated.resources.cancel
 import tallybook.shared.generated.resources.continue_editing
 import tallybook.shared.generated.resources.discard_changes_confirm
@@ -81,10 +85,7 @@ internal fun TransferSheetRoute(uiState: TransferUiState, actions: TransferActio
 @Composable
 internal fun TransferSheet(session: TransferSession, actions: TransferActions) {
   val origin = session.token
-  val title =
-      stringResource(
-          if (session.isNew) Res.string.transfer_new_title else Res.string.transfer_edit_title
-      )
+  val title = stringResource(session.entry.titleResource())
   TallybookModalBottomSheet(
       visible = session.isVisible,
       paneTitle = title,
@@ -106,6 +107,18 @@ internal fun TransferSheet(session: TransferSession, actions: TransferActions) {
   }
   TransferConfirmations(session, actions)
 }
+
+private val newTransferTitles: Map<TransferPurpose, StringResource> =
+    mapOf(
+        TransferPurpose.Move to Res.string.transfer_new_title,
+        TransferPurpose.PayCard to Res.string.account_pay_card,
+    )
+
+internal fun TransferEntry.titleResource(): StringResource =
+    when (this) {
+      is TransferEntry.New -> newTransferTitles.getValue(purpose)
+      is TransferEntry.Existing -> Res.string.transfer_edit_title
+    }
 
 private fun TransferSession.contentDetent(): String =
     when {

@@ -23,6 +23,8 @@ import com.kurobello.tallybook.core.model.primaryMoneda
 import com.kurobello.tallybook.core.text.matchesSearchText
 import com.kurobello.tallybook.core.text.normalizeSearchText
 import com.kurobello.tallybook.core.ui.account.CuentaBalance
+import com.kurobello.tallybook.feature.transfers.viewmodel.TransferEntry
+import com.kurobello.tallybook.feature.transfers.viewmodel.TransferPurpose
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -230,13 +232,20 @@ internal class AccountsViewModel(
 
   override fun onTransfer() {
     val sheet = uiState.value.sheet?.takeIf { it.isEditable && it.canTransfer } ?: return
-    leaveFor(AccountsEffect.Transfer(origenId = sheet.editing?.id, destinoId = null, null))
+    leaveFor(AccountsEffect.Transfer(TransferEntry.New(sheet.editing?.id, destinoId = null, null)))
   }
 
   override fun onPayCard() {
     val sheet = uiState.value.sheet?.takeIf { it.isEditable && it.canPayCard } ?: return
     val deuda = sheet.credit?.deuda?.takeIf { it.minorUnits > 0 }
-    leaveFor(AccountsEffect.Transfer(origenId = null, destinoId = sheet.editing?.id, deuda))
+    val entry =
+        TransferEntry.New(
+            origenId = null,
+            destinoId = sheet.editing?.id,
+            prefill = deuda,
+            purpose = TransferPurpose.PayCard,
+        )
+    leaveFor(AccountsEffect.Transfer(entry))
   }
 
   override fun onViewMovements() {

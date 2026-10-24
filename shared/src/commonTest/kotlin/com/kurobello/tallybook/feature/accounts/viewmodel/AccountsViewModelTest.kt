@@ -20,6 +20,8 @@ import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.ui.account.CuentaBalance
+import com.kurobello.tallybook.feature.transfers.viewmodel.TransferEntry
+import com.kurobello.tallybook.feature.transfers.viewmodel.TransferPurpose
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -455,11 +457,16 @@ class AccountsViewModelTest {
 
     assertEquals(
         listOf<AccountsEffect>(
-            AccountsEffect.Transfer(origenId = EFECTIVO.id, destinoId = null, prefill = null),
             AccountsEffect.Transfer(
-                origenId = null,
-                destinoId = NU.id,
-                prefill = Money(6_000_000, Moneda.COP),
+                TransferEntry.New(origenId = EFECTIVO.id, destinoId = null, prefill = null)
+            ),
+            AccountsEffect.Transfer(
+                TransferEntry.New(
+                    origenId = null,
+                    destinoId = NU.id,
+                    prefill = Money(6_000_000, Moneda.COP),
+                    purpose = TransferPurpose.PayCard,
+                )
             ),
         ),
         effects,

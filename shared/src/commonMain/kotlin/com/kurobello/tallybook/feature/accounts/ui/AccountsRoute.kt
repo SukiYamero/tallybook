@@ -21,7 +21,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.kurobello.tallybook.core.model.Moneda
-import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.ui.component.TallybookScreenSnackbar
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarDuration
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarMessage
@@ -34,6 +33,7 @@ import com.kurobello.tallybook.feature.accounts.viewmodel.AccountsEffect
 import com.kurobello.tallybook.feature.accounts.viewmodel.AccountsFeedback
 import com.kurobello.tallybook.feature.accounts.viewmodel.AccountsUiState
 import com.kurobello.tallybook.feature.accounts.viewmodel.AccountsViewModel
+import com.kurobello.tallybook.feature.transfers.viewmodel.TransferEntry
 import kotlinx.coroutines.flow.first
 import org.jetbrains.compose.resources.getString
 import org.koin.compose.viewmodel.koinViewModel
@@ -55,7 +55,7 @@ internal fun AccountsRoute(
     modals: PrimaryModalCoordinator,
     active: Boolean,
     onBack: () -> Unit,
-    onTransfer: ((origenId: String?, destinoId: String?, prefill: Money?) -> Unit)?,
+    onTransfer: ((TransferEntry.New) -> Unit)?,
     modifier: Modifier = Modifier,
     onViewMovements: ((cuentaId: String, moneda: Moneda) -> Unit)? = null,
     trailingContent: LazyListScope.() -> Unit = {},
@@ -98,7 +98,7 @@ internal fun AccountsRoute(
             // The shell refuses new modals while one is open, and the collected State can trail
             // the ViewModel's by a frame.
             snapshotFlow { state.value.sheet == null }.first { it }
-            latestTransfer.value?.invoke(effect.origenId, effect.destinoId, effect.prefill)
+            latestTransfer.value?.invoke(effect.entry)
           }
           is AccountsEffect.ViewMovements -> {
             snapshotFlow { state.value.sheet == null }.first { it }
