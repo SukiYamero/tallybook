@@ -2,7 +2,10 @@ package com.kurobello.tallybook.di
 
 import com.kurobello.tallybook.AppDisplayViewModel
 import com.kurobello.tallybook.AppStartupViewModel
+import com.kurobello.tallybook.core.data.CivilToday
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackViewModel
+import com.kurobello.tallybook.feature.accounts.viewmodel.AccountsViewModel
+import com.kurobello.tallybook.feature.accounts.viewmodel.QuickCuentaViewModel
 import com.kurobello.tallybook.feature.categories.viewmodel.CategoriesViewModel
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryDateProvider
@@ -38,6 +41,8 @@ internal val viewModelModule = module {
         preferencesRepository = get(),
         movimientoRepository = get(),
         categoriaRepository = get(),
+        saldoRepository = get(),
+        today = CivilToday(get(), get()),
     )
   }
   viewModel { parameters ->
@@ -95,4 +100,13 @@ internal val viewModelModule = module {
   }
   viewModel { CategoriesViewModel(categorias = get(), preferences = get(), suggester = get()) }
   viewModel { TagsViewModel(etiquetas = get(), preferences = get()) }
+  viewModel {
+    AccountsViewModel(
+        cuentas = get(),
+        saldos = get(),
+        preferences = get(),
+        today = CivilToday(get(), get()),
+    )
+  }
+  viewModel { QuickCuentaViewModel(cuentaRepository = get()) }
 }
