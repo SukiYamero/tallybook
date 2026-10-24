@@ -164,6 +164,47 @@ class DatabaseSchemaTest {
       }
 
   @Test
+  fun `migration from schema 8 adds the live transfer view and keeps every transfer`() =
+      withSnapshot(version = 8) { driver ->
+        val seed = ChangeStamp.SEED.value
+        driver.execute(
+            null,
+            "INSERT INTO cuenta(id, nombre, tipo, moneda, created_at, updated_at) VALUES " +
+                "('cop', 'Efectivo', 'EFECTIVO', 'COP', '2026-01-01T00:00:00Z', '$seed'), " +
+                "('usd', 'Chase', 'BANCO', 'USD', '2026-01-01T00:00:00Z', '$seed')",
+            0,
+        )
+        driver.execute(
+            null,
+            "INSERT INTO transferencia(id, cuenta_origen_id, cuenta_destino_id, " +
+                "monto_origen_minor, monto_destino_minor, fecha, created_at, updated_at, " +
+                "deleted_at) VALUES " +
+                "('live', 'cop', 'usd', 400000, 10000, '2026-02-01', '2026-02-01T00:00:00Z', " +
+                "'$seed', NULL), " +
+                "('gone', 'usd', 'cop', 100, 4000, '2026-02-02', '2026-02-02T00:00:00Z', " +
+                "'$seed', '$seed')",
+            0,
+        )
+
+        TallybookDatabase.Schema.migrate(
+            driver,
+            oldVersion = 8,
+            newVersion = TallybookDatabase.Schema.version,
+        )
+
+        assertEquals(
+            listOf("live cop 400000 COP usd 10000 USD"),
+            driver.queryStrings(
+                "SELECT id || ' ' || cuenta_origen_id || ' ' || monto_origen_minor || ' ' || " +
+                    "moneda_origen || ' ' || cuenta_destino_id || ' ' || " +
+                    "monto_destino_minor || ' ' || moneda_destino FROM transferencia_con_monedas"
+            ),
+        )
+        assertEquals(listOf("gone", "live"), driver.queryStrings("SELECT id FROM transferencia"))
+        assertEquals(freshSchema(), driver.schemaObjects())
+      }
+
+  @Test
   fun `fresh schema rejects invalid cuenta and transferencia rows`() {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       TallybookDatabase.Schema.create(driver)
@@ -689,8 +730,8 @@ class DatabaseSchemaTest {
             driver.queryStrings("SELECT name FROM pragma_index_info('movimiento_recent')"),
         )
         assertEquals(
-            listOf("movimiento_con_etiquetas"),
-            driver.queryStrings("SELECT name FROM sqlite_master WHERE type = 'view'"),
+            listOf("movimiento_con_etiquetas", "transferencia_con_monedas"),
+            driver.queryStrings("SELECT name FROM sqlite_master WHERE type = 'view' ORDER BY name"),
         )
         assertEquals(
             listOf(

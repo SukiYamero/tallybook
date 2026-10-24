@@ -2,9 +2,9 @@ package com.kurobello.tallybook.core.data
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
-import com.kurobello.tallybook.core.database.SelectTransferenciaById
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.database.Transferencia as StoredTransferencia
+import com.kurobello.tallybook.core.database.Transferencia_con_monedas as DatabaseTransferencia
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
@@ -248,7 +248,7 @@ private fun validateShape(transferencia: Transferencia): DataError.InvalidInput?
     }
 
 // An unreadable occupied ID must block restoration rather than become a retryable failure.
-private fun SelectTransferenciaById.isIdenticalTo(transferencia: Transferencia): Boolean =
+private fun DatabaseTransferencia.isIdenticalTo(transferencia: Transferencia): Boolean =
     try {
       toDomain() == transferencia
     } catch (_: IllegalArgumentException) {

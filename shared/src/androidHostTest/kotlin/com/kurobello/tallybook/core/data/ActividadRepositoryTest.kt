@@ -361,11 +361,13 @@ class ActividadRepositoryTest {
                     )
                   },
           )
+      var transferPlans = 0
       for ((name, read) in reads) {
         driver.reads.clear()
         read()
         val rowReads = driver.reads.filter { it.isRowRead }
         assertTrue(rowReads.isNotEmpty())
+        transferPlans += rowReads.count { it.isTransferencia }
         for (rowRead in rowReads) {
           val plan = driver.plan(rowRead)
           val index = if (rowRead.isTransferencia) "transferencia_recent" else "movimiento_recent"
@@ -376,6 +378,7 @@ class ActividadRepositoryTest {
           )
         }
       }
+      assertEquals(3, transferPlans)
     } finally {
       driver.close()
     }
@@ -470,7 +473,7 @@ class ActividadRepositoryTest {
       val binders: (SqlPreparedStatement.() -> Unit)?,
   ) {
     val isTransferencia: Boolean
-      get() = sql.trimStart().startsWith("SELECT\n    transferencia.id")
+      get() = sql.trimStart().startsWith("SELECT transferencia_con_monedas.id")
 
     val isRowRead: Boolean
       get() = isTransferencia || sql.trimStart().startsWith("SELECT movimiento_con_etiquetas.id")
