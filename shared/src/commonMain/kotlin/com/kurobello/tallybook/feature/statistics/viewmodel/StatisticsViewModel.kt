@@ -15,13 +15,13 @@ import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryStatisticsSnapshot
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
-import com.kurobello.tallybook.core.model.fold
-import com.kurobello.tallybook.core.model.map
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.StatisticsKey
 import com.kurobello.tallybook.core.model.StatisticsScope
 import com.kurobello.tallybook.core.model.StatisticsSnapshot
+import com.kurobello.tallybook.core.model.fold
+import com.kurobello.tallybook.core.model.map
 import com.kurobello.tallybook.core.model.monedas
 import com.kurobello.tallybook.core.model.viewedMoneda
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
@@ -250,9 +250,8 @@ internal class StatisticsViewModel(
 
   private suspend fun observe() = coroutineScope {
     launch { observePreferences() }
-    observeFrames(repositories, inputs, computationDispatcher, ::acceptCuentas).collect(
-        ::acceptFrame
-    )
+    observeFrames(repositories, inputs, computationDispatcher, ::acceptCuentas)
+        .collect(::acceptFrame)
   }
 
   private suspend fun observePreferences() {
@@ -270,7 +269,9 @@ internal class StatisticsViewModel(
       is DataOutcome.Success ->
           when (val state = outcome.data) {
             AppPreferencesState.Uninitialized ->
-                failContent(DataError.InvalidInput("Preferences are uninitialized after app startup"))
+                failContent(
+                    DataError.InvalidInput("Preferences are uninitialized after app startup")
+                )
             is AppPreferencesState.Ready ->
                 changeInputs { it.copy(primary = state.value.monedaPrincipal) }
           }
@@ -407,10 +408,9 @@ private fun observeFrames(
                 .flatMapLatest { key ->
                   if (key == null) flowOf(null)
                   else
-                      repositories.statistics
-                          .observe(key.context.request)
-                          .toSourceLoad()
-                          .map { Keyed(key, it) }
+                      repositories.statistics.observe(key.context.request).toSourceLoad().map {
+                        Keyed(key, it)
+                      }
                 },
             inputs
                 .map { it.detailKey }
@@ -429,10 +429,9 @@ private fun observeFrames(
                 .flatMapLatest { key ->
                   if (key == null) flowOf(null)
                   else
-                      repositories.actividades
-                          .observeYears(key.moneda)
-                          .toSourceLoad()
-                          .map { Keyed(key, it) }
+                      repositories.actividades.observeYears(key.moneda).toSourceLoad().map {
+                        Keyed(key, it)
+                      }
                 },
             inputs
                 .map { it.reload }
@@ -465,25 +464,23 @@ private fun observeCatalog(
 
 private fun StatisticsSources.toFrame(): StatisticsFrame {
   val catalogValue = catalog.value
-  val mainFrame =
-      main?.let { (key, load) ->
-        LoadedFrame(
-            key,
-            present(load, catalog.failure, catalogValue) { snapshot, names ->
-              presentStatistics(snapshot, key.context, names)
-            },
-        )
-      }
+  val mainFrame = main?.let { (key, load) ->
+    LoadedFrame(
+        key,
+        present(load, catalog.failure, catalogValue) { snapshot, names ->
+          presentStatistics(snapshot, key.context, names)
+        },
+    )
+  }
   val mainContent = mainFrame?.state?.cachedValue?.takeIf { detail?.key?.main == mainFrame.key }
-  val detailFrame =
-      detail?.let { (key, load) ->
-        LoadedFrame(
-            key,
-            present(load, catalog.failure, catalogValue) { snapshot, names ->
-              presentCategoryDetail(snapshot, key.rootId, key.main.context, names, mainContent)
-            },
-        )
-      }
+  val detailFrame = detail?.let { (key, load) ->
+    LoadedFrame(
+        key,
+        present(load, catalog.failure, catalogValue) { snapshot, names ->
+          presentCategoryDetail(snapshot, key.rootId, key.main.context, names, mainContent)
+        },
+    )
+  }
   return StatisticsFrame(
       mainFrame,
       detailFrame,

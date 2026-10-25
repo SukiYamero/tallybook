@@ -21,6 +21,8 @@ import com.kurobello.tallybook.feature.profile.viewmodel.ProfileViewModel
 import com.kurobello.tallybook.feature.search.viewmodel.SearchDateProvider
 import com.kurobello.tallybook.feature.search.viewmodel.SearchRepositories
 import com.kurobello.tallybook.feature.search.viewmodel.SearchViewModel
+import com.kurobello.tallybook.feature.statistics.viewmodel.StatisticsRepositories
+import com.kurobello.tallybook.feature.statistics.viewmodel.StatisticsViewModel
 import com.kurobello.tallybook.feature.tags.viewmodel.TagsViewModel
 import com.kurobello.tallybook.feature.transfers.viewmodel.ManageTransferenciaRepositories
 import com.kurobello.tallybook.feature.transfers.viewmodel.ManageTransferenciaViewModel
@@ -91,6 +93,22 @@ internal val viewModelModule = module {
         savedStateHandle = get(),
         unknownCategoryLabel = parameters.get(),
         dateProvider = SearchDateProvider(get(), get()),
+        computationDispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.DEFAULT)),
+    )
+  }
+  viewModel {
+    StatisticsViewModel(
+        repositories =
+            StatisticsRepositories(
+                preferences = get(),
+                statistics = get(),
+                actividades = get(),
+                categorias = get(),
+                etiquetas = get(),
+                cuentas = get(),
+            ),
+        savedStateHandle = get(),
+        civilToday = CivilToday(get(), get()),
         computationDispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.DEFAULT)),
     )
   }

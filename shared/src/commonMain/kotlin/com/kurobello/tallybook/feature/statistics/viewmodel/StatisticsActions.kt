@@ -5,6 +5,8 @@ import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.StatisticsKey
 import com.kurobello.tallybook.core.model.StatisticsScope
 
+// Every callback of the screen and its sheet, so the content composables depend on one interface.
+@Suppress("TooManyFunctions")
 internal interface StatisticsActions {
   fun onScopeChanged(scope: StatisticsScope)
 

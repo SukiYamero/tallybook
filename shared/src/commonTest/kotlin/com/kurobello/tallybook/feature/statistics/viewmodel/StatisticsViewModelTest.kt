@@ -122,9 +122,10 @@ class StatisticsViewModelTest {
     backgroundScope.launch { vm.uiState.collect {} }
     runCurrent()
 
-    val failed = assertIs<RetainedLoadState.Failed<StatisticsContent, StatisticsFailure>>(
-        vm.uiState.value.content
-    )
+    val failed =
+        assertIs<RetainedLoadState.Failed<StatisticsContent, StatisticsFailure>>(
+            vm.uiState.value.content
+        )
     assertIs<StatisticsFailure.Repository>(failed.failure)
     assertEquals(StatisticsSelection.initial(TODAY), vm.uiState.value.selection)
 

@@ -3,6 +3,7 @@ package com.kurobello.tallybook.feature.statistics.viewmodel
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.Change
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.StatisticsScope
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import kotlinx.datetime.YearMonth
@@ -20,14 +21,17 @@ internal data class CategoryDetailState(
 )
 
 /**
- * [shareBasisPoints] is the root's share of the period's gasto. [average] covers the complete
- * months shown and is null while only the month in progress is shown.
+ * The sheet's own copy of the read it shows, so it keeps describing that period while it closes
+ * after a change. [average] covers the complete months shown and is null while only the month in
+ * progress is shown.
  */
 internal data class CategoryDetailContent(
     val categoria: Categoria?,
     val label: StatisticsLabel,
     val color: StatisticsColor,
     val scope: StatisticsScope,
+    val period: MovimientoDateRange,
+    val partial: Boolean,
     val summary: CategoryDetailSummary,
     val months: List<CategoryMonth>,
     val average: CategoryAverage?,
@@ -35,6 +39,7 @@ internal data class CategoryDetailContent(
     val largest: List<CategoryLargest>,
 )
 
+/** [shareBasisPoints] is the root's share of the period's gasto. */
 internal data class CategoryDetailSummary(
     val total: String,
     val shareBasisPoints: Int?,

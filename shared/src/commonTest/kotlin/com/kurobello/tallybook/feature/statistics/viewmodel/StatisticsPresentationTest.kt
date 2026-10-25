@@ -1,9 +1,9 @@
 package com.kurobello.tallybook.feature.statistics.viewmodel
 
+import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryStatisticsSnapshot
 import com.kurobello.tallybook.core.model.CategoryTint
-import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.Change
 import com.kurobello.tallybook.core.model.DayGasto
 import com.kurobello.tallybook.core.model.DimensionTotal
@@ -107,7 +107,8 @@ class StatisticsPresentationTest {
         present(
             snapshot(
                 previous = null,
-                medios = listOf(DimensionTotal(StatisticsKey.Medio(MedioPago.DEBITO), clp(10), null)),
+                medios =
+                    listOf(DimensionTotal(StatisticsKey.Medio(MedioPago.DEBITO), clp(10), null)),
             )
         )
     assertNull(withoutPrevious.summary.change)
@@ -187,9 +188,7 @@ class StatisticsPresentationTest {
     assertEquals("$3.100", pace.projectionText)
 
     assertNull(present(snapshot(gastos = clp(0), months = months, daily = daily)).pace)
-    assertNull(
-        present(snapshot(months = months, daily = daily), scope = StatisticsScope.Year).pace
-    )
+    assertNull(present(snapshot(months = months, daily = daily), scope = StatisticsScope.Year).pace)
   }
 
   @Test
@@ -290,8 +289,7 @@ private val CATALOG =
                     categoria("super", "Super", padreId = "comida"),
                     categoria("ocio", "Ocio"),
                 )
-                .associateBy { it.id } +
-                (1..8).associate { "c$it" to categoria("c$it", "C$it") },
+                .associateBy { it.id } + (1..8).associate { "c$it" to categoria("c$it", "C$it") },
         etiquetas = mapOf("trip" to "Viaje"),
         cuentas = mapOf("visa" to "Visa"),
     )

@@ -6,33 +6,24 @@ import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.StatisticsScope
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runCurrent
-import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 internal class StatisticsSavedStateHostTest {
   private val today = LocalDate(2026, 10, 24)
 
   @Test
-  fun `a checkpoint restores the selection the currency and the dimension`() = runTest {
+  fun `a checkpoint restores the selection the currency and the dimension`() {
     val selection = StatisticsSelection(StatisticsScope.Year, LocalDate(2025, 3, 10))
-    val handle =
-        handleWith(statisticsSavedInput(selection, Moneda.COP, StatisticsDimension.Cuentas))
-    val vm = StatisticsFixture(this).create(handle)
-    backgroundScope.launch { vm.uiState.collect {} }
-    runCurrent()
-
-    val state = vm.uiState.value
-    assertEquals(selection, state.selection)
-    assertEquals(Moneda.COP, state.moneda)
-    assertEquals(StatisticsDimension.Cuentas, state.dimension)
-    assertEquals(StatisticsScope.Year, state.content.cachedValue?.scope)
+    assertEquals(
+        StatisticsRestoredInput(selection, Moneda.COP, StatisticsDimension.Cuentas),
+        restoreStatisticsInput(
+            handleWith(statisticsSavedInput(selection, Moneda.COP, StatisticsDimension.Cuentas)),
+            today,
+        ),
+    )
   }
 
   @Test

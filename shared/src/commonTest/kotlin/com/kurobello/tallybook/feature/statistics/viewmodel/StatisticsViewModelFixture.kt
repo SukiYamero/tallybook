@@ -9,7 +9,6 @@ import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.MutableClock
 import com.kurobello.tallybook.core.data.StatisticsRepository
-import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.Actividad
 import com.kurobello.tallybook.core.model.AppLocale
