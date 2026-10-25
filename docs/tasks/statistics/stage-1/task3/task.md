@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Agregar Vico 3.3.0 y construir los componentes de gráficos stateless y reutilizables en
+Agregar Vico 3.2.3 y construir los componentes de gráficos stateless y reutilizables en
 `core/ui/chart`. Reciben valores ya calculados y un resumen accesible, y no conocen ni el dominio ni
 los ViewModels.
 
@@ -13,19 +13,19 @@ los ViewModels.
 - Skills: `android-dev`, `compose`, `compose-component-design`, `compose-performance`,
   `compose-animations`, `compose-ui-testing-patterns` y `chrisbanes-skills:gradle-run`.
 - **Gate de APIs externas** (`docs/README.md`), antes de construir encima:
-  1. confirmar que la versión resuelta de `com.patrykandpatrick.vico:compose` es 3.3.0, que
+  1. confirmar que la versión resuelta de `com.patrykandpatrick.vico:compose` es 3.2.3, que
      `kotlinx-coroutines` pasa de la 1.10.2 resuelta hoy a 1.11.0, y que el POM declara Compose 1.11.1
      y Kotlin 2.4.10;
   2. verificar `CartesianChartHost`, `rememberCartesianChart`, `rememberColumnCartesianLayer`,
      `rememberLineCartesianLayer`, `CartesianChartModelProducer` y el marker contra la guía y el
-     código de la etiqueta `v3.3.0`;
+     código de la etiqueta `v3.2.3`;
   3. compilar `:shared:compileKotlinIosSimulatorArm64`.
 
   Si algo de esto falla, parar y reportar. No subir a otra versión.
 
 ## Archivos
 
-- Modificar: `gradle/libs.versions.toml` (`vico = "3.3.0"`, `kotlinx-coroutines = "1.11.0"`)
+- Modificar: `gradle/libs.versions.toml` (`vico = "3.2.3"`, `kotlinx-coroutines = "1.11.0"`)
 - Modificar: `shared/build.gradle.kts` (`commonMain`)
 - Modificar: `shared/src/commonMain/kotlin/com/kurobello/tallybook/core/ui/theme/Dimensions.kt`
   (alturas y grosores de los gráficos)

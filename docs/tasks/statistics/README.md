@@ -98,7 +98,11 @@ Defaults del plan (cambiarlos implica re-planificar):
 
 ## Librería
 
-**Vico `com.patrykandpatrick.vico:compose:3.3.0`, fijado.** La 3.3.1 pide Compose 1.12.
+**Vico `com.patrykandpatrick.vico:compose:3.2.3`, fijado.** El AAR de Android de la 3.3.0 declara
+`minCompileSdk=37`, y el proyecto compila con 36. La 3.2.3 declara 36 y pide Compose 1.11.0 (Gradle
+la resuelve a nuestra 1.11.1), coroutines 1.11.0 y Kotlin stdlib 2.3.21 (resuelto a 2.4.10).
+Publica `iosArm64` e `iosSimulatorArm64`. Antes de subir de versión, revisar el `minCompileSdk` del
+AAR.
 - Se usan dos piezas en un mismo `CartesianChart`: `ColumnCartesianLayer` + `LineCartesianLayer`.
   - Evolución: columnas de gastos e ingresos, más la línea de balance.
   - Ritmo: líneas, con la proyección como serie punteada.
@@ -165,7 +169,7 @@ S2 ya terminó, así que no hay dos escritores a la vez.
 
 ## Verificación final
 
-- **Gate de APIs externas** (S1/task3): versión resuelta de Vico y coroutines en
+- **Gate de APIs externas** (S1/task3, cumplido con Vico 3.2.3): versión resuelta de Vico y coroutines en
   `./gradlew :shared:dependencies`, POM en <https://central.sonatype.com/artifact/com.patrykandpatrick.vico/compose>,
   guía en <https://guide.vico.patrykandpatrick.com/> y `:shared:compileKotlinIosSimulatorArm64`.
 - **Contrato de integración** (S1/task1): un test host siembra subcategorías, tags múltiples,
