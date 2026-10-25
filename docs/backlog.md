@@ -66,7 +66,8 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
   Manual Xiaomi main-flow checks do not establish these cases; see
   [Manage movimientos](features/manage-movimientos.md#verification-boundaries). Statistics needs the
   same passes: TalkBack on the chart summaries and the category sheet, and enlarged text on its cards
-  and rows.
+  and rows, plus a light-theme and es-AR/pt-BR visual pass
+  (only dark theme in English was checked). TalkBack reads change labels like "▲ 12%" literally.
 
 - **Taxonomía detallada de errores** — `DataError` arranca con `Local`/`Unknown` en
   `docs/tasks/fundacion/wave-1/task1/task.md`; falta expandirlo (causas de red granulares, mapeo a
@@ -78,6 +79,10 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
   `Dispatchers.Default`). Mover el test a `commonTest` requiere reescribir esa aserción.
 
 ## Baja
+
+- **Search query-change scroll** — `SearchRoute` resets the list with `scrollToItem(0)` when the
+  query changes; like the first-entry focus bug, it can wait forever if the list was never measured
+  (a restored Search showing a changed query). Switch it to `requestScrollToItem(0)`.
 
 - **Smart entry polish** — Voice dictation is a placeholder (UI only). The sentence step's root is
   focusable to keep Android from auto-focusing the input, which adds an unlabeled focus stop;
