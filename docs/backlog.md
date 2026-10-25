@@ -2,6 +2,33 @@
 
 Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial, es lo pendiente ahora.
 
+## Orden de trabajo
+
+Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
+
+1. Destrabar los tests de dispositivo en el Xiaomi → *Android automated device checks and Search scale*.
+2. Estadísticas → *Producto*.
+3. Prueba completa en iPhone físico → *iOS physical end-to-end*.
+4. Tarjeta de crédito completa (cupo, vencimiento, recordatorio) → *Accounts follow-ups*.
+5. Presupuestos (sobre las consultas de Estadísticas) → *Accounts follow-ups*.
+6. Movimientos recurrentes → *Producto*.
+7. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
+   accessibility*, *Profile polish*.
+8. Google login + backup en Drive, cuando 2, 4, 5 y 6 estén cerrados → [plan](tasks/google-drive-persistence.md).
+9. Dictado por voz → *Smart entry polish*.
+10. Pulido chico → *Sentence amount above the cap*, *`ioDispatcher` en iOS*, *Unified Custom date-range picker*.
+11. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
+12. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
+
+## Producto
+
+- **Estadísticas** — Gasto por categoría del período (partes de un todo, posible por la categoría
+  única), comparación con el período anterior, evolución mes a mes y totales por tag, cuenta y medio.
+  Reusa el selector de período de Historial y agregados `SUM()` en SQL; falta decidir gráficos (Canvas
+  propio o librería compatible con CMP 1.11).
+- **Movimientos recurrentes** — Sueldo, alquiler, suscripciones: se generan al abrir la app (sin
+  trabajo en segundo plano) y se confirman con el flujo de resumen existente.
+
 ## Alta
 
 - **iOS physical end-to-end** — Shared production/test sources compile for Native, but physical
