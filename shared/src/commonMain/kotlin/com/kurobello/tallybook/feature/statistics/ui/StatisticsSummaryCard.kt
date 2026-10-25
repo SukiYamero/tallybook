@@ -14,6 +14,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.kurobello.tallybook.core.model.Change
 import com.kurobello.tallybook.core.model.Direction
+import com.kurobello.tallybook.core.ui.chart.changePercentText
 import com.kurobello.tallybook.core.ui.chart.color
 import com.kurobello.tallybook.core.ui.component.TallybookSurface
 import com.kurobello.tallybook.core.ui.component.TallybookText
@@ -85,9 +86,16 @@ private fun SummaryChange(change: Change) {
   val indicator = change.indicator()
   val description =
       when (change.direction) {
-        Direction.Up -> stringResource(Res.string.statistics_change_up_description, change.percent)
+        Direction.Up ->
+            stringResource(
+                Res.string.statistics_change_up_description,
+                changePercentText(change.percent),
+            )
         Direction.Down ->
-            stringResource(Res.string.statistics_change_down_description, change.percent)
+            stringResource(
+                Res.string.statistics_change_down_description,
+                changePercentText(change.percent),
+            )
         Direction.Flat -> stringResource(Res.string.statistics_change_flat_description)
       }
   TallybookText(

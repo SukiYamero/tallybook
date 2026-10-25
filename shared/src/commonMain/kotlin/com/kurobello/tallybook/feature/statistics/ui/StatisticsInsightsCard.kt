@@ -16,6 +16,7 @@ import com.composables.icons.lucide.Calendar
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.TrendingDown
 import com.composables.icons.lucide.TrendingUp
+import com.kurobello.tallybook.core.ui.chart.changePercentText
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.statistics.viewmodel.StatisticsComparison
@@ -47,7 +48,7 @@ internal fun StatisticsInsightsCard(
                 stringResource(
                     Res.string.statistics_insight_rose,
                     insight.label.text(),
-                    insight.percent,
+                    changePercentText(insight.percent),
                 ),
                 stringResource(Res.string.statistics_insight_more, insight.difference, than),
             )
@@ -58,7 +59,7 @@ internal fun StatisticsInsightsCard(
                 stringResource(
                     Res.string.statistics_insight_fell,
                     insight.label.text(),
-                    insight.percent,
+                    changePercentText(insight.percent),
                 ),
                 stringResource(Res.string.statistics_insight_less, insight.difference, than),
             )

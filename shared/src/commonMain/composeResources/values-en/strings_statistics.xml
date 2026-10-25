@@ -18,11 +18,11 @@
     <string name="statistics_than_year">than in %1$d</string>
     <string name="statistics_than_month_stretch">than the same days of %1$s</string>
     <string name="statistics_than_year_stretch">than the same stretch of %1$d</string>
-    <string name="statistics_change_up">▲ %1$d%</string>
-    <string name="statistics_change_down">▼ %1$d%</string>
+    <string name="statistics_change_up">▲ %1$s%</string>
+    <string name="statistics_change_down">▼ %1$s%</string>
     <string name="statistics_change_flat">= 0%</string>
-    <string name="statistics_change_up_description">%1$d% more</string>
-    <string name="statistics_change_down_description">%1$d% less</string>
+    <string name="statistics_change_up_description">%1$s% more</string>
+    <string name="statistics_change_down_description">%1$s% less</string>
     <string name="statistics_change_flat_description">No change</string>
     <string name="statistics_share">%1$d%</string>
     <string name="statistics_share_small">&lt;1%</string>
@@ -50,8 +50,8 @@
     <string name="statistics_legend_ingresos">Income</string>
     <string name="statistics_legend_balance">Balance</string>
     <string name="statistics_pace_title">This month’s pace</string>
-    <string name="statistics_pace_above">You’re %1$d% above your usual pace</string>
-    <string name="statistics_pace_below">You’re %1$d% below your usual pace</string>
+    <string name="statistics_pace_above">You’re %1$s% above your usual pace</string>
+    <string name="statistics_pace_below">You’re %1$s% below your usual pace</string>
     <string name="statistics_pace_even">You’re right at your usual pace</string>
     <string name="statistics_pace_projection">At this rate, you’ll end %1$s at %2$s. Your average for previous months is %3$s.</string>
     <string name="statistics_pace_today">Today · %1$s</string>
@@ -59,8 +59,8 @@
     <string name="statistics_pace_legend_projection">Projection</string>
     <string name="statistics_pace_description">Spending so far in %1$s: %2$s through today, projected %3$s, average %4$s.</string>
     <string name="statistics_insights_title">What changed</string>
-    <string name="statistics_insight_rose">%1$s rose %2$d%</string>
-    <string name="statistics_insight_fell">%1$s fell %2$d%</string>
+    <string name="statistics_insight_rose">%1$s rose %2$s%</string>
+    <string name="statistics_insight_fell">%1$s fell %2$s%</string>
     <string name="statistics_insight_more">%1$s more %2$s</string>
     <string name="statistics_insight_less">%1$s less %2$s</string>
     <string name="statistics_insight_biggest_day">Your biggest spending day</string>

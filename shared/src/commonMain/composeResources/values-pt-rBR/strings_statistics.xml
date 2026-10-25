@@ -18,11 +18,11 @@
     <string name="statistics_than_year">que em %1$d</string>
     <string name="statistics_than_month_stretch">que no mesmo período de %1$s</string>
     <string name="statistics_than_year_stretch">que no mesmo período de %1$d</string>
-    <string name="statistics_change_up">▲ %1$d%</string>
-    <string name="statistics_change_down">▼ %1$d%</string>
+    <string name="statistics_change_up">▲ %1$s%</string>
+    <string name="statistics_change_down">▼ %1$s%</string>
     <string name="statistics_change_flat">= 0%</string>
-    <string name="statistics_change_up_description">%1$d% a mais</string>
-    <string name="statistics_change_down_description">%1$d% a menos</string>
+    <string name="statistics_change_up_description">%1$s% a mais</string>
+    <string name="statistics_change_down_description">%1$s% a menos</string>
     <string name="statistics_change_flat_description">Sem mudança</string>
     <string name="statistics_share">%1$d%</string>
     <string name="statistics_share_small">&lt;1%</string>
@@ -50,8 +50,8 @@
     <string name="statistics_legend_ingresos">Receitas</string>
     <string name="statistics_legend_balance">Saldo</string>
     <string name="statistics_pace_title">Ritmo do mês</string>
-    <string name="statistics_pace_above">Você está %1$d% acima do seu ritmo habitual</string>
-    <string name="statistics_pace_below">Você está %1$d% abaixo do seu ritmo habitual</string>
+    <string name="statistics_pace_above">Você está %1$s% acima do seu ritmo habitual</string>
+    <string name="statistics_pace_below">Você está %1$s% abaixo do seu ritmo habitual</string>
     <string name="statistics_pace_even">Você está no seu ritmo habitual</string>
     <string name="statistics_pace_projection">Se continuar assim, você fecha %1$s em %2$s. Sua média dos meses anteriores é %3$s.</string>
     <string name="statistics_pace_today">Hoje · %1$s</string>
@@ -59,8 +59,8 @@
     <string name="statistics_pace_legend_projection">Projeção</string>
     <string name="statistics_pace_description">Gasto acumulado de %1$s: %2$s até hoje, projeção %3$s, média %4$s.</string>
     <string name="statistics_insights_title">O que mudou</string>
-    <string name="statistics_insight_rose">%1$s subiu %2$d%</string>
-    <string name="statistics_insight_fell">%1$s caiu %2$d%</string>
+    <string name="statistics_insight_rose">%1$s subiu %2$s%</string>
+    <string name="statistics_insight_fell">%1$s caiu %2$s%</string>
     <string name="statistics_insight_more">%1$s a mais %2$s</string>
     <string name="statistics_insight_less">%1$s a menos %2$s</string>
     <string name="statistics_insight_biggest_day">Seu dia de maior gasto</string>

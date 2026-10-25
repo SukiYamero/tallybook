@@ -43,6 +43,7 @@ import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.Change
 import com.kurobello.tallybook.core.model.Direction
+import com.kurobello.tallybook.core.ui.chart.changePercentText
 import com.kurobello.tallybook.core.ui.chart.chartRankColor
 import com.kurobello.tallybook.core.ui.chart.chartRestColor
 import com.kurobello.tallybook.core.ui.chart.shareText
@@ -244,8 +245,16 @@ private fun HomePaceLine(change: Change) {
       TallybookText(
           text =
               when (change.direction) {
-                Direction.Up -> stringResource(Res.string.statistics_pace_above, change.percent)
-                Direction.Down -> stringResource(Res.string.statistics_pace_below, change.percent)
+                Direction.Up ->
+                    stringResource(
+                        Res.string.statistics_pace_above,
+                        changePercentText(change.percent),
+                    )
+                Direction.Down ->
+                    stringResource(
+                        Res.string.statistics_pace_below,
+                        changePercentText(change.percent),
+                    )
                 Direction.Flat -> stringResource(Res.string.statistics_pace_even)
               },
           color = TallybookTheme.colors.foreground.secondary,

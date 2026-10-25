@@ -298,7 +298,7 @@ class HomeScreenTest {
         .assertIsDisplayed()
     composeRule
         .onNodeWithText(
-            runBlocking { getString(Res.string.statistics_pace_above, 15) },
+            runBlocking { getString(Res.string.statistics_pace_above, "15") },
             useUnmergedTree = true,
         )
         .assertIsDisplayed()
@@ -332,7 +332,7 @@ class HomeScreenTest {
         .assertDoesNotExist()
     composeRule
         .onNodeWithText(
-            runBlocking { getString(Res.string.statistics_pace_above, 15) },
+            runBlocking { getString(Res.string.statistics_pace_above, "15") },
             useUnmergedTree = true,
         )
         .assertDoesNotExist()

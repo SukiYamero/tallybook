@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import com.kurobello.tallybook.core.model.Direction
 import com.kurobello.tallybook.core.ui.chart.TallybookChartTheme
 import com.kurobello.tallybook.core.ui.chart.TallybookPaceChart
+import com.kurobello.tallybook.core.ui.chart.changePercentText
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.statistics.viewmodel.StatisticsPace
@@ -28,8 +29,10 @@ internal fun StatisticsPaceCard(pace: StatisticsPace, modifier: Modifier = Modif
   val month = monthName(pace.today.month)
   val headline =
       when (pace.change.direction) {
-        Direction.Up -> stringResource(Res.string.statistics_pace_above, pace.change.percent)
-        Direction.Down -> stringResource(Res.string.statistics_pace_below, pace.change.percent)
+        Direction.Up ->
+            stringResource(Res.string.statistics_pace_above, changePercentText(pace.change.percent))
+        Direction.Down ->
+            stringResource(Res.string.statistics_pace_below, changePercentText(pace.change.percent))
         Direction.Flat -> stringResource(Res.string.statistics_pace_even)
       }
   StatisticsCard(stringResource(Res.string.statistics_pace_title), modifier) {

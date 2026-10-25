@@ -37,9 +37,17 @@ internal fun shareText(basisPoints: Int): String =
             (basisPoints + HALF_PERCENT) / BASIS_POINTS_PER_PERCENT,
         )
 
+/**
+ * The number shown for a change of [percent]; past [MAX_SHOWN_PERCENT] the exact figure is noise,
+ * so it reads as a bound. Display only: rules keep comparing the exact value.
+ */
+internal fun changePercentText(percent: Int): String =
+    if (percent > MAX_SHOWN_PERCENT) ">$MAX_SHOWN_PERCENT" else percent.toString()
+
 internal fun shareFraction(basisPoints: Int): Float =
     basisPoints.toFloat() / (BASIS_POINTS_PER_PERCENT * BASIS_POINTS_PER_PERCENT)
 
 private const val SKIPPED_PALETTE_INDEX = 3
 private const val BASIS_POINTS_PER_PERCENT = 100
 private const val HALF_PERCENT = 50
+private const val MAX_SHOWN_PERCENT = 999

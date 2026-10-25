@@ -16,6 +16,7 @@ import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.StatisticsKey
 import com.kurobello.tallybook.core.model.StatisticsScope
 import com.kurobello.tallybook.core.model.StatisticsSnapshot
+import com.kurobello.tallybook.core.ui.chart.changePercentText
 import com.kurobello.tallybook.core.ui.chart.chartPaletteIndex
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -32,6 +33,14 @@ class StatisticsPresentationTest {
     assertEquals(
         listOf(0, 1, 2, 4, 5, 6, 7, 8, null),
         (0..8).map { chartPaletteIndex(it, PALETTE_SIZE) },
+    )
+  }
+
+  @Test
+  fun changePercentsPastNineHundredNinetyNineShowAsABound() {
+    assertEquals(
+        listOf("0", "999", ">999", ">999"),
+        listOf(0, 999, 1_000, 864_000).map(::changePercentText),
     )
   }
 

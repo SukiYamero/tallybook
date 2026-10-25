@@ -7,6 +7,7 @@ import com.kurobello.tallybook.core.model.Direction
 import com.kurobello.tallybook.core.ui.account.labelResource
 import com.kurobello.tallybook.core.ui.chart.ChangeIndicator
 import com.kurobello.tallybook.core.ui.chart.ChangeTone
+import com.kurobello.tallybook.core.ui.chart.changePercentText
 import com.kurobello.tallybook.core.ui.chart.chartRankColor
 import com.kurobello.tallybook.core.ui.chart.chartRestColor
 import com.kurobello.tallybook.feature.statistics.viewmodel.StatisticsColor
@@ -47,12 +48,12 @@ internal fun Change.indicator(): ChangeIndicator =
     when (direction) {
       Direction.Up ->
           ChangeIndicator(
-              stringResource(Res.string.statistics_change_up, percent),
+              stringResource(Res.string.statistics_change_up, changePercentText(percent)),
               ChangeTone.Unfavorable,
           )
       Direction.Down ->
           ChangeIndicator(
-              stringResource(Res.string.statistics_change_down, percent),
+              stringResource(Res.string.statistics_change_down, changePercentText(percent)),
               ChangeTone.Favorable,
           )
       Direction.Flat ->
