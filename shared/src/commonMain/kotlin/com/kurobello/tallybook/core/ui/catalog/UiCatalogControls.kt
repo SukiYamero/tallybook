@@ -478,42 +478,40 @@ private fun currentCatalogDate(): LocalDate =
 private data class CatalogPeriodHeader(val title: String, val supportingText: String?)
 
 private val catalogIconButtonMatrix: @Composable () -> Unit = {
-  CatalogSection(title = stringResource(Res.string.ui_catalog_icon_buttons)) {
-    CatalogSurface {
-      Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space24)) {
-          CatalogSample(label = stringResource(Res.string.ui_catalog_state_default)) {
-            TallybookIconButton(
-                onClick = {},
-                icon = Lucide.X,
-                contentDescription = stringResource(Res.string.ui_catalog_icon_button),
-            )
-          }
-          CatalogSample(label = stringResource(Res.string.ui_catalog_state_emphasis)) {
-            TallybookIconButton(
-                onClick = {},
-                icon = Lucide.X,
-                contentDescription = stringResource(Res.string.ui_catalog_icon_button),
-                style = TallybookIconButtonStyle.Brand,
-            )
-          }
-          CatalogSample(label = stringResource(Res.string.ui_catalog_state_ghost)) {
-            TallybookIconButton(
-                onClick = {},
-                icon = Lucide.X,
-                contentDescription = stringResource(Res.string.ui_catalog_icon_button),
-                style = TallybookIconButtonStyle.Ghost,
-            )
-          }
-        }
-        CatalogSample(label = stringResource(Res.string.ui_catalog_state_disabled)) {
+  CatalogSurface {
+    Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space16)) {
+      Row(horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space24)) {
+        CatalogSample(label = stringResource(Res.string.ui_catalog_state_default)) {
           TallybookIconButton(
               onClick = {},
               icon = Lucide.X,
-              contentDescription = stringResource(Res.string.ui_catalog_disabled_icon_button),
-              enabled = false,
+              contentDescription = stringResource(Res.string.ui_catalog_icon_button),
           )
         }
+        CatalogSample(label = stringResource(Res.string.ui_catalog_state_emphasis)) {
+          TallybookIconButton(
+              onClick = {},
+              icon = Lucide.X,
+              contentDescription = stringResource(Res.string.ui_catalog_icon_button),
+              style = TallybookIconButtonStyle.Brand,
+          )
+        }
+        CatalogSample(label = stringResource(Res.string.ui_catalog_state_ghost)) {
+          TallybookIconButton(
+              onClick = {},
+              icon = Lucide.X,
+              contentDescription = stringResource(Res.string.ui_catalog_icon_button),
+              style = TallybookIconButtonStyle.Ghost,
+          )
+        }
+      }
+      CatalogSample(label = stringResource(Res.string.ui_catalog_state_disabled)) {
+        TallybookIconButton(
+            onClick = {},
+            icon = Lucide.X,
+            contentDescription = stringResource(Res.string.ui_catalog_disabled_icon_button),
+            enabled = false,
+        )
       }
     }
   }
