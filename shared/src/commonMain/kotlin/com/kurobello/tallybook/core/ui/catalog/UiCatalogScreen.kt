@@ -116,6 +116,7 @@ internal fun UiCatalogScreen(
       catalogEntryComponents(fixtures)
       catalogDataDisplay(title = dataDisplay, fixtures = fixtures)
       catalogCharts()
+      catalogStatistics()
     }
   }
 }
