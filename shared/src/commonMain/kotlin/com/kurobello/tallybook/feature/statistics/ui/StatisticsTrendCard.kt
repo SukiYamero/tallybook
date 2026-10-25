@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import com.kurobello.tallybook.core.ui.chart.TallybookChartTheme
 import com.kurobello.tallybook.core.ui.chart.TallybookTrendChart
 import com.kurobello.tallybook.core.ui.chart.TrendPoint
@@ -104,34 +106,28 @@ private fun SelectedMonth(month: StatisticsTrendMonth) {
         color = TallybookTheme.colors.foreground.secondary,
         style = TallybookTheme.typography.caption,
     )
-    Row(horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12)) {
-      TrendFigure(
-          stringResource(Res.string.statistics_legend_gastos),
-          month.gastosText,
-          Modifier.weight(1f),
-      )
-      TrendFigure(
-          stringResource(Res.string.statistics_legend_ingresos),
-          month.ingresosText,
-          Modifier.weight(1f),
-      )
-      TrendFigure(
-          stringResource(Res.string.statistics_legend_balance),
-          month.balanceText,
-          Modifier.weight(1f),
-      )
-    }
+    TrendFigure(stringResource(Res.string.statistics_legend_gastos), month.gastosText)
+    TrendFigure(stringResource(Res.string.statistics_legend_ingresos), month.ingresosText)
+    TrendFigure(stringResource(Res.string.statistics_legend_balance), month.balanceText)
   }
 }
 
+/** The amount keeps one line at its full width; a long label gives way and ellipsizes. */
 @Composable
-private fun TrendFigure(label: String, amount: String, modifier: Modifier) {
-  Column(modifier = modifier) {
+private fun TrendFigure(label: String, amount: String) {
+  Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
+      verticalAlignment = Alignment.CenterVertically,
+  ) {
     TallybookText(
         label,
+        modifier = Modifier.weight(1f),
         color = TallybookTheme.colors.foreground.tertiary,
         style = TallybookTheme.typography.caption,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
     )
-    TallybookText(amount, style = TallybookTheme.typography.bodyEmphasis)
+    TallybookText(amount, style = TallybookTheme.typography.bodyEmphasis, maxLines = 1)
   }
 }
