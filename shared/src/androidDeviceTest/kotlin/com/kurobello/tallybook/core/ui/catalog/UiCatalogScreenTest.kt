@@ -335,7 +335,10 @@ class UiCatalogScreenTest {
   }
 
   private fun scrollTo(key: String) {
-    composeRule.onNode(hasScrollToKeyAction()).performScrollToKey(key)
+    // Period pickers nest their own keyed rows, so only the outermost keyed list is the catalog.
+    composeRule
+        .onNode(hasScrollToKeyAction() and !hasAnyAncestor(hasScrollToKeyAction()))
+        .performScrollToKey(key)
   }
 
   private companion object {
