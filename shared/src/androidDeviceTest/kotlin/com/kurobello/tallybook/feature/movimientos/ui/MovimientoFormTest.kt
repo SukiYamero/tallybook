@@ -12,6 +12,8 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -27,6 +29,7 @@ import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.testing.closeSoftKeyboard
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoUiState
@@ -135,6 +138,7 @@ class MovimientoFormTest {
 
     composeRule
         .onNodeWithContentDescription(localizedString(Res.string.movimiento_amount_expense_prompt))
+        .performScrollTo()
         .performClick()
         .assertIsFocused()
     composeRule.onNodeWithContentDescription(addLabel).performClick()
@@ -227,7 +231,8 @@ class MovimientoFormTest {
       assertEquals(180, actions.descripcion.length)
       assertEquals(180, descripcion.length)
     }
-    composeRule.onNodeWithText("180/180").assertIsDisplayed()
+    composeRule.closeSoftKeyboard()
+    composeRule.onNodeWithText("180/180").performScrollTo().assertIsDisplayed()
   }
 
   @Test
@@ -244,7 +249,18 @@ class MovimientoFormTest {
     composeRule
         .onNodeWithContentDescription(localizedString(Res.string.category_picker_single_title))
         .performClick()
-    composeRule.onNodeWithText(otros.nombre).assertDoesNotExist()
+    // The form itself shows Otros as the pending category; only the picker must not offer it.
+    composeRule
+        .onNode(
+            hasText(otros.nombre) and
+                hasAnyAncestor(
+                    SemanticsMatcher.expectValue(
+                        SemanticsProperties.PaneTitle,
+                        localizedString(Res.string.category_picker_single_title),
+                    )
+                )
+        )
+        .assertDoesNotExist()
     composeRule.onNodeWithText(child.nombre).performClick()
 
     composeRule.runOnIdle { assertEquals(listOf(child.id), selections) }
@@ -359,8 +375,13 @@ class MovimientoFormTest {
     composeRule.setContent {
       TallybookTheme { MovimientoForm(state(submitAttempted = true), RecordingActions()) }
     }
+    // The error focuses the amount, so the real keyboard opens over the error until dismissed.
+    composeRule.closeSoftKeyboard()
 
-    composeRule.onNodeWithText(localizedString(Res.string.amount_required)).assertIsDisplayed()
+    composeRule
+        .onNodeWithText(localizedString(Res.string.amount_required))
+        .performScrollTo()
+        .assertIsDisplayed()
     composeRule
         .onNode(
             SemanticsMatcher.expectValue(
@@ -384,7 +405,9 @@ class MovimientoFormTest {
       }
     }
 
-    composeRule.onNodeWithText(amountOverflow).assertIsDisplayed()
+    // The error focuses the amount, so the real keyboard opens over the error until dismissed.
+    composeRule.closeSoftKeyboard()
+    composeRule.onNodeWithText(amountOverflow).performScrollTo().assertIsDisplayed()
   }
 
   @Test
@@ -435,16 +458,16 @@ class MovimientoFormTest {
       }
     }
 
-    composeRule.onNodeWithText(preferencesError).assertIsDisplayed()
-    composeRule.onNodeWithText(retryLabel).performClick()
-    composeRule.onNodeWithText("10").assertIsDisplayed()
+    composeRule.onNodeWithText(preferencesError).performScrollTo().assertIsDisplayed()
+    composeRule.onNodeWithText(retryLabel).performScrollTo().performClick()
+    composeRule.onNodeWithText("10").performScrollTo().assertIsDisplayed()
     composeRule.runOnIdle { assertEquals(1, actions.retryCount) }
 
     composeRule.runOnIdle { error = MovimientoFormError.SAVE_FAILED }
     composeRule.waitForIdle()
 
-    composeRule.onNodeWithText(saveError).assertIsDisplayed()
-    composeRule.onNodeWithText("10").assertIsDisplayed()
+    composeRule.onNodeWithText(saveError).performScrollTo().assertIsDisplayed()
+    composeRule.onNodeWithText("10").performScrollTo().assertIsDisplayed()
   }
 
   private fun localizedString(resource: StringResource, vararg args: Any): String = runBlocking {
