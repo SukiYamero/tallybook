@@ -6,19 +6,18 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 
 Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 
-1. Destrabar los tests de dispositivo en el Xiaomi → *Android automated device checks and Search scale*.
-2. Estadísticas → *Producto*.
-3. Prueba completa en iPhone físico → *iOS physical end-to-end*.
-4. Tarjeta de crédito completa (cupo, vencimiento, recordatorio) → *Accounts follow-ups*.
-5. Presupuestos (sobre las consultas de Estadísticas) → *Accounts follow-ups*.
-6. Movimientos recurrentes → *Producto*.
-7. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
+1. Estadísticas → *Producto*.
+2. Prueba completa en iPhone físico → *iOS physical end-to-end*.
+3. Tarjeta de crédito completa (cupo, vencimiento, recordatorio) → *Accounts follow-ups*.
+4. Presupuestos (sobre las consultas de Estadísticas) → *Accounts follow-ups*.
+5. Movimientos recurrentes → *Producto*.
+6. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
    accessibility*, *Profile polish*.
-8. Google login + backup en Drive, cuando 2, 4, 5 y 6 estén cerrados → [plan](tasks/google-drive-persistence.md).
-9. Dictado por voz → *Smart entry polish*.
-10. Pulido chico → *Sentence amount above the cap*, *`ioDispatcher` en iOS*, *Unified Custom date-range picker*.
-11. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
-12. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
+7. Google login + backup en Drive, cuando 1, 3, 4 y 5 estén cerrados → [plan](tasks/google-drive-persistence.md).
+8. Dictado por voz → *Smart entry polish*.
+9. Pulido chico → *Sentence amount above the cap*, *`ioDispatcher` en iOS*, *Unified Custom date-range picker*.
+10. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
+11. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
 
 ## Producto
 
@@ -53,26 +52,12 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 
 ## Media
 
-- **Android automated device checks and Search scale** — The 2,000-row isolated scale fixture is prepared
-  and compiled but unexecuted; dataset authorization and a usable runner remain prerequisites.
-  The Xiaomi UI runner stalls before the first assertion because MIUI rejects the test APK's
-  `ComponentActivity` launch (`ActivityTaskManager: Abort background activity starts`); enabling
-  MIUI's "USB debugging (Security settings)" developer option on the device is the expected
-  prerequisite. Prioritize runner repair before retrying, then execute the agreed bounded scale check
-  with correctness, latency, responsiveness and subscription/allocation evidence. Existing manual
-  Android evidence and precise limits live in [Search](features/search.md#verification-boundaries).
-  Smart entry fixtures (sentence dialog, review, form), management sheet fixtures, custom categories
-  fixtures (category form, Categories screen and sheets, quick-create, Profile → Categories
-  navigation, sheet-form keyboard scrolling), movimiento title fixtures (Search day
-  headings, signed amounts) and single category and tags fixtures (`CategorySingleFieldTest`,
-  `EtiquetaTagFieldTest`, `EtiquetaPickerSheetTest`, `TagsScreenTest`, `TagsNavigationTest`, the tag
-  filter in `SearchFilterSheetTest`, the catalog sections in `UiCatalogScreenTest`) and the screen snackbar lifecycle gate
-  (`TallybookScreenSnackbarTest`) also compile but remain
-  unexecuted after a bounded stalled-runner retry; execute them after runner repair, preserving their Back, reread-height and IME assertions.
-  Accounts fixtures (`AccountsScreenTest`, `AccountsNavigationTest`, `TransferFormTest`,
-  `MovimientoCuentaFieldTest`, `MovimientoRowMedioTest`, and the updated Home, History, Search, entry
-  and management fixtures, including the History/Search volume fixtures with transfers) are in the
-  same state: compiled, unexecuted, behind the same MIUI launch block.
+- **Search scale budgets** — The instrumented suite runs on the Xiaomi (runner recipe in
+  [AGENTS.md](../AGENTS.md#2-comandos--exactos-con-flags)): 1228/1228 pass. `SearchVolumeDeviceTest`
+  seeds 2,000 movimientos and 200 transfers in test-owned storage and asserts complete row counts,
+  scroll checkpoints, bottom-bar clearance and subscription start/stop counts. It only records latency
+  and memory (last run: reads 14–67 ms, filter settle 154–268 ms, rapid text 2.7 ms on the main queue,
+  Java heap 38–49 MB, PSS 199–243 MB); pending is agreeing on budgets for them and asserting them.
 
 - **Accounts acceptance gaps on Android** — On the confirmed Xiaomi, check the CSV export of
   accounts, medio and transfers. TalkBack (a row's medio, `CuentaBalanceRow`, the medio

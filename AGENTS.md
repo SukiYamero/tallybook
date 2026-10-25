@@ -38,6 +38,12 @@ performance, coroutines/Flow, Gradle), `android-skills` (KMP: `kmp-boundaries`, 
 - Build debug Android: `./gradlew :androidApp:assembleDebug`
 - Test unitario compartido (JVM/Android host): `./gradlew :shared:testAndroidHostTest`
 - Test compartido en simulador iOS: `./gradlew :shared:iosSimulatorArm64Test`
+- Tests de dispositivo Android (instrumentados, `shared/src/androidDeviceTest`), en este orden:
+  `ANDROID_SERIAL=<serial> ./gradlew :shared:installAndroidDeviceTest` →
+  `adb shell appops set com.kurobello.tallybook.shared.test 10021 allow` →
+  `adb shell am instrument -w -r [-e class <fqcn>[#método]] com.kurobello.tallybook.shared.test/androidx.test.runner.AndroidJUnitRunner`.
+  MIUI rechaza los arranques de actividad en segundo plano del APK de test salvo con la op 10021
+  (reinstalar la puede resetear), y `connectedAndroidDeviceTest` reinstala y se cuelga: no usarlo.
 - Instalar + lanzar en el Android físico conectado:
   `adb install -r androidApp/build/outputs/apk/debug/androidApp-debug.apk && adb shell am start -n com.kurobello.tallybook/.MainActivity`
 - iOS: abrir `iosApp/iosApp.xcodeproj` en Xcode y correr con Cmd+R sobre el iPhone físico

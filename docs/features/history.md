@@ -42,8 +42,7 @@ passes style and Android/device-fixture/Native compilation. An isolated preview 
 remain complete, amount right edges align, and narrow rows move the label above the trailing value.
 The preview uses no database or preferences; no production money was seeded. Original device settings
 and the production foreground app are preserved.
-The new retained/error/retry UI fixture is compiled but unexecuted because the instrumented runner
-remains blocked; manual ready-state checks do not establish runtime coverage of its failure branches.
+The retained/error/retry UI fixture runs as part of the full instrumented suite passes on the Xiaomi (1228/1228).
 
 Android app/device-test builds, shared host tests, Detekt and format checks pass. Independent review
 approved the shared loading contracts, Home integration and compact date selection controls.
@@ -52,8 +51,7 @@ Physical Xiaomi checks cover period selection, Home/History retention, Back, cre
 keyboard dismissal, Activity recreation and saved-Activity restoration. App smoke confirms compact
 Day/Week/Month headers, the shared year floor, leap-day singleton weeks and navigation retention.
 Test-only preview activities confirm slow-read placeholders and cached empty revalidation without
-reappearing skeletons. Placeholder sample text is absent from accessibility. Automated instrumentation
-of the loading transitions remains unconfirmed because the runner stalls before assertions.
+reappearing skeletons. Placeholder sample text is absent from accessibility. The loading-transition device tests pass.
 A single isolated 10,000-row probe passed; it establishes a target observation, not a capacity or leak guarantee.
 Future checks follow [proportional verification](../README.md#proportional-verification).
 

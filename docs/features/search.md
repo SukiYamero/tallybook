@@ -64,10 +64,9 @@ feedback and the shared History balance were visually checked; no production rec
 Custom checks cover visible endpoint labels, rejected inverted/future selections, same-day apply and
 reopening unchanged. Device rotation and keep-awake settings were restored.
 
-The instrumented UI runner stalled before assertions and was interrupted after bounded diagnosis:
-0/20 selected tests completed. APK compilation is not a UI-test pass; production-app manual smoke
-provides the Android runtime evidence. The isolated 2,000-row scale fixture is compiled but unexecuted,
-so no Search capacity/performance claim is made. These remaining checks are tracked in the backlog.
+Device tests: the full instrumented suite passes on the Xiaomi (1228/1228), including the isolated 2,000-row scale fixture, which asserts
+complete counts, scrolling and subscription lifecycle. Its latency and memory are recorded, not held
+to a budget, so no Search performance claim is made; the budgets are tracked in the backlog.
 Native compilation does not establish physical iPhone runtime behavior; no authorized iPhone was
 available. No production data was seeded. Future checks follow
 [proportional verification](../README.md#proportional-verification).
