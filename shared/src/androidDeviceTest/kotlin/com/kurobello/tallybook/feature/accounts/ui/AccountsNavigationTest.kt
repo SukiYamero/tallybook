@@ -101,7 +101,8 @@ internal class AccountsNavigationTest {
   }
 
   private fun withShell(block: () -> Unit) {
-    val fixture = PrimaryDeviceShell()
+    // The accounts under test are in COP, so the shell's user has COP as primary currency.
+    val fixture = PrimaryDeviceShell(Moneda.COP)
     try {
       composeRule.setContent {
         if (fixture.mounted.value) {

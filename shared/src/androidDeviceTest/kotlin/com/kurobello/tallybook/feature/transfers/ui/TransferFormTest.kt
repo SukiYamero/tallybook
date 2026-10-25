@@ -25,6 +25,7 @@ import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.ui.component.TallybookViewportOverlayHost
 import com.kurobello.tallybook.core.ui.navigation.PrimaryDeviceShell
 import com.kurobello.tallybook.core.ui.navigation.TallybookNavHost
+import com.kurobello.tallybook.core.ui.testing.closeSoftKeyboard
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.transfers.viewmodel.TransferDraftState
 import com.kurobello.tallybook.feature.transfers.viewmodel.TransferEntry
@@ -87,7 +88,8 @@ internal class TransferFormTest {
 
   @Test
   fun aTransferCreatedFromAnAccountCanBeDeletedAndRestoredWithUndo() {
-    val fixture = PrimaryDeviceShell()
+    // The accounts under test are in COP, so the shell's user has COP as primary currency.
+    val fixture = PrimaryDeviceShell(Moneda.COP)
     fixture.cuentas.cuentas.value += NEQUI
     composeRule.setContent {
       val owner = fixture.owner.value
@@ -116,6 +118,8 @@ internal class TransferFormTest {
       composeRule
           .onNode(hasSetTextAction() and hasContentDescription(text(Res.string.amount)))
           .performTextInput("150")
+      // The sheet footer leaves while the keyboard is open, as the user sees it.
+      composeRule.closeSoftKeyboard()
       composeRule.onNodeWithText(text(Res.string.transfer_create)).performClick()
 
       val route = "Efectivo → Nequi"

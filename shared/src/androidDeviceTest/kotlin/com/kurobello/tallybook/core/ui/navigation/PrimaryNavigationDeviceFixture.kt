@@ -81,7 +81,7 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
 
-internal class PrimaryDeviceShell {
+internal class PrimaryDeviceShell(monedaPrincipal: Moneda = Moneda.USD) {
   val movimientos = NavigationMovimientos()
   val cuentas = FakeCuentaRepository(listOf(NAVIGATION_CASH))
   val saldos = FakeSaldoRepository(listOf(CuentaSaldo(NAVIGATION_CASH, Money(125_000, Moneda.COP))))
@@ -100,7 +100,7 @@ internal class PrimaryDeviceShell {
               override fun currentLanguageTag() = "es-CO"
             }
           }
-          single<AppPreferencesRepository> { NavigationPreferences() }
+          single<AppPreferencesRepository> { NavigationPreferences(monedaPrincipal) }
           single<MovimientoRepository> { movimientos }
           single<ActividadRepository> { movimientos }
           single<CategoriaRepository> { NavigationCategories() }
@@ -329,7 +329,7 @@ internal class NavigationMovimientos : MovimientoRepository, ActividadRepository
   }
 
   override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
-      error("Category history is not expected in this fixture")
+      MutableStateFlow(DataOutcome.Success(emptyList()))
 
   override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> {
     rows.value += movimiento
@@ -391,9 +391,11 @@ private val navigationStorageOrder =
         .thenByDescending { it.createdAt }
         .thenByDescending { it.id }
 
-private class NavigationPreferences : AppPreferencesRepository {
+private class NavigationPreferences(monedaPrincipal: Moneda) : AppPreferencesRepository {
   override val preferences: Flow<DataOutcome<AppPreferencesState>> =
-      MutableStateFlow(DataOutcome.Success(AppPreferencesState.Ready(AppPreferences(Moneda.USD))))
+      MutableStateFlow(
+          DataOutcome.Success(AppPreferencesState.Ready(AppPreferences(monedaPrincipal)))
+      )
 
   override suspend fun initialize(monedaPrincipal: Moneda): DataOutcome<Unit> =
       DataOutcome.Success(Unit)
