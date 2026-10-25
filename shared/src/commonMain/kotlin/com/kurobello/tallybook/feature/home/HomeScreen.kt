@@ -38,6 +38,7 @@ internal fun HomeRoute(
     viewModel: HomeViewModel = koinViewModel(),
     onOpenMovimiento: ((String) -> Unit)? = null,
     onOpenAccounts: (() -> Unit)? = null,
+    onOpenStatistics: (() -> Unit)? = null,
 ) {
   val state = rememberHomeRouteState(viewModel)
   HomeScreen(
@@ -50,6 +51,7 @@ internal fun HomeRoute(
       bottomBarClearance = bottomBarClearance,
       onOpenMovimiento = onOpenMovimiento,
       onOpenAccounts = onOpenAccounts,
+      onOpenStatistics = onOpenStatistics,
   )
 }
 
@@ -65,6 +67,7 @@ internal fun HomeScreen(
     bottomBarClearance: Dp = TallybookTheme.spacing.space0,
     onOpenMovimiento: ((String) -> Unit)? = null,
     onOpenAccounts: (() -> Unit)? = null,
+    onOpenStatistics: (() -> Unit)? = null,
 ) {
   val presentation by rememberHomePresentation(uiState)
   val renderedState = presentation.state
@@ -101,6 +104,7 @@ internal fun HomeScreen(
         }
         else -> {
           homeBalance(renderedState, onOpenAccounts)
+          homeStatistics(renderedState, onOpenStatistics)
           homePopulated(renderedState, onOpenMovimiento)
         }
       }

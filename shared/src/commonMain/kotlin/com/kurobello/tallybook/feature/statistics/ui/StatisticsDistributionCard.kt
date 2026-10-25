@@ -10,6 +10,8 @@ import androidx.compose.ui.Modifier
 import com.kurobello.tallybook.core.ui.chart.DonutSlice
 import com.kurobello.tallybook.core.ui.chart.TallybookDistributionRow
 import com.kurobello.tallybook.core.ui.chart.TallybookDonut
+import com.kurobello.tallybook.core.ui.chart.shareFraction
+import com.kurobello.tallybook.core.ui.chart.shareText
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentOption
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentedControl
 import com.kurobello.tallybook.core.ui.component.TallybookSegmentedControlStyle

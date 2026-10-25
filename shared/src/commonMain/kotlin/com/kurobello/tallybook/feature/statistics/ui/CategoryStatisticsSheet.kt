@@ -22,6 +22,8 @@ import com.kurobello.tallybook.core.model.StatisticsScope
 import com.kurobello.tallybook.core.ui.category.CategoryAvatar
 import com.kurobello.tallybook.core.ui.chart.TallybookCategoryTrendChart
 import com.kurobello.tallybook.core.ui.chart.TallybookDistributionRow
+import com.kurobello.tallybook.core.ui.chart.shareFraction
+import com.kurobello.tallybook.core.ui.chart.shareText
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookIconButton

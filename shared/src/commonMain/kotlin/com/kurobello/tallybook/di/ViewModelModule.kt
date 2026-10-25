@@ -11,6 +11,7 @@ import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewMod
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryDateProvider
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryRepositories
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryViewModel
+import com.kurobello.tallybook.feature.home.HomeRepositories
 import com.kurobello.tallybook.feature.home.HomeViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoRepositories
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
@@ -43,10 +44,7 @@ internal val viewModelModule = module {
   }
   viewModel {
     HomeViewModel(
-        preferencesRepository = get(),
-        movimientoRepository = get(),
-        categoriaRepository = get(),
-        saldoRepository = get(),
+        repositories = HomeRepositories(get(), get(), get(), get(), get()),
         today = CivilToday(get(), get()),
     )
   }

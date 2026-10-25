@@ -99,4 +99,8 @@
         <item quantity="one">View the movement</item>
         <item quantity="other">View the %1$d movements</item>
     </plurals>
+
+    <string name="home_statistics_title">Your month in numbers</string>
+    <string name="home_statistics_more">See more</string>
+    <string name="home_statistics_open">See your statistics</string>
 </resources>

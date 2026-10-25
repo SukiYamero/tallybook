@@ -50,15 +50,6 @@ internal data class StatisticsContext(
   }
 }
 
-/**
- * The palette entry of the [rank]-th group, skipping the red one that reads as gasto; null once the
- * palette runs out, where the group takes the "Otras" color.
- */
-internal fun chartPaletteIndex(rank: Int, paletteSize: Int): Int? {
-  val index = if (rank < SKIPPED_PALETTE_INDEX) rank else rank + 1
-  return index.takeIf { rank >= 0 && it < paletteSize }
-}
-
 /** Throws [ArithmeticException] when a total leaves the Long range. */
 internal fun presentStatistics(
     snapshot: StatisticsSnapshot,
@@ -169,5 +160,4 @@ private fun Money.signedFormat(): String = if (minorUnits > 0) "+" + format() el
 
 internal fun Money.chartValue(): Double = minorUnits / TEN.pow(moneda.scale)
 
-private const val SKIPPED_PALETTE_INDEX = 3
 private const val TEN = 10.0

@@ -16,6 +16,7 @@ import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.StatisticsKey
 import com.kurobello.tallybook.core.model.StatisticsScope
 import com.kurobello.tallybook.core.model.StatisticsSnapshot
+import com.kurobello.tallybook.core.ui.chart.chartPaletteIndex
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

@@ -4,6 +4,7 @@ import android.view.KeyEvent
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
@@ -31,11 +32,13 @@ import org.junit.Rule
 import org.junit.Test
 import org.koin.compose.KoinIsolatedContext
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.home_statistics_open
 import tallybook.shared.generated.resources.navigation_home
 import tallybook.shared.generated.resources.navigation_statistics
 import tallybook.shared.generated.resources.search_count
 import tallybook.shared.generated.resources.search_remove_filter
 import tallybook.shared.generated.resources.statistics_detail_view
+import tallybook.shared.generated.resources.statistics_scope_year
 import tallybook.shared.generated.resources.statistics_title
 
 internal class StatisticsNavigationTest {
@@ -65,6 +68,27 @@ internal class StatisticsNavigationTest {
     }
   }
 
+  @Test
+  fun theHomeCardOpensStatisticsWithItsRetainedSelection() {
+    withShell {
+      statisticsTab().performClick()
+      composeRule
+          .onNode(hasText(text(Res.string.statistics_scope_year)) and hasClickAction())
+          .performClick()
+      homeTab().performClick()
+      homeTab().assertIsSelected()
+
+      composeRule.onNode(hasClickLabel(text(Res.string.home_statistics_open))).performClick()
+
+      statisticsTab().assertIsSelected()
+      composeRule
+          .onNode(hasText(text(Res.string.statistics_scope_year)) and hasClickAction())
+          .assertIsSelected()
+      systemBack()
+      homeTab().assertIsSelected()
+    }
+  }
+
   private fun statisticsTab() =
       composeRule.onNode(
           hasContentDescription(text(Res.string.navigation_statistics)) and hasClickAction()
@@ -77,6 +101,11 @@ internal class StatisticsNavigationTest {
       )
 
   private fun homeTab() = composeRule.onNodeWithContentDescription(text(Res.string.navigation_home))
+
+  private fun hasClickLabel(label: String) =
+      SemanticsMatcher("onClick label is $label") {
+        it.config.getOrNull(SemanticsActions.OnClick)?.label == label
+      }
 
   private fun text(resource: StringResource): String = runBlocking { getString(resource) }
 

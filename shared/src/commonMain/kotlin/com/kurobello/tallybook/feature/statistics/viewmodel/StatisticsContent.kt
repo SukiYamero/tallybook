@@ -112,7 +112,7 @@ internal sealed interface StatisticsLabel {
 }
 
 internal sealed interface StatisticsColor {
-  /** The [rank]-th chart color, see [chartPaletteIndex]. */
+  /** The [rank]-th chart color, see [com.kurobello.tallybook.core.ui.chart.chartPaletteIndex]. */
   data class Rank(val rank: Int) : StatisticsColor
 
   data object Otras : StatisticsColor

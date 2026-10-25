@@ -1,6 +1,5 @@
 package com.kurobello.tallybook.feature.statistics.ui
 
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.kurobello.tallybook.core.model.Change
@@ -8,10 +7,11 @@ import com.kurobello.tallybook.core.model.Direction
 import com.kurobello.tallybook.core.ui.account.labelResource
 import com.kurobello.tallybook.core.ui.chart.ChangeIndicator
 import com.kurobello.tallybook.core.ui.chart.ChangeTone
+import com.kurobello.tallybook.core.ui.chart.chartRankColor
+import com.kurobello.tallybook.core.ui.chart.chartRestColor
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.statistics.viewmodel.StatisticsColor
 import com.kurobello.tallybook.feature.statistics.viewmodel.StatisticsLabel
-import com.kurobello.tallybook.feature.statistics.viewmodel.chartPaletteIndex
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.activity_missing_account
@@ -20,13 +20,8 @@ import tallybook.shared.generated.resources.statistics_change_flat
 import tallybook.shared.generated.resources.statistics_change_up
 import tallybook.shared.generated.resources.statistics_general
 import tallybook.shared.generated.resources.statistics_otras
-import tallybook.shared.generated.resources.statistics_share
-import tallybook.shared.generated.resources.statistics_share_small
 import tallybook.shared.generated.resources.statistics_unknown_etiqueta
 import tallybook.shared.generated.resources.unknown_category
-
-private const val BASIS_POINTS_PER_PERCENT = 100
-private const val HALF_PERCENT = 50
 
 @Composable
 internal fun StatisticsLabel.text(): String =
@@ -41,27 +36,11 @@ internal fun StatisticsLabel.text(): String =
     }
 
 @Composable
-internal fun StatisticsColor.color(): Color {
-  val palette = TallybookTheme.colors.chart
-  val faint = TallybookTheme.colors.foreground.faint
-  return when (this) {
-    is StatisticsColor.Rank -> chartPaletteIndex(rank, palette.size)?.let(palette::get) ?: faint
-    StatisticsColor.Otras -> faint
-  }
-}
-
-/** Rounded half up; every listed group has gasto, so one that rounds to 0% reads as under 1%. */
-@Composable
-internal fun shareText(basisPoints: Int): String =
-    if (basisPoints in 0 until HALF_PERCENT) stringResource(Res.string.statistics_share_small)
-    else
-        stringResource(
-            Res.string.statistics_share,
-            (basisPoints + HALF_PERCENT) / BASIS_POINTS_PER_PERCENT,
-        )
-
-internal fun shareFraction(basisPoints: Int): Float =
-    basisPoints.toFloat() / (BASIS_POINTS_PER_PERCENT * BASIS_POINTS_PER_PERCENT)
+internal fun StatisticsColor.color(): Color =
+    when (this) {
+      is StatisticsColor.Rank -> chartRankColor(rank)
+      StatisticsColor.Otras -> chartRestColor()
+    }
 
 /** A gasto that grows is unfavorable. */
 @Composable

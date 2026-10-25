@@ -64,6 +64,8 @@ internal object TallybookDimensions {
   val chartDonutThickness = TallybookSpacing.space24
   val chartLegendDot = 10.dp
   val chartDistributionBarHeight = TallybookSpacing.space6
+  val chartStackedBarHeight = TallybookSpacing.space10
+  val chartStackedBarGap = TallybookSpacing.space2
   val chartDistributionShareWidth = TallybookSpacing.space40
   val chartTrendAreaHeight = 150.dp
   val chartCategoryTrendAreaHeight = 136.dp
