@@ -50,10 +50,10 @@ internal fun StatisticsColor.color(): Color {
   }
 }
 
-/** Rounded half up; a share too small to round to 1% still reads as present. */
+/** Rounded half up; every listed group has gasto, so one that rounds to 0% reads as under 1%. */
 @Composable
 internal fun shareText(basisPoints: Int): String =
-    if (basisPoints in 1 until HALF_PERCENT) stringResource(Res.string.statistics_share_small)
+    if (basisPoints in 0 until HALF_PERCENT) stringResource(Res.string.statistics_share_small)
     else
         stringResource(
             Res.string.statistics_share,

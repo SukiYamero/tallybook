@@ -133,7 +133,7 @@ private fun LazyListScope.statisticsCards(
 ) {
   val loadState = state.content
   item(key = "statistics-summary") {
-    StatisticsSummaryCard(content.summary, stale = loadState !is RetainedLoadState.Ready)
+    StatisticsSummaryCard(content.summary, stale = loadState is RetainedLoadState.Failed)
   }
   if (loadState is RetainedLoadState.Failed)
       item(key = "statistics-refresh-error") {
