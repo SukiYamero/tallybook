@@ -9,7 +9,6 @@ import com.kurobello.tallybook.core.ui.chart.ChangeIndicator
 import com.kurobello.tallybook.core.ui.chart.ChangeTone
 import com.kurobello.tallybook.core.ui.chart.chartRankColor
 import com.kurobello.tallybook.core.ui.chart.chartRestColor
-import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.statistics.viewmodel.StatisticsColor
 import com.kurobello.tallybook.feature.statistics.viewmodel.StatisticsLabel
 import org.jetbrains.compose.resources.stringResource
@@ -58,12 +57,4 @@ internal fun Change.indicator(): ChangeIndicator =
           )
       Direction.Flat ->
           ChangeIndicator(stringResource(Res.string.statistics_change_flat), ChangeTone.Neutral)
-    }
-
-@Composable
-internal fun ChangeTone.color(): Color =
-    when (this) {
-      ChangeTone.Unfavorable -> TallybookTheme.colors.status.danger.base
-      ChangeTone.Favorable -> TallybookTheme.colors.status.success.base
-      ChangeTone.Neutral -> TallybookTheme.colors.foreground.tertiary
     }

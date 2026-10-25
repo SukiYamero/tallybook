@@ -126,7 +126,7 @@ private class StatisticsFilterIds(
     val cuentaIds: Set<String> = emptySet(),
 )
 
-/** Search has no medio filter, so a medio opens nothing. */
+/** A Search filter request carries no medio, so a medio opens nothing. */
 private fun statisticsFilterIds(key: StatisticsKey): StatisticsFilterIds? =
     when (key) {
       is StatisticsKey.Categoria -> StatisticsFilterIds(categoryIds = setOf(key.id))

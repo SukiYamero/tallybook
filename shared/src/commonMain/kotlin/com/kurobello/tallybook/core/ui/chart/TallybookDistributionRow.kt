@@ -131,7 +131,7 @@ private fun DistributionBar(fraction: Float, color: Color) {
 }
 
 @Composable
-private fun ChangeTone.color(): Color =
+internal fun ChangeTone.color(): Color =
     when (this) {
       ChangeTone.Unfavorable -> TallybookTheme.colors.status.danger.base
       ChangeTone.Favorable -> TallybookTheme.colors.status.success.base
