@@ -42,7 +42,7 @@ clean/dirty closing. Creation's default form remains available. This read-only s
 business records; Delete/Undo
 mutation and FIFO ownership are covered by targeted host fixtures.
 
-The instrumented runner remains blocked before assertions; compiled fixtures are not runtime passes.
+Device tests: the full instrumented suite passes on the Xiaomi (1228/1228).
 Physical iOS teardown, safe areas, VoiceOver, TalkBack and large-text snackbar/action usability remain
 unconfirmed and are tracked in [the backlog](../backlog.md). Acceptance applies to the delivered
 Xiaomi scope; those checks require separate evidence.

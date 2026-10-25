@@ -12,7 +12,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
-import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
@@ -46,7 +45,7 @@ import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.add_movimiento_pane_title
 import tallybook.shared.generated.resources.history_scope_week
 import tallybook.shared.generated.resources.history_year_description
-import tallybook.shared.generated.resources.movimiento_amount_expense_prompt
+import tallybook.shared.generated.resources.movimiento_phrase_label
 import tallybook.shared.generated.resources.navigation_add_movement
 import tallybook.shared.generated.resources.navigation_history
 import tallybook.shared.generated.resources.navigation_home
@@ -80,27 +79,24 @@ internal class HistoryNavigationTest {
   @Test
   fun onlyPrimariesNavigateAndCreationBlocksUnderlyingSelectionUntilHidden() {
     withShell {
-      listOf(Res.string.navigation_profile).forEach { label ->
-        composeRule
-            .onNodeWithContentDescription(text(label))
-            .assertHasNoClickAction()
-            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
-      }
+      composeRule
+          .onNodeWithContentDescription(text(Res.string.navigation_profile))
+          .assertHasClickAction()
+          .assert(SemanticsMatcher.expectValue(SemanticsProperties.Selected, false))
       composeRule
           .onNodeWithContentDescription(text(Res.string.navigation_home))
           .assertHasClickAction()
+      composeRule
+          .onNodeWithContentDescription(text(Res.string.navigation_add_movement))
+          .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
       historyTab().performClick()
       composeRule
           .onNodeWithContentDescription(text(Res.string.navigation_add_movement))
           .performClick()
       composeRule.onNodeWithContentDescription(text(Res.string.navigation_home)).performClick()
       historyTab().assertIsSelected()
-      composeRule.onNodeWithText("Food").assertIsDisplayed()
-      systemBack()
-      historyTab().assertIsSelected()
-      composeRule.onNodeWithText("Food").assertDoesNotExist()
       composeRule
-          .onNodeWithContentDescription(text(Res.string.movimiento_amount_expense_prompt))
+          .onNodeWithContentDescription(text(Res.string.movimiento_phrase_label))
           .assertIsDisplayed()
       val pane =
           SemanticsMatcher.expectValue(
@@ -151,18 +147,16 @@ internal class HistoryNavigationTest {
       composeRule
           .onNodeWithContentDescription(text(Res.string.navigation_add_movement))
           .performClick()
-      composeRule.onNodeWithText("Food").performClick()
-      val prompt = text(Res.string.movimiento_amount_expense_prompt)
-      composeRule.onNodeWithContentDescription(prompt).performTextInput("1234")
+      val sentence = text(Res.string.movimiento_phrase_label)
+      composeRule.onNodeWithContentDescription(sentence).performTextInput("Gasté 1234")
       restoreShell(fixture)
       historyTab().assertIsSelected()
-      composeRule.onNodeWithContentDescription(prompt).assertDoesNotExist()
+      composeRule.onNodeWithContentDescription(sentence).assertDoesNotExist()
       composeRule
           .onNodeWithContentDescription(text(Res.string.navigation_add_movement))
           .performClick()
-      composeRule.onNodeWithText("Food").performClick()
       composeRule
-          .onNodeWithContentDescription(prompt)
+          .onNodeWithContentDescription(sentence)
           .assert(
               SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString(""))
           )

@@ -15,6 +15,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -209,7 +210,7 @@ class MovimientoSentenceStepTest {
     show(samples.completeSentence.copy(etiquetasLoad = EtiquetasLoad.UNAVAILABLE))
 
     composeRule.onNodeWithText(string(Res.string.tags_unavailable)).assertIsDisplayed()
-    composeRule.onNodeWithText(string(Res.string.retry)).performClick()
+    composeRule.onNodeWithText(string(Res.string.retry)).performScrollTo().performClick()
     composeRule
         .onNodeWithContentDescription(string(Res.string.tag_add_description))
         .assertDoesNotExist()

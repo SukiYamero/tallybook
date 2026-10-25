@@ -1,6 +1,8 @@
 package com.kurobello.tallybook.feature.search.ui
 
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
@@ -205,10 +207,27 @@ class SearchScreenTest {
 
   @Test
   fun settledCountAndRowsAreReadOnlyWhileControlsEmitIsolatedCallbacks() {
-    val actions = SearchTestActions()
+    var typed by mutableStateOf("")
+    // The field reflects what it emits, as the ViewModel does; a frozen query would be echoed back
+    // by the real keyboard once it resyncs.
+    val actions =
+        object : SearchTestActions() {
+          override fun onQueryChanged(query: String) {
+            super.onQueryChanged(query)
+            typed = query
+          }
+        }
     var filterRequests = 0
     composeRule.setContent {
-      TallybookTheme { SearchScreen(searchTestState, actions, {}, { filterRequests++ }, 0.dp) }
+      TallybookTheme {
+        SearchScreen(
+            searchTestState.copy(rawQuery = typed),
+            actions,
+            {},
+            { filterRequests++ },
+            0.dp,
+        )
+      }
     }
     composeRule
         .onNodeWithText(runBlocking { getPluralString(Res.plurals.search_count, 1, 1) })

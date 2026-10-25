@@ -24,6 +24,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
+import com.kurobello.tallybook.core.ui.testing.withKeyboardInputMode
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.math.abs
 import kotlin.test.assertEquals
@@ -64,16 +65,23 @@ class TallybookChoicePillTest {
   fun focusedPillKeepsKeyboardActivationWithTheCallerFocusModifier() {
     val requester = FocusRequester()
     var clicks = 0
-    composeRule.setContent {
-      TallybookTheme {
-        TallybookChoicePill("Last 7 days", false, { clicks++ }, Modifier.focusRequester(requester))
+    composeRule.withKeyboardInputMode {
+      composeRule.setContent {
+        TallybookTheme {
+          TallybookChoicePill(
+              "Last 7 days",
+              false,
+              { clicks++ },
+              Modifier.focusRequester(requester),
+          )
+        }
       }
+      composeRule.runOnIdle { requester.requestFocus() }
+      composeRule.onNodeWithText("Last 7 days").assertIsFocused().performKeyInput {
+        pressKey(Key.Enter)
+      }
+      composeRule.runOnIdle { assertEquals(1, clicks) }
     }
-    composeRule.runOnIdle { requester.requestFocus() }
-    composeRule.onNodeWithText("Last 7 days").assertIsFocused().performKeyInput {
-      pressKey(Key.Enter)
-    }
-    composeRule.runOnIdle { assertEquals(1, clicks) }
   }
 
   @Test

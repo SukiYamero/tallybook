@@ -15,6 +15,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -36,6 +37,7 @@ import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.testing.closeSoftKeyboard
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoEffect
@@ -75,8 +77,10 @@ class AddMovimientoSheetTest {
 
   @Test
   fun opensOnTheSentenceStepWithContinueDisabledUntilTextIsTyped() {
-    val actions = SheetRecordingActions()
     var phrase by mutableStateOf("")
+    // The field reflects what it emits, as the ViewModel does; a frozen value would be echoed back
+    // by the real keyboard once it resyncs.
+    val actions = SheetRecordingActions(onPhraseRecorded = { phrase = it })
     composeRule.setContent {
       TallybookTheme {
         AddMovimientoSheet(
@@ -92,10 +96,7 @@ class AddMovimientoSheetTest {
         .onNodeWithText(resourceString(Res.string.movimiento_phrase_continue))
         .assertIsNotEnabled()
     composeRule.onNodeWithTag(PHRASE_INPUT_TAG).performTextInput("Gasté 20.000")
-    composeRule.runOnIdle {
-      assertEquals("Gasté 20.000", actions.lastPhrase)
-      phrase = "Gasté 20.000"
-    }
+    composeRule.runOnIdle { assertEquals("Gasté 20.000", actions.lastPhrase) }
     composeRule
         .onNodeWithText(resourceString(Res.string.movimiento_phrase_continue))
         .assertIsEnabled()
@@ -363,15 +364,13 @@ class AddMovimientoSheetTest {
     val dateBounds =
         composeRule
             .onNodeWithContentDescription(resourceString(Res.string.date))
-            .fetchSemanticsNode()
-            .boundsInRoot
+            .getUnclippedBoundsInRoot()
     val amountBounds =
         composeRule
             .onNodeWithContentDescription(
                 resourceString(Res.string.movimiento_amount_expense_prompt)
             )
-            .fetchSemanticsNode()
-            .boundsInRoot
+            .getUnclippedBoundsInRoot()
 
     assertTrue(
         dateBounds.bottom <= amountBounds.top,
@@ -485,6 +484,8 @@ class AddMovimientoSheetTest {
             )
         )
         .assertExists()
+    // The error focuses the amount, so the real keyboard opens over the footer until dismissed.
+    composeRule.closeSoftKeyboard()
     assertSaveFullyReachable(navigationBarBottom)
   }
 
@@ -630,8 +631,10 @@ class AddMovimientoSheetTest {
   }
 
   @Suppress("TooManyFunctions")
-  private class SheetRecordingActions(private val onSubmitRequested: () -> Unit = {}) :
-      AddMovimientoActions {
+  private class SheetRecordingActions(
+      private val onPhraseRecorded: (String) -> Unit = {},
+      private val onSubmitRequested: () -> Unit = {},
+  ) : AddMovimientoActions {
     var submitCount = 0
     var continueCount = 0
     var fillManuallyCount = 0
@@ -668,6 +671,7 @@ class AddMovimientoSheetTest {
 
     override fun onPhraseChanged(value: String) {
       lastPhrase = value
+      onPhraseRecorded(value)
     }
 
     override fun onPhraseContinue() {

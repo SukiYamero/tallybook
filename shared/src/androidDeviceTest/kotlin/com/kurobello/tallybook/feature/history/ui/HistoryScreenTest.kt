@@ -20,6 +20,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasAnySibling
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -85,6 +86,7 @@ import tallybook.shared.generated.resources.history_transfer_count
 import tallybook.shared.generated.resources.loading
 import tallybook.shared.generated.resources.navigation_add_movement
 import tallybook.shared.generated.resources.navigation_history
+import tallybook.shared.generated.resources.payment_method_cash
 import tallybook.shared.generated.resources.retry
 import tallybook.shared.generated.resources.transfer_row_route
 import tallybook.shared.generated.resources.transfer_with_moneda
@@ -267,7 +269,12 @@ class HistoryScreenTest {
     }
     composeRule.onNodeWithText(originalTitle).assertExists()
     composeRule.onNodeWithText(pendingTitle).assertDoesNotExist()
-    composeRule.onNodeWithText(summary.balance.format()).assertExists()
+    composeRule
+        .onNode(
+            hasText(summary.balance.format()) and
+                hasAnySibling(hasText(localized(Res.string.history_period_balance)))
+        )
+        .assertExists()
     composeRule.onNodeWithText("Lunch with Ana").assertExists()
     composeRule.onNodeWithContentDescription(localized(Res.string.loading)).assertDoesNotExist()
     val empty =
@@ -668,7 +675,9 @@ class HistoryScreenTest {
     val row = HistoryMovimientoRowUi(movement.copy(titulo = null), null, fallback, fallback)
     composeRule.setContent { TallybookTheme { HistoryRow(row) } }
     composeRule
-        .onNodeWithContentDescription("$fallback, $type, -$\u00A01,00, COP")
+        .onNodeWithContentDescription(
+            "$fallback, $type, -$\u00A01,00, COP, ${localized(Res.string.payment_method_cash)}"
+        )
         .assertIsDisplayed()
         .assertHasNoClickAction()
   }

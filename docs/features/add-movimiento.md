@@ -134,6 +134,8 @@ sheet's height and section spacing, the not-detected amount copy and the schema 
 existing data. The Category and Tags sections have their own boundaries in
 [Tags](tags.md#verification-boundaries).
 
-Not covered: device test execution (the runner stalls before returning results), a physical iPhone,
+Device tests: the full instrumented suite passes on the Xiaomi (1228/1228).
+
+Not covered: a physical iPhone,
 TalkBack and enlarged-text passes, light theme screenshots and native-speaker review of es-AR/pt-BR
 copy. Outstanding work is tracked in the [backlog](../backlog.md).

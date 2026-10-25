@@ -1,13 +1,9 @@
 package com.kurobello.tallybook.feature.movimientos.ui
 
 import android.view.KeyEvent
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -23,6 +19,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.testing.awaitSoftKeyboard
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.EditMovimientoDraftState
 import com.kurobello.tallybook.feature.movimientos.viewmodel.EtiquetasLoad
@@ -64,7 +61,7 @@ class ManageMovimientoSheetTest {
     val actions = ManagementSheetActions()
     composeRule.setContent { TallybookTheme { ManageMovimientoContent(editSession(), actions) } }
     composeRule.onNodeWithText("12.34").assertIsNotFocused()
-    composeRule.onNodeWithText("Lunch").assertIsDisplayed()
+    composeRule.onNodeWithText("Lunch").performScrollTo().assertIsDisplayed()
     composeRule.onNodeWithText("Food").assertIsDisplayed()
     assertEditorActionPlacement()
     composeRule.onNodeWithText(managementString(Res.string.movimiento_save_changes)).performClick()
@@ -112,12 +109,14 @@ class ManageMovimientoSheetTest {
 
   @Test
   fun editorSubmissionAndPendingDiscardDisableHeaderAndFooterActions() {
-    composeRule.mainClock.autoAdvance = false
     val ready = editSession()
     var session by mutableStateOf(ready)
     composeRule.setContent {
       TallybookTheme { ManageMovimientoContent(session, ManagementSheetActions()) }
     }
+    // The sheet composes its content over its opening frames; only the state changes are frozen.
+    composeRule.waitForIdle()
+    composeRule.mainClock.autoAdvance = false
     composeRule.runOnIdle { session = ready.copy(isSubmitting = true) }
     composeRule.mainClock.advanceTimeByFrame()
     assertEditorActionsDisabled()
@@ -155,7 +154,7 @@ class ManageMovimientoSheetTest {
       }
     }
     composeRule.onNodeWithText("12.34").assertIsNotFocused()
-    composeRule.onNodeWithText("Lunch").assertIsDisplayed()
+    composeRule.onNodeWithText("Lunch").performScrollTo().assertIsDisplayed()
     composeRule.onNodeWithText(managementString(Res.string.movimiento_save_changes)).performClick()
     composeRule.onNodeWithText(managementString(Res.string.movimiento_cancel)).performClick()
     composeRule.runOnIdle {
@@ -169,10 +168,7 @@ class ManageMovimientoSheetTest {
     val actions = ManagementSheetActions()
     val movimiento = managementMovimiento()
     val edit = EditMovimientoDraftState(movimiento, movimiento.toDraft(), LocalDate(2026, 9, 15))
-    var imeBottom = 0
     composeRule.setContent {
-      val bottom = WindowInsets.ime.getBottom(LocalDensity.current)
-      SideEffect { imeBottom = bottom }
       TallybookTheme {
         ManageMovimientoContent(
             MovimientoManagementSession(
@@ -193,8 +189,8 @@ class ManageMovimientoSheetTest {
     val save = managementString(Res.string.movimiento_save_changes)
     val cancel = managementString(Res.string.movimiento_cancel)
     val amount = managementString(Res.string.movimiento_amount_expense_prompt)
-    composeRule.onNodeWithContentDescription(amount).performClick()
-    composeRule.waitUntil(5_000) { imeBottom > 0 }
+    composeRule.onNodeWithContentDescription(amount).performScrollTo().performClick()
+    composeRule.awaitSoftKeyboard(visible = true)
     composeRule.onNodeWithText(save).assertDoesNotExist()
     composeRule.onNodeWithText(cancel).assertDoesNotExist()
     composeRule
@@ -202,7 +198,7 @@ class ManageMovimientoSheetTest {
         .assertIsDisplayed()
         .assertIsEnabled()
     composeRule.onNodeWithContentDescription(amount).performImeAction()
-    composeRule.waitUntil(5_000) { imeBottom == 0 }
+    composeRule.awaitSoftKeyboard(visible = false)
     composeRule.onNodeWithText(save).assertIsDisplayed().assertIsEnabled().performClick()
     composeRule.onNodeWithText(cancel).assertIsDisplayed().assertIsEnabled().performClick()
     composeRule.runOnIdle {
@@ -440,5 +436,7 @@ private fun editSession(etiquetaIds: List<String> = emptyList()): MovimientoMana
       categorias = listOf(managementCategoria()),
       isCategoriesLoading = false,
       edit = EditMovimientoDraftState(movimiento, movimiento.toDraft(), LocalDate(2026, 9, 15)),
+      cuentas = listOf(USD_CASH),
+      isCuentasLoading = false,
   )
 }

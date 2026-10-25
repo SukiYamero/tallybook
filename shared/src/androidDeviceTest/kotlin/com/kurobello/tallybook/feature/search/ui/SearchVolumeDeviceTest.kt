@@ -11,10 +11,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onChildren
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToKey
 import androidx.compose.ui.test.performTouchInput
@@ -202,10 +205,13 @@ class SearchVolumeDeviceTest {
       composeRule.onNodeWithText(row.title).assertIsDisplayed()
     }
     list.performTouchInput { swipeUp() }
-    composeRule.onNodeWithText(rows.last().title).assertIsDisplayed()
+    // Transfers can sort after the last movimiento, so the list's own last item is the one that
+    // must clear the bottom bar once the end is reached.
+    val range = list.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange]
+    assertEquals(range.maxValue(), range.value())
+    val lastItem = list.onChildren().onLast().assertIsDisplayed()
     assertTrue(clearancePixels > 0f)
-    val bottom =
-        composeRule.onNodeWithText(rows.last().title).fetchSemanticsNode().boundsInRoot.bottom
+    val bottom = lastItem.fetchSemanticsNode().boundsInRoot.bottom
     assertTrue(list.fetchSemanticsNode().boundsInRoot.bottom - bottom >= clearancePixels)
   }
 

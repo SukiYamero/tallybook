@@ -12,6 +12,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kurobello.tallybook.core.model.CreditEstimate
@@ -22,6 +23,7 @@ import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.ui.account.CuentaBalance
 import com.kurobello.tallybook.core.ui.component.TallybookViewportOverlayHost
+import com.kurobello.tallybook.core.ui.testing.closeSoftKeyboard
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.accounts.viewmodel.AccountConfirmation
 import com.kurobello.tallybook.feature.accounts.viewmodel.AccountDraftState
@@ -131,6 +133,8 @@ class AccountsScreenTest {
     composeRule
         .onNode(hasSetTextAction() and hasContentDescription(text(Res.string.account_name_label)))
         .performTextReplacement("Daviplata")
+    // The sheet footer leaves while the keyboard is open, as the user sees it.
+    composeRule.closeSoftKeyboard()
     composeRule.onNodeWithText(text(Res.string.account_create)).assertIsEnabled().performClick()
 
     composeRule.runOnIdle {
@@ -223,7 +227,7 @@ class AccountsScreenTest {
     composeRule.onNodeWithText(text(Res.string.account_transfer)).assertDoesNotExist()
     canTransfer.value = true
     composeRule.onNodeWithText(text(Res.string.account_transfer)).performClick()
-    composeRule.onNodeWithText(text(Res.string.account_pay_card)).performClick()
+    composeRule.onNodeWithText(text(Res.string.account_pay_card)).performScrollTo().performClick()
     composeRule.runOnIdle { assertEquals(listOf("transfer", "pay-card"), actions.calls) }
 
     state.value = listed.copy(sheet = AccountSheet.forEdit(NEQUI, null, referenced = false))

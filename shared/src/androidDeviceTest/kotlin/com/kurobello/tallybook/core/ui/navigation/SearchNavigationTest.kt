@@ -24,6 +24,7 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.savedstate.compose.LocalSavedStateRegistryOwner
 import androidx.test.platform.app.InstrumentationRegistry
 import com.kurobello.tallybook.core.ui.component.TallybookViewportOverlayHost
+import com.kurobello.tallybook.core.ui.testing.withKeyboardInputMode
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.StringResource
@@ -89,6 +90,10 @@ internal class SearchNavigationTest {
 
   @Test
   fun filterDraftDiscardApplyAndClearKeepUnderlyingNavigationAndModalExclusive() {
+    composeRule.withKeyboardInputMode { filterDraftDiscardApplyAndClear() }
+  }
+
+  private fun filterDraftDiscardApplyAndClear() {
     withShell {
       searchTab().performClick()
       filters().performClick()

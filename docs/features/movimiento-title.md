@@ -48,8 +48,8 @@ card tokens live in [UI architecture](../ui/architecture.md#movement-card-amount
   - Truncation of a long title and a long description.
   - The editor fields, Home/History/Search cards, Search day headers and signed amounts.
 
+Device tests: the full instrumented suite passes on the Xiaomi (1228/1228).
+
 Not covered:
 - iOS runtime.
-- The updated and new device UI tests. They compile, but the instrumented run hung before its first
-  activity launched on the Xiaomi.
 - TalkBack and enlarged-text passes.

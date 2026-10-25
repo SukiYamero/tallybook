@@ -8,9 +8,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import kotlin.math.abs
@@ -45,7 +47,12 @@ class TallybookModalDialogTest {
       }
     }
 
-    val screen = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+    // The dialog is its own full-screen window, so its root is the screen it centers in.
+    val screen =
+        composeRule
+            .onNode(isRoot() and hasAnyDescendant(hasText(BODY)))
+            .fetchSemanticsNode()
+            .boundsInRoot
     val body = composeRule.onNodeWithText(BODY).fetchSemanticsNode().boundsInRoot
     val offset = abs(body.center.y - screen.center.y)
     assertTrue(offset < screen.height * CENTER_TOLERANCE, "Body is $offset off the center")

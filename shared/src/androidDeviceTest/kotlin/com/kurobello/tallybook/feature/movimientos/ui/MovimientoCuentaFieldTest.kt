@@ -7,8 +7,11 @@ import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -20,6 +23,7 @@ import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.ui.account.CuentaPickerSheet
+import com.kurobello.tallybook.core.ui.testing.closeSoftKeyboard
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.accounts.viewmodel.QuickCuentaViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoCuentaUi
@@ -153,9 +157,14 @@ class MovimientoCuentaFieldTest {
     composeRule.waitForIdle()
     assertEquals(TipoCuenta.BANCO, quick.uiState.value.draft?.tipo)
     composeRule
-        .onNode(hasSetTextAction() and hasText(string(Res.string.account_name_label)))
+        .onNode(hasSetTextAction() and hasContentDescription(string(Res.string.account_name_label)))
         .performTextInput("Nequi")
-    composeRule.onNodeWithText(string(Res.string.account_create)).performClick()
+    // The sheet footer leaves while the keyboard is open, as the user sees it.
+    composeRule.closeSoftKeyboard()
+    // The field's own entry point reads the same in some locales; the sheet's action is the target.
+    composeRule
+        .onNode(hasText(string(Res.string.account_create)) and hasAnyAncestor(isDialog()))
+        .performClick()
 
     composeRule.waitUntil(5_000) { cuentas.isNotEmpty() }
     val created = repository.cuentas.value.single { it.nombre == "Nequi" }

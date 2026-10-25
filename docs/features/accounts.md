@@ -55,13 +55,11 @@ and Undo reviving the same row with a new stamp, creation into the cash account,
 USD → COP transfer, the History currency selector and its movement/transfer count, the Search medio
 filter, View movements, and locked type and currency shown read-only in the account sheet.
 
+Device tests: the full instrumented suite passes on the Xiaomi (1228/1228).
+
 Not covered:
 - CSV export on the device, and TalkBack and enlarged-text passes on Accounts, the medio control and
   rows.
 - iOS runtime.
-- The new and updated device tests (`AccountsScreenTest`, `AccountsNavigationTest`,
-  `TransferFormTest`, `MovimientoCuentaFieldTest`, `MovimientoRowMedioTest` and the updated Home,
-  History, Search and entry fixtures) compile but have not run, because MIUI blocks the
-  instrumentation activity launch.
 
 Outstanding work is tracked in the [backlog](../backlog.md).

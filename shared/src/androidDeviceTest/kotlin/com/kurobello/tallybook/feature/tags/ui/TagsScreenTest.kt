@@ -19,6 +19,7 @@ import com.kurobello.tallybook.core.model.CategoriaRules
 import com.kurobello.tallybook.core.model.ETIQUETA_DESCRIPCION_MAX
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.ui.component.TallybookViewportOverlayHost
+import com.kurobello.tallybook.core.ui.testing.closeSoftKeyboard
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.tags.viewmodel.TagDeletion
 import com.kurobello.tallybook.feature.tags.viewmodel.TagRow
@@ -247,8 +248,10 @@ class TagsScreenTest {
 
   @Test
   fun theDescriptionCountsItsLengthAndATooLongOneBlocksSaving() {
-    val actions = RecordingActions()
     val sheet = mutableStateOf(TagSheet.forEdit(empresa.copy(descripcion = "Oficina"), count = 0L))
+    // The field reflects what it emits, as the ViewModel does; a frozen value would be echoed back
+    // by the real keyboard once it resyncs.
+    val actions = RecordingActions { sheet.value = sheet.value.copy(descripcion = it) }
     composeRule.setContent {
       TallybookTheme {
         TallybookViewportOverlayHost {
@@ -269,6 +272,8 @@ class TagsScreenTest {
         .onNodeWithContentDescription(text(Res.string.tag_description_label))
         .performTextReplacement("Oficina central")
     composeRule.runOnIdle { assertEquals(listOf("descripcion:Oficina central"), actions.calls) }
+    // The sheet footer leaves while the keyboard is open, as the user sees it.
+    composeRule.closeSoftKeyboard()
 
     sheet.value = sheet.value.copy(descripcion = "x".repeat(ETIQUETA_DESCRIPCION_MAX + 1))
     composeRule
@@ -346,7 +351,8 @@ class TagsScreenTest {
     getPluralString(resource, count, count)
   }
 
-  private class RecordingActions : TagsActions {
+  private class RecordingActions(private val onDescripcionRecorded: (String) -> Unit = {}) :
+      TagsActions {
     val opened = mutableListOf<TagSheetRequest>()
     val calls = mutableListOf<String>()
 
@@ -389,6 +395,7 @@ class TagsScreenTest {
 
     override fun onDescripcionChanged(value: String) {
       calls += "descripcion:$value"
+      onDescripcionRecorded(value)
     }
 
     override fun onCancelDelete() = Unit

@@ -43,6 +43,7 @@ internal fun MovimientoPrimaryFields(
     interactionEnabled: Boolean = true,
 ) {
   val focusManager = LocalFocusManager.current
+  val dataFieldsEnabled = interactionEnabled && !uiState.isSubmitting && !uiState.isLoading
   Column {
     MovimientoTypeSelector(
         selected = uiState.tipo,
@@ -58,7 +59,7 @@ internal fun MovimientoPrimaryFields(
                 onOpenPicker = selection.onChooseCuenta,
                 onCreateCuenta = selection.onCreateCuenta,
             ),
-        enabled = interactionEnabled && !uiState.isSubmitting && !uiState.isLoading,
+        enabled = dataFieldsEnabled,
     )
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
     MovimientoCategoryField(
@@ -66,7 +67,7 @@ internal fun MovimientoPrimaryFields(
         onChoose = selection.onChooseCategoria,
         onSuggestion = { actions.onCategoriaSelected(it.id) },
         onDeselect = selection.onDeselectCategoria,
-        enabled = interactionEnabled && !uiState.isSubmitting && !uiState.isLoading,
+        enabled = dataFieldsEnabled,
     )
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space16))
     MovimientoEtiquetasField(
@@ -81,13 +82,13 @@ internal fun MovimientoPrimaryFields(
             uiState.maxSelectableDate?.let {
               MovimientoDateFieldState(
                   uiState.fecha,
-                  interactionEnabled && !uiState.isSubmitting,
+                  dataFieldsEnabled,
                   it,
               )
             }
                 ?: MovimientoDateFieldState(
                     fecha = uiState.fecha,
-                    enabled = interactionEnabled && !uiState.isSubmitting,
+                    enabled = dataFieldsEnabled,
                 ),
         onFechaChanged = actions::onFechaChanged,
         modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -105,7 +106,7 @@ internal fun MovimientoPrimaryFields(
                 error = uiState.amountError?.message(),
                 prompt = movimientoAmountPrompt(uiState.tipo),
             ),
-        enabled = interactionEnabled && !uiState.isSubmitting && !uiState.isLoading,
+        enabled = dataFieldsEnabled,
         callbacks =
             MovimientoAmountFieldCallbacks(
                 onValueChange = actions::onAmountChanged,

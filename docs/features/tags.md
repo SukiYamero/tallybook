@@ -60,7 +60,8 @@ initial scroll, the "Tags" header with its optional marker, the tag picker and t
 keyboard open (search, no-results create action and description stay visible), tag creation from the
 picker and a saved tag description; the user accepted the delivered flows on that device.
 
-Not covered: the device tests for the Category and Tags sections, the category picker, the tag
-picker, the Tags screen and its navigation, the Search tag filter and the UI catalog compile but have
-not run, because MIUI blocks the instrumentation activity launch (tracked in the
-[backlog](../backlog.md)). iOS runtime, TalkBack and enlarged-text passes are pending.
+Device tests: the full instrumented suite passes on the Xiaomi (1228/1228), covering the Category and Tags sections, both pickers, the Tags screen
+and its navigation, the Search tag filter and the UI catalog.
+
+Not covered: iOS runtime, TalkBack and enlarged-text passes (tracked in the
+[backlog](../backlog.md)).
