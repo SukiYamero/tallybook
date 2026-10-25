@@ -81,13 +81,13 @@ internal fun MovimientoPrimaryFields(
             uiState.maxSelectableDate?.let {
               MovimientoDateFieldState(
                   uiState.fecha,
-                  interactionEnabled && !uiState.isSubmitting,
+                  interactionEnabled && !uiState.isSubmitting && !uiState.isLoading,
                   it,
               )
             }
                 ?: MovimientoDateFieldState(
                     fecha = uiState.fecha,
-                    enabled = interactionEnabled && !uiState.isSubmitting,
+                    enabled = interactionEnabled && !uiState.isSubmitting && !uiState.isLoading,
                 ),
         onFechaChanged = actions::onFechaChanged,
         modifier = Modifier.align(Alignment.CenterHorizontally),
