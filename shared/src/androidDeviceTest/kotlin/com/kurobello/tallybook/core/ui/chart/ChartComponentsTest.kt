@@ -10,11 +10,14 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -44,8 +47,9 @@ class ChartComponentsTest {
       }
     }
 
-    composeRule.onNodeWithContentDescription(SUMMARY).assertIsDisplayed()
-    composeRule.onNodeWithText(CENTER, useUnmergedTree = true).assertDoesNotExist()
+    // The unmerged tree still lists cleared descendants; accessibility reads the merged one.
+    composeRule.onNodeWithContentDescription(SUMMARY).assertIsDisplayed().assertHasNoChildren()
+    composeRule.onNodeWithText(CENTER).assertDoesNotExist()
   }
 
   @Test
@@ -121,9 +125,13 @@ class ChartComponentsTest {
       }
     }
 
-    composeRule.onNodeWithContentDescription(PACE_SUMMARY).assertIsDisplayed()
-    composeRule.onNodeWithContentDescription(CATEGORY_SUMMARY).assertIsDisplayed()
-    composeRule.onNodeWithText(MONTHS.first(), useUnmergedTree = true).assertDoesNotExist()
+    composeRule.onNodeWithContentDescription(PACE_SUMMARY).assertIsDisplayed().assertHasNoChildren()
+    composeRule
+        .onNodeWithContentDescription(CATEGORY_SUMMARY)
+        .assertIsDisplayed()
+        .assertHasNoChildren()
+    composeRule.onNodeWithText(CENTER).assertDoesNotExist()
+    composeRule.onNodeWithText(MONTHS.first()).assertDoesNotExist()
   }
 
   @Test
@@ -170,12 +178,16 @@ class ChartComponentsTest {
     val rootWidth = composeRule.onRoot().getBoundsInRoot().width
     val bounds = List(ROW_COUNT) { composeRule.onNodeWithTag(rowTag(it)).getBoundsInRoot() }
     bounds.forEach { row ->
-      assertEquals(rootWidth, row.width)
-      assertEquals(bounds.first().height, row.height)
+      assertEquals(rootWidth.value, row.width.value, LAYOUT_TOLERANCE_DP)
+      assertEquals(bounds.first().height.value, row.height.value, LAYOUT_TOLERANCE_DP)
     }
   }
 
   private fun rowTag(index: Int) = "distribution-row-$index"
+
+  private fun SemanticsNodeInteraction.assertHasNoChildren() {
+    onChildren().assertCountEquals(0)
+  }
 
   private companion object {
     const val SUMMARY = "Gastos e ingresos de mayo a octubre"
@@ -187,6 +199,8 @@ class ChartComponentsTest {
     const val SHARE = "30%"
     const val CHANGE = "▲ 18%"
     const val HALF = 0.5f
+    /** Pixel bounds converted to dp differ in the last float digits between rows. */
+    const val LAYOUT_TOLERANCE_DP = 0.5f
     const val ROW_COUNT = 3
     const val TAPPED_SLOT = 2
     const val TAPPED_SLOT_CENTER = TAPPED_SLOT + 0.5f
