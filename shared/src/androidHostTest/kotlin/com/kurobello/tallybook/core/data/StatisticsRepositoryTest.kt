@@ -27,10 +27,12 @@ import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.SearchTipo
 import com.kurobello.tallybook.core.model.StatisticsKey
 import com.kurobello.tallybook.core.model.StatisticsRequest
+import com.kurobello.tallybook.core.model.StatisticsScope
 import com.kurobello.tallybook.core.model.StatisticsSnapshot
 import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.model.Transferencia
+import com.kurobello.tallybook.core.model.statisticsRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -45,6 +47,8 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.YearMonth
+import kotlinx.datetime.daysUntil
+import kotlinx.datetime.yearMonth
 
 class StatisticsRepositoryTest {
 
@@ -294,6 +298,45 @@ class StatisticsRepositoryTest {
               repository.observeCategory(categoryRequest(FOOD).copy(trend = midMonthTrend)).first(),
           )) {
         assertIs<DataError.InvalidInput>(assertIs<DataOutcome.Failure>(outcome).error)
+      }
+    }
+  }
+
+  @Test
+  fun `every request the ranges build passes validation`() = runTest {
+    withRepository { database, repository ->
+      database.seedSeptember()
+      val leapYearEnd = LocalDate(2028, 12, 31)
+      for ((scope, anchor, today) in
+          listOf(
+              Triple(StatisticsScope.Month, LocalDate(2026, 9, 30), LocalDate(2026, 10, 24)),
+              Triple(StatisticsScope.Month, LocalDate(2026, 10, 24), LocalDate(2026, 10, 24)),
+              Triple(StatisticsScope.Year, LocalDate(2026, 9, 30), LocalDate(2026, 10, 24)),
+              Triple(StatisticsScope.Year, LocalDate(2028, 2, 29), leapYearEnd),
+              Triple(StatisticsScope.Year, LocalDate(2027, 6, 1), leapYearEnd),
+          )) {
+        val request = statisticsRequest(scope, anchor, Moneda.COP, today)
+
+        val snapshot = success(repository.observe(request).first())
+
+        assertEquals(request.daily.start.daysUntil(request.daily.end) + 1, snapshot.daily.size)
+        assertEquals(
+            (request.trend.start.yearMonth..request.trend.end.yearMonth).count(),
+            snapshot.months.size,
+        )
+        assertIs<DataOutcome.Success<CategoryStatisticsSnapshot>>(
+            repository
+                .observeCategory(
+                    CategoryStatisticsRequest(
+                        Moneda.COP,
+                        FOOD,
+                        request.period,
+                        request.comparison,
+                        request.trend,
+                    )
+                )
+                .first()
+        )
       }
     }
   }
