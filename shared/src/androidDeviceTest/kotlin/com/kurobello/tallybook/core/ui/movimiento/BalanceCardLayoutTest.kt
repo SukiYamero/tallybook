@@ -19,6 +19,7 @@ import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import kotlin.math.ceil
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -88,7 +89,11 @@ class BalanceCardLayoutTest {
     node.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { action -> action(results) }
     val layout = results.single()
     assertEquals(1, layout.lineCount)
-    assertFalse(layout.didOverflowWidth)
+    // End-aligned text reports a paragraph as wide as its constraint while the node wraps the text,
+    // so didOverflowWidth is true even when nothing is cut; the node must hold the whole line.
+    assertTrue(
+        layout.size.width >= ceil(layout.multiParagraph.intrinsics.maxIntrinsicWidth).toInt()
+    )
     assertFalse(layout.didOverflowHeight)
   }
 }

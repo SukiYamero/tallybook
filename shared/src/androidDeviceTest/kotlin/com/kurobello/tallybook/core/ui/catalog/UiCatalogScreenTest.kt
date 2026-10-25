@@ -13,7 +13,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.filter
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
-import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasScrollToKeyAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
@@ -335,7 +335,7 @@ class UiCatalogScreenTest {
   }
 
   private fun scrollTo(key: String) {
-    composeRule.onNode(hasScrollAction()).performScrollToKey(key)
+    composeRule.onNode(hasScrollToKeyAction()).performScrollToKey(key)
   }
 
   private companion object {
