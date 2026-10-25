@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.SearchTipo
+import com.kurobello.tallybook.core.model.StatisticsKey
 import com.kurobello.tallybook.feature.search.ui.SearchFilterRequest
 
 /**
@@ -101,3 +102,35 @@ internal class PrimaryNavigator(
     searchFilterRequest = null
   }
 }
+
+/** Search over the gastos of one Statistics group in [moneda] and [range]. */
+internal fun PrimaryNavigator.showStatisticsFilter(
+    key: StatisticsKey,
+    moneda: Moneda,
+    range: MovimientoDateRange,
+) {
+  val ids = statisticsFilterIds(key) ?: return
+  showSearchFilter(
+      categoryIds = ids.categoryIds,
+      etiquetaIds = ids.etiquetaIds,
+      cuentaIds = ids.cuentaIds,
+      moneda = moneda,
+      range = range,
+      tipo = SearchTipo.GASTO,
+  )
+}
+
+private class StatisticsFilterIds(
+    val categoryIds: Set<String> = emptySet(),
+    val etiquetaIds: Set<String> = emptySet(),
+    val cuentaIds: Set<String> = emptySet(),
+)
+
+/** Search has no medio filter, so a medio opens nothing. */
+private fun statisticsFilterIds(key: StatisticsKey): StatisticsFilterIds? =
+    when (key) {
+      is StatisticsKey.Categoria -> StatisticsFilterIds(categoryIds = setOf(key.id))
+      is StatisticsKey.Etiqueta -> StatisticsFilterIds(etiquetaIds = setOf(key.id))
+      is StatisticsKey.Cuenta -> StatisticsFilterIds(cuentaIds = setOf(key.id))
+      is StatisticsKey.Medio -> null
+    }

@@ -13,12 +13,14 @@ internal data class PrimaryNavigationState(
     val secondary: Destination? = null,
     val searchVisited: Boolean = false,
     val profileVisited: Boolean = false,
+    val statisticsVisited: Boolean = false,
 ) {
   init {
     require(selected in primaryDestinations)
     require(selected != History || historyVisited)
     require(selected != Search || searchVisited)
     require(selected != Profile || profileVisited)
+    require(selected != Statistics || statisticsVisited)
     require(secondary == null || secondary.opensOver(selected))
   }
 
@@ -27,6 +29,7 @@ internal data class PrimaryNavigationState(
       add(Home)
       if (historyVisited) add(History)
       if (searchVisited) add(Search)
+      if (statisticsVisited) add(Statistics)
       if (profileVisited) add(Profile)
       secondary?.let(::add)
     }
@@ -48,6 +51,7 @@ internal data class PrimaryNavigationState(
                 historyVisited = historyVisited || destination == History,
                 searchVisited = searchVisited || destination == Search,
                 profileVisited = profileVisited || destination == Profile,
+                statisticsVisited = statisticsVisited || destination == Statistics,
                 secondary = null,
             )
       }
@@ -64,7 +68,8 @@ internal data class PrimaryNavigationState(
       }
 }
 
-private val primaryDestinations: Set<Destination> = setOf(Home, History, Search, Profile)
+private val primaryDestinations: Set<Destination> =
+    setOf(Home, History, Search, Statistics, Profile)
 
 private fun Destination.opensOver(primary: Destination): Boolean =
     when (this) {
@@ -75,6 +80,7 @@ private fun Destination.opensOver(primary: Destination): Boolean =
       Home,
       History,
       Search,
+      Statistics,
       Profile -> false
     }
 
@@ -83,6 +89,7 @@ internal fun initialPrimaryNavigation(start: Destination): PrimaryNavigationStat
       Home -> PrimaryNavigationState()
       History -> PrimaryNavigationState(History, historyVisited = true)
       Search -> PrimaryNavigationState(Search, searchVisited = true)
+      Statistics -> PrimaryNavigationState(Statistics, statisticsVisited = true)
       Profile -> PrimaryNavigationState(Profile, profileVisited = true)
       UiCatalog -> PrimaryNavigationState(secondary = UiCatalog)
       Categories,

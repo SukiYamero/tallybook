@@ -32,7 +32,6 @@ import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.back
 import tallybook.shared.generated.resources.navigation_home
 import tallybook.shared.generated.resources.navigation_profile
-import tallybook.shared.generated.resources.navigation_search
 import tallybook.shared.generated.resources.profile_tags_body
 import tallybook.shared.generated.resources.search_remove_filter
 import tallybook.shared.generated.resources.tag_edit_title
@@ -74,7 +73,7 @@ internal class TagsNavigationTest {
               runBlocking { getPluralString(Res.plurals.tag_view_movimientos_count, 2, 2) }
           )
           .performClick()
-      searchTab().assertIsSelected()
+      composeRule.assertSearchShownWithNoTabSelected()
       composeRule
           .onNodeWithContentDescription(
               runBlocking { getString(Res.string.search_remove_filter, EMPRESA.nombre) }
@@ -88,11 +87,6 @@ internal class TagsNavigationTest {
   private fun profileTab() =
       composeRule.onNode(
           hasContentDescription(text(Res.string.navigation_profile)) and hasClickAction()
-      )
-
-  private fun searchTab() =
-      composeRule.onNode(
-          hasContentDescription(text(Res.string.navigation_search)) and hasClickAction()
       )
 
   private fun homeTab() = composeRule.onNodeWithContentDescription(text(Res.string.navigation_home))

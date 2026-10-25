@@ -4,6 +4,14 @@ import android.os.Parcel
 import android.os.Parcelable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.SaveableStateRegistry
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.isSelected
+import androidx.compose.ui.test.junit4.ComposeTestRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModelStore
@@ -27,6 +35,7 @@ import com.kurobello.tallybook.core.data.FakeTransferenciaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.SaldoRepository
+import com.kurobello.tallybook.core.data.StatisticsRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.TransferenciaRepository
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
@@ -39,23 +48,33 @@ import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
+import com.kurobello.tallybook.core.model.CategoryStatisticsRequest
+import com.kurobello.tallybook.core.model.CategoryStatisticsSnapshot
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.CuentaSaldo
 import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.DayGasto
+import com.kurobello.tallybook.core.model.DimensionTotal
+import com.kurobello.tallybook.core.model.DimensionTotalOrder
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
+import com.kurobello.tallybook.core.model.MonthTotals
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
+import com.kurobello.tallybook.core.model.MovimientoPeriodRanges
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.RestoreResult
+import com.kurobello.tallybook.core.model.StatisticsKey
+import com.kurobello.tallybook.core.model.StatisticsRequest
+import com.kurobello.tallybook.core.model.StatisticsSnapshot
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -75,11 +94,33 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.YearMonth
+import kotlinx.datetime.plus
+import kotlinx.datetime.yearMonth
+import org.jetbrains.compose.resources.getString
 import org.koin.core.qualifier.named
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
+import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.search_placeholder
+
+internal val isPrimaryTab: SemanticsMatcher =
+    SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
+
+internal fun ComposeTestRule.assertNoTabSelected() {
+  onAllNodes(isPrimaryTab and isSelected()).assertCountEquals(0)
+}
+
+/** Search has no tab, so while it is open the bar marks none. */
+internal fun ComposeTestRule.assertSearchShownWithNoTabSelected() {
+  onNodeWithContentDescription(runBlocking { getString(Res.string.search_placeholder) })
+      .assertIsDisplayed()
+  assertNoTabSelected()
+}
 
 internal class PrimaryDeviceShell(monedaPrincipal: Moneda = Moneda.USD) {
   val movimientos = NavigationMovimientos()
@@ -107,6 +148,7 @@ internal class PrimaryDeviceShell(monedaPrincipal: Moneda = Moneda.USD) {
           single<EtiquetaRepository> { FakeEtiquetaRepository() }
           single<CuentaRepository> { cuentas }
           single<SaldoRepository> { saldos }
+          single<StatisticsRepository> { movimientos }
           single<TransferenciaRepository> { FakeTransferenciaRepository(cuentas) }
           single<IdGenerator> { IdGenerator { "new-${ids.incrementAndGet()}" } }
           single<Clock> {
@@ -208,7 +250,9 @@ internal class NavigationParent(restored: SavedState?) :
   }
 }
 
-internal class NavigationMovimientos : MovimientoRepository, ActividadRepository {
+/** Statistics read the same rows as Search, so a category's count matches its filtered results. */
+internal class NavigationMovimientos :
+    MovimientoRepository, ActividadRepository, StatisticsRepository {
   override suspend fun defaultSelection(
       primary: Moneda,
       tipo: TipoMovimiento,
@@ -384,7 +428,117 @@ internal class NavigationMovimientos : MovimientoRepository, ActividadRepository
   }
 
   override suspend fun getAll(): DataOutcome<List<Movimiento>> = DataOutcome.Success(rows.value)
+
+  override fun observe(request: StatisticsRequest): Flow<DataOutcome<StatisticsSnapshot>> =
+      rows.map { values ->
+        val currency = values.filter { it.monto.moneda == request.moneda }
+        val period = currency.within(request.period)
+        val previous = request.comparison?.let { currency.within(it) }
+        DataOutcome.Success(
+            StatisticsSnapshot(
+                current = period.summary(request.moneda),
+                previous = previous?.summary(request.moneda),
+                categorias =
+                    period.totals(previous, request.moneda) {
+                      StatisticsKey.Categoria(it.categoriaId)
+                    },
+                etiquetas = emptyList(),
+                cuentas =
+                    period.totals(previous, request.moneda) { StatisticsKey.Cuenta(it.cuentaId) },
+                medios = period.totals(previous, request.moneda) { StatisticsKey.Medio(it.medio) },
+                months =
+                    request.trend.months().map { month ->
+                      MonthTotals(month, currency.within(month.range()).summary(request.moneda))
+                    },
+                daily =
+                    request.daily.days().map { day ->
+                      DayGasto(
+                          day,
+                          currency.within(MovimientoDateRange(day, day)).gastos(request.moneda),
+                      )
+                    },
+                hasAnyMovimiento = currency.isNotEmpty(),
+            )
+        )
+      }
+
+  override fun observeCategory(
+      request: CategoryStatisticsRequest
+  ): Flow<DataOutcome<CategoryStatisticsSnapshot>> = rows.map { values ->
+    val gastos = values.filter {
+      it.monto.moneda == request.moneda &&
+          it.tipo == TipoMovimiento.GASTO &&
+          it.categoriaId == request.rootId
+    }
+    val period = gastos.within(request.period)
+    val current = period.gastos(request.moneda)
+    val previous = request.comparison?.let { gastos.within(it).gastos(request.moneda) }
+    DataOutcome.Success(
+        CategoryStatisticsSnapshot(
+            current = current,
+            previous = previous,
+            count = period.size.toLong(),
+            subcategorias =
+                listOf(DimensionTotal(StatisticsKey.Categoria(request.rootId), current, previous)),
+            months =
+                request.trend.months().map { month ->
+                  month to gastos.within(month.range()).gastos(request.moneda)
+                },
+            largest =
+                period
+                    .sortedWith(
+                        compareByDescending<Movimiento> { it.monto }
+                            .thenByDescending { it.fecha }
+                            .thenBy { it.id }
+                    )
+                    .take(LARGEST_COUNT),
+        )
+    )
+  }
 }
+
+private fun List<Movimiento>.within(range: MovimientoDateRange) = filter {
+  it.fecha in range.start..range.end
+}
+
+private fun List<Movimiento>.gastos(moneda: Moneda) =
+    Money(filter { it.tipo == TipoMovimiento.GASTO }.sumOf { it.monto.minorUnits }, moneda)
+
+private fun List<Movimiento>.summary(moneda: Moneda) =
+    MovimientoSummary(
+        Money(filter { it.tipo == TipoMovimiento.INGRESO }.sumOf { it.monto.minorUnits }, moneda),
+        gastos(moneda),
+    )
+
+private fun List<Movimiento>.totals(
+    previous: List<Movimiento>?,
+    moneda: Moneda,
+    key: (Movimiento) -> StatisticsKey,
+): List<DimensionTotal> {
+  val current = filter { it.tipo == TipoMovimiento.GASTO }.groupBy(key)
+  val before = previous?.filter { it.tipo == TipoMovimiento.GASTO }?.groupBy(key)
+  return (current.keys + before?.keys.orEmpty())
+      .map { group ->
+        DimensionTotal(
+            group,
+            current[group].orEmpty().gastos(moneda),
+            before?.let { it[group].orEmpty().gastos(moneda) },
+        )
+      }
+      .sortedWith(DimensionTotalOrder)
+}
+
+private fun MovimientoDateRange.months(): List<YearMonth> =
+    generateSequence(start.yearMonth) { it.plus(1, DateTimeUnit.MONTH) }
+        .takeWhile { it <= end.yearMonth }
+        .toList()
+
+private fun MovimientoDateRange.days(): List<LocalDate> =
+    generateSequence(start) { it.plus(1, DateTimeUnit.DAY) }.takeWhile { it <= end }.toList()
+
+private fun YearMonth.range() = MovimientoPeriodRanges.calendarMonth(this)
+
+private const val LARGEST_COUNT = 3
 
 private val navigationStorageOrder =
     compareByDescending<Movimiento> { it.fecha }

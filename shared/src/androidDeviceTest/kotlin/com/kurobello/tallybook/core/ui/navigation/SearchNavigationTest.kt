@@ -10,7 +10,6 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
-import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -37,7 +36,6 @@ import tallybook.shared.generated.resources.home_search_placeholder
 import tallybook.shared.generated.resources.movimiento_amount_expense_prompt
 import tallybook.shared.generated.resources.navigation_add_movement
 import tallybook.shared.generated.resources.navigation_home
-import tallybook.shared.generated.resources.navigation_search
 import tallybook.shared.generated.resources.search_apply
 import tallybook.shared.generated.resources.search_filters
 import tallybook.shared.generated.resources.search_income
@@ -51,38 +49,37 @@ internal class SearchNavigationTest {
   @get:Rule val composeRule = createComposeRule()
 
   @Test
-  fun searchRetainsQueryScrollAndActualSavedEntryAcrossTabAndNewOwner() {
+  fun searchRetainsQueryAcrossHomeAndScrollAcrossANewOwner() {
     withShell { fixture ->
-      searchTab().performClick()
-      field().assertIsNotFocused().performTextInput("Item")
+      homeField().performClick()
+      composeRule.assertSearchShownWithNoTabSelected()
+      field().assertIsFocused().performTextInput("Item")
       systemBack()
       searchList().performScrollToNode(hasText("Item 35"))
       composeRule.onNodeWithText("Item 35").assertIsDisplayed()
-      homeTab().performClick()
-      searchTab().performClick()
-      composeRule.onNodeWithText("Item 35").assertIsDisplayed()
       restoreShell(fixture)
-      searchTab().assertIsSelected()
+      composeRule.assertNoTabSelected()
       composeRule.onNodeWithText("Item 35").assertIsDisplayed()
-      searchList().performScrollToNode(hasContentDescription(text(Res.string.search_placeholder)))
+      homeTab().performClick()
+      homeTab().assertIsSelected()
+      homeField().performClick()
       field().assertTextContains("Item")
     }
   }
 
   @Test
-  fun homeEntryRevealsDeeplyScrolledFieldAndFocusesOnceWhileTabReturnDoesNot() {
+  fun everyHomeEntryRevealsDeeplyScrolledFieldAndFocusesItAndBackReturnsHome() {
     withShell {
-      searchTab().performClick()
+      homeField().performClick()
+      field().assertIsFocused()
+      systemBack()
       field().assertIsNotFocused()
       searchList().performScrollToNode(hasText("Item 35"))
       homeTab().performClick()
-      composeRule.onNodeWithText(text(Res.string.home_search_placeholder)).performClick()
-      searchTab().assertIsSelected()
+      homeField().performClick()
+      composeRule.assertNoTabSelected()
       field().assertIsDisplayed().assertIsFocused()
       systemBack()
-      homeTab().performClick()
-      searchTab().performClick()
-      field().assertIsNotFocused()
       systemBack()
       homeTab().assertIsSelected()
     }
@@ -95,11 +92,11 @@ internal class SearchNavigationTest {
 
   private fun filterDraftDiscardApplyAndClear() {
     withShell {
-      searchTab().performClick()
+      homeField().performClick()
       filters().performClick()
       composeRule.onNodeWithText(text(Res.string.search_last_7_days)).performClick()
       homeTab().performClick()
-      searchTab().assertIsSelected()
+      composeRule.assertNoTabSelected()
       composeRule
           .onNodeWithContentDescription(text(Res.string.navigation_add_movement))
           .performClick()
@@ -125,10 +122,7 @@ internal class SearchNavigationTest {
     }
   }
 
-  private fun searchTab() =
-      composeRule.onNode(
-          hasContentDescription(text(Res.string.navigation_search)) and hasClickAction()
-      )
+  private fun homeField() = composeRule.onNodeWithText(text(Res.string.home_search_placeholder))
 
   private fun homeTab() = composeRule.onNodeWithContentDescription(text(Res.string.navigation_home))
 

@@ -42,6 +42,7 @@ import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.FakeSaldoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.SaldoRepository
+import com.kurobello.tallybook.core.data.StatisticsRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.data.cashCuenta
@@ -78,6 +79,7 @@ import com.kurobello.tallybook.feature.history.viewmodel.HistoryUiState
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryViewModel
 import com.kurobello.tallybook.feature.home.HomeViewModel
 import com.kurobello.tallybook.feature.home.rememberHomeRouteState
+import com.kurobello.tallybook.feature.statistics.viewmodel.FakeStatistics
 import java.io.Serializable as JavaSerializable
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -289,6 +291,7 @@ private class ShellSuite(private val scope: TestScope) {
             single<ActividadRepository> { repository }
             single<CuentaRepository> { FakeCuentaRepository(listOf(cashCuenta(Moneda.USD))) }
             single<SaldoRepository> { FakeSaldoRepository() }
+            single<StatisticsRepository> { FakeStatistics() }
             single<EtiquetaRepository> { FakeEtiquetaRepository() }
             single<CategoriaRepository> { ShellCategories() }
             single<Clock> {
@@ -440,6 +443,7 @@ private class ShellHarness(
                 }
               }
               Search,
+              Statistics,
               Profile,
               UiCatalog,
               Categories,

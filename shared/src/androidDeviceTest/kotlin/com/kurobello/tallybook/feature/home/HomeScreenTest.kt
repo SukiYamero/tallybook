@@ -52,7 +52,7 @@ import tallybook.shared.generated.resources.navigation_add_movement
 import tallybook.shared.generated.resources.navigation_history
 import tallybook.shared.generated.resources.navigation_home
 import tallybook.shared.generated.resources.navigation_profile
-import tallybook.shared.generated.resources.navigation_search
+import tallybook.shared.generated.resources.navigation_statistics
 import tallybook.shared.generated.resources.retry
 import tallybook.shared.generated.resources.ui_catalog_title
 
@@ -132,7 +132,7 @@ class HomeScreenTest {
             homeLabel,
             localizedString(Res.string.navigation_history),
             localizedString(Res.string.navigation_add_movement),
-            localizedString(Res.string.navigation_search),
+            localizedString(Res.string.navigation_statistics),
             localizedString(Res.string.navigation_profile),
         )
     composeRule.setContent { TallybookTheme { HostedHomeScreen(HomeUiState.loading(), {}, {}) } }
@@ -148,7 +148,7 @@ class HomeScreenTest {
     val otherDestinations =
         listOf(
             Res.string.navigation_history,
-            Res.string.navigation_search,
+            Res.string.navigation_statistics,
             Res.string.navigation_profile,
         )
     composeRule.setContent { TallybookTheme { HostedHomeScreen(HomeUiState.loading(), {}, {}) } }
