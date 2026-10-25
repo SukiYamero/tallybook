@@ -197,12 +197,36 @@ private fun basisPointsOf(amount: Money, total: Money): Int =
 
 /**
  * `value * multiplier / divisor` rounded half up; operands are non-negative, [divisor] positive.
+ * The product is never formed: a total near [Money.MAX_MINOR_UNITS] times 10,000 basis points
+ * overflows Long although the ratio itself is small, so the remainder is scaled by shift-and-add.
  */
 private fun roundedRatio(value: Long, multiplier: Long, divisor: Long): Long {
-  val numerator = timesExact(value, multiplier)
-  val quotient = numerator / divisor
-  val remainder = numerator % divisor
-  return if (remainder >= divisor - remainder) quotient + 1 else quotient
+  val part = value % divisor
+  var quotient = 0L
+  var remainder = 0L
+  for (bit in Long.SIZE_BITS - 1 - multiplier.countLeadingZeroBits() downTo 0) {
+    // Invariant: quotient * divisor + remainder = part * (the bits of multiplier read so far).
+    quotient *= 2
+    if (remainder >= divisor - remainder) {
+      remainder -= divisor - remainder
+      quotient += 1
+    } else {
+      remainder *= 2
+    }
+    if ((multiplier shr bit) and 1L == 1L) {
+      if (remainder >= divisor - part) {
+        remainder -= divisor - part
+        quotient += 1
+      } else {
+        remainder += part
+      }
+    }
+  }
+  // The fraction and its rounding add at most multiplier, so this is the only overflow left.
+  val whole = timesExact(value / divisor, multiplier)
+  if (whole > Long.MAX_VALUE - multiplier) throw ArithmeticException("Monto out of Long range")
+  val rounded = whole + quotient
+  return if (remainder >= divisor - remainder) rounded + 1 else rounded
 }
 
 private fun timesExact(a: Long, b: Long): Long {

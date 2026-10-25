@@ -38,6 +38,21 @@ class StatisticsRulesTest {
   }
 
   @Test
+  fun sharesOfTotalsAtTheMontoCapStayExact() {
+    val cap = Money.MAX_MINOR_UNITS
+    val exclusive = exclusiveShares(listOf(total("a", cap), total("b", cap / 3)))
+    val overlapping =
+        overlappingShares(
+            listOf(DimensionTotal(StatisticsKey.Etiqueta("t"), money(cap / 8), null)),
+            money(cap),
+        )
+
+    assertEquals(listOf(7500, 2500), exclusive.map { it.basisPoints })
+    assertEquals(listOf(1250), overlapping.map { it.basisPoints })
+    assertEquals(Change(200, Direction.Up), change(money(cap), money(cap / 3)))
+  }
+
+  @Test
   fun sevenExclusiveGroupsShowFiveAndGroupTheRestInOtras() {
     val totals =
         listOf(
