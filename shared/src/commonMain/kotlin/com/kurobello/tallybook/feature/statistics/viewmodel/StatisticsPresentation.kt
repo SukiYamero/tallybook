@@ -72,9 +72,17 @@ internal fun presentStatistics(
           ),
       trend = presentTrend(snapshot, context),
       pace = presentPace(snapshot, context),
-      insights = insights(snapshot).map { it.present(labels) },
+      insights = presentInsights(snapshot, labels),
   )
 }
+
+// Without gasto only "fell 100%" rows could apply, which the summary's comparison already says.
+private fun presentInsights(
+    snapshot: StatisticsSnapshot,
+    labels: StatisticsLabels,
+): List<StatisticsInsight> =
+    if (snapshot.current.gastos.minorUnits > 0) insights(snapshot).map { it.present(labels) }
+    else emptyList()
 
 private fun presentSummary(
     snapshot: StatisticsSnapshot,

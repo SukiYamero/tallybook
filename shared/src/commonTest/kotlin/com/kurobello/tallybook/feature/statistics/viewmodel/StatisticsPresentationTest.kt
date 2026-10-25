@@ -208,6 +208,19 @@ class StatisticsPresentationTest {
   }
 
   @Test
+  fun aPeriodWithoutGastoHasNoInsightsEvenWhenACategoriaFellToZero() {
+    val content =
+        present(
+            snapshot(
+                gastos = clp(0),
+                categorias = listOf(DimensionTotal(cat("ocio"), clp(0), clp(5_000))),
+            )
+        )
+
+    assertEquals(emptyList(), content.insights)
+  }
+
+  @Test
   fun theDetailNamesTheRootGeneralAndAveragesCompleteMonths() {
     val main =
         present(
