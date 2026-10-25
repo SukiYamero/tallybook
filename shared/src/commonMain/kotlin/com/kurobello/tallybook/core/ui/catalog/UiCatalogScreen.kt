@@ -115,6 +115,7 @@ internal fun UiCatalogScreen(
       catalogControlMatrices()
       catalogEntryComponents(fixtures)
       catalogDataDisplay(title = dataDisplay, fixtures = fixtures)
+      catalogCharts()
     }
   }
 }
