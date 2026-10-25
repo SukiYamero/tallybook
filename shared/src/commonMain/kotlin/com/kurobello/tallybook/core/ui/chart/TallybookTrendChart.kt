@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -59,6 +60,8 @@ internal fun TallybookTrendChart(
     modifier: Modifier = Modifier,
 ) {
   val selectedLabel = points.getOrNull(selectedIndex)?.label
+  // The balance line's points pad each edge by half their size, outside Vico's equal x slots.
+  val slotInset = TallybookTheme.dimensions.chartPointSize / 2
   Box(
       modifier =
           modifier.clearAndSetSemantics {
@@ -78,10 +81,10 @@ internal fun TallybookTrendChart(
           labels = points.map(TrendPoint::label),
           emphasizedIndex = selectedIndex.takeIf { it in points.indices },
           partialIndices = points.partialIndices(),
-          edgeInset = TallybookTheme.dimensions.chartPointSize / 2,
+          edgeInset = slotInset,
       )
     }
-    Row(modifier = Modifier.matchParentSize()) {
+    Row(modifier = Modifier.matchParentSize().padding(horizontal = slotInset)) {
       points.indices.forEach { index ->
         Box(
             Modifier.weight(1f).fillMaxHeight().clickable(
