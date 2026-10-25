@@ -47,9 +47,8 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
   and management fixtures, including the History/Search volume fixtures with transfers) are in the
   same state: compiled, unexecuted, behind the same MIUI launch block.
 
-- **Accounts acceptance gaps on Android** — On the confirmed Xiaomi, upgrade over the existing mock
-  dataset from schema 8 to 9 (`transferencia_con_monedas`) and check History/Search transfers and the
-  CSV export of accounts, medio and transfers. TalkBack (a row's medio, `CuentaBalanceRow`, the medio
+- **Accounts acceptance gaps on Android** — On the confirmed Xiaomi, check the CSV export of
+  accounts, medio and transfers. TalkBack (a row's medio, `CuentaBalanceRow`, the medio
   control) and enlarged-text/dark-theme passes on Accounts and the medio control are pending. The
   installation node's exclusion from auto backup and device transfer is covered only by host tests of
   the extraction rules. See [Accounts](features/accounts.md#verification-boundaries).

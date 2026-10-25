@@ -50,12 +50,12 @@ of the medio table, account locks and deletion, transfer validation and Undo, ba
 boundaries, sentence detection per language, the selection owners, History/Search activity reads and
 the CSV layout. One final independent review ran; its findings were fixed.
 
-On the Xiaomi M2012K11AG, over the existing mock dataset: the in-place upgrades 6 → 7 → 8, delete and
-Undo reviving the same row with a new stamp, creation into the cash account, Accounts with a USD → COP
-transfer, the History currency selector, the Search medio filter and View movements.
+On the Xiaomi M2012K11AG, over the existing mock dataset: the in-place upgrades 6 → 7 → 8 → 9, delete
+and Undo reviving the same row with a new stamp, creation into the cash account, Accounts with a
+USD → COP transfer, the History currency selector and its movement/transfer count, the Search medio
+filter, View movements, and locked type and currency shown read-only in the account sheet.
 
 Not covered:
-- The 8 → 9 upgrade on the device is pending.
 - CSV export on the device, and TalkBack and enlarged-text passes on Accounts, the medio control and
   rows.
 - iOS runtime.
