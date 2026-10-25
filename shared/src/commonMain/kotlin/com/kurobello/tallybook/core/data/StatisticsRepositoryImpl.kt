@@ -8,6 +8,7 @@ import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.DayGasto
 import com.kurobello.tallybook.core.model.DimensionTotal
+import com.kurobello.tallybook.core.model.DimensionTotalOrder
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
@@ -195,7 +196,7 @@ internal class StatisticsRepositoryImpl(
           .map { key ->
             DimensionTotal(key, current[key] ?: zero, previous?.let { it[key] ?: zero })
           }
-          .sortedWith(compareByDescending<DimensionTotal> { it.current }.thenBy { it.key.sortId })
+          .sortedWith(DimensionTotalOrder)
     }
 
     private fun totalsIn(
@@ -257,12 +258,3 @@ private fun storedMoney(total: Long?, moneda: Moneda): Money {
   check(minorUnits in 0..Money.MAX_MINOR_UNITS) { "Stored total is outside the supported range" }
   return Money(minorUnits, moneda)
 }
-
-private val StatisticsKey.sortId: String
-  get() =
-      when (this) {
-        is StatisticsKey.Categoria -> id
-        is StatisticsKey.Etiqueta -> id
-        is StatisticsKey.Cuenta -> id
-        is StatisticsKey.Medio -> medio.name
-      }

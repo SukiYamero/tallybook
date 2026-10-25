@@ -190,18 +190,7 @@ private fun notableMovement(total: DimensionTotal, periodGasto: Money): Category
 }
 
 private fun ranked(totals: List<DimensionTotal>): List<DimensionTotal> =
-    totals
-        .filter { it.current.minorUnits > 0 }
-        .sortedWith(compareByDescending<DimensionTotal> { it.current }.thenBy { it.key.rankId })
-
-private val StatisticsKey.rankId: String
-  get() =
-      when (this) {
-        is StatisticsKey.Categoria -> id
-        is StatisticsKey.Etiqueta -> id
-        is StatisticsKey.Cuenta -> id
-        is StatisticsKey.Medio -> medio.name
-      }
+    totals.filter { it.current.minorUnits > 0 }.sortedWith(DimensionTotalOrder)
 
 private fun basisPointsOf(amount: Money, total: Money): Int =
     roundedRatio(amount.minorUnits, BASIS_POINTS.toLong(), total.minorUnits).toInt()

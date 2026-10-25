@@ -32,6 +32,19 @@ internal sealed interface StatisticsKey {
  */
 internal data class DimensionTotal(val key: StatisticsKey, val current: Money, val previous: Money?)
 
+/** The order of every dimension list and of the shares built from one: current DESC, then id. */
+internal val DimensionTotalOrder: Comparator<DimensionTotal> =
+    compareByDescending<DimensionTotal> { it.current }.thenBy { it.key.sortId }
+
+private val StatisticsKey.sortId: String
+  get() =
+      when (this) {
+        is StatisticsKey.Categoria -> id
+        is StatisticsKey.Etiqueta -> id
+        is StatisticsKey.Cuenta -> id
+        is StatisticsKey.Medio -> medio.name
+      }
+
 internal data class MonthTotals(val month: YearMonth, val summary: MovimientoSummary)
 
 internal data class DayGasto(val fecha: LocalDate, val gasto: Money)
