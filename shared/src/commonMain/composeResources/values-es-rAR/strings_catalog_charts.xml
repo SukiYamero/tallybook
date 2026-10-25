@@ -13,8 +13,8 @@
     <string name="ui_catalog_chart_today">Hoy · %1$s</string>
     <string name="ui_catalog_chart_long_label">Suscripciones y servicios digitales compartidos en familia</string>
     <string name="ui_catalog_chart_donut_caption">7 categorías</string>
-    <string name="ui_catalog_chart_share">%1$d%%</string>
-    <string name="ui_catalog_chart_change_up">▲ %1$d%%</string>
-    <string name="ui_catalog_chart_change_down">▼ %1$d%%</string>
+    <string name="ui_catalog_chart_share">%1$d%</string>
+    <string name="ui_catalog_chart_change_up">▲ %1$d%</string>
+    <string name="ui_catalog_chart_change_down">▼ %1$d%</string>
     <string name="ui_catalog_chart_change_flat">=</string>
 </resources>
