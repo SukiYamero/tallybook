@@ -21,7 +21,7 @@ CREATE TABLE movimiento (
 -- The stable recent order matches this index so SQLite can scan it without a temporary sort, and fecha
 -- leads for date-range reads. It is partial, so only a query whose WHERE implies deleted_at IS NULL can
 -- use it: every read through movimiento_con_etiquetas does, and the direct aggregates repeat the filter
--- so sumMovimientosPorCategoria still searches its fecha range here.
+-- so the Statistics sums still search their fecha range here.
 CREATE INDEX movimiento_recent ON movimiento(fecha DESC, created_at DESC, id DESC)
 WHERE deleted_at IS NULL;
 
@@ -204,7 +204,7 @@ UPDATE movimiento
 SET categoria_id = :categoria_id, updated_at = :stamp, deleted_at = NULL
 WHERE id = :id AND deleted_at IS NOT NULL;
 
--- The same range filter as sumMovimientosPorCategoria, so it also searches movimiento_recent.
+-- The same range filter as the Statistics sums, so it also searches movimiento_recent.
 sumMovimientosByTipoInRange:
 SELECT movimiento.tipo, SUM(movimiento.monto_minor) AS total_minor
 FROM movimiento
@@ -214,17 +214,140 @@ WHERE cuenta.moneda = ?
   AND movimiento.deleted_at IS NULL
 GROUP BY movimiento.tipo;
 
--- Grouped by tipo as well as categoria_id so gastos and ingresos in the same categoria never net
--- each other out. Filtered by moneda because minor units of different currencies are different units
--- and adding them is meaningless.
-sumMovimientosPorCategoria:
-SELECT movimiento.categoria_id, movimiento.tipo, SUM(movimiento.monto_minor) AS total_minor
+-- Statistics aggregates read live gastos (sumPorMes also ingresos) in one moneda over an inclusive
+-- fecha range. They filter the movimiento table directly, repeating deleted_at IS NULL so the range is
+-- searched in movimiento_recent, and join cuenta because minor units of different currencies are
+-- different units.
+
+-- A movimiento whose categoria row is missing (there are no foreign keys) groups under its own id,
+-- and tombstoned or hidden categorias still own their movimientos, so the roots add up to the total.
+sumGastoPorCategoriaRaiz:
+SELECT COALESCE(categoria.padre_id, movimiento.categoria_id) AS root_id,
+       SUM(movimiento.monto_minor) AS total_minor
 FROM movimiento
 JOIN cuenta ON cuenta.id = movimiento.cuenta_id
-WHERE cuenta.moneda = ?
-  AND movimiento.fecha BETWEEN ? AND ?
+LEFT JOIN categoria ON categoria.id = movimiento.categoria_id
+WHERE cuenta.moneda = :moneda
+  AND movimiento.fecha >= :start_date AND movimiento.fecha <= :end_date
   AND movimiento.deleted_at IS NULL
-GROUP BY movimiento.categoria_id, movimiento.tipo;
+  AND movimiento.tipo = 'GASTO'
+GROUP BY root_id;
+
+-- The category predicate of selectFilteredMovimientosByCategory, so the detail matches Search.
+sumGastoPorSubcategoria:
+SELECT movimiento.categoria_id, SUM(movimiento.monto_minor) AS total_minor
+FROM movimiento
+JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+WHERE cuenta.moneda = :moneda
+  AND movimiento.fecha >= :start_date AND movimiento.fecha <= :end_date
+  AND movimiento.deleted_at IS NULL
+  AND movimiento.tipo = 'GASTO'
+  AND (
+      +movimiento.categoria_id = :root_id
+      OR +movimiento.categoria_id IN (SELECT id FROM categoria WHERE padre_id = :root_id)
+  )
+GROUP BY movimiento.categoria_id;
+
+sumGastoCategoriaPorMes:
+SELECT substr(movimiento.fecha, 1, 7) AS month, SUM(movimiento.monto_minor) AS total_minor
+FROM movimiento
+JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+WHERE cuenta.moneda = :moneda
+  AND movimiento.fecha >= :start_date AND movimiento.fecha <= :end_date
+  AND movimiento.deleted_at IS NULL
+  AND movimiento.tipo = 'GASTO'
+  AND (
+      +movimiento.categoria_id = :root_id
+      OR +movimiento.categoria_id IN (SELECT id FROM categoria WHERE padre_id = :root_id)
+  )
+GROUP BY month;
+
+countGastoCategoria:
+SELECT COUNT(*)
+FROM movimiento
+JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+WHERE cuenta.moneda = :moneda
+  AND movimiento.fecha >= :start_date AND movimiento.fecha <= :end_date
+  AND movimiento.deleted_at IS NULL
+  AND movimiento.tipo = 'GASTO'
+  AND (
+      +movimiento.categoria_id = :root_id
+      OR +movimiento.categoria_id IN (SELECT id FROM categoria WHERE padre_id = :root_id)
+  );
+
+-- Through the view because the rows map to Movimiento with their etiquetas.
+selectGastosMasGrandesCategoria:
+SELECT *
+FROM movimiento_con_etiquetas
+WHERE monto_moneda = :moneda
+  AND fecha >= :start_date AND fecha <= :end_date
+  AND tipo = 'GASTO'
+  AND (
+      +categoria_id = :root_id
+      OR +categoria_id IN (SELECT id FROM categoria WHERE padre_id = :root_id)
+  )
+ORDER BY monto_minor DESC, fecha DESC, id
+LIMIT :limit;
+
+-- Each etiqueta adds the whole movimiento on purpose, so these totals overlap and never add up to
+-- the gasto total.
+sumGastoPorEtiqueta:
+SELECT movimiento_etiqueta.etiqueta_id, SUM(movimiento.monto_minor) AS total_minor
+FROM movimiento
+JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+JOIN movimiento_etiqueta ON movimiento_etiqueta.movimiento_id = movimiento.id
+WHERE cuenta.moneda = :moneda
+  AND movimiento.fecha >= :start_date AND movimiento.fecha <= :end_date
+  AND movimiento.deleted_at IS NULL
+  AND movimiento.tipo = 'GASTO'
+GROUP BY movimiento_etiqueta.etiqueta_id;
+
+sumGastoPorCuenta:
+SELECT movimiento.cuenta_id, SUM(movimiento.monto_minor) AS total_minor
+FROM movimiento
+JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+WHERE cuenta.moneda = :moneda
+  AND movimiento.fecha >= :start_date AND movimiento.fecha <= :end_date
+  AND movimiento.deleted_at IS NULL
+  AND movimiento.tipo = 'GASTO'
+GROUP BY movimiento.cuenta_id;
+
+sumGastoPorMedio:
+SELECT movimiento.medio_pago, SUM(movimiento.monto_minor) AS total_minor
+FROM movimiento
+JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+WHERE cuenta.moneda = :moneda
+  AND movimiento.fecha >= :start_date AND movimiento.fecha <= :end_date
+  AND movimiento.deleted_at IS NULL
+  AND movimiento.tipo = 'GASTO'
+GROUP BY movimiento.medio_pago;
+
+sumPorMes:
+SELECT substr(movimiento.fecha, 1, 7) AS month, movimiento.tipo, SUM(movimiento.monto_minor) AS total_minor
+FROM movimiento
+JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+WHERE cuenta.moneda = :moneda
+  AND movimiento.fecha >= :start_date AND movimiento.fecha <= :end_date
+  AND movimiento.deleted_at IS NULL
+GROUP BY month, movimiento.tipo;
+
+sumGastoPorDia:
+SELECT movimiento.fecha, SUM(movimiento.monto_minor) AS total_minor
+FROM movimiento
+JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+WHERE cuenta.moneda = :moneda
+  AND movimiento.fecha >= :start_date AND movimiento.fecha <= :end_date
+  AND movimiento.deleted_at IS NULL
+  AND movimiento.tipo = 'GASTO'
+GROUP BY movimiento.fecha;
+
+existsMovimientoEnMoneda:
+SELECT EXISTS (
+    SELECT 1
+    FROM movimiento
+    JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+    WHERE cuenta.moneda = :moneda AND movimiento.deleted_at IS NULL
+);
 
 -- defaultSelection's fallback order as ranked candidates: 0 the newest live movimiento (with
 -- :medio when given), 1 the primary cash account, 2 the primary currency, 3 any other cuenta. The
