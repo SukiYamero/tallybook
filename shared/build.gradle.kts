@@ -82,6 +82,7 @@ kotlin {
       implementation(libs.navigation3.ui)
       implementation(libs.sqldelight.runtime)
       implementation(libs.sqldelight.coroutinesExtensions)
+      implementation(libs.vico.compose)
     }
     iosMain.dependencies { implementation(libs.sqldelight.nativeDriver) }
     commonTest.dependencies {
