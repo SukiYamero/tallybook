@@ -92,6 +92,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
@@ -280,6 +281,9 @@ internal class NavigationMovimientos :
           }
       )
   val starts = AtomicInteger()
+
+  /** While false, Search reads stay pending, as a slow first query would. */
+  val searchReadsReleased = MutableStateFlow(true)
   val activeRanges = AtomicInteger()
   val activeRecent = AtomicInteger()
 
@@ -287,6 +291,7 @@ internal class NavigationMovimientos :
       criteria: MovimientoReadCriteria
   ): Flow<DataOutcome<MovimientoSearchSnapshot>> = flow {
     starts.incrementAndGet()
+    searchReadsReleased.first { it }
     emitAll(
         rows.map { values ->
           val currencyRows = values.filter { it.monto.moneda == criteria.moneda }

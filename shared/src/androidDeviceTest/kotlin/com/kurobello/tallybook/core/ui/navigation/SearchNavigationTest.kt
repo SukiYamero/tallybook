@@ -7,7 +7,6 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasContentDescription
@@ -72,8 +71,9 @@ internal class SearchNavigationTest {
     withShell {
       homeField().performClick()
       field().assertIsFocused()
+      // The first Back only dismisses the keyboard; Compose keeps the field focused.
       systemBack()
-      field().assertIsNotFocused()
+      composeRule.assertSearchShownWithNoTabSelected()
       searchList().performScrollToNode(hasText("Item 35"))
       homeTab().performClick()
       homeField().performClick()
@@ -82,6 +82,23 @@ internal class SearchNavigationTest {
       systemBack()
       systemBack()
       homeTab().assertIsSelected()
+    }
+  }
+
+  @Test
+  fun firstHomeEntryFocusesTheFieldWhileResultsLoadAndKeepsItOnceTheyArrive() {
+    withShell { fixture ->
+      fixture.movimientos.searchReadsReleased.value = false
+      homeField().performClick()
+      field().assertIsFocused()
+      fixture.movimientos.searchReadsReleased.value = true
+      composeRule.waitUntil(RESULTS_TIMEOUT_MILLIS) {
+        composeRule
+            .onAllNodes(hasText("Item ", substring = true))
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+      }
+      field().assertIsFocused()
     }
   }
 
@@ -177,3 +194,5 @@ internal class SearchNavigationTest {
     }
   }
 }
+
+private const val RESULTS_TIMEOUT_MILLIS = 5_000L

@@ -14,7 +14,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSerializable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -34,7 +33,6 @@ import com.kurobello.tallybook.feature.search.viewmodel.SearchFilterSessionId
 import com.kurobello.tallybook.feature.search.viewmodel.SearchUiState
 import com.kurobello.tallybook.feature.search.viewmodel.SearchViewModel
 import com.kurobello.tallybook.feature.search.viewmodel.SearchWork
-import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -143,13 +141,15 @@ private fun SearchEntryFocus(
   LaunchedEffect(focusRequest, active, lifecycle) {
     if (focusRequest != null && active) {
       lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-        list.scrollToItem(0)
-        snapshotFlow { list.layoutInfo.visibleItemsInfo.isNotEmpty() }.first { it }
-        withFrameNanos {}
-        if (latestActive.value && fieldFocus.requestFocus()) {
-          keyboard?.show()
-          latestAcknowledgment.value(focusRequest)
-        }
+        // SearchScreen swaps [list] into its LazyColumn only once results exist, and the column's
+        // first-layout node stays bound to the state it started with, so a suspending scroll on a
+        // never-measured [list] would wait forever. The request applies whenever it is measured.
+        list.requestScrollToItem(0)
+        // The field is composed at the top of whichever list is shown, at the latest one layout
+        // after the scroll request.
+        do withFrameNanos {} while (!(latestActive.value && fieldFocus.requestFocus()))
+        keyboard?.show()
+        latestAcknowledgment.value(focusRequest)
       }
     }
   }

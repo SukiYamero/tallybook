@@ -7,6 +7,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
@@ -36,6 +37,7 @@ import tallybook.shared.generated.resources.home_statistics_open
 import tallybook.shared.generated.resources.navigation_home
 import tallybook.shared.generated.resources.navigation_statistics
 import tallybook.shared.generated.resources.search_count
+import tallybook.shared.generated.resources.search_placeholder
 import tallybook.shared.generated.resources.search_remove_filter
 import tallybook.shared.generated.resources.statistics_detail_view
 import tallybook.shared.generated.resources.statistics_scope_year
@@ -66,6 +68,9 @@ internal class StatisticsNavigationTest {
               runBlocking { getString(Res.string.search_remove_filter, CATEGORY) }
           )
           .assertIsDisplayed()
+      composeRule
+          .onNodeWithContentDescription(text(Res.string.search_placeholder))
+          .assertIsNotFocused()
       systemBack()
       homeTab().assertIsSelected()
     }
