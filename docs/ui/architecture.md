@@ -233,9 +233,10 @@ visible caller header when overridden.
 
 ### Balance summary cards
 
-Home and History reuse `BalanceCard` and its matching `BalanceCardSkeleton`. Home uses the global
-summary and its default localized balance label. History supplies the selected period's snapshot and
-localized Period balance label; it does not observe the global summary.
+Home and History reuse `BalanceCard` and its matching `BalanceCardSkeleton`. Home supplies the
+primary currency's total balance with this month's income and expenses, under its default localized
+balance label, and the whole card opens Accounts. History supplies the selected period's snapshot and
+localized Period balance label; it does not observe the total balance.
 
 Income and Expenses occupy two full-width white rows under the total. Each row places its icon/label
 at the start and the complete amount at the end, preserving currency, sign and decimals. A shared
@@ -454,10 +455,11 @@ Snapshotting extras for each parent lifetime prevents Activity Intent Bundles fr
 Tabs select existing entries; History root Back selects Home, Home root delegates platform exit, and
 Search and Profile root Back select Home. One `secondary` slot shows a secondary destination over the
 selected primary with the bottom bar hidden: the UI catalog over any primary, Categories and Tags only
-over Profile (`PrimaryNavigator.openSecondary`). Back closes the secondary first, and selecting any
-primary clears it. Home search opens Search with a one-time focus intent; "View N movements" in a
-Categories or Tags sheet selects Search, once that sheet has hidden, with a one-shot
-`SearchFilterRequest` (category or tag ids) that the retained Search ViewModel applies once.
+over Profile, Accounts over Home or Profile (`PrimaryNavigator.openSecondary`). Back closes the
+secondary first, and selecting any primary clears it. Home search opens Search with a one-time focus
+intent; "View N movements" in a Categories or Tags sheet, or "View movements" in an account sheet,
+selects Search, once that sheet has hidden, with a one-shot `SearchFilterRequest` (category, tag or
+account ids, plus the account's currency) that the retained Search ViewModel applies once.
 
 Home/History repository observations use five-second subscription sharing. Feature routes revalidate
 before lifecycle collection. `RetainedLoadState<Content, Failure>` is the shared snapshot contract:
@@ -601,10 +603,11 @@ The temporal and selection rules live in [business logic](../business-logic.md#t
 History starts directly with its contextual header and period controls. Scrollable content adds
 `space20` above the header after the frame safe inset. Selected-period totals have
 an explicit label and scroll with the content. No fixed global balance, currency banner or independent
-global-summary status appears in History; the global balance remains on Home.
+global-summary status appears in History; the total balance remains on Home.
 While accounts exist in more than one currency a `MonedaSelector` follows the header; day groups show
-transfers as `ActividadTransferenciaRow`s that open transfer management, and the totals and movement count
-leave them out. History has no text-search field, non-date filters, balance-visibility
+transfers as `ActividadTransferenciaRow`s that open transfer management. The totals leave transfers out;
+the count line names them in a second part ("N movimientos · M transferencias entre cuentas") only
+when there are any. History has no text-search field, non-date filters, balance-visibility
 toggle or fourth annual scope. Search is a separate destination.
 
 ## Remaining product decisions
@@ -726,7 +729,9 @@ Selecting a movement opens a content-sized bottom sheet with the localized Edit 
 including during its initial read. A successful read supplies the original record and prefilled draft.
 The editor reuses creation's state-independent controls
 through `MovimientoFormState`/`MovimientoFormActions`: the type selector retains its directional icons
-and status colors, the currency precedes the numeric input, the Category section uses
+and status colors, `MovimientoCuentaField` follows it with the Medio and Account sections (accounts in
+the stored currency only; in-place creation keeps that currency fixed), the currency precedes the
+numeric input, the Category section uses
 `CategorySingleField` without a × and the single-select picker, and the Tags section uses
 `EtiquetaTagField` with the tag picker. It opens with no initial picker and no forced keyboard.
 Existing title and description open filled. Focus, disclosure, keyboard and category-entry phases belong to

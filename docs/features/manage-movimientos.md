@@ -14,11 +14,12 @@ feedback windows and lifecycle; the [component catalog](../ui/components.md) lis
 - `MovimientoRepository` exposes `getById`, typed `update`, transactional `deleteAndCapture` and
   conflict-safe `restoreDeleted`. SQLDelight is the persisted owner; no schema migration is added.
   Existing raw/idempotent delete remains compatible.
-- `ManageMovimientoViewModel` and `PrimaryModalCoordinator` integrate shared routes, mutation
-  feedback and restoration. The shared form contracts preserve Add's entry and validation behavior.
+- `ManageMovimientoViewModel` and `PrimaryModalCoordinator` integrate shared routes and mutations;
+  `ManagementFeedbackViewModel` (`core/ui/feedback`) owns feedback and restoration for movimientos and
+  [transfers](accounts.md) alike. The shared form contracts preserve Add's entry and validation behavior.
 - Existing repository flows refresh Home/History/Search rather than patching a second list.
   Copy is localized in all existing resource locales.
-- Feedback stays in a caller-owned FIFO queue. The shared snackbar host owns its visible window,
+- Feedback stays in the shell's one FIFO `ManagementFeedbackQueue`. The shared snackbar host owns its visible window,
   monotonic deadline and backlog compaction; the component catalog exercises the same delivery policy.
 
 ## Verification boundaries

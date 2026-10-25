@@ -23,7 +23,7 @@ entry flow are described in [Add movimiento](add-movimiento.md); visual ownershi
   filtered by that tag. Saves and deletes report through a snackbar; a failed save or delete keeps the
   sheet with an inline error.
 - **Delete**: the confirmation counts the movimientos in every currency that use the tag (or says
-  none do). Confirming unlinks the tag from them and deletes it; there is no Undo.
+  none do). Confirming unlinks the tag from them and tombstones it; there is no Undo.
 
 ## Integration
 
@@ -35,7 +35,7 @@ entry flow are described in [Add movimiento](add-movimiento.md); visual ownershi
   whitespace runs collapsed, stored as null when blank and rejected past `ETIQUETA_DESCRIPCION_MAX`;
   quick creation from the movimiento picker passes none, and an update that changes nothing does
   not write. Search, CSV and rows never read it. Validation, duplicate checks and writes share one
-  transaction; delete unlinks and deletes in the same one. Undo of a movimiento deletion
+  transaction; delete unlinks, bumps the affected movimientos' stamps and tombstones in the same one. Undo of a movimiento deletion
   skips tags that no longer exist and restores in Otros when the custom category is gone.
 - `TagsViewModel` owns the query, the content state and the one open sheet; the route turns its
   effects into the snackbar and the Search request. Navigation keeps Tags in the `secondary` slot, and

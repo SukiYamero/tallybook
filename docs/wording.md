@@ -2,7 +2,7 @@
 
 Portado casi verbatim de `web/moneta/docs/voice-and-tone.md` — mismas reglas, mismo criterio, para que
 la voz de la app sea una sola entre web y mobile. Ground truth acá: los string resources de Compose
-Multiplatform (`shared/src/commonMain/composeResources/values-*/strings.xml`); si una regla de acá y un
+Multiplatform (`shared/src/commonMain/composeResources/values*/strings*.xml`); si una regla de acá y un
 string ya shippeado no coinciden, arreglar el que esté mal y actualizar este doc en el mismo cambio.
 
 ## 1. Encabezar con la razón del usuario, no con lo que pide la app
@@ -99,5 +99,7 @@ eso:
 | Consumo del ciclo actual | Consumo del ciclo | Consumo del ciclo | Spending this cycle | Gastos do ciclo |
 | Conteo de transferencias internas (Historial) | N transferencias entre cuentas | N transferencias entre cuentas | N transfers between accounts | N transferências entre contas |
 
-Los rótulos de medio y tipo de cuenta viven en `composeResources/values*/strings_accounts.xml`; las
-pantallas de cuentas agregan ahí sus claves nuevas en vez de tocar `strings.xml`.
+La copy se reparte por área en `composeResources/values*/`: `strings_accounts.xml` (rótulos de medio y
+tipo de cuenta, Cuentas y transferencias entre cuentas), `strings_entry_accounts.xml` (medio y cuenta en
+la carga y edición de movimientos) y `strings_integration.xml` (Historial, Búsqueda y CSV). `strings.xml`
+conserva sus claves; una clave nueva va al archivo de su área.

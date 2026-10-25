@@ -14,7 +14,10 @@ sincroniza cuentas bancarias reales.
 
 Un **movimiento** registra un gasto o un ingreso.
 
-- **Obligatorios**: tipo (gasto / ingreso), monto, fecha, moneda y exactamente una categoría.
+- **Obligatorios**: tipo (gasto / ingreso), monto, fecha, cuenta, medio de pago y exactamente una
+  categoría. La moneda es la de la [cuenta](#cuentas): el movimiento no guarda una moneda propia. El
+  monto es positivo y no supera `Money.MAX_MINOR_UNITS` (10^15 unidades menores), el mismo tope de las
+  transferencias y del saldo inicial de una cuenta (en ambos signos).
 - **Opcionales**: tags (ver [Category and tags](#category-and-tags)), título y descripción, de hasta
   180 caracteres cada uno. El título nombra el
   movimiento (en la creación por frase es la frase escrita); la descripción agrega contexto extra si
@@ -22,8 +25,9 @@ Un **movimiento** registra un gasto o un ingreso.
   solicitado al usuario.
 - **Tarjetas**: toda tarjeta de movimiento (Inicio, Historial, Buscar) muestra el título, o el nombre
   de la categoría si no hay título, en hasta dos líneas, debajo la descripción en una línea con un
-  tamaño menor (sin descripción esa línea no aparece) y al final el monto. La tarjeta no muestra la fecha (Historial
-  y Buscar ya agrupan por día). El texto completo se ve al abrir la tarjeta.
+  tamaño menor (sin descripción esa línea no aparece) y al final el monto, precedido por el ícono del
+  [medio de pago](#medio-de-pago), que se anuncia con su nombre. La tarjeta no muestra la fecha (Historial
+  y Buscar ya agrupan por día), la cuenta ni los tags. El texto completo se ve al abrir la tarjeta.
 - **Signo del monto**: el signo va antes del símbolo de la moneda (`-$ 25,00`, `+$ 5.000,00`), el orden
   de CLDR que siguen las apps bancarias y de finanzas.
 - La categoría es obligatoria en el dato, no en la interacción: si el usuario guarda una creación sin
@@ -41,36 +45,43 @@ app derives the draft from it and the user confirms or refines it; the manual fo
   title length limit.
 - Below the input, a "Detected" area appears once the sentence has text and goes away if it is
   cleared. It shows tipo and fecha (their defaults, gasto and today, until the sentence says
-  otherwise), the amount when found (otherwise a note that it was not detected), a "Category"
-  section and an optional "Tags" section below it. Values update while typing; nothing is persisted
+  otherwise), the amount when found (otherwise a note that it was not detected), the Medio and
+  Account sections, a "Category" section and an optional "Tags" section below it. Values update while typing; nothing is persisted
   until Save. While the user has not touched the category, the sentence owns it: the high-confidence
   category shows selected and the other suggestions stay visible but dimmed. Tapping a dimmed
   suggestion switches to it; the × on the selected one clears it. The first manual choice hands the
   category to the user, and later sentences or Continue no longer replace it. Tags follow the same
-  ownership: tags the sentence detected stay owned by it until the user adds or removes a tag.
+  ownership: tags the sentence detected stay owned by it until the user adds or removes a tag. Medio
+  and account have their own owners (see [Selection in entry and editing](#selection-in-entry-and-editing)).
 - The Continue action is pinned in a footer under the scrolling content, so it stays visible with
   the keyboard open. Inside the scrolling area, below the Detected card, an "or" divider introduces
   voice dictation (a non-functional placeholder marked as coming soon), followed by a secondary
   "fill manually" action that opens the empty form. Fill manually drops everything the sentence
   derived but keeps the category and tags the user picked by hand in the dialog.
 - Line breaks typed or pasted into the sentence become single spaces. Clearing the sentence also
-  clears what it derived (tipo, amount, fecha, título, descripción and the sentence-owned category and
-  tags), so the dialog counts as clean again even after a Continue and Back; a category and tags
-  picked by hand remain.
+  clears what it derived (tipo, amount, fecha, título, descripción, the sentence-owned category and
+  tags, and a sentence-owned medio and account, which return to the default selection), so the dialog
+  counts as clean again even after a Continue and Back; a category, tags, medio and account picked by
+  hand remain.
 - Tapping outside or the Back gesture closes the dialog directly while the sentence is blank;
   otherwise it asks to discard first. Continue parses the sentence once, writes tipo, monto, fecha,
-  categoría and tags (each unless the user took it over) and título into the draft (replacing earlier
+  medio, cuenta, categoría and tags (each unless the user took it over) and título into the draft (replacing earlier
   derived values), closes the dialog and opens the summary. A description typed in the form is
   kept.
 - **Tipo**: expense and income verbs in every supported language decide it (`gasté`, `pagué`,
   `me cobraron` → gasto; `recibí`, `me pagaron`, `cobré`, `vendí` → ingreso). Without a verb, an
   income category suggestion selects ingreso; otherwise gasto.
-- **Monto**: digits with the primary currency's group/decimal separators, a currency symbol,
+- **Monto**: digits with the draft currency's group/decimal separators, a currency symbol,
   multipliers (`k`, `mil`, `millón`/`millones`, regional slang such as `lucas` or `palos`) and basic
   number words. A separator followed by exactly three digits groups; any other separator is decimal.
-  The amount is always in the primary currency. When several candidates remain, the largest one wins
-  and the summary flags the amount for review. No amount leaves the field empty and required; the
-  dialog and the summary say it was not detected, and the summary points to Edit movimiento.
+  The draft currency is the selected account's: the sentence is read again in another currency when
+  the account it names is in one. While the amount is sentence-owned, choosing another account
+  re-derives it from the sentence in that account's currency; a typed amount keeps its value,
+  reformatted for the new currency, and Save validates it against that currency's scale (CLP has no
+  decimals). When several candidates remain, the largest one wins and the summary flags the amount
+  for review. No amount leaves the field empty and required; the dialog and the summary say it was not
+  detected, and the summary points to Edit movimiento. The parser does not apply the amount cap; Save
+  routes an amount above it to the form's amount error.
 - **Fecha**: today, yesterday, the day before yesterday, a weekday (its most recent occurrence, today
   included) and explicit day/month dates (day-first except in English). A day without month resolves
   to its most recent past occurrence. Future expressions are ignored and the date stays today.
@@ -83,10 +94,36 @@ app derives the draft from it and the user confirms or refines it; the manual fo
   movimiento falls back to Otros.
 - **Tags**: the sentence selects existing tags whose full name appears in it as whole words, compared
   with the shared search normalization. Detection never creates a tag.
+- **Medio and account**: detected in every supported language, with the vocabulary owned by
+  `PhraseLexicon` (`medioWords`) and compared after the shared search normalization.
+  - Method phrases ("en efectivo", "con débito", "tarjeta de crédito", "por transferencia", "pix",
+    "credit card", "cartão de débito"…) select their medio.
+  - A card without its kind ("con tarjeta", "with my card", "no cartão") decides no medio and offers
+    Débito and Crédito. Two different explicit methods in one sentence decide none and offer both.
+    A phrase naming the kind wins over a generic card mention that overlaps it.
+  - A method mention directly after a negation ("no", "sin", "not", "without", "sem", "não") decides
+    nothing and leaves the subject, as do "sin tarjeta" and "sem cartão".
+  - A card that is the thing being paid is not a method: one preceded by "de", "pago", "pagar", "pay",
+    "fatura", "factura" or "cuota", by a determiner with no method preposition ("pagué la tarjeta de
+    crédito") or followed by "bill", "payment" or "statement" stays in the subject for the category
+    suggestion. Category phrases that contain a method word ("cash back", "petty cash",
+    "transferencia recibida") are never methods.
+  - A live, non-archived account whose full name appears as whole words is selected. Where names
+    overlap the earliest, then the longest, owns the words; the earliest named account wins and other
+    named accounts are offered. A name shared across currencies resolves to the primary-currency
+    account, otherwise it stays undecided and offers the candidates. An account name never becomes a
+    date or an amount and leaves the subject.
+  - A named account outranks method words: its type implies the medio (`TipoCuenta.defaultMedio`:
+    Efectivo, Crédito, and for a bank account Débito on a gasto and Transferencia on an ingreso),
+    except that a transfer word with a bank account selects Transferencia. A contradicting method word
+    is dropped. Every result is adapted to the final tipo.
+  - Words are consumed in a fixed order: tipo verbs, method phrases (before account names, so "en
+    efectivo" is not split by the seeded "Efectivo" account), account names, fecha, monto; the rest is
+    the subject.
 - The summary is a tall bottom sheet titled as a review-and-confirm step. It only reviews: labeled
   sections show tipo and fecha (prominent), the amount and the title, and the only choices it offers
-  are the category with its suggestions and the optional tags. It has no text input; the description
-  lives in the form. Its two
+  are medio and account, the category with its suggestions and the optional tags. It has no text
+  input; the description lives in the form. Its two
   equal-level actions, separated from the content by generous space, are Edit movimiento (left),
   which opens the complete form with the same draft, and Save (right). Save with an invalid required
   value opens the form with that field's error and focus instead of persisting. Back returns from
@@ -124,9 +161,11 @@ the training data, so correcting a suggestion teaches the next one.
 Home, History and Search open the current persisted movimiento by ID. Missing records cannot be
 edited or deleted; failed reads require Retry before mutation actions become available.
 
-- Editing permits type, positive exact amount, civil date, category, tags, optional title and
-  optional description. Stored currency, ID and `createdAt` remain fixed. Amount input round-trips through the stored
-  currency's scale and decimal separator without grouping or a currency symbol.
+- Editing permits type, positive exact amount, civil date, medio, account, category, tags, optional
+  title and optional description. The account can change only to one in the stored currency, so the
+  currency, ID and `createdAt` remain fixed; an archived account stays valid while untouched. Amount
+  input round-trips through the stored currency's scale and decimal separator without grouping or a
+  currency symbol.
 - Creation's validation and title/description normalization also apply to editing. Civil today/timezone
   is captured at editor entry and again on Save; future dates are rejected without silently changing
   the draft when the clock moves backward.
@@ -148,14 +187,20 @@ edited or deleted; failed reads require Retry before mutation actions become ava
   competing edits or mutations. The transaction validates that
   its captured row can be restored before deleting it; an ineligible legacy record stays intact.
   Failure keeps the editor and draft for retry. An already-missing record produces informational feedback.
-- Only the exact row captured by the delete transaction is eligible for Undo. Restore preserves all
-  fields and identity. An identical existing row counts as restored without writing; a different or
-  unreadable same-ID row is a terminal conflict and is preserved.
-- Each feedback token owns at most one deleted snapshot. Completed management outcomes wait in
-  arrival order without replacing an earlier Undo. Only the visible token can claim its snapshot;
+- Deleting leaves a tombstone (see [Change stamps and tombstones](#change-stamps-and-tombstones)).
+  Only the exact row captured by the delete transaction is eligible for Undo. Restore revives the
+  tombstone with the same ID, all captured fields and a new stamp. An identical live row counts as
+  restored without writing; a different or unreadable same-ID row, or a tombstone with different
+  content, is a terminal conflict and is preserved.
+- Restoring into an archived account is allowed and leaves it archived. An account that no longer
+  exists gives `RestoreResult.MissingCuenta`: its own warning message, without Retry, releases the
+  snapshot, and the money never moves to another account. An account whose currency changed, or whose
+  type no longer takes the captured medio, is a conflict. Transfers share the same outcomes.
+- Each feedback token owns at most one deleted snapshot, a movimiento or a transfer. Completed
+  management outcomes wait in arrival order without replacing an earlier Undo. Only the visible token can claim its snapshot;
   Close or expiry releases that token's snapshot, while a fresh process or disposal of the owner
   releases the whole queue. The committed deletion remains applied until its own Undo succeeds.
-  There is no persistent trash or Undo for edits.
+  There is no user-visible trash or Undo for edits.
 - Undo claims the token once before restoration starts. Late action/timeout callbacks cannot consume
   a claimed operation. Restore failure retains the snapshot for Retry; success or conflict releases
   it. Primary tabs can change during restoration, but new modal sessions wait until it finishes.
@@ -164,6 +209,137 @@ edited or deleted; failed reads require Retry before mutation actions become ava
 
 Presentation, feedback windows and lifecycle ownership live in
 [UI architecture](ui/architecture.md#movimiento-management-and-feedback).
+
+## Cuentas
+
+A **cuenta** is where the money of a movimiento came from or went to. Balances are derived, never
+stored (see [Balances and credit-card estimate](#balances-and-credit-card-estimate)).
+
+- Fields: `id`, `nombre`, `tipo`, `moneda`, `saldoInicial`, optional `diaCorte`, `archivada`,
+  `createdAt` and change stamps.
+- Types: `EFECTIVO`, `BANCO` (bank or wallet: Nequi, Daviplata, Mercado Pago, debit cards) and
+  `CREDITO` (credit card). An account has only a name: no card numbers or other sensitive data.
+- `nombre` is trimmed, up to 30 characters and unique per currency among live accounts, archived
+  included, ignoring case and supported accents. Creating a name that already exists offers the
+  existing account. A tombstoned name can be reused and gets a new ID. Account names are not
+  translated.
+- `saldoInicial` is a signed exact `Money` in the account's currency. The form asks for an unsigned
+  amount; for a credit card it is the opening debt, which the form state stores negated (the only
+  place that conversion happens).
+- `diaCorte` (1–31) is the statement day of a credit card and is accepted only on that type.
+- Pickers, selectors and rows add the currency code to accounts outside the primary currency, so
+  same-named accounts stay distinguishable.
+- The default cash account has the deterministic ID `cuenta_efectivo_<moneda in lowercase>` and the
+  name localized at creation ("Efectivo", "Cash", "Dinheiro"). Bootstrap creates one in the primary
+  currency only while no live account exists (a fresh install); changing the primary currency never
+  creates an account. If a tombstone holds that ID, the seed takes a generated ID instead.
+- Locks, checked after the duplicate name: the currency is locked while any live movimiento or
+  transfer references the account, and always for a default cash account, whose ID names its currency
+  (`CuentaWrite.CurrencyLocked`); the type is locked while referenced, because stored medios were
+  validated against it (`CuentaWrite.TypeLocked`). The account sheet shows locked type and currency as
+  read-only before Save.
+- Archiving removes the account from pickers and sentence detection; its balance still counts in
+  totals and it stays under Archived in Accounts. Unarchiving is allowed. The last non-archived
+  account cannot be archived or deleted.
+- Deletion tombstones an account no live movimiento or transfer references; otherwise the sheet offers
+  archiving, like custom categories. Being the last active account is reported before being in use.
+- Upgrading existing data assigned every movimiento to the "Efectivo" account of its currency with
+  medio Efectivo. A currency whose movimientos were all deleted got its cash account as a tombstone,
+  so Undo of those rows is `MissingCuenta`.
+
+### Accounts screen
+
+Profile → Accounts, also opened from Home's balance card.
+
+- A search by name, one total per currency with a live account, then the accounts grouped by type,
+  each with its balance. Credit cards show the estimated debt (or a positive balance as credit in the
+  user's favour) and this cycle's spending with the cycle's dates. Archived accounts sit in a
+  collapsible Archived group. Without a search, the five most recent transfers follow.
+- An account opens its sheet: edit, archive or unarchive, delete, "View movements" (Search with that
+  account's currency and the account filter), "Move between accounts" and, for a credit card, "Pay
+  card".
+
+## Medio de pago
+
+How a movimiento was paid or received (`MedioPago`):
+
+| Medio | Compatible account types | Allowed for |
+| --- | --- | --- |
+| `EFECTIVO` | `EFECTIVO` | gasto, ingreso |
+| `DEBITO` | `BANCO` | gasto |
+| `TRANSFERENCIA` (paying or receiving from someone else) | `BANCO` | gasto, ingreso |
+| `CREDITO` | `CREDITO` | gasto, ingreso (refund) |
+
+- The repository rejects an incompatible medio/account/tipo combination, an archived newly chosen
+  account and an account in another currency on edit; the UI never offers them.
+- Changing a draft from gasto to ingreso while the medio is `DEBITO` changes it to `TRANSFERENCIA`
+  on the same account.
+- `TRANSFERENCIA` as a medio (money sent to or received from a third party) is distinct from a
+  [transfer between own accounts](#transferencias); copy keeps them apart following
+  [wording](wording.md#7-glosario-cuentas-medios-de-pago-y-transferencias).
+
+### Selection in entry and editing
+
+- Every creation and editing surface shows a Medio section followed by an Account section. Medio is a
+  single choice among the medios the tipo allows. The account selector lists live, non-archived
+  accounts compatible with the medio (in the editor, only in the stored currency); with one it shows
+  it without a picker, with none it offers creating one in place: name, type preset by the medio,
+  currency defaulting to the primary one and fixed to the stored one in the editor. An undecided medio
+  blocks Save with a field error.
+- Preselection without sentence evidence has one producer,
+  `MovimientoRepository.defaultSelection(primary, tipo, medio?)`: one SQL read, no stored preference,
+  returning a `CuentaSelection` (account, medio and the account's currency). The fallback order,
+  restricted to `medio` when given: the account and medio of the newest live movimiento (its medio
+  adapted to the tipo) if the account is live, active and compatible → the primary cash account →
+  the first active compatible account in the primary currency → the first active compatible account.
+  An account found by type gets `TipoCuenta.defaultMedio(tipo)`. The result is null only when no
+  active account fits the given medio. The editor passes the stored currency as `primary` and drops a
+  default in another currency.
+- Ownership follows the tags model with three owners: `DEFAULT` follows the repository's selection,
+  `SENTENCE` is replaced by every interpretation and `USER` survives both. Clearing the sentence or
+  discarding returns to `DEFAULT`. Choosing a medio keeps a compatible account or takes that medio's
+  default; choosing an account keeps a compatible medio or takes the type's default.
+- If Save fails because the repository no longer takes the account, that becomes the account field's
+  error; any other failure stays the shared save error.
+
+## Transferencias
+
+A **transferencia** moves money between two of the user's own accounts.
+
+- Fields: `id`, `cuentaOrigenId`, `cuentaDestinoId` (different), `montoOrigen` (positive, origin
+  currency), `montoDestino` (positive, destination currency; equal to `montoOrigen` and not asked when
+  both accounts share the currency), `fecha` (civil date, not future), optional `descripcion` (up to
+  180 characters), `createdAt` and change stamps. No category, tags or medio. Different currencies
+  are allowed with a sent and a received amount; there is no exchange rate.
+- A transfer is neither income nor expense: it never enters ingresos/gastos, category totals,
+  suggestions or budgets. It changes the two account balances only.
+- An archived account is rejected as a newly chosen side (insert, or an edit that changes that side);
+  an edit keeps an unchanged archived side, and Undo restores into it.
+- Transfers are created from Accounts ("Move between accounts" or "Pay card"), never from the
+  sentence. Editing may change every field; currency rules apply per side. Deletion asks for
+  confirmation and offers Undo through the same feedback queue as movimientos, with the outcomes in
+  [Editing and deletion](#editing-and-deletion).
+- The origin defaults to the newest live transfer's origin when it is active and not a credit card,
+  else the primary cash account, else the first active non-credit account in the primary currency,
+  then in any currency. With only credit cards there is no default.
+- "Pay card" opens a transfer with the card as destination and the estimated debt as `montoDestino`.
+  With a same-currency origin that is the only amount; with another currency `montoOrigen` starts
+  empty. Paying a card is never an expense: its purchases were already recorded as gastos.
+- Rows are neutral (no sign or income/expense color), show the route ("Nequi → NU") and the amount of
+  the side being viewed.
+
+## Balances and credit-card estimate
+
+- `saldo(cuenta) = saldoInicial + Σ ingresos − Σ gastos + Σ montoDestino of incoming transfers −
+  Σ montoOrigen of outgoing transfers`, over live rows of every date.
+- The total balance of a currency is the Σ saldo of every live account in it, archived included.
+- Credit card: `deuda = max(0, −saldo)`; a positive balance is shown as a credit in the user's favour.
+- Cycle spending is the card's gastos minus ingresos (refunds) inside the current cycle. With
+  `diaCorte = d` the cycle runs from the day after the previous statement date through the next one,
+  today included when it is the statement date; a statement day past the month's end falls on its last
+  day (31 → 30 April, 28/29 February). Without `diaCorte` the cycle is the calendar month. Debt and
+  cycle spending are labelled as estimates, since the user may not record every purchase.
+- All arithmetic is exact `Long` minor units in SQL `SUM()`; currencies are never added together.
 
 ## Moneda e idioma
 
@@ -174,18 +350,35 @@ al portar, agregar CLP y DOP a la tabla de mapeo.
 locale del sistema una sola vez; idioma y región salen del mismo tag (`es-CO` → idioma `es`, región
 `CO`); la región mapea a moneda por tabla fija (default `COP` si no matchea); el idioma determina los
 strings de la UI. No hay selector de moneda al inicio — es inferido y se cambia después desde Perfil.
-Cambiar la moneda principal no convierte montos: cada movimiento conserva su `moneda`, y Home,
-Historial, Búsqueda y el default de un movimiento nuevo pasan a usar la moneda elegida.
+Cambiar la moneda principal no convierte montos ni crea cuentas: cada cuenta conserva su moneda, y
+Home, la moneda inicial de Historial y Búsqueda y la preselección de un movimiento nuevo pasan a usar
+la moneda elegida.
 
 El idioma sigue al dispositivo salvo que se fije desde Perfil (`es`, `es-AR`, `en`, `pt-BR`). Los
 nombres de las categorías predefinidas siguen el idioma activo; la moneda inferida no cambia con él.
 
-La exportación CSV desde Perfil incluye todos los movimientos de todas las monedas, con el monto sin
-signo (el tipo indica la dirección), la moneda, la categoría, su categoría principal (una categoría raíz
-repite su propio nombre) y los tags unidos por " · " de cada fila. Compartir el archivo no modifica datos.
+## Home
 
-Home recent movimientos use the primary currency before applying the six-row limit, ordered by
-`fecha DESC, created_at DESC, id DESC`. Newer foreign-currency rows cannot hide eligible movements.
+- The balance card shows the total balance of the primary currency (see
+  [Balances](#balances-and-credit-card-estimate)), zero while that currency has no account, with this
+  month's ingresos and gastos in the primary currency as secondary values. Tapping it opens Accounts.
+- Recent movimientos are the six newest whose account is in the primary currency, filtered before the
+  limit and ordered by `fecha DESC, created_at DESC, id DESC`, so newer foreign-currency rows cannot
+  hide eligible ones. Transfers are not listed on Home.
+
+## CSV export
+
+The export from Profile reads every live movimiento, transfer, account, category and tag in one
+snapshot and writes all currencies, newest first (`fecha`, `createdAt`, `id`). Sharing the file does not
+modify data.
+
+- Columns: fecha, tipo, categoría, categoría principal (a root category repeats its own name), tags
+  joined by " · ", título, descripción, monto, moneda, then cuenta, medio, cuenta destino, monto
+  destino and moneda destino. The account columns follow the original nine so spreadsheets built on
+  earlier exports keep lining up.
+- Amounts are unsigned plain decimals with the currency's scale: the tipo carries the direction.
+- A transfer is one row of type "Transferencia entre cuentas": its origin fills the monto, moneda and
+  cuenta columns, its destination the last three; categoría, tags, título and medio stay empty.
 
 ## Categorías
 
@@ -256,8 +449,8 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
   by name, each with its movimiento count in the primary currency. Tapping a tag opens its sheet with
   name and description, "View movements" (opens Search filtered by that tag) and delete.
 - Tags are never hidden. Deleting a tag asks for confirmation showing how many movimientos use it,
-  then removes it from those movimientos and deletes it; the movimientos themselves stay and no Undo
-  is offered.
+  then unlinks it from those movimientos, bumping their change stamps, and tombstones it in the same
+  transaction; the movimientos themselves stay and no Undo is offered.
 - Undoing a movimiento deletion restores the tags that still exist; if its custom category was
   deleted meanwhile, the movimiento is restored in Otros.
 
@@ -284,7 +477,7 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
 
 ## Tracking and History
 
-History browses movimientos with three scopes: Day, Week and Month. A year selector supplies
+History browses movimientos and transfers with three scopes: Day, Week and Month. A year selector supplies
 calendar context; Year is not a fourth scope. Search is a separate destination. Text search and
 non-date filters belong to Search; charts do not belong to History selection.
 
@@ -298,7 +491,7 @@ non-date filters belong to Search; charts do not belong to History selection.
   Year/month changes and Month-chip selection preserve day-of-month where valid, clamp month-end
   and leap dates, and clamp future dates. A future month in the current year uses the current month.
 - Allowed years include every year from the shared `FIRST_SELECTABLE_YEAR` (2019) through the current
-  year, descending. Earlier years with persisted movimientos in the primary currency or a
+  year, descending. Earlier years with a movimiento or a transfer side in the viewed currency or a
   selected/restored anchor remain available, so the selection floor never hides existing records.
   Selected/restored past years remain available for the retained entry even after their last row
   disappears and another year is selected. Future years are excluded after backward date refresh.
@@ -306,27 +499,35 @@ non-date filters belong to Search; charts do not belong to History selection.
 - Each date refresh captures the clock and timezone once. An anchor equal to the previous today
   follows the new today; historical anchors stay fixed unless they become future, then clamp to
   today. Resume refresh makes newly available years visible without a background midnight timer.
-- Reads use inclusive civil dates in `Movimiento.fecha`, with no UTC-instant conversion. Group by
-  `fecha`, preserving `fecha DESC, created_at DESC, id DESC`; `createdAt` is only the secondary order.
-- Period count, income, expense and balance describe every movimiento in the selected
-  date/currency range, derived from the same bounded snapshot. Period balance is income minus
-  expense. History presents only the selected period; it does not display or subscribe to a global
-  balance. Home owns the global summary over all dates in the primary currency.
-- Saved selection contains only schema version, scope and ISO anchor. Unknown versions/scopes or
-  malformed/future anchors recover to Day/today; valid inputs recompute derived state against current
-  today/currency. Repository rows and query state are never saved. Android supported saved-owner
+- History shows one currency, the primary one by default. While live accounts (archived included)
+  exist in more than one currency, a selector offers those currencies; a selected currency left
+  without accounts falls back to the primary one.
+- Reads use inclusive civil dates in `fecha`, with no UTC-instant conversion. Movimientos in the
+  viewed currency and transfers with a side in it are read in one transaction, so rows, totals and
+  years share a snapshot. Group by `fecha`, preserving `fecha DESC, created_at DESC, id DESC`;
+  `createdAt` is only the secondary order. Transfers appear in their day as neutral rows with the
+  viewed side's amount.
+- Period income, expense and balance describe every movimiento in the selected date/currency range,
+  derived from the same bounded snapshot; transfers never enter them. Period balance is income minus
+  expense. The count line reads "N movimientos · M transferencias entre cuentas" and omits the second
+  part when M is 0. History presents only the selected period; Home owns the total balance.
+- Saved selection contains only schema version, scope, ISO anchor and the selected currency. Unknown
+  versions/scopes or malformed/future anchors recover to Day/today; valid inputs recompute derived
+  state against current today/currency. Repository rows and query state are never saved. Android supported saved-owner
   recreation and iOS retained-controller/saveable recreation define restoration; fresh cold launches
   use normal defaults, with no iOS cross-process persistence bridge.
 
 ## Search and filters
 
-Search is a separate destination over the primary currency. Its implementation contract lives in
-[Search](features/search.md); this section owns agreed product rules, not delivery status.
+Search is a separate destination over one currency, chosen with the same selector rules as
+[History](#tracking-and-history). Its implementation contract lives in [Search](features/search.md);
+this section owns agreed product rules, not delivery status.
 
-- A fresh entry has an empty query, All history, all types and no selected categories or tags. All
-  history removes the date predicate; it never imposes a year floor or result limit.
-- Text matches one contiguous substring in title, description, the displayed category name or any tag
-  name. Trim and
+- A fresh entry has the primary currency, an empty query, All history, all types and no selected
+  medios, accounts, categories or tags. All history removes the date predicate; it never imposes a
+  year floor or result limit.
+- Text matches one contiguous substring in a movimiento's title, description, displayed category name
+  or any tag name, and in a transfer's description or either account's name. Trim and
   lowercase with the existing supported-locale accent folding; preserve `ñ` versus `n`. Blank text
   matches everything. Internal spaces are literal; no token/fuzzy/amount/date/category-ID search.
   Unknown-category display labels are searchable.
@@ -343,13 +544,20 @@ Search is a separate destination over the primary currency. Its implementation c
   Restored malformed/future Custom input recovers to default filters. If the clock moves backward,
   keep an existing now-future Custom selection visible with an invalid-range error until corrected;
   never silently clamp it or run its invalid query.
-- Date/type/category/tag dimensions compose AND; selected IDs within a dimension compose OR. No IDs
-  means no restriction in that dimension; selecting a parent category matches the parent and its
-  children (see
+- Date/type/medio/account/category/tag dimensions compose AND; selected IDs within a dimension
+  compose OR. No IDs means no restriction in that dimension; selecting a parent category matches the
+  parent and its children (see
   [Hierarchy and filtering](#hierarchy-and-filtering)). All real categories, including children, remain
   selectable regardless of type. The tags dimension appears only when the user has tags. Missing
   selected category IDs remain visible with a localized fallback and explicit remove action; a deleted
   tag leaves the applied filters.
+- The type dimension is all, gasto, ingreso or "Entre cuentas" (`SearchTipo`; `TipoMovimiento` stays
+  gasto/ingreso). Transfers match only while the type is all or Entre cuentas and no medio, category
+  or tag is selected; an account filter matches either side of a transfer.
+- The account dimension lists the viewed currency's accounts, archived included, plus selected
+  accounts of another currency and a localized fallback for selected IDs no account holds. A missing
+  selected account stays applied until removed. "View movements" in an account sheet opens Search
+  with that account's currency and only that account selected.
 - Filter edits form a draft. Apply atomically commits and closes; Back, scrim or drag discards and
   closes. Clear atomically commits default filters and closes, resetting Custom endpoints to current
   today and preserving raw search text. Apply is available for
@@ -357,16 +565,48 @@ Search is a separate destination over the primary currency. Its implementation c
 - Removing an applied chip commits just that dimension. Draft edits never update results, applied
   chips or count. Closing sheets accept no edits or repeated commits.
 - Rows use `fecha DESC, created_at DESC, id DESC`, grouped under one full-date header per day that
-  has results. Rows follow the shared card rule (title with category fallback, then description) and
-  show signed exact amounts. A real row opens movimiento management; Search has no global balance.
+  has results. Movimiento rows follow the shared card rule (title with category fallback, then
+  description) and show signed exact amounts; transfer rows are neutral. A real row opens its
+  management; Search has no global balance.
 - Count derives from the exact settled result list. Pending/stale/failed work never reports an old
-  count as current. No-data means no stored movements in this currency; no-results means currency
-  data exists but criteria/text match none. Currency presence metadata and structural rows come from
+  count as current. No-data means no stored movimientos or transfers in this currency; no-results
+  means currency data exists but criteria/text match none. Currency presence metadata and structural rows come from
   the same database read snapshot.
-- Applied filters/raw text survive supported saved-owner recreation. Results, categories, loading,
+- Applied filters, raw text and the selected currency survive supported saved-owner recreation. Results, categories, loading,
   jobs, focus, keyboard and open/closing drafts are not saved. Tab changes retain the entry and scroll.
   Raw text never enters preferences, analytics or logs. Restoration follows the existing platform
   scope; no iOS cross-process persistence bridge is added.
+
+## Change stamps and tombstones
+
+Every persisted root entity is ready for the future Drive backup and sync engine without another data
+migration.
+
+- `movimiento`, `categoria`, `etiqueta`, `cuenta` and `transferencia` have `updated_at` (non-null)
+  and `deleted_at` (null while live). Both hold a `ChangeStamp`: a hybrid logical clock value encoded
+  as sortable text, `<13-digit epoch millis>-<4 hex counter>-<16 hex node>`, whose text order equals
+  stamp order. A stamp is never read back as a wall-clock time for business logic.
+- One `ChangeClock` per process issues stamps: `next = max(wallClock, last.millis)`, with the counter
+  incremented on ties or when the wall clock moves backward. Bootstrap prepares it from the maximum
+  stored stamp of every stamped table before the first mutation, so stamps never go backward across
+  restarts; preparing again only ever advances it (to be repeated after a dataset replacement).
+- The node is a random per-installation ID in a device-scoped DataStore file, separate from the
+  financial preferences, excluded from Android auto backup/device transfer and from iOS backups. It
+  appears in data only inside stamps.
+- An aggregate is a root row plus the child rows it owns (`movimiento_etiqueta` belongs to its
+  movimiento). A change to a child bumps the root's `updated_at`; child rows carry no stamps.
+- Every successful insert, update, hide/show, rename, delete and restore issues one stamp per
+  transaction, shared by every row it writes. A normalized no-op writes nothing. Renaming seeded
+  categories for the active language is presentation and issues no stamp. Seeded rows (predefined
+  categories, default cash accounts) use the constant `ChangeStamp.SEED`
+  (`0000000000000-0000-0000000000000000`) so every installation agrees on their first version.
+- Stamps stay in the persistence layer; domain models do not carry them, so content equality (Undo)
+  ignores them.
+- Deleting sets `deleted_at = updated_at = next stamp`; the row keeps its fields and owned child rows
+  are removed. Every read, count, aggregate, uniqueness check, export and suggestion source excludes
+  tombstones. Tombstones are never purged; compaction belongs to the sync engine.
+- Inserts are strict: an ID that exists, live or tombstoned, fails instead of reviving the row. Only
+  Undo revives, on the tombstone it captured (see [Editing and deletion](#editing-and-deletion)).
 
 ## Tema
 

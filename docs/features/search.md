@@ -1,6 +1,7 @@
 # Search and filters
 
-Search is a shared Android/iOS primary destination over persisted movimientos in the primary currency.
+Search is a shared Android/iOS primary destination over persisted movimientos and transfers in one
+selected currency, the primary one by default.
 The user accepted the Android flow and follow-ups; the reviewed implementation is integrated into `main`.
 [Business logic](../business-logic.md#search-and-filters) owns matching, date and filter rules;
 [UI architecture](../ui/architecture.md#search-presentation) owns presentation and lifecycle contracts.
@@ -9,8 +10,9 @@ references; their sample data and quantity-bearing Apply button are not requirem
 
 ## Integration
 
-- SQLDelight structural predicates produce rows and currency years in one transaction-backed
-  `MovimientoSearchSnapshot`. Categories and tags come from their repositories. Text matching uses
+- SQLDelight structural predicates produce movimiento and transfer rows and currency years in one
+  transaction-backed `MovimientoSearchSnapshot` from `ActividadRepository.observeFiltered`.
+  Categories, tags and accounts come from their repositories. Text matching uses
   the shared normalization utility and injected computation dispatcher, without resubscribing for
   each character. Cancellation and generation/revision guards prevent stale publication.
 - SearchViewModel owns raw input, applied criteria, transactional editing/closing sessions and
@@ -27,14 +29,17 @@ references; their sample data and quantity-bearing Apply button are not requirem
   visuals and no press shading. Shared movement-row amounts and skeletons follow the
   [global card typography](../ui/architecture.md#movement-card-amounts); monetary formatting is unchanged. Reusable APIs live in the [catalog](../ui/components.md).
 - Tag filters reach SQL through `MovimientoReadCriteria.etiquetaIds`. SQLDelight `IN :list` cannot
-  express "no filter", so `MovimientoRepositoryImpl.observeFiltered` picks one of four named queries
-  (none, category, tag, both). The filter sheet shows a Tags section of `EtiquetaChip`s after the
+  express "no filter", so `ActividadRepositoryImpl` picks one of four named queries (none, category,
+  tag, both); account and medio filters use a flag argument next to their list, and transfers are
+  read only while `MovimientoReadCriteria.includesTransferencias` holds. The filter sheet shows a Tags section of `EtiquetaChip`s after the
   categories while the user has tags; applied tags render as `TallybookFilterTag`s with a `#` icon.
 - Results are grouped under one full-date header per day with results; rows show title (category
-  fallback) and description, without date or tags.
+  fallback) and description, without date or tags, and transfers use `ActividadTransferenciaRow`,
+  which opens transfer management. Accounts' "View movements" arrives as a `SearchFilterRequest` with
+  the account and its currency.
 - Real result rows open [movimiento management](manage-movimientos.md); its mutations refresh the
   existing repository projection while retaining Search input and criteria.
-- No chart, currency selector, category authoring, sync, FTS, pager or dependency upgrade is included.
+- No chart, category authoring, sync, FTS, pager or dependency upgrade is included.
   The unified Custom range selector is deferred to [the backlog](../backlog.md).
 
 ## Verification boundaries
