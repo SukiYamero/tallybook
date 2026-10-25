@@ -14,7 +14,7 @@ Dejar listas, probadas y sin UI de pantalla las cuatro piezas que la pantalla co
   tipos del modelo se commitean primero, porque task2 los consume.
 - [**task2 — Reglas**](task2/task.md): selección Mes/Año, tramo comparable, variación, top + "Otras",
   ritmo y "Lo que cambió".
-- [**task3 — Gráficos**](task3/task.md): Vico 3.3.0, `TallybookDonut`, `TallybookDistributionRow`,
+- [**task3 — Gráficos**](task3/task.md): Vico 3.2.3, `TallybookDonut`, `TallybookDistributionRow`,
   `TallybookTrendChart`, `TallybookPaceChart` y `TallybookCategoryTrendChart`, con entradas en el
   catálogo.
 - [**task4 — Filtro de Search por rango**](task4/task.md): `SearchFilterRequest` con rango y tipo.

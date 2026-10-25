@@ -19,7 +19,7 @@ Cada dato vive en un solo lugar y sin historial:
   - una subsección de presentación de Estadísticas;
   - en la paleta `chart`, cómo se asigna por rango.
 - `docs/ui/components.md`: los componentes de `core/ui/chart`.
-- `docs/stack.md`: Vico 3.3.0, fijado y por qué, junto con la decisión de dona y barras propias.
+- `docs/stack.md`: Vico 3.2.3, fijado y por qué, junto con la decisión de dona y barras propias.
 - `docs/features/README.md`: la fila de Estadísticas, en el estado correspondiente.
 - `docs/backlog.md`: sacar el ítem Estadísticas y dejar los pendientes reales que queden
   (verificación en iOS, accesibilidad pendiente).
