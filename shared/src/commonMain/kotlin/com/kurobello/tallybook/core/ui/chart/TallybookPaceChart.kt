@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.core.ui.chart
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -82,12 +83,12 @@ internal fun TallybookPaceChart(
         chart = chart,
         modelProducer = producer,
         modifier =
-            modifier.fillMaxWidth().clearAndSetSemantics {
-              this.contentDescription = contentDescription
-            },
+            modifier
+                .fillMaxWidth()
+                .height(TallybookTheme.dimensions.chartPaceAreaHeight)
+                .clearAndSetSemantics { this.contentDescription = contentDescription },
         scrollState = rememberVicoScrollState(scrollEnabled = false),
         animationSpec = TallybookChartTheme.animationSpec,
-        chartAreaHeight = TallybookTheme.dimensions.chartPaceAreaHeight,
     )
   }
 }

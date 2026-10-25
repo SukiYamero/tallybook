@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -124,10 +125,9 @@ private fun TrendChartCanvas(points: List<TrendPoint>, selectedIndex: Int) {
     CartesianChartHost(
         chart = chart,
         modelProducer = producer,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().height(TallybookTheme.dimensions.chartTrendAreaHeight),
         scrollState = rememberVicoScrollState(scrollEnabled = false),
         animationSpec = TallybookChartTheme.animationSpec,
-        chartAreaHeight = TallybookTheme.dimensions.chartTrendAreaHeight,
     )
   }
 }

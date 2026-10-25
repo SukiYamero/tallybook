@@ -3,6 +3,7 @@ package com.kurobello.tallybook.core.ui.chart
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -96,10 +97,9 @@ private fun CategoryTrendCanvas(
     CartesianChartHost(
         chart = chart,
         modelProducer = producer,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().height(dimensions.chartCategoryTrendAreaHeight),
         scrollState = rememberVicoScrollState(scrollEnabled = false),
         animationSpec = TallybookChartTheme.animationSpec,
-        chartAreaHeight = dimensions.chartCategoryTrendAreaHeight,
     )
   }
 }

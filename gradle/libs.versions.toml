@@ -26,7 +26,7 @@ material3 = "1.11.0-alpha07"
 navigation3 = "1.1.1"
 robolectric = "4.17"
 sqldelight = "2.3.2"
-vico = "3.3.0"
+vico = "3.2.3"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
