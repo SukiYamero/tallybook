@@ -10,10 +10,12 @@ import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
+import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.feature.search.viewmodel.SearchActions
 import com.kurobello.tallybook.feature.search.viewmodel.SearchCategoryState
+import com.kurobello.tallybook.feature.search.viewmodel.SearchCuentaState
 import com.kurobello.tallybook.feature.search.viewmodel.SearchEtiquetaState
 import com.kurobello.tallybook.feature.search.viewmodel.SearchFilterSessionId
 import com.kurobello.tallybook.feature.search.viewmodel.SearchFilters
@@ -26,6 +28,16 @@ internal val searchTestCategory =
     Categoria("food", "Food", null, CategoryIcon.UTENSILS, CategoryTint.AMBER)
 internal val searchTestEtiqueta =
     Etiqueta("t_empresa", "Empresa", Instant.parse("2026-01-01T00:00:00Z"))
+internal val searchTestCuenta =
+    Cuenta(
+        Cuenta.defaultCashId(Moneda.USD),
+        "Efectivo",
+        TipoCuenta.EFECTIVO,
+        Money(0, Moneda.USD),
+        null,
+        archivada = false,
+        Instant.parse("2026-01-01T00:00:00Z"),
+    )
 internal val searchTestMovement =
     Movimiento(
         "coffee",
@@ -53,6 +65,7 @@ internal val searchTestState =
         Moneda.USD,
         categories = SearchCategoryState(listOf(searchTestCategory), false),
         etiquetas = SearchEtiquetaState(listOf(searchTestEtiqueta)),
+        cuentas = SearchCuentaState(listOf(searchTestCuenta)),
         years = searchTestResults.years,
         results = RetainedLoadState.Ready(searchTestResults),
         work = null,
