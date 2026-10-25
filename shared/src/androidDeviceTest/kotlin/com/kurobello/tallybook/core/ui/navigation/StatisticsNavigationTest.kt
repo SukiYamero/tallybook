@@ -39,6 +39,7 @@ import tallybook.shared.generated.resources.search_count
 import tallybook.shared.generated.resources.search_remove_filter
 import tallybook.shared.generated.resources.statistics_detail_view
 import tallybook.shared.generated.resources.statistics_scope_year
+import tallybook.shared.generated.resources.statistics_spent
 import tallybook.shared.generated.resources.statistics_title
 
 internal class StatisticsNavigationTest {
@@ -49,14 +50,16 @@ internal class StatisticsNavigationTest {
     withShell {
       statisticsTab().performClick()
       statisticsTab().assertIsSelected()
+      waitForNode(hasText(text(Res.string.statistics_spent)))
       statisticsList().performScrollToNode(hasText(CATEGORY) and hasClickAction())
       composeRule.onNode(hasText(CATEGORY) and hasClickAction()).performClick()
-      composeRule
-          .onNode(hasText(plural(Res.plurals.statistics_detail_view, ROWS)) and hasClickAction())
-          .performScrollTo()
-          .performClick()
+      val viewMovimientos =
+          hasText(plural(Res.plurals.statistics_detail_view, ROWS)) and hasClickAction()
+      waitForNode(viewMovimientos)
+      composeRule.onNode(viewMovimientos).performScrollTo().performClick()
 
       composeRule.assertSearchShownWithNoTabSelected()
+      waitForNode(hasText(plural(Res.plurals.search_count, ROWS)))
       composeRule.onNodeWithText(plural(Res.plurals.search_count, ROWS)).assertIsDisplayed()
       composeRule
           .onNodeWithContentDescription(
@@ -107,6 +110,13 @@ internal class StatisticsNavigationTest {
         it.config.getOrNull(SemanticsActions.OnClick)?.label == label
       }
 
+  // Statistics presents its reads on the computation dispatcher, which Compose idling ignores.
+  private fun waitForNode(matcher: SemanticsMatcher) {
+    composeRule.waitUntil(WAIT_MILLIS) {
+      composeRule.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty()
+    }
+  }
+
   private fun text(resource: StringResource): String = runBlocking { getString(resource) }
 
   private fun plural(resource: PluralStringResource, count: Int): String = runBlocking {
@@ -147,5 +157,6 @@ internal class StatisticsNavigationTest {
     /** Every fixture row is a USD gasto in Food on the fixture's today. */
     const val CATEGORY = "Food"
     const val ROWS = 60
+    const val WAIT_MILLIS = 5_000L
   }
 }
