@@ -64,5 +64,6 @@ countMovimientosPorEtiqueta:
 SELECT movimiento_etiqueta.etiqueta_id, COUNT(*) AS movimiento_count
 FROM movimiento_etiqueta
 JOIN movimiento ON movimiento.id = movimiento_etiqueta.movimiento_id
-WHERE movimiento.monto_moneda = ? AND movimiento.deleted_at IS NULL
+JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+WHERE cuenta.moneda = ? AND movimiento.deleted_at IS NULL
 GROUP BY movimiento_etiqueta.etiqueta_id;

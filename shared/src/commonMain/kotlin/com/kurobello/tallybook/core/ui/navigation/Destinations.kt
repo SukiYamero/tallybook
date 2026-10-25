@@ -18,3 +18,5 @@ import kotlinx.serialization.Serializable
 @Serializable data object Categories : Destination
 
 @Serializable data object Tags : Destination
+
+@Serializable data object Accounts : Destination

@@ -4,7 +4,12 @@ import androidx.lifecycle.ViewModelStore
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
+import com.kurobello.tallybook.core.data.CivilToday
+import com.kurobello.tallybook.core.data.FakeSaldoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.MutableClock
+import com.kurobello.tallybook.core.data.SaldoRepository
+import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
@@ -12,19 +17,22 @@ import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaSaldo
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
-import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
-import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.ThemeMode
+import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -47,6 +55,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
@@ -279,7 +288,15 @@ class HomeViewModelTest {
             summary = DataOutcome.Success(summary(Moneda.USD)),
         )
     val categorias = FakeCategoriaRepository(DataOutcome.Success(emptyList()))
-    val vm = HomeViewModel(preferences, movimientos, categorias, backgroundScope)
+    val vm =
+        HomeViewModel(
+            preferences,
+            movimientos,
+            categorias,
+            primarySaldos(),
+            today(),
+            backgroundScope,
+        )
     runCurrent()
     assertEquals(0, preferences.subscriptionCount)
     val collector = backgroundScope.launch { vm.uiState.collect {} }
@@ -324,6 +341,8 @@ class HomeViewModelTest {
             preferences,
             movimientos,
             FakeCategoriaRepository(DataOutcome.Success(listOf(category))),
+            primarySaldos(),
+            today(),
             backgroundScope,
         )
     val collector = backgroundScope.launch { vm.uiState.collect {} }
@@ -387,17 +406,149 @@ class HomeViewModelTest {
     assertTrue(sibling.isActive)
   }
 
+  @Test
+  fun theCardShowsThePrimaryCurrencyTotalBalanceFromTheReadModel() = runTest {
+    val saldos = primarySaldos(Money(125_000, Moneda.COP), Money(9_900, Moneda.USD))
+    val vm =
+        createViewModel(
+            FakePreferencesRepository(readyPreferences(Moneda.COP)),
+            FakeMovimientoRepository(
+                recent = DataOutcome.Success(emptyList()),
+                summary = DataOutcome.Success(summary(Moneda.COP)),
+            ),
+            FakeCategoriaRepository(DataOutcome.Success(emptyList())),
+            backgroundScope,
+            saldos = saldos,
+        )
+    runCurrent()
+    assertEquals(Money(125_000, Moneda.COP), vm.uiState.value.totalBalance)
+
+    saldos.saldos.value =
+        saldos.saldos.value.map {
+          if (it.saldo.moneda == Moneda.COP) it.copy(saldo = Money(100_000, Moneda.COP)) else it
+        }
+    runCurrent()
+    assertEquals(Money(100_000, Moneda.COP), vm.uiState.value.totalBalance)
+  }
+
+  @Test
+  fun theCardsSecondaryValuesAreThisCivilMonthInTheInjectedTimeZone() = runTest {
+    val movimientos =
+        FakeMovimientoRepository(
+            recent = DataOutcome.Success(emptyList()),
+            summary = DataOutcome.Success(summary(Moneda.COP)),
+        )
+    val vm =
+        createViewModel(
+            FakePreferencesRepository(readyPreferences(Moneda.COP)),
+            movimientos,
+            FakeCategoriaRepository(DataOutcome.Success(emptyList())),
+            backgroundScope,
+            today =
+                CivilToday(
+                    MutableClock(Instant.parse("2026-10-01T03:00:00Z")),
+                    TimeZoneProvider { TimeZone.of("UTC-05:00") },
+                ),
+        )
+    runCurrent()
+
+    assertEquals(
+        listOf(Moneda.COP to MovimientoDateRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30))),
+        movimientos.summaryRanges,
+    )
+    assertEquals(summary(Moneda.COP), vm.uiState.value.summary)
+  }
+
+  @Test
+  fun resumingInANewMonthReadsThatMonth() = runTest {
+    val clock = MutableClock(Instant.parse("2026-10-31T12:00:00Z"))
+    val movimientos =
+        FakeMovimientoRepository(
+            recent = DataOutcome.Success(emptyList()),
+            summary = DataOutcome.Success(summary(Moneda.COP)),
+        )
+    val vm =
+        createViewModel(
+            FakePreferencesRepository(readyPreferences(Moneda.COP)),
+            movimientos,
+            FakeCategoriaRepository(DataOutcome.Success(emptyList())),
+            backgroundScope,
+            today = today(clock),
+        )
+    runCurrent()
+    assertEquals(OCTOBER, movimientos.summaryRanges.last().second)
+
+    clock.now = Instant.parse("2026-11-01T12:00:00Z")
+    vm.onResume()
+    runCurrent()
+
+    assertEquals(
+        MovimientoDateRange(LocalDate(2026, 11, 1), LocalDate(2026, 11, 30)),
+        movimientos.summaryRanges.last().second,
+    )
+    assertFalse(vm.uiState.value.isLoading)
+  }
+
+  @Test
+  fun withoutALivePrimaryCurrencyAccountTheTotalIsZeroInThatCurrency() = runTest {
+    val vm =
+        createViewModel(
+            FakePreferencesRepository(readyPreferences(Moneda.COP)),
+            FakeMovimientoRepository(
+                recent = DataOutcome.Success(emptyList()),
+                summary = DataOutcome.Success(HomeUiState.emptySummary(Moneda.COP)),
+            ),
+            FakeCategoriaRepository(DataOutcome.Success(emptyList())),
+            backgroundScope,
+            saldos =
+                FakeSaldoRepository(
+                    primarySaldos(Money(9_900, Moneda.USD)).saldos.value.filter {
+                      it.saldo.moneda == Moneda.USD
+                    }
+                ),
+        )
+    runCurrent()
+
+    assertTrue(vm.uiState.value.hasSnapshot)
+    assertNull(vm.uiState.value.error)
+    assertEquals(Money(0, Moneda.COP), vm.uiState.value.totalBalance)
+  }
+
+  @Test
+  fun aBalanceReadFailureIsAHomeFailure() = runTest {
+    val failure = DataError.Local(IllegalStateException())
+    val saldos = primarySaldos().apply { this.failure.value = failure }
+    val vm =
+        createViewModel(
+            FakePreferencesRepository(readyPreferences(Moneda.COP)),
+            FakeMovimientoRepository(
+                recent = DataOutcome.Success(emptyList()),
+                summary = DataOutcome.Success(summary(Moneda.COP)),
+            ),
+            FakeCategoriaRepository(DataOutcome.Success(emptyList())),
+            backgroundScope,
+            saldos = saldos,
+        )
+    runCurrent()
+
+    assertEquals(failure, vm.uiState.value.error)
+  }
+
   private fun createViewModel(
       preferences: AppPreferencesRepository,
       movimientos: MovimientoRepository = FakeMovimientoRepository(),
       categorias: CategoriaRepository = FakeCategoriaRepository(),
       scope: CoroutineScope,
+      saldos: SaldoRepository = primarySaldos(),
+      today: CivilToday = today(),
   ): HomeViewModel {
     val viewModel =
         HomeViewModel(
             preferencesRepository = preferences,
             movimientoRepository = movimientos,
             categoriaRepository = categorias,
+            saldoRepository = saldos,
+            today = today,
             scope = scope,
         )
     scope.launch { viewModel.uiState.collect {} }
@@ -437,6 +588,12 @@ class HomeViewModelTest {
       recent: DataOutcome<List<Movimiento>>? = null,
       summary: DataOutcome<MovimientoSummary>? = null,
   ) : MovimientoRepository {
+    override suspend fun defaultSelection(
+        primary: Moneda,
+        tipo: TipoMovimiento,
+        medio: MedioPago?,
+    ): DataOutcome<CuentaSelection?> = error("Default selections are not expected in this fixture")
+
     private val recentValues = MutableStateFlow(recent)
     private val summaryValues = MutableStateFlow(summary)
     val recentRequests = mutableListOf<Pair<Moneda, Int>>()
@@ -451,9 +608,6 @@ class HomeViewModelTest {
 
     var summarySubscriptions = 0
       private set
-
-    override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> =
-        error("Home recent reads must include principal currency")
 
     override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
         flow {
@@ -477,24 +631,16 @@ class HomeViewModelTest {
           }
         }
 
-    override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> = flow {
+    val summaryRanges = mutableListOf<Pair<Moneda, MovimientoDateRange>>()
+
+    override fun observeSummary(
+        moneda: Moneda,
+        range: MovimientoDateRange,
+    ): Flow<DataOutcome<MovimientoSummary>> = flow {
+      summaryRanges += moneda to range
       summarySubscriptions += 1
       emitAll(summaryValues.filterNotNull())
     }
-
-    override fun observeFiltered(
-        criteria: MovimientoReadCriteria
-    ): Flow<DataOutcome<MovimientoSearchSnapshot>> =
-        error("Search reads are not expected in this fixture")
-
-    override fun observeRange(
-        moneda: Moneda,
-        range: MovimientoDateRange,
-    ): Flow<DataOutcome<List<Movimiento>>> =
-        error("History range reads are not expected in this fixture")
-
-    override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> =
-        error("History year reads are not expected in this fixture")
 
     override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
         error("Category history reads are not expected in this fixture")
@@ -516,14 +662,10 @@ class HomeViewModelTest {
     override suspend fun deleteAndCapture(id: String): DataOutcome<Movimiento?> =
         DataOutcome.Success(null)
 
-    override suspend fun restoreDeleted(
-        movimiento: Movimiento
-    ): DataOutcome<MovimientoRestoreResult> =
+    override suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<RestoreResult> =
         DataOutcome.Failure(
             DataError.InvalidInput("This Home fixture has no persistent movimiento store")
         )
-
-    override suspend fun delete(id: String): DataOutcome<Unit> = DataOutcome.Success(Unit)
 
     fun emitRecent(value: DataOutcome<List<Movimiento>>) {
       recentValues.value = value
@@ -568,6 +710,30 @@ class HomeViewModelTest {
   }
 
   private companion object {
+    val OCTOBER = MovimientoDateRange(LocalDate(2026, 10, 1), LocalDate(2026, 10, 31))
+
+    fun today(at: MutableClock = MutableClock(Instant.parse("2026-10-24T12:00:00Z"))) =
+        CivilToday(at, TimeZoneProvider { TimeZone.UTC })
+
+    /** Every currency the tests read has one live account, so totals are never missing. */
+    fun primarySaldos(vararg saldos: Money): FakeSaldoRepository =
+        FakeSaldoRepository(
+            Moneda.entries.map { moneda ->
+              CuentaSaldo(
+                  Cuenta(
+                      id = Cuenta.defaultCashId(moneda),
+                      nombre = "Efectivo",
+                      tipo = TipoCuenta.EFECTIVO,
+                      saldoInicial = saldos.firstOrNull { it.moneda == moneda } ?: Money(0, moneda),
+                      diaCorte = null,
+                      archivada = false,
+                      createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+                  ),
+                  saldos.firstOrNull { it.moneda == moneda } ?: Money(0, moneda),
+              )
+            }
+        )
+
     fun readyPreferences(moneda: Moneda) =
         DataOutcome.Success(AppPreferencesState.Ready(AppPreferences(moneda)))
 
@@ -593,6 +759,8 @@ class HomeViewModelTest {
             titulo = null,
             descripcion = null,
             createdAt = Instant.parse("2026-09-15T00:00:00Z"),
+            cuentaId = Cuenta.defaultCashId(moneda),
+            medio = MedioPago.EFECTIVO,
         )
   }
 }

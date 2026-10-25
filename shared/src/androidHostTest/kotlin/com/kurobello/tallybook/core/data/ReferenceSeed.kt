@@ -5,11 +5,18 @@ import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.ChangeStamp
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.TipoCuenta
+import kotlin.time.Instant
 
 /**
  * Creates the schema with the rows movimiento writes must reference: the seeded category catalog,
- * [extraCategoriaIds] as extra roots and [etiquetaIds] as tags named after their ids.
+ * [extraCategoriaIds] as extra roots, [etiquetaIds] as tags named after their ids and the default
+ * cash cuenta of every [Moneda], so [Cuenta.defaultCashId] of a movimiento's currency always
+ * exists.
  */
 internal fun createSchemaWithReferences(
     driver: SqlDriver,
@@ -33,12 +40,13 @@ internal fun TallybookDatabase.insertLegacy(
         movimiento.id,
         movimiento.tipo.name,
         movimiento.monto.minorUnits,
-        movimiento.monto.moneda.name,
         movimiento.fecha.toString(),
         movimiento.titulo,
         movimiento.descripcion,
         movimiento.createdAt.toString(),
         movimiento.categoriaId,
+        movimiento.cuentaId,
+        movimiento.medio.name,
         stamp.value,
     )
     movimiento.etiquetaIds.forEachIndexed { posicion, etiquetaId ->
@@ -75,5 +83,27 @@ internal fun TallybookDatabase.seedReferences(
     etiquetaIds.forEach { id ->
       etiquetaQueries.insertEtiqueta(id, id, null, "2026-01-01T00:00:00Z", ChangeStamp.SEED.value)
     }
+    seedCashCuentas()
   }
 }
+
+/** The default cash cuenta of every [Moneda], the cuentas legacy movimientos were migrated to. */
+internal fun TallybookDatabase.seedCashCuentas() {
+  transaction {
+    Moneda.entries.forEach { moneda -> insertCuentaRow(cashCuenta(moneda), ChangeStamp.SEED) }
+  }
+}
+
+internal fun cashCuenta(
+    moneda: Moneda,
+    createdAt: Instant = Instant.parse("2026-01-01T00:00:00Z"),
+): Cuenta =
+    Cuenta(
+        id = Cuenta.defaultCashId(moneda),
+        nombre = "Efectivo",
+        tipo = TipoCuenta.EFECTIVO,
+        saldoInicial = Money(0, moneda),
+        diaCorte = null,
+        archivada = false,
+        createdAt = createdAt,
+    )

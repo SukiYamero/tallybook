@@ -2,26 +2,30 @@ package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
+import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeTransferenciaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
-import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
-import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackViewModel
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.coroutines.CompletableDeferred
@@ -36,14 +40,15 @@ internal class ManageMovimientoFixture(scope: CoroutineScope) {
   val repository = ManagementRepository()
   val categorias = ManagementCategorias()
   val etiquetas = FakeEtiquetaRepository()
+  val cuentas = FakeCuentaRepository(listOf(USD_CASH, USD_BANK, USD_CARD, COP_CASH, NU))
   val clock = ManagementClock()
+  val feedback = ManagementFeedbackViewModel(repository, FakeTransferenciaRepository(), scope).queue
   val viewModel =
       ManageMovimientoViewModel(
-          repository,
-          categorias,
-          etiquetas,
+          ManageMovimientoRepositories(repository, categorias, etiquetas, cuentas),
           clock,
           TimeZoneProvider { TimeZone.UTC },
+          feedback,
           scope,
       )
 }
@@ -77,13 +82,25 @@ internal class ManagementCategorias : CategoriaRepository by UnsupportedCategori
 }
 
 internal class ManagementRepository : MovimientoRepository {
+  /** Answers per medio; the editor reads them with the movimiento's currency as primary. */
+  val medioSelections = mutableMapOf<MedioPago?, CuentaSelection?>()
+  val selectionRequests = mutableListOf<Pair<Moneda, MedioPago?>>()
+
+  override suspend fun defaultSelection(
+      primary: Moneda,
+      tipo: TipoMovimiento,
+      medio: MedioPago?,
+  ): DataOutcome<CuentaSelection?> {
+    selectionRequests += primary to medio
+    return DataOutcome.Success(medioSelections[medio])
+  }
+
   var current: Movimiento? = managementMovimiento()
   var readResult: DataOutcome<Movimiento?>? = null
   var updateResult: DataOutcome<MovimientoUpdateResult> =
       DataOutcome.Success(MovimientoUpdateResult.Updated)
   var deleteResult: DataOutcome<Movimiento?>? = null
-  var restoreResult: DataOutcome<MovimientoRestoreResult> =
-      DataOutcome.Success(MovimientoRestoreResult.Restored)
+  var restoreResult: DataOutcome<RestoreResult> = DataOutcome.Success(RestoreResult.Restored)
   var readGate: CompletableDeferred<Unit>? = null
   var updateGate: CompletableDeferred<Unit>? = null
   var restoreGate: CompletableDeferred<Unit>? = null
@@ -118,6 +135,8 @@ internal class ManagementRepository : MovimientoRepository {
               etiquetaIds = changes.etiquetaIds,
               titulo = changes.titulo,
               descripcion = changes.descripcion,
+              cuentaId = changes.cuentaId,
+              medio = changes.medio,
           )
     }
     return updateResult
@@ -131,32 +150,20 @@ internal class ManagementRepository : MovimientoRepository {
     return result
   }
 
-  override suspend fun restoreDeleted(
-      movimiento: Movimiento
-  ): DataOutcome<MovimientoRestoreResult> {
+  override suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<RestoreResult> {
     restores++
     restored = movimiento
     restoreGate?.await()
     return restoreResult
   }
 
-  override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = emptyFlow()
-
   override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
       emptyFlow()
 
-  override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> = emptyFlow()
-
-  override fun observeRange(
+  override fun observeSummary(
       moneda: Moneda,
       range: MovimientoDateRange,
-  ): Flow<DataOutcome<List<Movimiento>>> = emptyFlow()
-
-  override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> = emptyFlow()
-
-  override fun observeFiltered(
-      criteria: MovimientoReadCriteria
-  ): Flow<DataOutcome<MovimientoSearchSnapshot>> = emptyFlow()
+  ): Flow<DataOutcome<MovimientoSummary>> = emptyFlow()
 
   override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
       emptyFlow()
@@ -166,9 +173,6 @@ internal class ManagementRepository : MovimientoRepository {
 
   override suspend fun getAll(): DataOutcome<List<Movimiento>> =
       DataOutcome.Success(listOfNotNull(current))
-
-  override suspend fun delete(id: String): DataOutcome<Unit> =
-      error("Management must capture deletion")
 }
 
 internal fun managementCategoria(id: String = "food", parent: String? = null) =
@@ -184,6 +188,8 @@ internal fun managementMovimiento() =
         "Lunch",
         null,
         Instant.parse("2026-09-15T10:00:00Z"),
+        Cuenta.defaultCashId(Moneda.USD),
+        MedioPago.EFECTIVO,
     )
 
 internal fun managementFailure() = DataOutcome.Failure(DataError.Local(IllegalStateException()))

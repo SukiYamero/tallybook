@@ -5,10 +5,18 @@ import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.db.SqlPreparedStatement
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
+import com.kurobello.tallybook.core.data.TestChangeClock
+import com.kurobello.tallybook.core.data.seedCashCuentas
 import com.kurobello.tallybook.core.data.toDomain
 import com.kurobello.tallybook.core.model.ChangeStamp
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
+import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import java.io.File
 import java.sql.SQLException
@@ -18,8 +26,241 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.LocalDate
 
 class DatabaseSchemaTest {
+
+  @Test
+  fun `migration from schema 7 assigns one cash account per currency and keeps every row`() =
+      withSnapshot(version = 7) { driver ->
+        listOf(
+                "('cop_gasto', 'GASTO', 1000, 'COP', '2026-01-01T10:00:00.5Z', " +
+                    "'1767261600500-0001-0123456789abcdef', NULL)",
+                "('cop_first', 'GASTO', 2500, 'COP', '2026-01-01T10:00:00Z', " +
+                    "'1767261600000-0000-0000000000000000', NULL)",
+                "('cop_ingreso', 'INGRESO', 9000, 'COP', '2026-03-01T08:00:00Z', " +
+                    "'1772352000000-0002-0123456789abcdef', NULL)",
+                "('usd_gasto', 'GASTO', 1250, 'USD', '2026-02-01T00:00:00Z', " +
+                    "'1769904000000-0000-0123456789abcdef', NULL)",
+                "('clp_deleted', 'GASTO', 900, 'CLP', '2025-12-31T23:59:59Z', " +
+                    "'1772352000000-0003-0123456789abcdef', " +
+                    "'1772352000000-0003-0123456789abcdef')",
+            )
+            .forEach { values ->
+              driver.execute(
+                  null,
+                  "INSERT INTO movimiento(id, tipo, monto_minor, monto_moneda, created_at, " +
+                      "updated_at, deleted_at, fecha, categoria_id) " +
+                      "SELECT column1, column2, column3, column4, column5, column6, column7, " +
+                      "'2026-01-15', 'cat_comida' FROM (VALUES $values)",
+                  0,
+              )
+            }
+        driver.execute(
+            null,
+            "INSERT INTO etiqueta(id, nombre, created_at, updated_at) VALUES " +
+                "('tag_a', 'Viaje', '2026-01-01T00:00:00Z', '${ChangeStamp.SEED.value}'), " +
+                "('tag_b', 'Casa', '2026-01-01T00:00:00Z', '${ChangeStamp.SEED.value}')",
+            0,
+        )
+        driver.execute(
+            null,
+            "INSERT INTO movimiento_etiqueta(movimiento_id, etiqueta_id, posicion) VALUES " +
+                "('cop_gasto', 'tag_b', 0), ('cop_gasto', 'tag_a', 1), ('usd_gasto', 'tag_a', 0)",
+            0,
+        )
+        val sumsBefore =
+            driver.queryStrings(
+                "SELECT monto_moneda || ' ' || tipo || ' ' || SUM(monto_minor) FROM movimiento " +
+                    "WHERE deleted_at IS NULL GROUP BY monto_moneda, tipo ORDER BY 1"
+            )
+        val stampsBefore = driver.movimientoStamps()
+
+        TallybookDatabase.Schema.migrate(
+            driver,
+            oldVersion = 7,
+            newVersion = TallybookDatabase.Schema.version,
+        )
+
+        val seed = ChangeStamp.SEED.value
+        assertEquals(
+            listOf(
+                "cuenta_efectivo_clp Efectivo EFECTIVO CLP 0 - 0 2025-12-31T23:59:59Z $seed $seed",
+                "cuenta_efectivo_cop Efectivo EFECTIVO COP 0 - 0 2026-01-01T10:00:00Z $seed -",
+                "cuenta_efectivo_usd Efectivo EFECTIVO USD 0 - 0 2026-02-01T00:00:00Z $seed -",
+            ),
+            driver.queryStrings(
+                "SELECT id || ' ' || nombre || ' ' || tipo || ' ' || moneda || ' ' || " +
+                    "saldo_inicial_minor || ' ' || COALESCE(dia_corte, '-') || ' ' || " +
+                    "archivada || ' ' || created_at || ' ' || updated_at || ' ' || " +
+                    "COALESCE(deleted_at, '-') FROM cuenta ORDER BY id"
+            ),
+        )
+        assertEquals(
+            listOf(
+                "clp_deleted cuenta_efectivo_clp EFECTIVO",
+                "cop_first cuenta_efectivo_cop EFECTIVO",
+                "cop_gasto cuenta_efectivo_cop EFECTIVO",
+                "cop_ingreso cuenta_efectivo_cop EFECTIVO",
+                "usd_gasto cuenta_efectivo_usd EFECTIVO",
+            ),
+            driver.queryStrings(
+                "SELECT id || ' ' || cuenta_id || ' ' || medio_pago FROM movimiento ORDER BY id"
+            ),
+        )
+        assertEquals(stampsBefore, driver.movimientoStamps())
+        val database = TallybookDatabase(driver)
+        assertEquals(
+            mapOf(
+                "cop_first" to "COP",
+                "cop_gasto" to "COP",
+                "cop_ingreso" to "COP",
+                "usd_gasto" to "USD",
+            ),
+            database.movimientoQueries.selectAllMovimientos().executeAsList().associate {
+              it.id to it.monto_moneda
+            },
+        )
+        assertEquals(
+            sumsBefore,
+            listOf("CLP", "COP", "USD")
+                .flatMap { moneda ->
+                  database.movimientoQueries.totalsByTipo(moneda).map { (tipo, total) ->
+                    "$moneda $tipo $total"
+                  }
+                }
+                .sorted(),
+        )
+        assertEquals(
+            listOf("cop_gasto tag_a 1", "cop_gasto tag_b 0", "usd_gasto tag_a 0"),
+            driver.queryStrings(
+                "SELECT movimiento_id || ' ' || etiqueta_id || ' ' || posicion " +
+                    "FROM movimiento_etiqueta ORDER BY 1"
+            ),
+        )
+        val clpSnapshot =
+            Movimiento(
+                id = "clp_deleted",
+                tipo = TipoMovimiento.GASTO,
+                monto = Money(900, Moneda.CLP),
+                fecha = LocalDate(2026, 1, 15),
+                categoriaId = "cat_comida",
+                titulo = null,
+                descripcion = null,
+                createdAt = Instant.parse("2025-12-31T23:59:59Z"),
+                cuentaId = Cuenta.defaultCashId(Moneda.CLP),
+                medio = MedioPago.EFECTIVO,
+            )
+        assertEquals(
+            DataOutcome.Success(RestoreResult.MissingCuenta),
+            runBlocking {
+              MovimientoRepositoryImpl(database, Dispatchers.Unconfined, TestChangeClock())
+                  .restoreDeleted(clpSnapshot)
+            },
+        )
+        assertEquals(freshSchema(), driver.schemaObjects())
+      }
+
+  @Test
+  fun `migration from schema 8 adds the live transfer view and keeps every transfer`() =
+      withSnapshot(version = 8) { driver ->
+        val seed = ChangeStamp.SEED.value
+        driver.execute(
+            null,
+            "INSERT INTO cuenta(id, nombre, tipo, moneda, created_at, updated_at) VALUES " +
+                "('cop', 'Efectivo', 'EFECTIVO', 'COP', '2026-01-01T00:00:00Z', '$seed'), " +
+                "('usd', 'Chase', 'BANCO', 'USD', '2026-01-01T00:00:00Z', '$seed')",
+            0,
+        )
+        driver.execute(
+            null,
+            "INSERT INTO transferencia(id, cuenta_origen_id, cuenta_destino_id, " +
+                "monto_origen_minor, monto_destino_minor, fecha, created_at, updated_at, " +
+                "deleted_at) VALUES " +
+                "('live', 'cop', 'usd', 400000, 10000, '2026-02-01', '2026-02-01T00:00:00Z', " +
+                "'$seed', NULL), " +
+                "('gone', 'usd', 'cop', 100, 4000, '2026-02-02', '2026-02-02T00:00:00Z', " +
+                "'$seed', '$seed')",
+            0,
+        )
+
+        TallybookDatabase.Schema.migrate(
+            driver,
+            oldVersion = 8,
+            newVersion = TallybookDatabase.Schema.version,
+        )
+
+        assertEquals(
+            listOf("live cop 400000 COP usd 10000 USD"),
+            driver.queryStrings(
+                "SELECT id || ' ' || cuenta_origen_id || ' ' || monto_origen_minor || ' ' || " +
+                    "moneda_origen || ' ' || cuenta_destino_id || ' ' || " +
+                    "monto_destino_minor || ' ' || moneda_destino FROM transferencia_con_monedas"
+            ),
+        )
+        assertEquals(listOf("gone", "live"), driver.queryStrings("SELECT id FROM transferencia"))
+        assertEquals(freshSchema(), driver.schemaObjects())
+      }
+
+  @Test
+  fun `fresh schema rejects invalid cuenta and transferencia rows`() {
+    JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+      TallybookDatabase.Schema.create(driver)
+      val seed = ChangeStamp.SEED.value
+      fun insertCuenta(id: String, tipo: String, diaCorte: String) =
+          driver.execute(
+              null,
+              "INSERT INTO cuenta(id, nombre, tipo, moneda, dia_corte, created_at, updated_at) " +
+                  "VALUES ('$id', '$id', '$tipo', 'COP', $diaCorte, '2026-01-01T00:00:00Z', " +
+                  "'$seed')",
+              0,
+          )
+      fun insertTransferencia(id: String, destino: String, origenMinor: Long, destinoMinor: Long) =
+          driver.execute(
+              null,
+              "INSERT INTO transferencia(id, cuenta_origen_id, cuenta_destino_id, " +
+                  "monto_origen_minor, monto_destino_minor, fecha, created_at, updated_at) " +
+                  "VALUES ('$id', 'nequi', '$destino', $origenMinor, $destinoMinor, " +
+                  "'2026-01-02', '2026-01-02T00:00:00Z', '$seed')",
+              0,
+          )
+
+      insertCuenta("nequi", "BANCO", "NULL")
+      insertCuenta("nu", "CREDITO", "31")
+      insertCuenta("nu_first_day", "CREDITO", "1")
+      insertTransferencia("valid", destino = "nu", origenMinor = 100, destinoMinor = 100)
+
+      assertFailsWith<SQLException> { insertCuenta("unknown_tipo", "AHORRO", "NULL") }
+      assertFailsWith<SQLException> { insertCuenta("dia_zero", "CREDITO", "0") }
+      assertFailsWith<SQLException> { insertCuenta("dia_32", "CREDITO", "32") }
+      assertFailsWith<SQLException> {
+        insertTransferencia("zero_origen", destino = "nu", origenMinor = 0, destinoMinor = 100)
+      }
+      assertFailsWith<SQLException> {
+        insertTransferencia(
+            "negative_destino",
+            destino = "nu",
+            origenMinor = 100,
+            destinoMinor = -1,
+        )
+      }
+      assertFailsWith<SQLException> {
+        insertTransferencia(
+            "same_account",
+            destino = "nequi",
+            origenMinor = 100,
+            destinoMinor = 100,
+        )
+      }
+      assertEquals(
+          listOf("nequi", "nu", "nu_first_day"),
+          driver.queryStrings("SELECT id FROM cuenta ORDER BY id"),
+      )
+      assertEquals(listOf("valid"), driver.queryStrings("SELECT id FROM transferencia"))
+    }
+  }
 
   @Test
   fun `migration from schema 6 backfills change stamps and keeps every row`() =
@@ -454,19 +695,28 @@ class DatabaseSchemaTest {
                 "id",
                 "tipo",
                 "monto_minor",
-                "monto_moneda",
                 "fecha",
                 "descripcion",
                 "created_at",
                 "titulo",
                 "categoria_id",
+                "cuenta_id",
+                "medio_pago",
                 "updated_at",
                 "deleted_at",
             ),
             driver.queryStrings("SELECT name FROM pragma_table_info('movimiento')"),
         )
         assertEquals(
-            listOf("movimiento_by_categoria", "movimiento_etiqueta_etiqueta", "movimiento_recent"),
+            listOf(
+                "movimiento_by_categoria",
+                "movimiento_by_cuenta",
+                "movimiento_etiqueta_etiqueta",
+                "movimiento_recent",
+                "transferencia_by_destino",
+                "transferencia_by_origen",
+                "transferencia_recent",
+            ),
             driver.queryStrings(
                 "SELECT name FROM sqlite_master WHERE type = 'index' AND name NOT LIKE 'sqlite_%' ORDER BY name"
             ),
@@ -480,11 +730,18 @@ class DatabaseSchemaTest {
             driver.queryStrings("SELECT name FROM pragma_index_info('movimiento_recent')"),
         )
         assertEquals(
-            listOf("movimiento_con_etiquetas"),
-            driver.queryStrings("SELECT name FROM sqlite_master WHERE type = 'view'"),
+            listOf("movimiento_con_etiquetas", "transferencia_con_monedas"),
+            driver.queryStrings("SELECT name FROM sqlite_master WHERE type = 'view' ORDER BY name"),
         )
         assertEquals(
-            listOf("categoria", "etiqueta", "movimiento", "movimiento_etiqueta"),
+            listOf(
+                "categoria",
+                "cuenta",
+                "etiqueta",
+                "movimiento",
+                "movimiento_etiqueta",
+                "transferencia",
+            ),
             driver.queryStrings(
                 "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
             ),
@@ -504,8 +761,19 @@ class DatabaseSchemaTest {
           )
           .value
 
+  private fun MovimientoQueries.totalsByTipo(moneda: String): Map<String, Long?> =
+      sumMovimientosByTipoInRange(moneda, "0000-01-01", "9999-12-31").executeAsList().associate {
+        it.tipo to it.total_minor
+      }
+
   private fun SqlDriver.stampsOf(table: String): List<String> =
       queryStrings("SELECT id || ' ' || updated_at FROM $table ORDER BY id")
+
+  private fun SqlDriver.movimientoStamps(): List<String> =
+      queryStrings(
+          "SELECT id || ' ' || updated_at || ' ' || COALESCE(deleted_at, '-') FROM movimiento " +
+              "ORDER BY id"
+      )
 
   private fun withSnapshot(version: Int, block: (SqlDriver) -> Unit) {
     val snapshot = File("src/commonMain/sqldelight/databases/$version.db")
@@ -543,7 +811,7 @@ class DatabaseSchemaTest {
   private fun inMemoryDatabase(): TallybookDatabase {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     TallybookDatabase.Schema.create(driver)
-    return TallybookDatabase(driver)
+    return TallybookDatabase(driver).apply { seedCashCuentas() }
   }
 
   private fun TallybookDatabase.insert(
@@ -563,12 +831,13 @@ class DatabaseSchemaTest {
           id = id,
           tipo = tipo,
           monto_minor = montoMinor,
-          monto_moneda = moneda,
           fecha = fecha,
           titulo = titulo,
           descripcion = descripcion,
           created_at = createdAt,
           categoria_id = categoriaId,
+          cuenta_id = Cuenta.defaultCashId(Moneda.valueOf(moneda)),
+          medio_pago = MedioPago.EFECTIVO.name,
           updated_at = ChangeStamp.SEED.value,
       )
       etiquetaIds.forEachIndexed { posicion, etiquetaId ->
@@ -664,7 +933,7 @@ class DatabaseSchemaTest {
   }
 
   @Test
-  fun `selectRecentMovimientos uses fecha then created at then id and obeys limit`() {
+  fun `selectRecentMovimientosByMoneda uses fecha then created at then id and obeys limit`() {
     val db = inMemoryDatabase()
     db.insert(id = "a", montoMinor = 100, fecha = "2026-09-03", createdAt = "2026-09-03T12:00:00Z")
     db.insert(id = "c", montoMinor = 100, fecha = "2026-09-03", createdAt = "2026-09-03T12:00:00Z")
@@ -673,12 +942,14 @@ class DatabaseSchemaTest {
 
     assertEquals(
         listOf("c", "a", "b"),
-        db.movimientoQueries.selectRecentMovimientos(3).executeAsList().map { it.id },
+        db.movimientoQueries.selectRecentMovimientosByMoneda("COP", 3).executeAsList().map {
+          it.id
+        },
     )
   }
 
   @Test
-  fun `sumMovimientosByTipo filters by moneda before summing`() {
+  fun `sumMovimientosByTipoInRange filters by moneda before summing`() {
     val db = inMemoryDatabase()
     db.insert(id = "gasto", montoMinor = 500, moneda = "COP")
     db.insert(id = "ingreso", tipo = "INGRESO", montoMinor = 2_000, moneda = "COP")
@@ -686,9 +957,7 @@ class DatabaseSchemaTest {
 
     assertEquals(
         mapOf("GASTO" to 500L, "INGRESO" to 2_000L),
-        db.movimientoQueries.sumMovimientosByTipo("COP").executeAsList().associate {
-          it.tipo to it.total_minor
-        },
+        db.movimientoQueries.totalsByTipo("COP"),
     )
   }
 
@@ -801,9 +1070,7 @@ class DatabaseSchemaTest {
     )
     assertEquals(
         mapOf("GASTO" to 1_500L),
-        db.movimientoQueries.sumMovimientosByTipo("COP").executeAsList().associate {
-          it.tipo to it.total_minor
-        },
+        db.movimientoQueries.totalsByTipo("COP"),
     )
   }
 
@@ -839,7 +1106,7 @@ class DatabaseSchemaTest {
   fun `reads through the movimiento view skip tombstones`() {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       TallybookDatabase.Schema.create(driver)
-      val db = TallybookDatabase(driver)
+      val db = TallybookDatabase(driver).apply { seedCashCuentas() }
       db.insert(id = "live", montoMinor = 100)
       db.insert(id = "tombstone", montoMinor = 200)
 
@@ -861,7 +1128,7 @@ class DatabaseSchemaTest {
   fun `direct table reads counts and aggregates skip tombstones`() {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       TallybookDatabase.Schema.create(driver)
-      val db = TallybookDatabase(driver)
+      val db = TallybookDatabase(driver).apply { seedCashCuentas() }
       for (id in listOf("cat_live", "cat_gone")) {
         db.categoriaQueries.insertCategoria(id, id, null, "tag", "neutral", ChangeStamp.SEED.value)
       }
@@ -899,16 +1166,17 @@ class DatabaseSchemaTest {
       val categorias = db.categoriaQueries
       val etiquetas = db.etiquetaQueries
 
-      assertEquals(listOf("2026"), movimientos.selectMovimientoYears("COP").executeAsList())
+      assertEquals(
+          listOf("2026"),
+          db.transferenciaQueries.selectActividadYears("COP").executeAsList(),
+      )
       assertEquals(
           listOf("cafe"),
           movimientos.selectCategoryHistory(10).executeAsList().map { it.titulo },
       )
       assertEquals(
           mapOf("GASTO" to 100L),
-          movimientos.sumMovimientosByTipo("COP").executeAsList().associate {
-            it.tipo to it.total_minor
-          },
+          movimientos.totalsByTipo("COP"),
       )
       assertEquals(
           listOf(Triple("cat_live", "GASTO", 100L)),
@@ -996,12 +1264,47 @@ class DatabaseSchemaTest {
                   },
               "selectFilteredMovimientos without filters" to
                   {
-                    queries.selectFilteredMovimientos("COP", null, null, null).executeAsList()
+                    queries
+                        .selectFilteredMovimientos(
+                            "COP",
+                            null,
+                            null,
+                            null,
+                            0,
+                            emptyList(),
+                            0,
+                            emptyList(),
+                        )
+                        .executeAsList()
                   },
               "selectFilteredMovimientos with range and tipo" to
                   {
                     queries
-                        .selectFilteredMovimientos("COP", "2026-01-01", "2026-12-31", "GASTO")
+                        .selectFilteredMovimientos(
+                            "COP",
+                            "2026-01-01",
+                            "2026-12-31",
+                            "GASTO",
+                            0,
+                            emptyList(),
+                            0,
+                            emptyList(),
+                        )
+                        .executeAsList()
+                  },
+              "selectFilteredMovimientos with cuenta and medio" to
+                  {
+                    queries
+                        .selectFilteredMovimientos(
+                            "COP",
+                            null,
+                            null,
+                            null,
+                            1,
+                            listOf("nequi"),
+                            1,
+                            listOf("DEBITO"),
+                        )
                         .executeAsList()
                   },
               "selectFilteredMovimientosByCategory" to
@@ -1012,6 +1315,10 @@ class DatabaseSchemaTest {
                             null,
                             null,
                             null,
+                            0,
+                            emptyList(),
+                            0,
+                            emptyList(),
                             listOf("cat_comida"),
                         )
                         .executeAsList()

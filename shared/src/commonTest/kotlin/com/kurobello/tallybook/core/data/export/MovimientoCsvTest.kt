@@ -3,11 +3,15 @@ package com.kurobello.tallybook.core.data.export
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.Transferencia
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -17,7 +21,8 @@ import kotlinx.datetime.LocalDate
 private const val BOM = "﻿"
 private const val CRLF = "\r\n"
 private const val HEADER =
-    "Fecha,Tipo,Categoría,Categoría padre,Tags,Título,Descripción,Monto,Moneda"
+    "Fecha,Tipo,Categoría,Categoría padre,Tags,Título,Descripción,Monto,Moneda," +
+        "Cuenta,Medio,Cuenta destino,Monto destino,Moneda destino"
 
 private val labels =
     MovimientoCsvLabels(
@@ -32,6 +37,27 @@ private val labels =
         currencyHeader = "Moneda",
         expenseLabel = "Gasto",
         incomeLabel = "Ingreso",
+        accountHeader = "Cuenta",
+        medioHeader = "Medio",
+        destinationAccountHeader = "Cuenta destino",
+        destinationAmountHeader = "Monto destino",
+        destinationCurrencyHeader = "Moneda destino",
+        transferLabel = "Transferencia entre cuentas",
+        medioLabels =
+            mapOf(
+                MedioPago.EFECTIVO to "Efectivo",
+                MedioPago.DEBITO to "Débito",
+                MedioPago.TRANSFERENCIA to "Transferencia",
+                MedioPago.CREDITO to "Crédito",
+            ),
+    )
+
+private val cuentas =
+    listOf(
+        cuenta(id = Cuenta.defaultCashId(Moneda.CLP), nombre = "Billetera", moneda = Moneda.CLP),
+        cuenta(id = Cuenta.defaultCashId(Moneda.COP), nombre = "Caja COP", moneda = Moneda.COP),
+        cuenta(id = "nequi", nombre = "Nequi", moneda = Moneda.COP, tipo = TipoCuenta.BANCO),
+        cuenta(id = "usd", nombre = "Ahorro USD", moneda = Moneda.USD, tipo = TipoCuenta.BANCO),
     )
 
 private val comida = categoria(id = "comida", nombre = "Comida")
@@ -48,14 +74,14 @@ class MovimientoCsvTest {
 
   @Test
   fun startsWithBomAndLocalizedHeaderAndEndsEveryRecordWithCrlf() {
-    val csv = buildMovimientoCsv(listOf(movimiento(id = "a")), categorias, etiquetas, labels)
+    val csv = exportCsv(listOf(movimiento(id = "a")), emptyList(), cuentas, categorias, etiquetas)
 
     assertTrue(csv.startsWith(BOM + HEADER + CRLF))
     assertTrue(csv.endsWith(CRLF))
     assertEquals(2, csv.split(CRLF).size - 1)
     assertEquals(
         BOM + HEADER + CRLF,
-        buildMovimientoCsv(emptyList(), categorias, etiquetas, labels),
+        exportCsv(emptyList(), emptyList(), cuentas, categorias, etiquetas),
     )
   }
 
@@ -73,7 +99,7 @@ class MovimientoCsvTest {
     val labelled = movimientos.map { it.copy(titulo = it.id) }
 
     val titles =
-        dataRows(buildMovimientoCsv(labelled, categorias, etiquetas, labels)).map {
+        dataRows(exportCsv(labelled, emptyList(), cuentas, categorias, etiquetas)).map {
           it.split(",")[5]
         }
 
@@ -103,10 +129,10 @@ class MovimientoCsvTest {
 
     assertEquals(
         listOf(
-            "2026-03-05,Gasto,Supermercado,Comida,,Feria,Frutas y verduras,1500,CLP",
-            "2026-03-01,Ingreso,Sueldo,Sueldo,,,,2500000.00,COP",
+            "2026-03-05,Gasto,Supermercado,Comida,,Feria,Frutas y verduras,1500,CLP,Billetera,Efectivo,,,",
+            "2026-03-01,Ingreso,Sueldo,Sueldo,,,,2500000.00,COP,Caja COP,Efectivo,,,",
         ),
-        dataRows(buildMovimientoCsv(movimientos, categorias, etiquetas, labels)),
+        dataRows(exportCsv(movimientos, emptyList(), cuentas, categorias, etiquetas)),
     )
   }
 
@@ -124,7 +150,7 @@ class MovimientoCsvTest {
             .mapIndexed { index, monto -> movimiento(id = "$index", monto = monto) }
 
     val formatted =
-        dataRows(buildMovimientoCsv(amounts, categorias, etiquetas, labels)).map {
+        dataRows(exportCsv(amounts, emptyList(), cuentas, categorias, etiquetas)).map {
           it.split(",")[7]
         }
 
@@ -143,15 +169,16 @@ class MovimientoCsvTest {
         )
     descriptions.forEach { (descripcion, expected) ->
       val csv =
-          buildMovimientoCsv(
+          exportCsv(
               listOf(movimiento(id = "a", categoriaId = "sueldo", descripcion = descripcion)),
+              emptyList(),
+              cuentas,
               categorias,
               etiquetas,
-              labels,
           )
 
       assertTrue(
-          csv.endsWith(",Sueldo,Sueldo,,,$expected,1000,CLP$CRLF"),
+          csv.endsWith(",Sueldo,Sueldo,,,$expected,1000,CLP,Billetera,Efectivo,,,$CRLF"),
           "for '$descripcion': $csv",
       )
     }
@@ -171,11 +198,12 @@ class MovimientoCsvTest {
     guarded.forEach { (descripcion, expected) ->
       val row =
           dataRows(
-                  buildMovimientoCsv(
+                  exportCsv(
                       listOf(movimiento(id = "a", descripcion = descripcion)),
+                      emptyList(),
+                      cuentas,
                       categorias,
                       etiquetas,
-                      labels,
                   ),
               )
               .single()
@@ -185,11 +213,12 @@ class MovimientoCsvTest {
     val formulaCategoria = categoria(id = "f", nombre = "=HYPERLINK(\"x\")")
     val row =
         dataRows(
-                buildMovimientoCsv(
+                exportCsv(
                     listOf(movimiento(id = "a", categoriaId = "f")),
+                    emptyList(),
+                    cuentas,
                     listOf(formulaCategoria),
                     emptyList(),
-                    labels,
                 ),
             )
             .single()
@@ -206,10 +235,10 @@ class MovimientoCsvTest {
 
     assertEquals(
         listOf(
-            "2026-01-15,Gasto,Comida,Comida,Empresa,,,1000,CLP",
-            "2026-01-15,Gasto,Comida,Comida,Viaje Chile · Empresa,,,1000,CLP",
+            "2026-01-15,Gasto,Comida,Comida,Empresa,,,1000,CLP,Billetera,Efectivo,,,",
+            "2026-01-15,Gasto,Comida,Comida,Viaje Chile · Empresa,,,1000,CLP,Billetera,Efectivo,,,",
         ),
-        dataRows(buildMovimientoCsv(movimientos, categorias, etiquetas, labels)),
+        dataRows(exportCsv(movimientos, emptyList(), cuentas, categorias, etiquetas)),
     )
   }
 
@@ -223,8 +252,136 @@ class MovimientoCsvTest {
         )
 
     assertEquals(
-        listOf("2026-01-15,Gasto,,,,,,1000,CLP", "2026-01-15,Gasto,Huérfana,,,,,1000,CLP"),
-        dataRows(buildMovimientoCsv(movimientos, categorias + orphan, etiquetas, labels)),
+        listOf(
+            "2026-01-15,Gasto,,,,,,1000,CLP,Billetera,Efectivo,,,",
+            "2026-01-15,Gasto,Huérfana,,,,,1000,CLP,Billetera,Efectivo,,,",
+        ),
+        dataRows(exportCsv(movimientos, emptyList(), cuentas, categorias + orphan, etiquetas)),
+    )
+  }
+
+  @Test
+  fun writesTheMovimientoAccountAndMedioAndLeavesDestinationCellsEmpty() {
+    val movimiento =
+        movimiento(id = "a", monto = Money(1250, Moneda.COP), categoriaId = "sueldo")
+            .copy(cuentaId = "nequi", medio = MedioPago.DEBITO)
+
+    assertEquals(
+        listOf("2026-01-15,Gasto,Sueldo,Sueldo,,,,12.50,COP,Nequi,Débito,,,"),
+        dataRows(
+            exportCsv(listOf(movimiento), emptyList(), cuentas, categorias, etiquetas),
+        ),
+    )
+  }
+
+  @Test
+  fun writesASameCurrencyTransferWithOnlyTypeDescriptionAmountsAndAccounts() {
+    val transferencia =
+        transferencia(
+            id = "t",
+            origenId = "nequi",
+            destinoId = Cuenta.defaultCashId(Moneda.COP),
+            montoOrigen = Money(5_000_000, Moneda.COP),
+            montoDestino = Money(5_000_000, Moneda.COP),
+            descripcion = "Retiro cajero",
+        )
+
+    assertEquals(
+        listOf(
+            "2026-01-15,Transferencia entre cuentas,,,,,Retiro cajero,50000.00,COP," +
+                "Nequi,,Caja COP,50000.00,COP"
+        ),
+        dataRows(
+            exportCsv(emptyList(), listOf(transferencia), cuentas, categorias, etiquetas),
+        ),
+    )
+  }
+
+  @Test
+  fun writesACrossCurrencyTransferWithEachSideInItsOwnScale() {
+    val transferencia =
+        transferencia(
+            id = "t",
+            origenId = Cuenta.defaultCashId(Moneda.CLP),
+            destinoId = "usd",
+            montoOrigen = Money(50_000, Moneda.CLP),
+            montoDestino = Money(5_250, Moneda.USD),
+            descripcion = null,
+        )
+
+    assertEquals(
+        listOf(
+            "2026-01-15,Transferencia entre cuentas,,,,,,50000,CLP,Billetera,,Ahorro USD,52.50,USD"
+        ),
+        dataRows(
+            exportCsv(emptyList(), listOf(transferencia), cuentas, categorias, etiquetas),
+        ),
+    )
+  }
+
+  @Test
+  fun mergesMovimientosAndTransfersByFechaThenCreatedAtThenIdDescending() {
+    val movimientos =
+        listOf(
+            movimiento(id = "m-old", fecha = LocalDate(2026, 1, 1), titulo = "m-old"),
+            movimiento(id = "m-b", fecha = LocalDate(2026, 2, 1), createdAtSeconds = 10)
+                .copy(titulo = "m-b"),
+        )
+    val transferencias =
+        listOf(
+            transferencia(id = "t-new", fecha = LocalDate(2026, 3, 1), descripcion = "t-new"),
+            transferencia(
+                id = "t-late",
+                fecha = LocalDate(2026, 2, 1),
+                createdAtSeconds = 20,
+                descripcion = "t-late",
+            ),
+            transferencia(
+                id = "m-a",
+                fecha = LocalDate(2026, 2, 1),
+                createdAtSeconds = 10,
+                descripcion = "m-a",
+            ),
+        )
+
+    val labelsInOrder =
+        dataRows(
+                exportCsv(movimientos, transferencias, cuentas, categorias, etiquetas),
+            )
+            .map { row -> row.split(",").let { it[5].ifEmpty { it[6] } } }
+
+    assertEquals(listOf("t-new", "t-late", "m-b", "m-a", "m-old"), labelsInOrder)
+  }
+
+  @Test
+  fun escapesAccountNamesAndTransferDescriptionsAndLeavesMissingAccountsEmpty() {
+    val tricky = cuenta(id = "tricky", nombre = "Banco \"Uno\", ahorro", moneda = Moneda.COP)
+    val formula = cuenta(id = "formula", nombre = "=Caja", moneda = Moneda.COP)
+    val transferencia =
+        transferencia(
+            id = "t",
+            origenId = "tricky",
+            destinoId = "formula",
+            descripcion = "+57 300",
+        )
+    val orphanMovimiento =
+        movimiento(id = "m", monto = Money(1250, Moneda.COP)).copy(cuentaId = "deleted")
+
+    assertEquals(
+        listOf(
+            "2026-01-15,Transferencia entre cuentas,,,,,'+57 300,10.00,COP," +
+                "\"Banco \"\"Uno\"\", ahorro\",,'=Caja,10.00,COP",
+            "2026-01-15,Gasto,Comida,Comida,,,,12.50,COP,,Efectivo,,,",
+        ),
+        dataRows(
+            exportCsv(
+                listOf(orphanMovimiento),
+                listOf(transferencia),
+                listOf(tricky, formula),
+                categorias,
+                etiquetas,
+            ),
+        ),
     )
   }
 }
@@ -261,5 +418,56 @@ private fun movimiento(
         titulo = titulo,
         descripcion = descripcion,
         createdAt = Instant.fromEpochSeconds(createdAtSeconds),
+        cuentaId = Cuenta.defaultCashId(monto.moneda),
+        medio = MedioPago.EFECTIVO,
         etiquetaIds = etiquetaIds,
+    )
+
+private fun cuenta(
+    id: String,
+    nombre: String,
+    moneda: Moneda,
+    tipo: TipoCuenta = TipoCuenta.EFECTIVO,
+) =
+    Cuenta(
+        id = id,
+        nombre = nombre,
+        tipo = tipo,
+        saldoInicial = Money(0, moneda),
+        diaCorte = null,
+        archivada = false,
+        createdAt = Instant.fromEpochSeconds(0),
+    )
+
+private fun transferencia(
+    id: String,
+    fecha: LocalDate = LocalDate(2026, 1, 15),
+    createdAtSeconds: Long = 0,
+    origenId: String = "nequi",
+    destinoId: String = Cuenta.defaultCashId(Moneda.COP),
+    montoOrigen: Money = Money(1000, Moneda.COP),
+    montoDestino: Money = montoOrigen,
+    descripcion: String? = null,
+) =
+    Transferencia(
+        id = id,
+        cuentaOrigenId = origenId,
+        cuentaDestinoId = destinoId,
+        montoOrigen = montoOrigen,
+        montoDestino = montoDestino,
+        fecha = fecha,
+        descripcion = descripcion,
+        createdAt = Instant.fromEpochSeconds(createdAtSeconds),
+    )
+
+private fun exportCsv(
+    movimientos: List<Movimiento>,
+    transferencias: List<Transferencia>,
+    cuentas: List<Cuenta>,
+    categorias: List<Categoria>,
+    etiquetas: List<Etiqueta>,
+): String =
+    buildMovimientoCsv(
+        MovimientoExportContent(movimientos, transferencias, cuentas, categorias, etiquetas),
+        labels,
     )

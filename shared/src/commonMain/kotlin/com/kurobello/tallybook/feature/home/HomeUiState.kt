@@ -19,6 +19,9 @@ internal data class HomeUiState(
   val summary: MovimientoSummary
     get() = content.cachedValue?.summary ?: emptySummary(moneda)
 
+  val totalBalance: Money
+    get() = content.cachedValue?.totalBalance ?: Money(0, moneda)
+
   val recent
     get() = content.cachedValue?.recent.orEmpty()
 

@@ -2,6 +2,7 @@ package com.kurobello.tallybook.core.data
 
 import com.kurobello.tallybook.core.database.Movimiento_con_etiquetas as DatabaseMovimiento
 import com.kurobello.tallybook.core.model.ChangeStamp
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -27,6 +28,8 @@ class MovimientoMapperTest {
             titulo = "almuerzo",
             descripcion = "con Ana",
             createdAt = createdAt,
+            cuentaId = "nequi",
+            medio = MedioPago.TRANSFERENCIA,
             etiquetaIds = listOf("empresa"),
         ),
         databaseMovimiento(createdAt.toString()).toDomain(),
@@ -79,6 +82,8 @@ class MovimientoMapperTest {
           created_at = createdAt,
           titulo = "almuerzo",
           categoria_id = "cat_comida",
+          cuenta_id = "nequi",
+          medio_pago = "TRANSFERENCIA",
           updated_at = ChangeStamp.SEED.value,
           deleted_at = null,
           etiqueta_ids = "0\u001Fempresa",

@@ -37,6 +37,7 @@ internal fun HomeRoute(
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel(),
     onOpenMovimiento: ((String) -> Unit)? = null,
+    onOpenAccounts: (() -> Unit)? = null,
 ) {
   val state = rememberHomeRouteState(viewModel)
   HomeScreen(
@@ -48,6 +49,7 @@ internal fun HomeRoute(
       modifier = modifier,
       bottomBarClearance = bottomBarClearance,
       onOpenMovimiento = onOpenMovimiento,
+      onOpenAccounts = onOpenAccounts,
   )
 }
 
@@ -62,6 +64,7 @@ internal fun HomeScreen(
     modifier: Modifier = Modifier,
     bottomBarClearance: Dp = TallybookTheme.spacing.space0,
     onOpenMovimiento: ((String) -> Unit)? = null,
+    onOpenAccounts: (() -> Unit)? = null,
 ) {
   val presentation by rememberHomePresentation(uiState)
   val renderedState = presentation.state
@@ -92,8 +95,14 @@ internal fun HomeScreen(
       when {
         renderedState.error != null -> item { HomeError(onRetry) }
         !renderedState.hasSnapshot -> homeLoading(presentation.showLoading)
-        renderedState.isEmpty -> item { HomeEmpty(onAddMovimiento) }
-        else -> homePopulated(renderedState, onOpenMovimiento)
+        renderedState.isEmpty -> {
+          homeBalance(renderedState, onOpenAccounts)
+          item { HomeEmpty(onAddMovimiento) }
+        }
+        else -> {
+          homeBalance(renderedState, onOpenAccounts)
+          homePopulated(renderedState, onOpenMovimiento)
+        }
       }
       if (onOpenCatalog != null) {
         item {
@@ -125,6 +134,11 @@ internal fun HomeEmptyPreview() {
                 summary = HomeUiState.emptySummary(com.kurobello.tallybook.core.model.Moneda.COP),
                 recent = emptyList(),
                 categoriasById = emptyMap(),
+                totalBalance =
+                    com.kurobello.tallybook.core.model.Money(
+                        0,
+                        com.kurobello.tallybook.core.model.Moneda.COP,
+                    ),
             )
         ),
         {},
@@ -175,6 +189,11 @@ internal fun HomePopulatedPreview() {
           titulo = null,
           descripcion = null,
           createdAt = kotlin.time.Instant.parse("2026-09-15T00:00:00Z"),
+          cuentaId =
+              com.kurobello.tallybook.core.model.Cuenta.defaultCashId(
+                  com.kurobello.tallybook.core.model.Moneda.COP
+              ),
+          medio = com.kurobello.tallybook.core.model.MedioPago.EFECTIVO,
       )
   TallybookTheme {
     HomeScreen(
@@ -187,6 +206,11 @@ internal fun HomePopulatedPreview() {
                     ),
                 recent = listOf(movimiento),
                 categoriasById = mapOf(categoria.id to categoria),
+                totalBalance =
+                    com.kurobello.tallybook.core.model.Money(
+                        1_250_000,
+                        com.kurobello.tallybook.core.model.Moneda.COP,
+                    ),
             )
         ),
         {},

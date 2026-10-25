@@ -16,6 +16,9 @@ data class Movimiento(
     val titulo: String?,
     val descripcion: String?,
     val createdAt: Instant,
+    /** The currency of [monto] is this cuenta's; the database stores it only there. */
+    val cuentaId: String,
+    val medio: MedioPago,
     /** Up to [MAX_ETIQUETAS_POR_MOVIMIENTO] distinct ids in the user's display order. */
     val etiquetaIds: List<String> = emptyList(),
 )

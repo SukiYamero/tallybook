@@ -68,6 +68,8 @@ class HistoryLoadingPreviewActivity : ComponentActivity() {
 
     override fun onPeriodSelected(period: MovimientoDateRange) = Unit
 
+    override fun onMonedaSelected(moneda: Moneda) = Unit
+
     override fun onRetry() = Unit
 
     override fun onResume() = Unit

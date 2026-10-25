@@ -14,6 +14,8 @@ internal data class HistoryUiState(
         RetainedLoadState.Loading(),
     val years: HistoryYearState = HistoryYearState(),
     val preferenceFailure: DataError? = null,
+    val primary: Moneda? = null,
+    val monedas: List<Moneda> = emptyList(),
 ) {
   val range
     get() = selection.range(today)
@@ -28,7 +30,10 @@ internal data class HistoryUiState(
     get() = selection.availableYears(years.persisted, today, years.retained)
 
   val isEmpty: Boolean
-    get() = period !is RetainedLoadState.Failed && period.cachedValue?.movementCount == 0
+    get() = period !is RetainedLoadState.Failed && period.cachedValue?.isEmpty == true
+
+  val showsMonedaSelector: Boolean
+    get() = moneda != null && monedas.size > 1
 }
 
 internal data class HistoryYearState(

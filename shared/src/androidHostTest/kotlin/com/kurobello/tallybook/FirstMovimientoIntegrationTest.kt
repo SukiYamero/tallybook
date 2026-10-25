@@ -4,6 +4,9 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.CivilToday
+import com.kurobello.tallybook.core.data.CuentaRepositoryImpl
+import com.kurobello.tallybook.core.data.CuentaSeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
 import com.kurobello.tallybook.core.data.IdGenerator
@@ -12,18 +15,26 @@ import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
+import com.kurobello.tallybook.core.data.SaldoRepositoryImpl
 import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.cashCuenta
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
+import com.kurobello.tallybook.core.data.entry.CuentaMatcher
 import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
+import com.kurobello.tallybook.core.data.insertCuentaRow
 import com.kurobello.tallybook.core.data.maxStoredChangeStamp
+import com.kurobello.tallybook.core.data.seedDefaultCuenta
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
+import com.kurobello.tallybook.core.model.ChangeStamp
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -79,6 +90,14 @@ class FirstMovimientoIntegrationTest {
                   TestChangeClock(),
               )
           val movimientos = MovimientoRepositoryImpl(database, dispatcher, TestChangeClock())
+          val cuentas =
+              CuentaRepositoryImpl(
+                  database,
+                  dispatcher,
+                  IdGenerator { error("Not used by this test") },
+                  FixedClock(FIXED_INSTANT),
+                  TestChangeClock(),
+              )
           val etiquetas =
               EtiquetaRepositoryImpl(
                   database,
@@ -98,6 +117,10 @@ class FirstMovimientoIntegrationTest {
                         // deterministic names.
                         resource.key
                       },
+                  cuentaSeedProvider = CuentaSeedProvider(FixedClock(FIXED_INSTANT)) { it.key },
+                  seedDefaultCuenta = {
+                    database.seedDefaultCuenta(it, IdGenerator { "cash" }, dispatcher)
+                  },
                   changeClock = TestChangeClock(),
                   storedMaxChangeStamp = { database.maxStoredChangeStamp(dispatcher) },
               )
@@ -114,6 +137,8 @@ class FirstMovimientoIntegrationTest {
                   preferencesRepository = preferences,
                   movimientoRepository = movimientos,
                   categoriaRepository = categorias,
+                  saldoRepository = SaldoRepositoryImpl(database, dispatcher),
+                  today = CivilToday(FixedClock(FIXED_INSTANT), TimeZoneProvider { TimeZone.UTC }),
                   scope = scopes.newScope(dispatcher),
               )
           backgroundScope.launch { home.uiState.collect {} }
@@ -126,7 +151,13 @@ class FirstMovimientoIntegrationTest {
           val expenseForm =
               createMovimientoViewModel(
                   repositories =
-                      AddMovimientoRepositories(preferences, categorias, movimientos, etiquetas),
+                      AddMovimientoRepositories(
+                          preferences,
+                          categorias,
+                          movimientos,
+                          etiquetas,
+                          cuentas,
+                      ),
                   id = "expense",
                   scope = scopes.newScope(dispatcher),
                   dispatcher = dispatcher,
@@ -141,11 +172,21 @@ class FirstMovimientoIntegrationTest {
 
           assertEquals(Money(-1_050, Moneda.COP), home.uiState.value.summary.balance)
           assertEquals(listOf("expense"), home.uiState.value.recent.map(Movimiento::id))
+          assertEquals(
+              Cuenta.defaultCashId(Moneda.COP) to MedioPago.EFECTIVO,
+              home.uiState.value.recent.single().let { it.cuentaId to it.medio },
+          )
 
           val incomeForm =
               createMovimientoViewModel(
                   repositories =
-                      AddMovimientoRepositories(preferences, categorias, movimientos, etiquetas),
+                      AddMovimientoRepositories(
+                          preferences,
+                          categorias,
+                          movimientos,
+                          etiquetas,
+                          cuentas,
+                      ),
                   id = "income",
                   scope = scopes.newScope(dispatcher),
                   dispatcher = dispatcher,
@@ -167,7 +208,9 @@ class FirstMovimientoIntegrationTest {
               home.uiState.value.summary,
           )
           assertEquals(Money(950, Moneda.COP), home.uiState.value.summary.balance)
+          assertEquals(Money(950, Moneda.COP), home.uiState.value.totalBalance)
 
+          database.insertCuentaRow(cashCuenta(Moneda.USD), ChangeStamp.SEED)
           assertEquals(
               DataOutcome.Success(Unit),
               movimientos.insert(
@@ -180,12 +223,15 @@ class FirstMovimientoIntegrationTest {
                       titulo = null,
                       descripcion = null,
                       createdAt = FIXED_INSTANT,
+                      cuentaId = Cuenta.defaultCashId(Moneda.USD),
+                      medio = MedioPago.EFECTIVO,
                   )
               ),
           )
           testScheduler.advanceUntilIdle()
 
           assertEquals(Money(950, Moneda.COP), home.uiState.value.summary.balance)
+          assertEquals(Money(950, Moneda.COP), home.uiState.value.totalBalance)
 
           scopes.forEach(CoroutineScope::cancel)
           testScheduler.advanceUntilIdle()
@@ -252,6 +298,14 @@ class FirstMovimientoIntegrationTest {
                   TestChangeClock(),
               )
           val movimientos = MovimientoRepositoryImpl(database, dispatcher, TestChangeClock())
+          val cuentas =
+              CuentaRepositoryImpl(
+                  database,
+                  dispatcher,
+                  IdGenerator { error("Not used by this test") },
+                  FixedClock(FIXED_INSTANT),
+                  TestChangeClock(),
+              )
           val etiquetas =
               EtiquetaRepositoryImpl(
                   database,
@@ -266,13 +320,17 @@ class FirstMovimientoIntegrationTest {
                   preferencesRepository = preferences,
                   categoriaRepository = categorias,
                   categorySeedProvider = CategorySeedProvider { resource -> resource.key },
+                  cuentaSeedProvider = CuentaSeedProvider(FixedClock(FIXED_INSTANT)) { it.key },
+                  seedDefaultCuenta = {
+                    database.seedDefaultCuenta(it, IdGenerator { "cash" }, dispatcher)
+                  },
                   changeClock = TestChangeClock(),
                   storedMaxChangeStamp = { database.maxStoredChangeStamp(dispatcher) },
               )
           assertEquals(DataOutcome.Success(Unit), bootstrapper.initialize())
 
           val repositories =
-              AddMovimientoRepositories(preferences, categorias, movimientos, etiquetas)
+              AddMovimientoRepositories(preferences, categorias, movimientos, etiquetas, cuentas)
           val first =
               createMovimientoViewModel(
                   repositories,
@@ -344,6 +402,7 @@ class FirstMovimientoIntegrationTest {
                   parser = MovimientoPhraseParser(),
                   suggester = CategorySuggester(CategoryKeywordDictionary.builtIn),
                   etiquetaMatcher = EtiquetaMatcher(),
+                  cuentaMatcher = CuentaMatcher(),
                   localeProvider = FixedDeviceLocaleProvider("es-CO"),
                   computationDispatcher = dispatcher,
               ),

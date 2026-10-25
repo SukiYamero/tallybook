@@ -3,7 +3,9 @@ package com.kurobello.tallybook.feature.home
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -28,7 +30,12 @@ class HomePresentationTest {
   fun cachedEmptySnapshotRemainsEmptyWithoutInitialLoadingFeedback() = runTest {
     val empty =
         HomeUiState.ready(
-            HomeContent(HomeUiState.emptySummary(Moneda.USD), emptyList(), emptyMap())
+            HomeContent(
+                HomeUiState.emptySummary(Moneda.USD),
+                emptyList(),
+                emptyMap(),
+                Money(0, Moneda.USD),
+            )
         )
     val source = MutableStateFlow(empty)
     val frames = mutableListOf<HomePresentation>()
@@ -141,6 +148,8 @@ class HomePresentationTest {
             null,
             null,
             Instant.parse("2026-10-06T12:00:00Z"),
+            Cuenta.defaultCashId(Moneda.USD),
+            MedioPago.EFECTIVO,
         )
     val ready =
         HomeUiState.ready(
@@ -148,6 +157,7 @@ class HomePresentationTest {
                 MovimientoSummary(Money(100, Moneda.USD), Money(0, Moneda.USD)),
                 listOf(movement),
                 mapOf(category.id to category),
+                Money(2_000, Moneda.USD),
             )
         )
   }

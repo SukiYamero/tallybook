@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.feature.search.viewmodel
 
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Moneda
@@ -24,20 +25,16 @@ internal data class SearchUiState(
     val results: RetainedLoadState<SearchResultsUi, SearchFailure> = RetainedLoadState.Loading(),
     val work: SearchWork? = SearchWork.Reading,
     val preferenceFailure: DataError? = null,
+    val primary: Moneda? = null,
+    val monedas: List<Moneda> = emptyList(),
+    val cuentas: SearchCuentaState = SearchCuentaState(),
 ) {
+  /** [moneda] is the viewed currency: the primary one unless the user picked another. */
   val criteria: MovimientoReadCriteria?
-    get() {
-      val currency = moneda ?: return null
-      val resolution =
-          resolveSearchFilters(filters, today) as? SearchFilterResolution.Valid ?: return null
-      return MovimientoReadCriteria(
-          currency,
-          resolution.range,
-          filters.tipo,
-          filters.categoryIds,
-          filters.etiquetaIds,
-      )
-    }
+    get() = moneda?.let { filters.criteria(it, today) }
+
+  val showsMonedaSelector: Boolean
+    get() = moneda != null && monedas.size > 1
 
   val isCurrent: Boolean
     get() =
@@ -60,6 +57,7 @@ internal data class SearchUiState(
             preferenceFailure == null &&
             categories.isReady &&
             etiquetas.isReady &&
+            cuentas.isReady &&
             (years?.moneda == moneda ||
                 resolveSearchFilters(filters, today) is SearchFilterResolution.Invalid)
 
@@ -90,6 +88,15 @@ internal data class SearchCategoryState(
 
 internal data class SearchEtiquetaState(
     val values: List<Etiqueta>? = null,
+    val failure: DataError? = null,
+) {
+  val isReady: Boolean
+    get() = values != null && failure == null
+}
+
+/** Live accounts, archived included: a missing selected ID stays visible for explicit removal. */
+internal data class SearchCuentaState(
+    val values: List<Cuenta>? = null,
     val failure: DataError? = null,
 ) {
   val isReady: Boolean

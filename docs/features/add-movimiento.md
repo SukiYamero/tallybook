@@ -18,7 +18,7 @@ Creation moves through three steps; business rules for each live in
   sentence and Done on the keyboard continues. The "Detected" card is absent while the sentence is
   blank and fades in, expanding, with the first text (it leaves the same way). It shows the tipo and
   date badges (expense and today until the sentence says more), the amount when found or a note that
-  it was not detected, the Category section and the optional Tags section. Detection runs after a 250 ms debounce and clears immediately when
+  it was not detected, the Medio and Account sections, the Category section and the optional Tags section. Detection runs after a 250 ms debounce and clears immediately when
   the input is emptied, which also resets what an earlier Continue derived. Continue is pinned in a
   footer outside the scrolling body, so it stays on screen with the keyboard open and suggestions
   showing. The body scrolls the input, the Detected card, the "or" divider with the voice placeholder
@@ -31,12 +31,13 @@ Creation moves through three steps; business rules for each live in
   keyboard closes. Scrim taps and Back dismiss as before.
 - **Review (sheet)**: opens tall rather than hugging its content. A title and one-line subtitle
   lead labeled sections: Type and Date as large badges side by side, Amount (a missing one reads "not detected", with a hint to use Edit movimiento), the quoted
-  Title (the sentence), the Category section with its suggestions and the Tags section, each
-  section `space24` apart. Edit movimiento (left) opens the form with the same
+  Title (the sentence), the Medio and Account sections, the Category section with its suggestions
+  and the Tags section, each section `space24` apart. Edit movimiento (left) opens the form with the same
   draft; Save (right) persists; the actions sit at the bottom, at least `space32` below the content.
   The review has no text input: the description is edited in the form.
   A failed save shows the shared save error above the actions and keeps the draft.
-- **Form**: the complete form in the same sheet, with the same Category and Tags sections. Save
+- **Form**: the complete form in the same sheet: tipo, Medio, Account, Category, Tags, date, amount
+  and the optional texts. Save
   without a real category persists Otros; the Category section shows the pending style and, beside
   its label, the "to complete" caption whenever the effective category is Otros.
   Save with an invalid amount from the review opens the form with the field error and focus on it.
@@ -68,8 +69,8 @@ Creation moves through three steps; business rules for each live in
 
 ## Ownership and retained capability
 
-- `AddMovimientoViewModel` owns the draft (one `categoriaId` and the ordered `etiquetaIds`), the
-  sentence, the step, validation, submission and the opening baseline. The detected values,
+- `AddMovimientoViewModel` owns the draft (one `categoriaId`, the ordered `etiquetaIds`, and the
+  medio and account with their owner), the sentence, the step, validation, submission and the opening baseline. The detected values,
   suggestions, summary and unsaved flag derive from that state; composition never reads the clock.
   `MovimientoEntryEngine` holds the pure parser and suggestion calls; the history index is rebuilt per
   emission on the computation dispatcher and a failed history read falls back to dictionary-only

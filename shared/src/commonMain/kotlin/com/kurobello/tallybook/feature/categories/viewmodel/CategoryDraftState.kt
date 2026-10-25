@@ -6,6 +6,7 @@ import com.kurobello.tallybook.core.model.CategoriaDraft
 import com.kurobello.tallybook.core.model.CategoriaRules
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.text.capTo
 
 internal enum class CategoryNombreError {
   BLANK,
@@ -103,11 +104,4 @@ private fun CategoryDraftState.followNombre(
       icono = if (iconoTouched) icono else suggestion.icono,
       color = if (colorTouched) color else suggestion.color,
   )
-}
-
-/** Caps at [max] UTF-16 units without leaving half of a surrogate pair at the end. */
-private fun String.capTo(max: Int): String {
-  if (length <= max) return this
-  val capped = take(max)
-  return if (capped.last().isHighSurrogate()) capped.dropLast(1) else capped
 }

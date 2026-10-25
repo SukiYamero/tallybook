@@ -10,4 +10,6 @@ data class MovimientoChanges(
     val etiquetaIds: List<String>,
     val titulo: String?,
     val descripcion: String?,
+    val cuentaId: String,
+    val medio: MedioPago,
 )

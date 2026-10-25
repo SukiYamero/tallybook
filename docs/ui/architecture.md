@@ -233,9 +233,10 @@ visible caller header when overridden.
 
 ### Balance summary cards
 
-Home and History reuse `BalanceCard` and its matching `BalanceCardSkeleton`. Home uses the global
-summary and its default localized balance label. History supplies the selected period's snapshot and
-localized Period balance label; it does not observe the global summary.
+Home and History reuse `BalanceCard` and its matching `BalanceCardSkeleton`. Home supplies the
+primary currency's total balance with this month's income and expenses, under its default localized
+balance label, and the whole card opens Accounts. History supplies the selected period's snapshot and
+localized Period balance label; it does not observe the total balance.
 
 Income and Expenses occupy two full-width white rows under the total. Each row places its icon/label
 at the start and the complete amount at the end, preserving currency, sign and decimals. A shared
@@ -262,6 +263,12 @@ Their text column is the title (`cardTitle`, 14sp bold, at most two lines) with 
 then the description (`caption`, one line) only when present, and the signed amount last, below
 them, so long titles and long amounts never compete for the same line. Text ends with an ellipsis and
 no card shows the date.
+
+The amount line starts with the movimiento's payment-method icon (`MedioPagoIcon`, `iconSmall`,
+`foreground.secondary`); the amount keeps its style and color rule. The icon has no description of
+its own: the row's merged description ends with the medio label after the amount and currency
+("…, -$ 50.000,00, COP, Crédito"). Rows never show the account name. The skeleton reserves the same
+icon slot so loading does not shift the amount.
 
 ### Token organization
 
@@ -448,10 +455,11 @@ Snapshotting extras for each parent lifetime prevents Activity Intent Bundles fr
 Tabs select existing entries; History root Back selects Home, Home root delegates platform exit, and
 Search and Profile root Back select Home. One `secondary` slot shows a secondary destination over the
 selected primary with the bottom bar hidden: the UI catalog over any primary, Categories and Tags only
-over Profile (`PrimaryNavigator.openSecondary`). Back closes the secondary first, and selecting any
-primary clears it. Home search opens Search with a one-time focus intent; "View N movements" in a
-Categories or Tags sheet selects Search, once that sheet has hidden, with a one-shot
-`SearchFilterRequest` (category or tag ids) that the retained Search ViewModel applies once.
+over Profile, Accounts over Home or Profile (`PrimaryNavigator.openSecondary`). Back closes the
+secondary first, and selecting any primary clears it. Home search opens Search with a one-time focus
+intent; "View N movements" in a Categories or Tags sheet, or "View movements" in an account sheet,
+selects Search, once that sheet has hidden, with a one-shot `SearchFilterRequest` (category, tag or
+account ids, plus the account's currency) that the retained Search ViewModel applies once.
 
 Home/History repository observations use five-second subscription sharing. Feature routes revalidate
 before lifecycle collection. `RetainedLoadState<Content, Failure>` is the shared snapshot contract:
@@ -595,8 +603,11 @@ The temporal and selection rules live in [business logic](../business-logic.md#t
 History starts directly with its contextual header and period controls. Scrollable content adds
 `space20` above the header after the frame safe inset. Selected-period totals have
 an explicit label and scroll with the content. No fixed global balance, currency banner or independent
-global-summary status appears in History; the global balance remains on Home.
-History has no text-search field, non-date filters, balance-visibility
+global-summary status appears in History; the total balance remains on Home.
+While accounts exist in more than one currency a `MonedaSelector` follows the header; day groups show
+transfers as `ActividadTransferenciaRow`s that open transfer management. The totals leave transfers out;
+the count line names them in a second part ("N movimientos · M transferencias entre cuentas") only
+when there are any. History has no text-search field, non-date filters, balance-visibility
 toggle or fourth annual scope. Search is a separate destination.
 
 ## Remaining product decisions
@@ -611,14 +622,17 @@ This is the presentation contract for [Search](../features/search.md).
 [Business logic](../business-logic.md#search-and-filters) owns matching and filter/date/count semantics.
 
 Search follows the supplied composition: header/title and result status, filter icon, text input,
-horizontal removable applied tags using the shared `TallybookFilterTag`, then a lazy movement list
-grouped under one `CivilDayHeader` per day (`dayHeading`, 15sp semibold, shared with History). Use the frame's top/horizontal safe area, `space20` above the header and shell-measured bottom clearance exactly once. Header/field
+a `MonedaSelector` while accounts exist in more than one currency, horizontal removable applied tags using the
+shared `TallybookFilterTag` (medio and account tags included), then a lazy movement list, transfers as
+`ActividadTransferenciaRow`s, grouped under one `CivilDayHeader` per day (`dayHeading`, 15sp semibold, shared with History). Use the frame's top/horizontal safe area, `space20` above the header and shell-measured bottom clearance exactly once. Header/field
 scroll with content; no fixed global balance or chart. Rows reuse MovimientoRowContent with the shared
 title/description card text; category/currency/type semantics remain accessible.
 
 The filter sheet occupies 72% of available height, revealing the underlying Search field in portrait.
-It uses compact, vertically centered wrapping date presets, two existing date chips for Custom, Todos/Gastos/Ingresos,
-then parent-grouped real category chips with children visible. Show all persisted categories, with
+It uses compact, vertically centered wrapping date presets, two existing date chips for Custom, wrapping
+Todos/Gastos/Ingresos/Entre cuentas type pills, Medio (`MedioPagoFilterControl`) and Cuentas (the viewed
+currency's accounts, archived included, plus selected ones of another currency and missing-ID fallbacks with
+remove semantics), then parent-grouped real category chips with children visible. Show all persisted categories, with
 their existing icons/tints, plus selected missing-ID fallback chips with remove semantics. While the
 user has tags, a Tags section of `EtiquetaChip`s follows the categories. The body
 scrolls while a separate Limpiar/Aplicar footer remains reachable above safe/IME insets. Preserve
@@ -715,7 +729,9 @@ Selecting a movement opens a content-sized bottom sheet with the localized Edit 
 including during its initial read. A successful read supplies the original record and prefilled draft.
 The editor reuses creation's state-independent controls
 through `MovimientoFormState`/`MovimientoFormActions`: the type selector retains its directional icons
-and status colors, the currency precedes the numeric input, the Category section uses
+and status colors, `MovimientoCuentaField` follows it with the Medio and Account sections (accounts in
+the stored currency only; in-place creation keeps that currency fixed), the currency precedes the
+numeric input, the Category section uses
 `CategorySingleField` without a × and the single-select picker, and the Tags section uses
 `EtiquetaTagField` with the tag picker. It opens with no initial picker and no forced keyboard.
 Existing title and description open filled. Focus, disclosure, keyboard and category-entry phases belong to
@@ -748,10 +764,16 @@ dialogs consume Back before their parent management surface.
 
 ### Shell ownership and admission
 
-One `ManageMovimientoViewModel` lives in a remembered child ViewModel owner outside primary
-Navigation 3 entries. It owns the read generation, management session, editable draft, mutation,
-pending committed feedback and a transient FIFO feedback queue with per-token deleted snapshots.
-It outlives the sheet so Undo does not
+One remembered child ViewModel owner outside primary Navigation 3 entries hosts the shell's
+management view models. `ManagementFeedbackViewModel` owns the single `ManagementFeedbackQueue`
+(`core/ui/feedback`): the transient FIFO of feedback tokens, each holding at most one
+`DeletedSnapshot` (movimiento or transferencia), the claim/restore cycle and session admission, so
+an open management sheet blocks Undo claims and a claimed restore blocks new sheets.
+`ManageMovimientoViewModel` lives in the same owner, receives that queue on creation and owns the
+read generation, management session, editable draft, mutation and the pending committed outcome it
+enqueues once its sheet is hidden. `ManageTransferenciaViewModel` (`feature/transfers`) lives in
+the same owner under the same contract for the transfer sheet (create, edit, delete); creating a
+transfer enqueues nothing, like movimiento creation. The queue outlives every sheet so Undo does not
 depend on an entry or closing modal. The existing creation store/session remains separate.
 
 The child uses the root parent's remembered creation extras and no saved-state registry.
@@ -760,8 +782,8 @@ ownership is scene-based and clears the child on active-scene disposal. Financia
 jobs and feedback tokens never enter saved state or preferences. A fresh process/scene starts closed.
 Host tests establish the actual owner/provider seam; physical iOS teardown is a separate runtime check.
 
-`PrimaryModalCoordinator` admits creation, management and the active destination's modal (Search
-filters, Profile option sheets) through one controller each, including loading, confirmations, submission
+`PrimaryModalCoordinator` admits creation, movimiento management, transfer management and the
+active destination's modal (Search filters, Profile option sheets) through one controller each, including loading, confirmations, submission
 and Closing. Primary navigation waits while a modal
 owns the window. During Undo restoration, tabs can change but all new modal sessions wait.
 Callbacks carry origin/token/revision; delayed callbacks cannot close a new session, duplicate feedback

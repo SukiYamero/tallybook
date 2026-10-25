@@ -7,6 +7,7 @@ import com.kurobello.tallybook.core.model.EtiquetaWrite
 import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.text.AmountInputError
 import kotlinx.datetime.LocalDate
 
 /** Tags are optional, so their catalog loads apart from what blocks entry. */
@@ -34,6 +35,7 @@ internal interface MovimientoFormState {
   val error: MovimientoFormError?
   val amountError: AmountInputError?
   val isCategoriaMissing: Boolean
+  val cuentaField: MovimientoCuentaUi
 
   /** The category the form presents, which is the Otros fallback while none is chosen. */
   val displayedCategoriaId: String?

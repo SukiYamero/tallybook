@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.core.ui.navigation
 
 import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSession
+import com.kurobello.tallybook.feature.transfers.viewmodel.TransferEntry
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -186,6 +187,48 @@ internal class PrimaryModalCoordinatorTest {
     management.restoring = true
     assertFalse(coordinator.isContentCovered)
     assertFalse(coordinator.tryOpenCreation())
+  }
+
+  @Test
+  fun transferManagementIsOneMoreExclusiveModalThatWaitsForUndo() {
+    val creation = AddMovimientoSheetSession()
+    val coordinator = PrimaryModalCoordinator(creation) { false }
+    val management = ManagementController()
+    val transfer = TransferController()
+    coordinator.attachManagement(management)
+    assertFalse(coordinator.tryOpenTransfer(TransferEntry.Existing("t")))
+    coordinator.attachTransfer(transfer)
+
+    assertTrue(coordinator.tryOpenTransfer(TransferEntry.Existing("t")))
+    assertTrue(coordinator.isContentCovered)
+    assertFalse(coordinator.canNavigate)
+    assertFalse(coordinator.tryOpenCreation())
+    assertFalse(coordinator.tryOpenManagement("movement"))
+    assertFalse(coordinator.dispatchFeedback(true) {})
+    transfer.active = false
+    assertTrue(coordinator.tryOpenManagement("movement"))
+    assertFalse(coordinator.tryOpenTransfer(TransferEntry.New(null, null, null)))
+    management.active = false
+    management.restoring = true
+    assertFalse(coordinator.tryOpenTransfer(TransferEntry.New(null, null, null)))
+    management.restoring = false
+    coordinator.detachTransfer(TransferController())
+    assertTrue(coordinator.tryOpenTransfer(TransferEntry.New(null, null, null)))
+    transfer.active = false
+    coordinator.detachTransfer(transfer)
+    assertFalse(coordinator.tryOpenTransfer(TransferEntry.New(null, null, null)))
+  }
+
+  private class TransferController : TransferManagementController {
+    var active = false
+    override val hasActiveSession
+      get() = active
+
+    override fun open(entry: TransferEntry): Boolean {
+      if (active) return false
+      active = true
+      return true
+    }
   }
 
   private class ManagementController : MovimientoManagementController {

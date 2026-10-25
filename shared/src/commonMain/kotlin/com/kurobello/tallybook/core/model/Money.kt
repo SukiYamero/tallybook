@@ -45,6 +45,13 @@ data class Money(val minorUnits: Long, val moneda: Moneda) : Comparable<Money> {
   companion object {
 
     /**
+     * The largest monto a movimiento, a transfer side or an opening balance may hold, either sign
+     * for a balance: 10^15 minor units, beyond any real amount yet small enough that balances
+     * adding thousands of them stay inside Long.
+     */
+    const val MAX_MINOR_UNITS: Long = 1_000_000_000_000_000L
+
+    /**
      * Reads a plain decimal with no group separator (`-?\d+(\.\d{1,scale})?`). Rejects — instead of
      * truncating — more decimals than the moneda admits: silently losing money on an import or a
      * form parse is worse than failing.

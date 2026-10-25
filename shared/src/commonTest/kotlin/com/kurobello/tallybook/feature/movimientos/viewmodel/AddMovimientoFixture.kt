@@ -4,8 +4,10 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.CategorySeedCatalog
+import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
@@ -13,6 +15,7 @@ import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
+import com.kurobello.tallybook.core.data.entry.CuentaMatcher
 import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.core.model.AppLocale
@@ -21,18 +24,20 @@ import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
-import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
-import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.ThemeMode
+import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.coroutines.CompletableDeferred
@@ -53,6 +58,7 @@ internal fun createAddViewModel(
     categoriaRepository: CategoriaRepository = AddFakeCategorias(DataOutcome.Success(emptyList())),
     preferencesRepository: AppPreferencesRepository = AddFakePreferences(),
     etiquetaRepository: EtiquetaRepository = FakeEtiquetaRepository(),
+    cuentaRepository: CuentaRepository = FakeCuentaRepository(addCashCuentas()),
     clock: Clock = AddFixedClock(ADD_TEST_NOW),
     timeZone: TimeZone = TimeZone.UTC,
     computationDispatcher: CoroutineDispatcher = UnconfinedTestDispatcher(),
@@ -65,6 +71,7 @@ internal fun createAddViewModel(
                 categorias = categoriaRepository,
                 movimientos = movimientoRepository,
                 etiquetas = etiquetaRepository,
+                cuentas = cuentaRepository,
             ),
         idGenerator = IdGenerator { "movement-id" },
         clock = clock,
@@ -74,6 +81,7 @@ internal fun createAddViewModel(
                 parser = MovimientoPhraseParser(),
                 suggester = CategorySuggester(CategoryKeywordDictionary.builtIn),
                 etiquetaMatcher = EtiquetaMatcher(),
+                cuentaMatcher = CuentaMatcher(),
                 localeProvider = AddFixedLocale,
                 computationDispatcher = computationDispatcher,
             ),
@@ -82,6 +90,9 @@ internal fun createAddViewModel(
 
 internal fun addPreferences(moneda: Moneda) =
     AddFakePreferences(DataOutcome.Success(AppPreferencesState.Ready(AppPreferences(moneda))))
+
+/** One default cash cuenta per moneda, which is what any primary currency resolves to. */
+internal fun addCashCuentas(): List<Cuenta> = Moneda.entries.map(::cashCuenta)
 
 internal fun addSeedCategorias(): List<Categoria> =
     CategorySeedCatalog.categories.map { Categoria(it.id, it.id, it.padreId, it.icono, it.color) }
@@ -142,26 +153,34 @@ internal open class AddFakeMovimientos(
 ) : MovimientoRepository {
   val inserted = mutableListOf<Movimiento>()
 
+  /** Null resolves the primary cash cuenta, as a fresh install does. */
+  var selection: DataOutcome<CuentaSelection?>? = null
+
+  /** Per-medio answers; a medio without one resolves the primary cash cuenta only for EFECTIVO. */
+  val medioSelections = mutableMapOf<MedioPago, CuentaSelection?>()
+  val selectionRequests = mutableListOf<Triple<Moneda, TipoMovimiento, MedioPago?>>()
+
+  override suspend fun defaultSelection(
+      primary: Moneda,
+      tipo: TipoMovimiento,
+      medio: MedioPago?,
+  ): DataOutcome<CuentaSelection?> {
+    selectionRequests += Triple(primary, tipo, medio)
+    val cash = CuentaSelection(Cuenta.defaultCashId(primary), MedioPago.EFECTIVO, primary)
+    return when {
+      medio == null -> selection ?: DataOutcome.Success(cash)
+      medio in medioSelections -> DataOutcome.Success(medioSelections[medio])
+      else -> DataOutcome.Success(cash.takeIf { medio == MedioPago.EFECTIVO })
+    }
+  }
+
   override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
       error("Scoped recent reads are not expected in this fixture")
 
-  override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = emptyFlow()
-
-  override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> = emptyFlow()
-
-  override fun observeFiltered(
-      criteria: MovimientoReadCriteria
-  ): Flow<DataOutcome<MovimientoSearchSnapshot>> =
-      error("Search reads are not expected in this fixture")
-
-  override fun observeRange(
+  override fun observeSummary(
       moneda: Moneda,
       range: MovimientoDateRange,
-  ): Flow<DataOutcome<List<Movimiento>>> =
-      error("History range reads are not expected in this fixture")
-
-  override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> =
-      error("History year reads are not expected in this fixture")
+  ): Flow<DataOutcome<MovimientoSummary>> = emptyFlow()
 
   val history =
       MutableStateFlow<DataOutcome<List<CategoryHistoryRow>>>(DataOutcome.Success(emptyList()))
@@ -197,6 +216,8 @@ internal open class AddFakeMovimientos(
             etiquetaIds = changes.etiquetaIds,
             titulo = changes.titulo,
             descripcion = changes.descripcion,
+            cuentaId = changes.cuentaId,
+            medio = changes.medio,
         )
     val values = inserted.map { if (it.id == id) updated else it }
     inserted.clear()
@@ -212,22 +233,17 @@ internal open class AddFakeMovimientos(
     return DataOutcome.Success(captured)
   }
 
-  override suspend fun restoreDeleted(
-      movimiento: Movimiento
-  ): DataOutcome<MovimientoRestoreResult> {
+  override suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<RestoreResult> {
     val current = inserted.firstOrNull { it.id == movimiento.id }
     if (current != null)
         return DataOutcome.Success(
-            if (current == movimiento) MovimientoRestoreResult.AlreadyPresent
-            else MovimientoRestoreResult.Conflict
+            if (current == movimiento) RestoreResult.AlreadyPresent else RestoreResult.Conflict
         )
     val values = inserted + movimiento
     inserted.clear()
     inserted.addAll(values)
-    return DataOutcome.Success(MovimientoRestoreResult.Restored)
+    return DataOutcome.Success(RestoreResult.Restored)
   }
-
-  override suspend fun delete(id: String): DataOutcome<Unit> = DataOutcome.Success(Unit)
 }
 
 internal class AddSuspendedMovimientos : AddFakeMovimientos() {

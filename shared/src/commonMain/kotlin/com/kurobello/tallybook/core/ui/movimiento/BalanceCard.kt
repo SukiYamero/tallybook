@@ -1,5 +1,8 @@
 package com.kurobello.tallybook.core.ui.movimiento
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,8 +15,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -21,6 +30,9 @@ import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.component.TallybookTapFeedback
+import com.kurobello.tallybook.core.ui.component.rememberTallybookTapFeedback
+import com.kurobello.tallybook.core.ui.component.resolveTallybookSurfaceContainerColor
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
@@ -28,6 +40,11 @@ import tallybook.shared.generated.resources.home_balance
 import tallybook.shared.generated.resources.home_expenses
 import tallybook.shared.generated.resources.home_income
 
+/**
+ * [balance] defaults to the period's flow; Home passes the accounts' total balance instead. With
+ * [action] the whole card is one button that keeps the shared press feedback.
+ */
+@Suppress("LongParameterList")
 @Composable
 fun BalanceCard(
     summary: MovimientoSummary,
@@ -35,11 +52,24 @@ fun BalanceCard(
     label: String = stringResource(Res.string.home_balance),
     secondaryAmountFormatter: (Money, TipoMovimiento) -> String = { amount, _ -> amount.format() },
     footerContent: (@Composable () -> Unit)? = null,
+    balance: Money = summary.balance,
+    secondaryLabels: BalanceCardLabels = BalanceCardLabels.default(),
+    action: BalanceCardAction? = null,
 ) {
+  val interactionSource = remember { MutableInteractionSource() }
+  val isPressed by interactionSource.collectIsPressedAsState()
+  val tapFeedback = rememberTallybookTapFeedback()
+  val shape = MaterialTheme.shapes.extraLarge
   Surface(
-      modifier = modifier,
-      shape = MaterialTheme.shapes.extraLarge,
-      color = MaterialTheme.colorScheme.primaryContainer,
+      modifier = modifier.then(balanceCardClick(action, shape, interactionSource, tapFeedback)),
+      shape = shape,
+      color =
+          resolveTallybookSurfaceContainerColor(
+              containerColor = MaterialTheme.colorScheme.primaryContainer,
+              pressedOverlay = TallybookTheme.colors.interaction.pressedOverlay,
+              isPressed = isPressed,
+              hasTapFeedback = tapFeedback.isActive,
+          ),
       contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
   ) {
     Column(
@@ -52,17 +82,17 @@ fun BalanceCard(
             color = MaterialTheme.colorScheme.onPrimaryContainer,
             style = TallybookTheme.typography.balanceLabel,
         )
-        Text(text = summary.balance.format(), style = TallybookTheme.typography.headline)
+        Text(text = balance.format(), style = TallybookTheme.typography.headline)
       }
       Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12)) {
         SummaryAmount(
-            label = stringResource(Res.string.home_income),
+            label = secondaryLabels.income,
             amountText = secondaryAmountFormatter(summary.ingresos, TipoMovimiento.INGRESO),
             tipo = TipoMovimiento.INGRESO,
             modifier = Modifier.fillMaxWidth(),
         )
         SummaryAmount(
-            label = stringResource(Res.string.home_expenses),
+            label = secondaryLabels.expenses,
             amountText = secondaryAmountFormatter(summary.gastos, TipoMovimiento.GASTO),
             tipo = TipoMovimiento.GASTO,
             modifier = Modifier.fillMaxWidth(),
@@ -72,6 +102,42 @@ fun BalanceCard(
     }
   }
 }
+
+@Composable
+private fun balanceCardClick(
+    action: BalanceCardAction?,
+    shape: Shape,
+    interactionSource: MutableInteractionSource,
+    tapFeedback: TallybookTapFeedback,
+): Modifier =
+    if (action == null) Modifier
+    else
+        Modifier.clip(shape)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClickLabel = action.label,
+                role = Role.Button,
+                onClick = {
+                  tapFeedback.trigger()
+                  action.onClick()
+                },
+            )
+
+@Immutable
+data class BalanceCardLabels(val income: String, val expenses: String) {
+  companion object {
+    @Composable
+    fun default(): BalanceCardLabels =
+        BalanceCardLabels(
+            income = stringResource(Res.string.home_income),
+            expenses = stringResource(Res.string.home_expenses),
+        )
+  }
+}
+
+/** [label] is announced as what tapping the card does. */
+@Immutable data class BalanceCardAction(val label: String, val onClick: () -> Unit)
 
 @Composable
 private fun SummaryAmount(

@@ -1,12 +1,18 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Movimiento
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarDuration
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarMessage
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarTimer
 import com.kurobello.tallybook.core.ui.component.tallybookSnackbarTimeoutMillis
+import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -19,6 +25,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.TimeZone
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ManageMovimientoFeedbackTest {
@@ -26,63 +33,63 @@ class ManageMovimientoFeedbackTest {
   fun completedOperationsWaitInOrderWithoutReplacingTheCurrentFeedback() = runTest {
     val f = ManageMovimientoFixture(backgroundScope)
     deleteAndHide(f, managementMovimiento())
-    val deleted = assertNotNull(f.viewModel.uiState.value.feedback)
+    val deleted = assertNotNull(f.feedback.state.value.feedback)
     deleteAndHide(f, managementMovimiento().copy(id = "second"))
-    assertEquals(deleted, f.viewModel.uiState.value.feedback)
+    assertEquals(deleted, f.feedback.state.value.feedback)
     deleteAndHide(f, managementMovimiento().copy(id = "third"), missing = true)
-    assertEquals(deleted, f.viewModel.uiState.value.feedback)
+    assertEquals(deleted, f.feedback.state.value.feedback)
 
-    f.viewModel.onFeedbackDismiss(deleted.token, deleted.revision)
-    val second = assertNotNull(f.viewModel.uiState.value.feedback)
-    assertEquals(MovimientoFeedbackKind.Deleted, second.kind)
+    f.feedback.onFeedbackDismiss(deleted.token, deleted.revision)
+    val second = assertNotNull(f.feedback.state.value.feedback)
+    assertEquals(ManagementFeedbackKind.Deleted, second.kind)
     assertTrue(second.token > deleted.token)
-    f.viewModel.onFeedbackDismiss(second.token, second.revision)
-    val third = assertNotNull(f.viewModel.uiState.value.feedback)
-    assertEquals(MovimientoFeedbackKind.Missing, third.kind)
+    f.feedback.onFeedbackDismiss(second.token, second.revision)
+    val third = assertNotNull(f.feedback.state.value.feedback)
+    assertEquals(ManagementFeedbackKind.Missing, third.kind)
     assertTrue(third.token > second.token)
-    f.viewModel.onFeedbackDismiss(third.token, third.revision)
-    assertNull(f.viewModel.uiState.value.feedback)
+    f.feedback.onFeedbackDismiss(third.token, third.revision)
+    assertNull(f.feedback.state.value.feedback)
   }
 
   @Test
   fun backlogCompactsActiveAndLastQueuedFeedbackThenAnIsolatedMessageGetsItsFullWindow() = runTest {
     val f = ManageMovimientoFixture(backgroundScope)
     deleteAndHide(f, managementMovimiento())
-    val first = assertNotNull(f.viewModel.uiState.value.feedback)
+    val first = assertNotNull(f.feedback.state.value.feedback)
     val timer =
         TallybookSnackbarTimer(this, testScheduler.timeSource) { token, revision ->
-          f.viewModel.onFeedbackDismiss(token, revision)
+          f.feedback.onFeedbackDismiss(token, revision)
           true
         }
     updateFeedbackTimer(timer, f)
     advanceTimeBy(3_000)
     deleteAndHide(f, managementMovimiento().copy(id = "second"), missing = true)
-    assertEquals(first, f.viewModel.uiState.value.feedback)
+    assertEquals(first, f.feedback.state.value.feedback)
     updateFeedbackTimer(timer, f)
     advanceTimeBy(1_849)
     runCurrent()
-    assertEquals(first, f.viewModel.uiState.value.feedback)
+    assertEquals(first, f.feedback.state.value.feedback)
     advanceTimeBy(1)
     runCurrent()
-    val second = assertNotNull(f.viewModel.uiState.value.feedback)
-    assertEquals(MovimientoFeedbackKind.Missing, second.kind)
+    val second = assertNotNull(f.feedback.state.value.feedback)
+    assertEquals(ManagementFeedbackKind.Missing, second.kind)
     updateFeedbackTimer(timer, f)
     advanceTimeBy(1_849)
     runCurrent()
-    assertEquals(second, f.viewModel.uiState.value.feedback)
+    assertEquals(second, f.feedback.state.value.feedback)
     advanceTimeBy(1)
     runCurrent()
-    assertNull(f.viewModel.uiState.value.feedback)
+    assertNull(f.feedback.state.value.feedback)
     updateFeedbackTimer(timer, f)
     deleteAndHide(f, managementMovimiento().copy(id = "third"), missing = true)
-    val isolated = assertNotNull(f.viewModel.uiState.value.feedback)
+    val isolated = assertNotNull(f.feedback.state.value.feedback)
     updateFeedbackTimer(timer, f)
     advanceTimeBy(3_699)
     runCurrent()
-    assertEquals(isolated, f.viewModel.uiState.value.feedback)
+    assertEquals(isolated, f.feedback.state.value.feedback)
     advanceTimeBy(1)
     runCurrent()
-    assertNull(f.viewModel.uiState.value.feedback)
+    assertNull(f.feedback.state.value.feedback)
     timer.dispose()
   }
 
@@ -92,25 +99,25 @@ class ManageMovimientoFeedbackTest {
     val firstSnapshot = managementMovimiento().copy(descripcion = "First committed version")
     val secondSnapshot = managementMovimiento().copy(id = "second", descripcion = "Second version")
     deleteAndHide(f, firstSnapshot)
-    val first = assertNotNull(f.viewModel.uiState.value.feedback)
+    val first = assertNotNull(f.feedback.state.value.feedback)
     deleteAndHide(f, secondSnapshot)
 
-    f.viewModel.onFeedbackAction(first.token, first.revision)
+    f.feedback.onFeedbackAction(first.token, first.revision)
     runCurrent()
     assertEquals(firstSnapshot, f.repository.restored)
-    val restored = assertNotNull(f.viewModel.uiState.value.feedback)
-    assertEquals(MovimientoFeedbackKind.Restored, restored.kind)
-    f.viewModel.onFeedbackDismiss(first.token, first.revision)
-    assertEquals(restored, f.viewModel.uiState.value.feedback)
-    f.viewModel.onFeedbackDismiss(restored.token, restored.revision)
-    val second = assertNotNull(f.viewModel.uiState.value.feedback)
+    val restored = assertNotNull(f.feedback.state.value.feedback)
+    assertEquals(ManagementFeedbackKind.Restored, restored.kind)
+    f.feedback.onFeedbackDismiss(first.token, first.revision)
+    assertEquals(restored, f.feedback.state.value.feedback)
+    f.feedback.onFeedbackDismiss(restored.token, restored.revision)
+    val second = assertNotNull(f.feedback.state.value.feedback)
 
-    f.viewModel.onFeedbackAction(first.token, first.revision)
-    f.viewModel.onFeedbackDismiss(restored.token, restored.revision)
+    f.feedback.onFeedbackAction(first.token, first.revision)
+    f.feedback.onFeedbackDismiss(restored.token, restored.revision)
     runCurrent()
     assertEquals(1, f.repository.restores)
-    assertEquals(second, f.viewModel.uiState.value.feedback)
-    f.viewModel.onFeedbackAction(second.token, second.revision)
+    assertEquals(second, f.feedback.state.value.feedback)
+    f.feedback.onFeedbackAction(second.token, second.revision)
     runCurrent()
     assertEquals(2, f.repository.restores)
     assertEquals(secondSnapshot, f.repository.restored)
@@ -121,39 +128,39 @@ class ManageMovimientoFeedbackTest {
     val f = ManageMovimientoFixture(backgroundScope)
     val snapshot = managementMovimiento()
     deleteAndHide(f, snapshot)
-    val first = assertNotNull(f.viewModel.uiState.value.feedback)
+    val first = assertNotNull(f.feedback.state.value.feedback)
     deleteAndHide(f, managementMovimiento().copy(id = "second"), missing = true)
     f.repository.restoreResult = managementFailure()
-    f.viewModel.onFeedbackAction(first.token, first.revision)
+    f.feedback.onFeedbackAction(first.token, first.revision)
     runCurrent()
-    val failed = assertNotNull(f.viewModel.uiState.value.feedback)
-    assertEquals(MovimientoFeedbackKind.RestoreFailed, failed.kind)
+    val failed = assertNotNull(f.feedback.state.value.feedback)
+    assertEquals(ManagementFeedbackKind.RestoreFailed, failed.kind)
     assertEquals(first.token, failed.token)
-    f.viewModel.onFeedbackDismiss(first.token, first.revision)
-    f.viewModel.onFeedbackAction(first.token, first.revision)
-    assertEquals(failed, f.viewModel.uiState.value.feedback)
+    f.feedback.onFeedbackDismiss(first.token, first.revision)
+    f.feedback.onFeedbackAction(first.token, first.revision)
+    assertEquals(failed, f.feedback.state.value.feedback)
 
-    f.repository.restoreResult = DataOutcome.Success(MovimientoRestoreResult.Restored)
-    f.viewModel.onFeedbackAction(failed.token, failed.revision)
+    f.repository.restoreResult = DataOutcome.Success(RestoreResult.Restored)
+    f.feedback.onFeedbackAction(failed.token, failed.revision)
     runCurrent()
-    val restored = assertNotNull(f.viewModel.uiState.value.feedback)
-    assertEquals(MovimientoFeedbackKind.Restored, restored.kind)
+    val restored = assertNotNull(f.feedback.state.value.feedback)
+    assertEquals(ManagementFeedbackKind.Restored, restored.kind)
     assertEquals(first.token, restored.token)
     assertEquals(snapshot, f.repository.restored)
     assertEquals(2, f.repository.restores)
-    f.viewModel.onFeedbackDismiss(restored.token, restored.revision)
-    assertEquals(MovimientoFeedbackKind.Missing, f.viewModel.uiState.value.feedback?.kind)
+    f.feedback.onFeedbackDismiss(restored.token, restored.revision)
+    assertEquals(ManagementFeedbackKind.Missing, f.feedback.state.value.feedback?.kind)
   }
 
   @Test
   fun busyHeadAndOpenSessionRejectActionsWithoutDroppingWaitingFeedback() = runTest {
     val f = ManageMovimientoFixture(backgroundScope)
     deleteAndHide(f, managementMovimiento())
-    val first = assertNotNull(f.viewModel.uiState.value.feedback)
+    val first = assertNotNull(f.feedback.state.value.feedback)
     f.repository.current = managementMovimiento().copy(id = "second")
     assertTrue(f.viewModel.open("second"))
     runCurrent()
-    f.viewModel.onFeedbackAction(first.token, first.revision)
+    f.feedback.onFeedbackAction(first.token, first.revision)
     runCurrent()
     assertEquals(0, f.repository.restores)
     f.viewModel.onRequestDelete()
@@ -162,25 +169,79 @@ class ManageMovimientoFeedbackTest {
     f.viewModel.onSheetHidden(assertNotNull(f.viewModel.uiState.value.session).token)
 
     f.repository.restoreGate = CompletableDeferred()
-    f.viewModel.onFeedbackAction(first.token, first.revision)
-    val busy = assertNotNull(f.viewModel.uiState.value.feedback)
+    f.feedback.onFeedbackAction(first.token, first.revision)
+    val busy = assertNotNull(f.feedback.state.value.feedback)
     assertTrue(busy.isRestoring)
     assertFalse(f.viewModel.open("third"))
-    f.viewModel.onFeedbackAction(busy.token, busy.revision)
-    f.viewModel.onFeedbackDismiss(busy.token, busy.revision)
+    f.feedback.onFeedbackAction(busy.token, busy.revision)
+    f.feedback.onFeedbackDismiss(busy.token, busy.revision)
     runCurrent()
     assertEquals(1, f.repository.restores)
-    assertEquals(busy, f.viewModel.uiState.value.feedback)
+    assertEquals(busy, f.feedback.state.value.feedback)
     f.repository.restoreGate?.complete(Unit)
     runCurrent()
-    val restored = assertNotNull(f.viewModel.uiState.value.feedback)
-    f.viewModel.onFeedbackDismiss(restored.token, restored.revision)
-    assertEquals(MovimientoFeedbackKind.Deleted, f.viewModel.uiState.value.feedback?.kind)
+    val restored = assertNotNull(f.feedback.state.value.feedback)
+    f.feedback.onFeedbackDismiss(restored.token, restored.revision)
+    assertEquals(ManagementFeedbackKind.Deleted, f.feedback.state.value.feedback?.kind)
+  }
+
+  @Test
+  fun clearingTheViewModelWithAnOpenSessionFreesItsSlot() = runTest {
+    val f = ManageMovimientoFixture(backgroundScope)
+    deleteAndHide(f, managementMovimiento())
+    val undo = assertNotNull(f.feedback.state.value.feedback)
+    val store = ViewModelStore()
+    val viewModel =
+        ViewModelProvider.create(
+                store,
+                viewModelFactory {
+                  initializer {
+                    ManageMovimientoViewModel(
+                        ManageMovimientoRepositories(
+                            f.repository,
+                            f.categorias,
+                            f.etiquetas,
+                            f.cuentas,
+                        ),
+                        f.clock,
+                        TimeZoneProvider { TimeZone.UTC },
+                        f.feedback,
+                        backgroundScope,
+                    )
+                  }
+                },
+            )[ManageMovimientoViewModel::class]
+    f.repository.current = managementMovimiento().copy(id = "second")
+    assertTrue(viewModel.open("second"))
+    assertEquals(1, f.feedback.state.value.openSessions)
+
+    store.clear()
+    assertEquals(0, f.feedback.state.value.openSessions)
+    f.feedback.onFeedbackAction(undo.token, undo.revision)
+    runCurrent()
+    assertEquals(1, f.repository.restores)
+  }
+
+  @Test
+  fun missingCuentaFailureIsShortAndHandsOverToTheWaitingFeedback() = runTest {
+    val f = ManageMovimientoFixture(backgroundScope)
+    deleteAndHide(f, managementMovimiento())
+    val first = assertNotNull(f.feedback.state.value.feedback)
+    deleteAndHide(f, managementMovimiento().copy(id = "second"), missing = true)
+    f.repository.restoreResult = DataOutcome.Success(RestoreResult.MissingCuenta)
+    f.feedback.onFeedbackAction(first.token, first.revision)
+    runCurrent()
+    val failed = assertNotNull(f.feedback.state.value.feedback)
+    assertEquals(ManagementFeedbackKind.RestoreMissingCuenta, failed.kind)
+    assertFalse(failed.hasAction)
+
+    f.feedback.onFeedbackDismiss(failed.token, failed.revision)
+    assertEquals(ManagementFeedbackKind.Missing, f.feedback.state.value.feedback?.kind)
   }
 }
 
 private fun updateFeedbackTimer(timer: TallybookSnackbarTimer, fixture: ManageMovimientoFixture) {
-  val state = fixture.viewModel.uiState.value
+  val state = fixture.feedback.state.value
   val message =
       state.feedback?.let {
         TallybookSnackbarMessage(

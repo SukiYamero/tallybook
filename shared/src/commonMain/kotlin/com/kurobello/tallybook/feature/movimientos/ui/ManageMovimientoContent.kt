@@ -58,6 +58,7 @@ internal fun ManageMovimientoContent(
     session: MovimientoManagementSession,
     actions: ManageMovimientoSheetActions,
     categoryCreation: CategoryPickerCreation? = null,
+    cuentaCreation: CuentaCreation? = null,
 ) {
   val origin = session.token
   val title = stringResource(Res.string.movimiento_edit_title)
@@ -78,7 +79,10 @@ internal fun ManageMovimientoContent(
               activeContentDetentIdentifier = detent,
           ),
   ) {
-    ManagementSheetBody(session, actions, title, categoryCreation)
+    ManagementSheetBody(session, actions, title, categoryCreation, cuentaCreation)
+  }
+  session.form?.let {
+    CuentaCreationSheet(cuentaCreation, it.cuentaField, actions::onCuentaSelected)
   }
   ManagementConfirmations(session, actions)
 }
@@ -97,10 +101,11 @@ private fun ManagementSheetBody(
     actions: ManageMovimientoSheetActions,
     title: String,
     categoryCreation: CategoryPickerCreation?,
+    cuentaCreation: CuentaCreation?,
 ) {
   val interactionEnabled = session.phase != MovimientoManagementPhase.Closing
   if (session.form != null) {
-    ManagementEditContent(session, actions, title, categoryCreation)
+    ManagementEditContent(session, actions, title, categoryCreation, cuentaCreation)
   } else {
     ManagementReadContent(
         session.phase,
@@ -118,8 +123,10 @@ private fun ManagementEditContent(
     actions: ManageMovimientoSheetActions,
     title: String,
     categoryCreation: CategoryPickerCreation?,
+    cuentaCreation: CuentaCreation?,
 ) {
   val interactionEnabled = session.canInteractWithEditor
+  val form = requireNotNull(session.form)
   val presentation =
       MovimientoFormPresentation(
           title,
@@ -147,6 +154,7 @@ private fun ManagementEditContent(
       supportingContent = { ManagementEditError(session.error) },
       footerContent = { ManagementEditFooter(session, actions, presentation) },
       categoryCreation = categoryCreation,
+      onCreateCuenta = cuentaCreation?.let { creation -> { creation.start(form.cuentaField) } },
   )
 }
 

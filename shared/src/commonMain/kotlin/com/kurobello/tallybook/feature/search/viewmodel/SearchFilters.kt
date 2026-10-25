@@ -1,8 +1,9 @@
 package com.kurobello.tallybook.feature.search.viewmodel
 
 import com.kurobello.tallybook.core.model.FIRST_SELECTABLE_YEAR
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.MovimientoDateRange
-import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.SearchTipo
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.minus
@@ -20,20 +21,26 @@ internal enum class SearchDatePreset {
   Custom,
 }
 
+@Suppress("LongParameterList")
 internal class SearchFilters(
     val preset: SearchDatePreset,
     val customStart: LocalDate,
     val customEnd: LocalDate,
-    val tipo: TipoMovimiento? = null,
+    val tipo: SearchTipo? = null,
     categoryIds: Set<String> = emptySet(),
     etiquetaIds: Set<String> = emptySet(),
+    cuentaIds: Set<String> = emptySet(),
+    medios: Set<MedioPago> = emptySet(),
 ) {
   private val capturedCategoryIds = categoryIds.toSet()
   private val capturedEtiquetaIds = etiquetaIds.toSet()
+  private val capturedCuentaIds = cuentaIds.toSet()
+  private val capturedMedios = medios.toSet()
 
   init {
     require(capturedCategoryIds.none { it.isBlank() }) { "Selected category IDs must not be blank" }
     require(capturedEtiquetaIds.none { it.isBlank() }) { "Selected etiqueta IDs must not be blank" }
+    require(capturedCuentaIds.none { it.isBlank() }) { "Selected cuenta IDs must not be blank" }
   }
 
   val categoryIds: Set<String>
@@ -42,28 +49,52 @@ internal class SearchFilters(
   val etiquetaIds: Set<String>
     get() = capturedEtiquetaIds.toSet()
 
+  val cuentaIds: Set<String>
+    get() = capturedCuentaIds.toSet()
+
+  val medios: Set<MedioPago>
+    get() = capturedMedios.toSet()
+
   val hasActiveFilters: Boolean
     get() =
         preset != SearchDatePreset.All ||
             tipo != null ||
             capturedCategoryIds.isNotEmpty() ||
-            capturedEtiquetaIds.isNotEmpty()
+            capturedEtiquetaIds.isNotEmpty() ||
+            capturedCuentaIds.isNotEmpty() ||
+            capturedMedios.isNotEmpty()
 
-  @Suppress("LongParameterList")
   fun copy(
       preset: SearchDatePreset = this.preset,
       customStart: LocalDate = this.customStart,
       customEnd: LocalDate = this.customEnd,
-      tipo: TipoMovimiento? = this.tipo,
+      tipo: SearchTipo? = this.tipo,
       categoryIds: Set<String> = capturedCategoryIds,
       etiquetaIds: Set<String> = capturedEtiquetaIds,
-  ): SearchFilters = SearchFilters(preset, customStart, customEnd, tipo, categoryIds, etiquetaIds)
+      cuentaIds: Set<String> = capturedCuentaIds,
+      medios: Set<MedioPago> = capturedMedios,
+  ): SearchFilters =
+      SearchFilters(
+          preset,
+          customStart,
+          customEnd,
+          tipo,
+          categoryIds,
+          etiquetaIds,
+          cuentaIds,
+          medios,
+      )
 
   fun toggleCategory(id: String): SearchFilters =
       copy(categoryIds = capturedCategoryIds.toggled(id))
 
   fun toggleEtiqueta(id: String): SearchFilters =
       copy(etiquetaIds = capturedEtiquetaIds.toggled(id))
+
+  fun toggleCuenta(id: String): SearchFilters = copy(cuentaIds = capturedCuentaIds.toggled(id))
+
+  fun toggleMedio(medio: MedioPago): SearchFilters =
+      copy(medios = if (medio in capturedMedios) capturedMedios - medio else capturedMedios + medio)
 
   fun availableYears(
       persistedYears: List<Int>,
@@ -87,7 +118,9 @@ internal class SearchFilters(
           customEnd == other.customEnd &&
           tipo == other.tipo &&
           capturedCategoryIds == other.capturedCategoryIds &&
-          capturedEtiquetaIds == other.capturedEtiquetaIds
+          capturedEtiquetaIds == other.capturedEtiquetaIds &&
+          capturedCuentaIds == other.capturedCuentaIds &&
+          capturedMedios == other.capturedMedios
 
   override fun hashCode(): Int {
     var result = preset.hashCode()
@@ -95,7 +128,9 @@ internal class SearchFilters(
     result = FILTER_HASH_MULTIPLIER * result + customEnd.hashCode()
     result = FILTER_HASH_MULTIPLIER * result + (tipo?.hashCode() ?: 0)
     result = FILTER_HASH_MULTIPLIER * result + capturedCategoryIds.hashCode()
-    return FILTER_HASH_MULTIPLIER * result + capturedEtiquetaIds.hashCode()
+    result = FILTER_HASH_MULTIPLIER * result + capturedEtiquetaIds.hashCode()
+    result = FILTER_HASH_MULTIPLIER * result + capturedCuentaIds.hashCode()
+    return FILTER_HASH_MULTIPLIER * result + capturedMedios.hashCode()
   }
 
   companion object {

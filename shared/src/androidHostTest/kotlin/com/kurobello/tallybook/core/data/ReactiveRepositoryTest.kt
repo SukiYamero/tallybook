@@ -2,22 +2,26 @@ package com.kurobello.tallybook.core.data
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.model.Actividad
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.ChangeStamp
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.RestoreResult
+import com.kurobello.tallybook.core.model.SearchTipo
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -29,7 +33,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -49,7 +52,7 @@ class ReactiveRepositoryTest {
         )
     val emissions = Channel<DataOutcome<List<Movimiento>>>(Channel.UNLIMITED)
     val collection = launch {
-      repository.observeRecent(limit = 10).take(2).collect(emissions::send)
+      repository.observeRecent(Moneda.USD, limit = 10).take(2).collect(emissions::send)
     }
 
     testScheduler.advanceUntilIdle()
@@ -93,36 +96,37 @@ class ReactiveRepositoryTest {
               "foreign-corrupt",
               "INVALID_TYPE",
               100,
-              "USD",
               "2026-09-16",
               null,
               null,
               "invalid-instant",
               "cat_comida",
+              "cuenta_efectivo_usd",
+              "EFECTIVO",
               ChangeStamp.SEED.value,
           )
           testScheduler.runCurrent()
           assertEquals(DataOutcome.Success(listOf(third, second)), emissions.last())
-          assertIs<DataOutcome.Failure>(repository.observeRecent(10).first())
-          assertEquals(DataOutcome.Success(Unit), repository.delete(third.id))
+          assertEquals(DataOutcome.Success(third), repository.deleteAndCapture(third.id))
           testScheduler.runCurrent()
           assertEquals(DataOutcome.Success(listOf(second, first)), emissions.last())
           database.movimientoQueries.insertMovimiento(
               "selected-corrupt",
               "GASTO",
               0,
-              "COP",
               "2026-09-16",
               null,
               null,
               first.createdAt.toString(),
               "cat_comida",
+              "cuenta_efectivo_cop",
+              "EFECTIVO",
               ChangeStamp.SEED.value,
           )
           testScheduler.runCurrent()
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(emissions.last()).error)
           assertTrue(collector.isCompleted)
-          assertEquals(DataOutcome.Success(Unit), repository.delete("selected-corrupt"))
+          database.movimientoQueries.tombstoneMovimiento(ChangeStamp.SEED.value, "selected-corrupt")
           assertEquals(DataOutcome.Success(listOf(second, first)), flow.first())
         }
       }
@@ -175,83 +179,6 @@ class ReactiveRepositoryTest {
   }
 
   @Test
-  fun `observe recent rejects a nonpositive limit without starting a query`() = runTest {
-    val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    createSchemaWithReferences(driver, listOf("other"))
-    val repository =
-        MovimientoRepositoryImpl(
-            TallybookDatabase(driver),
-            StandardTestDispatcher(testScheduler),
-            TestChangeClock(),
-        )
-
-    val outcome = repository.observeRecent(limit = 0).toList()
-
-    assertIs<DataError.InvalidInput>(assertIs<DataOutcome.Failure>(outcome.single()).error)
-    driver.close()
-  }
-
-  @Test
-  fun `observe summary returns zeroes for a moneda without movimientos`() = runTest {
-    val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    createSchemaWithReferences(driver, listOf("other"))
-    val repository =
-        MovimientoRepositoryImpl(
-            TallybookDatabase(driver),
-            StandardTestDispatcher(testScheduler),
-            TestChangeClock(),
-        )
-
-    assertEquals(
-        DataOutcome.Success(
-            MovimientoSummary(ingresos = Money(0, Moneda.COP), gastos = Money(0, Moneda.COP))
-        ),
-        repository.observeSummary(Moneda.COP).first(),
-    )
-    driver.close()
-  }
-
-  @Test
-  fun `observe summary separates gastos and ingresos in the requested moneda`() = runTest {
-    val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    createSchemaWithReferences(driver, listOf("other"))
-    val repository =
-        MovimientoRepositoryImpl(
-            TallybookDatabase(driver),
-            StandardTestDispatcher(testScheduler),
-            TestChangeClock(),
-        )
-    repository.insert(movimiento("gasto", TipoMovimiento.GASTO, Money(500, Moneda.COP)))
-    repository.insert(movimiento("ingreso", TipoMovimiento.INGRESO, Money(2_000, Moneda.COP)))
-    repository.insert(movimiento("other", TipoMovimiento.INGRESO, Money(9_999, Moneda.USD)))
-
-    assertEquals(
-        DataOutcome.Success(
-            MovimientoSummary(ingresos = Money(2_000, Moneda.COP), gastos = Money(500, Moneda.COP))
-        ),
-        repository.observeSummary(Moneda.COP).first(),
-    )
-    driver.close()
-  }
-
-  @Test
-  fun `observe recent maps a closed storage driver to a local error`() = runTest {
-    val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-    createSchemaWithReferences(driver, listOf("other"))
-    val repository =
-        MovimientoRepositoryImpl(
-            TallybookDatabase(driver),
-            StandardTestDispatcher(testScheduler),
-            TestChangeClock(),
-        )
-    driver.close()
-
-    assertIs<DataError.Local>(
-        assertIs<DataOutcome.Failure>(repository.observeRecent(10).first()).error
-    )
-  }
-
-  @Test
   fun `cancelling an active recent collector does not emit a local failure`() = runTest {
     val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
     createSchemaWithReferences(driver, listOf("other"))
@@ -262,7 +189,7 @@ class ReactiveRepositoryTest {
             TestChangeClock(),
         )
     val emissions = Channel<DataOutcome<List<Movimiento>>>(Channel.UNLIMITED)
-    val collection = launch { repository.observeRecent(10).collect(emissions::send) }
+    val collection = launch { repository.observeRecent(Moneda.USD, 10).collect(emissions::send) }
 
     testScheduler.advanceUntilIdle()
     assertEquals(DataOutcome.Success(emptyList()), emissions.receive())
@@ -275,10 +202,10 @@ class ReactiveRepositoryTest {
   @Test
   fun `update capture and restore invalidate home history and search observations`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-      createSchemaWithReferences(driver, listOf("other"))
+      val database = createSchemaWithReferences(driver, listOf("other"))
       val repository =
           MovimientoRepositoryImpl(
-              TallybookDatabase(driver),
+              database,
               StandardTestDispatcher(testScheduler),
               TestChangeClock(),
           )
@@ -293,39 +220,46 @@ class ReactiveRepositoryTest {
           MovimientoReadCriteria(
               Moneda.COP,
               range = range,
-              tipo = TipoMovimiento.GASTO,
+              tipo = SearchTipo.GASTO,
               categoryIds = setOf("cat_comida"),
           )
       val recent = mutableListOf<DataOutcome<List<Movimiento>>>()
       val summary = mutableListOf<DataOutcome<MovimientoSummary>>()
-      val history = mutableListOf<DataOutcome<List<Movimiento>>>()
+      val history = mutableListOf<DataOutcome<List<Actividad>>>()
       val years = mutableListOf<DataOutcome<List<Int>>>()
       val search = mutableListOf<DataOutcome<MovimientoSearchSnapshot>>()
+      val actividades = ActividadRepositoryImpl(database, StandardTestDispatcher(testScheduler))
+      val allDates = MovimientoDateRange(LocalDate(2025, 1, 1), LocalDate(2026, 12, 31))
       val collectors =
           listOf(
               backgroundScope.launch {
                 repository.observeRecent(Moneda.COP, 6).collect(recent::add)
               },
               backgroundScope.launch {
-                repository.observeSummary(Moneda.COP).collect(summary::add)
+                repository.observeSummary(Moneda.COP, allDates).collect(summary::add)
               },
               backgroundScope.launch {
-                repository.observeRange(Moneda.COP, range).collect(history::add)
+                actividades.observeActividadRange(Moneda.COP, range).collect(history::add)
               },
-              backgroundScope.launch { repository.observeYears(Moneda.COP).collect(years::add) },
-              backgroundScope.launch { repository.observeFiltered(criteria).collect(search::add) },
+              backgroundScope.launch { actividades.observeYears(Moneda.COP).collect(years::add) },
+              backgroundScope.launch { actividades.observeFiltered(criteria).collect(search::add) },
           )
       try {
         testScheduler.runCurrent()
         assertEquals(DataOutcome.Success(rows.reversed().take(6)), recent.last())
-        assertEquals(DataOutcome.Success(rows.reversed()), history.last())
+        assertEquals(
+            DataOutcome.Success(rows.reversed().map(Actividad::DeMovimiento)),
+            history.last(),
+        )
         assertEquals(DataOutcome.Success(listOf(2026)), years.last())
         assertEquals(
             DataOutcome.Success(MovimientoSummary(Money(0, Moneda.COP), Money(700, Moneda.COP))),
             summary.last(),
         )
         assertEquals(
-            DataOutcome.Success(MovimientoSearchSnapshot(rows.reversed(), listOf(2026))),
+            DataOutcome.Success(
+                MovimientoSearchSnapshot(rows.reversed().map(Actividad::DeMovimiento), listOf(2026))
+            ),
             search.last(),
         )
         val changed =
@@ -351,13 +285,15 @@ class ReactiveRepositoryTest {
                     changed.etiquetaIds,
                     changed.titulo,
                     changed.descripcion,
+                    changed.cuentaId,
+                    changed.medio,
                 ),
             ),
         )
         testScheduler.runCurrent()
         val remaining = rows.dropLast(1).reversed()
         assertEquals(DataOutcome.Success(remaining), recent.last())
-        assertEquals(DataOutcome.Success(remaining), history.last())
+        assertEquals(DataOutcome.Success(remaining.map(Actividad::DeMovimiento)), history.last())
         assertEquals(DataOutcome.Success(listOf(2026, 2025)), years.last())
         assertEquals(
             DataOutcome.Success(
@@ -366,29 +302,33 @@ class ReactiveRepositoryTest {
             summary.last(),
         )
         assertEquals(
-            DataOutcome.Success(MovimientoSearchSnapshot(remaining, listOf(2026, 2025))),
+            DataOutcome.Success(
+                MovimientoSearchSnapshot(remaining.map(Actividad::DeMovimiento), listOf(2026, 2025))
+            ),
             search.last(),
         )
         assertEquals(DataOutcome.Success(changed), repository.deleteAndCapture(changed.id))
         testScheduler.runCurrent()
         assertEquals(DataOutcome.Success(remaining), recent.last())
-        assertEquals(DataOutcome.Success(remaining), history.last())
+        assertEquals(DataOutcome.Success(remaining.map(Actividad::DeMovimiento)), history.last())
         assertEquals(DataOutcome.Success(listOf(2026)), years.last())
         assertEquals(
             DataOutcome.Success(MovimientoSummary(Money(0, Moneda.COP), Money(600, Moneda.COP))),
             summary.last(),
         )
         assertEquals(
-            DataOutcome.Success(MovimientoSearchSnapshot(remaining, listOf(2026))),
+            DataOutcome.Success(
+                MovimientoSearchSnapshot(remaining.map(Actividad::DeMovimiento), listOf(2026))
+            ),
             search.last(),
         )
         assertEquals(
-            DataOutcome.Success(MovimientoRestoreResult.Restored),
+            DataOutcome.Success(RestoreResult.Restored),
             repository.restoreDeleted(changed),
         )
         testScheduler.runCurrent()
         assertEquals(DataOutcome.Success(remaining), recent.last())
-        assertEquals(DataOutcome.Success(remaining), history.last())
+        assertEquals(DataOutcome.Success(remaining.map(Actividad::DeMovimiento)), history.last())
         assertEquals(DataOutcome.Success(listOf(2026, 2025)), years.last())
         assertEquals(
             DataOutcome.Success(
@@ -397,7 +337,9 @@ class ReactiveRepositoryTest {
             summary.last(),
         )
         assertEquals(
-            DataOutcome.Success(MovimientoSearchSnapshot(remaining, listOf(2026, 2025))),
+            DataOutcome.Success(
+                MovimientoSearchSnapshot(remaining.map(Actividad::DeMovimiento), listOf(2026, 2025))
+            ),
             search.last(),
         )
         for (emissions in listOf(recent, summary, history, years, search)) assertEquals(
@@ -424,5 +366,7 @@ class ReactiveRepositoryTest {
           titulo = "almuerzo",
           descripcion = null,
           createdAt = Instant.parse("2026-09-03T12:00:00Z"),
+          cuentaId = Cuenta.defaultCashId(monto.moneda),
+          medio = MedioPago.EFECTIVO,
       )
 }

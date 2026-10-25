@@ -3,22 +3,33 @@ package com.kurobello.tallybook.feature.movimientos.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
-import com.kurobello.tallybook.core.model.Money
+import com.kurobello.tallybook.core.model.MedioPago
+import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.text.AmountInputResult
 import com.kurobello.tallybook.core.text.normalizeOptionalText
+import com.kurobello.tallybook.core.text.parseAmountInput
+import com.kurobello.tallybook.core.text.toAmountInput
 import com.kurobello.tallybook.core.ui.component.DismissalDecision
 import com.kurobello.tallybook.core.ui.component.dismissalDecision
+import com.kurobello.tallybook.core.ui.feedback.DeletedSnapshot
+import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackKind
+import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackQueue
+import com.kurobello.tallybook.core.ui.feedback.ManagementOutcome
+import com.kurobello.tallybook.core.ui.feedback.ManagementSessionHandle
+import com.kurobello.tallybook.core.ui.feedback.ManagementSubject
 import kotlin.time.Clock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -29,33 +40,41 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.todayIn
 
-// One owner serializes the sheet lifecycle and the Undo mutation that outlives that sheet.
 @Suppress("TooManyFunctions")
 internal class ManageMovimientoViewModel(
-    private val movimientoRepository: MovimientoRepository,
-    private val categoriaRepository: CategoriaRepository,
-    private val etiquetaRepository: EtiquetaRepository,
+    repositories: ManageMovimientoRepositories,
     private val clock: Clock,
     private val timeZoneProvider: TimeZoneProvider,
+    private val feedback: ManagementFeedbackQueue,
     scope: CoroutineScope? = null,
 ) : ViewModel(), ManageMovimientoActions {
+  private val movimientoRepository = repositories.movimientos
+  private val categoriaRepository = repositories.categorias
+  private val etiquetaRepository = repositories.etiquetas
+  private val cuentaRepository = repositories.cuentas
   private val coroutineScope = scope ?: viewModelScope
   private var nextToken = 0L
   private var readGeneration = 0L
   private var readJob: Job? = null
   private var categoryJob: Job? = null
   private var etiquetaJob: Job? = null
-  private var pendingFeedback: PendingMovimientoFeedback? = null
+  private var cuentaJob: Job? = null
+  private var defaultsJob: Job? = null
+  private var pendingOutcome: ManagementOutcome? = null
+  private var feedbackSession: ManagementSessionHandle? = null
 
   val uiState: StateFlow<ManageMovimientoUiState>
     field = MutableStateFlow(ManageMovimientoUiState())
 
   override fun open(id: String): Boolean {
-    if (id.isBlank() || uiState.value.session != null || uiState.value.isRestoring) return false
+    val admission =
+        if (id.isBlank() || uiState.value.session != null) null else feedback.openSession()
+    feedbackSession = admission ?: return false
     val session = MovimientoManagementSession(token = ++nextToken, movimientoId = id)
     uiState.update { it.copy(session = session) }
     loadCategories(session.token)
     loadEtiquetas(session.token)
+    loadCuentas(session.token)
     loadMovimiento(session.token)
     return true
   }
@@ -68,6 +87,7 @@ internal class ManageMovimientoViewModel(
             session.hasPendingConfirmation
     )
         return
+    if (session.isCuentasFailed) loadCuentas(session.token)
     if (session.phase == MovimientoManagementPhase.Edit) loadCategories(session.token)
     else {
       if (session.isCategoriesFailed) loadCategories(session.token)
@@ -75,7 +95,31 @@ internal class ManageMovimientoViewModel(
     }
   }
 
-  override fun onTipoChanged(tipo: TipoMovimiento) = updateDraft { copy(tipo = tipo) }
+  override fun onTipoChanged(tipo: TipoMovimiento) = updateDraft {
+    copy(tipo = tipo, medio = medio?.forTipo(tipo))
+  }
+
+  override fun onMedioSelected(medio: MedioPago) {
+    val session = uiState.value.session ?: return
+    val form = session.form?.takeIf { medio != it.draft.medio && medio.allows(it.tipo) } ?: return
+    val next =
+        form.shownChoice.withMedio(
+            medio,
+            session.cuentas,
+            session.cuentaDefaults,
+            moneda = form.moneda,
+        )
+    updateDraft { copy(medio = next.medio, cuentaId = next.cuentaId) }
+  }
+
+  override fun onCuentaSelected(id: String) {
+    val form = uiState.value.session?.form ?: return
+    val cuenta =
+        form.cuentas.firstOrNull { it.id == id && !it.archivada && it.moneda == form.moneda }
+            ?: return
+    val next = form.shownChoice.withCuenta(cuenta, form.tipo)
+    updateDraft { copy(medio = next.medio, cuentaId = next.cuentaId) }
+  }
 
   override fun onAmountChanged(value: String) = updateDraft { copy(amountInput = value) }
 
@@ -191,14 +235,35 @@ internal class ManageMovimientoViewModel(
     coroutineScope.launch {
       val update = changes.withoutDeletedEtiquetas()
       when (val outcome = movimientoRepository.update(session.movimientoId, update)) {
-        is DataOutcome.Failure ->
-            updateSession(session.token) {
-              copy(isSubmitting = false, edit = edit?.copy(error = MovimientoFormError.SAVE_FAILED))
-            }
+        is DataOutcome.Failure -> {
+          // Every refusal is invalid input; re-reading the cuenta tells a refused one apart.
+          val rejected =
+              outcome.error is DataError.InvalidInput &&
+                  (cuentaRepository.getById(update.cuentaId) as? DataOutcome.Success)
+                      ?.data
+                      ?.accepts(
+                          update.medio,
+                          update.monto.moneda,
+                          storedCuentaId = session.edit?.original?.cuentaId,
+                      ) != true
+          updateSession(session.token) {
+            copy(
+                isSubmitting = false,
+                edit =
+                    edit?.copy(
+                        error = MovimientoFormError.SAVE_FAILED.takeUnless { rejected },
+                        cuentaRejected = rejected,
+                    ),
+            )
+          }
+        }
         is DataOutcome.Success ->
             when (outcome.data) {
               MovimientoUpdateResult.Updated ->
-                  close(session.token, PendingMovimientoFeedback(MovimientoFeedbackKind.Saved))
+                  close(
+                      session.token,
+                      ManagementOutcome(ManagementSubject.Movimiento, ManagementFeedbackKind.Saved),
+                  )
               MovimientoUpdateResult.NotFound ->
                   updateSession(session.token) {
                     copy(isSubmitting = false, error = MovimientoManagementError.MissingOnSave)
@@ -249,11 +314,12 @@ internal class ManageMovimientoViewModel(
         is DataOutcome.Success ->
             close(
                 session.token,
-                PendingMovimientoFeedback(
+                ManagementOutcome(
+                    subject = ManagementSubject.Movimiento,
                     kind =
-                        if (outcome.data == null) MovimientoFeedbackKind.Missing
-                        else MovimientoFeedbackKind.Deleted,
-                    deleted = outcome.data,
+                        if (outcome.data == null) ManagementFeedbackKind.Missing
+                        else ManagementFeedbackKind.Deleted,
+                    deleted = outcome.data?.let(DeletedSnapshot::OfMovimiento),
                 ),
             )
       }
@@ -264,73 +330,12 @@ internal class ManageMovimientoViewModel(
     val session = uiState.value.session ?: return
     if (session.token != origin || session.phase != MovimientoManagementPhase.Closing) return
     stopReads()
-    val pending = pendingFeedback
-    pendingFeedback = null
-    if (pending != null) {
-      val feedback =
-          MovimientoFeedback(
-              token = ++nextToken,
-              kind = pending.kind,
-              deletedMovimiento = pending.deleted,
-          )
-      uiState.update { it.copy(session = null, feedbackQueue = it.feedbackQueue + feedback) }
-    } else uiState.update { it.copy(session = null) }
+    val pending = pendingOutcome
+    pendingOutcome = null
+    uiState.update { it.copy(session = null) }
+    feedbackSession?.close(pending)
+    feedbackSession = null
   }
-
-  override fun onFeedbackAction(token: Long, revision: Int) {
-    val current = uiState.value
-    val feedback =
-        feedbackFor(token, revision, current)?.takeIf { it.hasAction && current.session == null }
-            ?: return
-    val deleted = feedback.deletedMovimiento ?: return
-    val claimed = feedback.copy(revision = revision + 1, isRestoring = true)
-    if (
-        uiState.compareAndSet(
-            current,
-            current.copy(feedbackQueue = listOf(claimed) + current.feedbackQueue.drop(1)),
-        )
-    ) {
-      coroutineScope.launch {
-        val outcome = movimientoRepository.restoreDeleted(deleted)
-        val kind =
-            when (outcome) {
-              is DataOutcome.Failure -> MovimientoFeedbackKind.RestoreFailed
-              is DataOutcome.Success ->
-                  when (outcome.data) {
-                    MovimientoRestoreResult.Restored,
-                    MovimientoRestoreResult.AlreadyPresent -> MovimientoFeedbackKind.Restored
-                    MovimientoRestoreResult.Conflict -> MovimientoFeedbackKind.RestoreConflict
-                  }
-            }
-        val completed =
-            claimed.copy(
-                revision = claimed.revision + 1,
-                kind = kind,
-                isRestoring = false,
-                deletedMovimiento = deleted.takeIf { kind == MovimientoFeedbackKind.RestoreFailed },
-            )
-        uiState.update { latest ->
-          if (latest.feedback == claimed)
-              latest.copy(feedbackQueue = listOf(completed) + latest.feedbackQueue.drop(1))
-          else latest
-        }
-      }
-    }
-  }
-
-  override fun onFeedbackDismiss(token: Long, revision: Int) {
-    val feedback = feedbackFor(token, revision) ?: return
-    uiState.update {
-      if (it.feedback == feedback) it.copy(feedbackQueue = it.feedbackQueue.drop(1)) else it
-    }
-  }
-
-  private fun feedbackFor(
-      token: Long,
-      revision: Int,
-      current: ManageMovimientoUiState = uiState.value,
-  ): MovimientoFeedback? =
-      current.feedback?.takeIf { it.token == token && it.revision == revision && !it.isRestoring }
 
   private fun requestLeaveEdit(session: MovimientoManagementSession): Boolean =
       when (dismissalDecision(session.hasUnsavedChanges)) {
@@ -349,7 +354,18 @@ internal class ManageMovimientoViewModel(
     if (!session.canModifyDraft) return
     updateSession(session.token) {
       copy(
-          edit = edit?.let { it.copy(draft = transform(it.draft), error = null) },
+          edit =
+              edit?.let {
+                val draft = transform(it.draft)
+                it.copy(
+                    draft = draft,
+                    error = null,
+                    cuentaRejected =
+                        it.cuentaRejected &&
+                            draft.cuentaId == it.draft.cuentaId &&
+                            draft.medio == it.draft.medio,
+                )
+              },
           error = error?.takeIf { it == MovimientoManagementError.MissingOnSave },
       )
     }
@@ -399,6 +415,39 @@ internal class ManageMovimientoViewModel(
                   )
             }
       }
+      loadedEdit?.let { loadCuentaDefaults(token, it.original.monto.moneda) }
+    }
+  }
+
+  private fun loadCuentas(token: Long) {
+    cuentaJob?.cancel()
+    updateSession(token) { copy(isCuentasLoading = true, isCuentasFailed = false) }
+    cuentaJob = coroutineScope.launch {
+      cuentaRepository.observeAll().collect { result ->
+        updateSession(token) {
+          if (phase == MovimientoManagementPhase.Closing) this
+          else
+              when (result) {
+                is DataOutcome.Success ->
+                    copy(cuentas = result.data, isCuentasLoading = false, isCuentasFailed = false)
+                is DataOutcome.Failure -> copy(isCuentasLoading = false, isCuentasFailed = true)
+              }
+        }
+        uiState.value.session
+            ?.takeIf { it.token == token }
+            ?.movimiento
+            ?.let { loadCuentaDefaults(token, it.monto.moneda) }
+      }
+    }
+  }
+
+  // The stored currency stands in for the primary one, so each fallback prefers it; a default in
+  // another currency is still dropped by the selection rules.
+  private fun loadCuentaDefaults(token: Long, moneda: Moneda) {
+    defaultsJob?.cancel()
+    defaultsJob = coroutineScope.launch {
+      val defaults = (movimientoRepository.cuentaDefaults(moneda) as? DataOutcome.Success)?.data
+      updateSession(token) { copy(cuentaDefaults = defaults) }
     }
   }
 
@@ -443,8 +492,8 @@ internal class ManageMovimientoViewModel(
     }
   }
 
-  private fun close(token: Long, feedback: PendingMovimientoFeedback? = null) {
-    pendingFeedback = feedback
+  private fun close(token: Long, outcome: ManagementOutcome? = null) {
+    pendingOutcome = outcome
     readJob?.cancel()
     ++readGeneration
     updateSession(token) {
@@ -469,7 +518,9 @@ internal class ManageMovimientoViewModel(
 
   override fun onCleared() {
     stopReads()
-    pendingFeedback = null
+    pendingOutcome = null
+    feedbackSession?.close()
+    feedbackSession = null
     uiState.value = ManageMovimientoUiState()
   }
 
@@ -479,14 +530,21 @@ internal class ManageMovimientoViewModel(
     readJob?.cancel()
     categoryJob?.cancel()
     etiquetaJob?.cancel()
+    cuentaJob?.cancel()
+    defaultsJob?.cancel()
     ++readGeneration
   }
 }
 
-private data class PendingMovimientoFeedback(
-    val kind: MovimientoFeedbackKind,
-    val deleted: Movimiento? = null,
+internal data class ManageMovimientoRepositories(
+    val movimientos: MovimientoRepository,
+    val categorias: CategoriaRepository,
+    val etiquetas: EtiquetaRepository,
+    val cuentas: CuentaRepository,
 )
+
+private val EditMovimientoUiState.shownChoice: CuentaSelectionState
+  get() = CuentaSelectionState(draft.medio, cuentaField.selected?.id, SelectionOwner.USER)
 
 private val MovimientoManagementSession.canInteract: Boolean
   get() = !isSubmitting && phase != MovimientoManagementPhase.Closing
@@ -497,12 +555,6 @@ private val MovimientoManagementSession.hasPendingConfirmation: Boolean
 private val MovimientoManagementSession.canModifyDraft: Boolean
   get() = phase == MovimientoManagementPhase.Edit && canInteract && !hasPendingConfirmation
 
-internal fun Money.toAmountInput(): String {
-  val digits = minorUnits.toString().padStart(moneda.scale + 1, '0')
-  return if (moneda.scale == 0) digits
-  else digits.dropLast(moneda.scale) + moneda.decimalSeparator + digits.takeLast(moneda.scale)
-}
-
 internal fun Movimiento.toDraft() =
     MovimientoDraft(
         tipo,
@@ -512,6 +564,8 @@ internal fun Movimiento.toDraft() =
         etiquetaIds,
         titulo.orEmpty(),
         descripcion.orEmpty(),
+        cuentaId,
+        medio,
     )
 
 private fun Movimiento.toChanges() =
@@ -523,6 +577,8 @@ private fun Movimiento.toChanges() =
         etiquetaIds,
         titulo.normalizeOptionalTextOrNull(),
         descripcion.normalizeOptionalTextOrNull(),
+        cuentaId,
+        medio,
     )
 
 private fun String?.normalizeOptionalTextOrNull(): String? = this?.normalizeOptionalText()
@@ -530,8 +586,11 @@ private fun String?.normalizeOptionalTextOrNull(): String? = this?.normalizeOpti
 private fun EditMovimientoUiState.toChangesOrNull(): MovimientoChanges? {
   val amount = (parseAmountInput(amountInput, moneda) as? AmountInputResult.Valid)?.money
   val categoria = categoriaId
+  val cuenta = cuentaField.selected
+  val medio = cuentaField.effectiveMedio(tipo)
   val isReady = !isLoading && error == null && hasValidCategoria && !isFechaInvalid
-  return if (amount == null || categoria == null || !isReady) null
+  if (amount == null || categoria == null || !isReady) return null
+  return if (cuenta == null || medio == null) null
   else
       MovimientoChanges(
           tipo,
@@ -541,5 +600,7 @@ private fun EditMovimientoUiState.toChangesOrNull(): MovimientoChanges? {
           etiquetaIds,
           titulo.normalizeOptionalText(),
           descripcion.normalizeOptionalText(),
+          cuenta.id,
+          medio,
       )
 }

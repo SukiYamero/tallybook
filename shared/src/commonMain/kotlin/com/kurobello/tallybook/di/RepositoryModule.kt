@@ -1,14 +1,26 @@
 package com.kurobello.tallybook.di
 
+import com.kurobello.tallybook.core.data.ActividadRepository
+import com.kurobello.tallybook.core.data.ActividadRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.CuentaRepository
+import com.kurobello.tallybook.core.data.CuentaRepositoryImpl
+import com.kurobello.tallybook.core.data.CuentaSeedProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
+import com.kurobello.tallybook.core.data.SaldoRepository
+import com.kurobello.tallybook.core.data.SaldoRepositoryImpl
+import com.kurobello.tallybook.core.data.TransferenciaRepository
+import com.kurobello.tallybook.core.data.TransferenciaRepositoryImpl
+import com.kurobello.tallybook.core.data.export.DatabaseMovimientoExportSource
+import com.kurobello.tallybook.core.data.export.MovimientoExportSource
 import com.kurobello.tallybook.core.data.maxStoredChangeStamp
+import com.kurobello.tallybook.core.data.seedDefaultCuenta
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import kotlinx.coroutines.CoroutineDispatcher
 import org.koin.core.qualifier.named
@@ -39,7 +51,26 @@ val repositoryModule = module {
         changeClock = get(),
     )
   }
+  single<CuentaRepository> {
+    CuentaRepositoryImpl(
+        database = get(),
+        dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
+        idGenerator = get(),
+        clock = get(),
+        changeClock = get(),
+    )
+  }
+  single<TransferenciaRepository> {
+    TransferenciaRepositoryImpl(
+        database = get(),
+        dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
+        clock = get(),
+        timeZoneProvider = get(),
+        changeClock = get(),
+    )
+  }
   single { CategorySeedProvider() }
+  single { CuentaSeedProvider(clock = get()) }
   single {
     val database = get<TallybookDatabase>()
     val dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO))
@@ -48,8 +79,28 @@ val repositoryModule = module {
         preferencesRepository = get(),
         categoriaRepository = get(),
         categorySeedProvider = get(),
+        cuentaSeedProvider = get(),
+        seedDefaultCuenta = { database.seedDefaultCuenta(it, get(), dispatcher) },
         changeClock = get(),
         storedMaxChangeStamp = { database.maxStoredChangeStamp(dispatcher) },
+    )
+  }
+  single<SaldoRepository> {
+    SaldoRepositoryImpl(
+        database = get(),
+        dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
+    )
+  }
+  single<ActividadRepository> {
+    ActividadRepositoryImpl(
+        database = get(),
+        dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
+    )
+  }
+  single<MovimientoExportSource> {
+    DatabaseMovimientoExportSource(
+        database = get(),
+        dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
     )
   }
 }

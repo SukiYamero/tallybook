@@ -199,11 +199,52 @@ internal class PrimaryNavigationTest {
   }
 
   @Test
+  fun accountsOpensOverHomeOrProfileAndBackReturnsToThatPrimary() {
+    val home = PrimaryNavigationState()
+    val fromHome = home.openSecondary(Accounts)
+    assertEquals(Accounts, fromHome.secondary)
+    assertEquals(listOf(Home, Accounts), fromHome.displayedKeys)
+    assertEquals(home, fromHome.back())
+
+    val history = home.select(History)
+    assertSame(history, history.openSecondary(Accounts))
+    val search = home.select(Search)
+    assertSame(search, search.openSecondary(Accounts))
+
+    val profile = home.select(Profile)
+    val fromProfile = profile.openSecondary(Accounts)
+    assertEquals(listOf(Home, Profile, Accounts), fromProfile.retainedKeys)
+    assertSame(fromProfile, fromProfile.openSecondary(Categories))
+    assertEquals(profile, fromProfile.back())
+    assertEquals(listOf(Home), fromProfile.select(Home).displayedKeys)
+    assertEquals(
+        initialPrimaryNavigation(Profile).openSecondary(Accounts),
+        initialPrimaryNavigation(Accounts),
+    )
+    assertEquals("secondary-accounts", primaryContentKey(Accounts))
+  }
+
+  @Test
+  fun snapshotWithAccountsOpenOverHomeRestoresTheSecondarySlot() {
+    val original = PrimaryNavigationState().openSecondary(Accounts)
+    val restored =
+        Json.decodeFromString<PrimaryNavigationState>(
+            Json.encodeToString(PrimaryNavigationState.serializer(), original)
+        )
+    assertEquals(original, restored)
+    assertEquals(Home, restored.back().selected)
+    assertEquals(null, restored.back().secondary)
+  }
+
+  @Test
   fun aSecondaryThatCannotOpenOverItsPrimaryIsRejected() {
     assertFailsWith<IllegalArgumentException> {
       PrimaryNavigationState(Home, secondary = Categories)
     }
     assertFailsWith<IllegalArgumentException> { PrimaryNavigationState(Home, secondary = Tags) }
+    assertFailsWith<IllegalArgumentException> {
+      PrimaryNavigationState(Search, searchVisited = true, secondary = Accounts)
+    }
     assertFailsWith<IllegalArgumentException> {
       PrimaryNavigationState(Profile, profileVisited = true, secondary = Search)
     }

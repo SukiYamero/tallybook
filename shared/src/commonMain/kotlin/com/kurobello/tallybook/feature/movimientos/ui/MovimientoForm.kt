@@ -21,20 +21,15 @@ import com.kurobello.tallybook.core.ui.component.TallybookSheetForm
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
-import com.kurobello.tallybook.feature.movimientos.viewmodel.AmountInputError
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormError
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormState
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.add_movimiento_pane_title
-import tallybook.shared.generated.resources.amount_malformed
-import tallybook.shared.generated.resources.amount_not_positive
-import tallybook.shared.generated.resources.amount_overflow
-import tallybook.shared.generated.resources.amount_required
-import tallybook.shared.generated.resources.amount_too_many_decimals
 import tallybook.shared.generated.resources.description_optional
 import tallybook.shared.generated.resources.loading
+import tallybook.shared.generated.resources.movimiento_accounts_error
 import tallybook.shared.generated.resources.movimiento_categories_error
 import tallybook.shared.generated.resources.movimiento_preferences_error
 import tallybook.shared.generated.resources.movimiento_save_error
@@ -60,15 +55,20 @@ internal fun MovimientoForm(
     interactionEnabled: Boolean = true,
     categoryCreation: CategoryPickerCreation? = null,
     onDeselectCategoria: (() -> Unit)? = null,
+    onCreateCuenta: (() -> Unit)? = null,
 ) {
   val fieldFocus = remember { MovimientoFieldFocus() }
   val categoryPicker = rememberMovimientoPicker(interactionEnabled)
   val etiquetaPicker = rememberMovimientoPicker(interactionEnabled)
+  val cuentaPicker = rememberMovimientoPicker(interactionEnabled)
   NavigationBackHandler(
       state = rememberNavigationEventState(NavigationEventInfo.None),
-      isBackEnabled = (categoryPicker.isVisible || etiquetaPicker.isVisible) && interactionEnabled,
+      isBackEnabled =
+          interactionEnabled &&
+              listOf(categoryPicker, etiquetaPicker, cuentaPicker).any { it.isVisible },
       onBackCompleted = {
         when {
+          cuentaPicker.isVisible -> cuentaPicker.onDismiss()
           etiquetaPicker.isVisible -> etiquetaPicker.onDismiss()
           categoryCreation?.state?.draft != null -> categoryCreation.actions.onClose()
           else -> categoryPicker.onDismiss()
@@ -102,6 +102,8 @@ internal fun MovimientoForm(
                 onChooseCategoria = categoryPicker.onOpen,
                 onDeselectCategoria = onDeselectCategoria,
                 onAddEtiqueta = etiquetaPicker.onOpen,
+                onChooseCuenta = cuentaPicker.onOpen,
+                onCreateCuenta = onCreateCuenta,
             ),
         fieldFocus = fieldFocus.copy(amountModifier = Modifier.revealWhenFocused()),
     )
@@ -148,6 +150,12 @@ internal fun MovimientoForm(
       actions = actions,
       picker = etiquetaPicker,
   )
+  MovimientoCuentaPickerSheet(
+      visible = interactionEnabled && cuentaPicker.isVisible,
+      field = uiState.cuentaField,
+      onSelect = actions::onCuentaSelected,
+      picker = cuentaPicker,
+  )
 }
 
 @Composable
@@ -159,16 +167,6 @@ private fun MovimientoValidationFocus(
     if (uiState.amountError != null) fieldFocus.amount.requestFocus()
   }
 }
-
-@Composable
-internal fun AmountInputError.message(): String =
-    when (this) {
-      AmountInputError.EMPTY -> stringResource(Res.string.amount_required)
-      AmountInputError.MALFORMED -> stringResource(Res.string.amount_malformed)
-      AmountInputError.NOT_POSITIVE -> stringResource(Res.string.amount_not_positive)
-      AmountInputError.TOO_MANY_DECIMALS -> stringResource(Res.string.amount_too_many_decimals)
-      AmountInputError.OVERFLOW -> stringResource(Res.string.amount_overflow)
-    }
 
 @Composable
 internal fun MovimientoFormErrorMessage(
@@ -187,6 +185,12 @@ internal fun MovimientoFormErrorMessage(
     MovimientoFormError.CATEGORIES_UNAVAILABLE ->
         MovimientoFormRetryError(
             stringResource(Res.string.movimiento_categories_error),
+            onRetry,
+            interactionEnabled,
+        )
+    MovimientoFormError.ACCOUNTS_UNAVAILABLE ->
+        MovimientoFormRetryError(
+            stringResource(Res.string.movimiento_accounts_error),
             onRetry,
             interactionEnabled,
         )

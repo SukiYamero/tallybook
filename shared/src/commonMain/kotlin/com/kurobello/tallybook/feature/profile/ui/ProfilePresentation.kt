@@ -3,20 +3,28 @@ package com.kurobello.tallybook.feature.profile.ui
 import androidx.compose.runtime.Composable
 import com.kurobello.tallybook.core.data.export.MovimientoCsvLabels
 import com.kurobello.tallybook.core.model.AppLocale
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.ThemeMode
+import com.kurobello.tallybook.core.ui.account.labelResource
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.csv_header_account
 import tallybook.shared.generated.resources.csv_header_amount
 import tallybook.shared.generated.resources.csv_header_category
 import tallybook.shared.generated.resources.csv_header_currency
 import tallybook.shared.generated.resources.csv_header_date
 import tallybook.shared.generated.resources.csv_header_description
+import tallybook.shared.generated.resources.csv_header_destination_account
+import tallybook.shared.generated.resources.csv_header_destination_amount
+import tallybook.shared.generated.resources.csv_header_destination_currency
+import tallybook.shared.generated.resources.csv_header_medio
 import tallybook.shared.generated.resources.csv_header_parent_category
 import tallybook.shared.generated.resources.csv_header_tags
 import tallybook.shared.generated.resources.csv_header_title
 import tallybook.shared.generated.resources.csv_header_type
+import tallybook.shared.generated.resources.csv_transfer_type
 import tallybook.shared.generated.resources.currency_name_ars
 import tallybook.shared.generated.resources.currency_name_brl
 import tallybook.shared.generated.resources.currency_name_clp
@@ -93,4 +101,11 @@ internal fun movimientoCsvLabels(): MovimientoCsvLabels =
         currencyHeader = stringResource(Res.string.csv_header_currency),
         expenseLabel = stringResource(Res.string.expense),
         incomeLabel = stringResource(Res.string.income),
+        accountHeader = stringResource(Res.string.csv_header_account),
+        medioHeader = stringResource(Res.string.csv_header_medio),
+        destinationAccountHeader = stringResource(Res.string.csv_header_destination_account),
+        destinationAmountHeader = stringResource(Res.string.csv_header_destination_amount),
+        destinationCurrencyHeader = stringResource(Res.string.csv_header_destination_currency),
+        transferLabel = stringResource(Res.string.csv_transfer_type),
+        medioLabels = MedioPago.entries.associateWith { stringResource(it.labelResource) },
     )

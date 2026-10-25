@@ -55,6 +55,7 @@ internal fun SearchRoute(
     active: Boolean,
     modifier: Modifier = Modifier,
     onOpenMovimiento: ((String) -> Unit)? = null,
+    onOpenTransferencia: ((String) -> Unit)? = null,
 ) {
   val label = stringResource(Res.string.unknown_category)
   val locale = LocalLocale.current.toLanguageTag()
@@ -111,6 +112,7 @@ internal fun SearchRoute(
       actions = actions,
       onAdd = onAdd,
       onOpenMovimiento = onOpenMovimiento,
+      onOpenTransferencia = onOpenTransferencia,
       onOpenFilters = {
         if (modals.tryOpenDestinationModal(controller)) {
           keyboard?.hide()
@@ -163,7 +165,12 @@ private fun SearchFilterRequestEffect(
   val latestHandled = rememberUpdatedState(onHandled)
   LaunchedEffect(request, active, actions) {
     if (request != null && active) {
-      actions.onShowFilters(request.categoryIds, request.etiquetaIds)
+      actions.onShowFilters(
+          request.categoryIds,
+          request.etiquetaIds,
+          request.cuentaIds,
+          request.moneda,
+      )
       latestHandled.value(request.token)
     }
   }
@@ -218,6 +225,8 @@ private data class SearchScrollIdentity(
     val categoryIds: List<String>,
     val etiquetaIds: List<String> = emptyList(),
     val normalizedQuery: String,
+    val cuentaIds: List<String> = emptyList(),
+    val medios: List<String> = emptyList(),
 )
 
 private fun SearchRequest.scrollIdentity(): SearchScrollIdentity =
@@ -229,4 +238,6 @@ private fun SearchRequest.scrollIdentity(): SearchScrollIdentity =
         criteria.categoryIds.sorted(),
         criteria.etiquetaIds.sorted(),
         normalizedQuery,
+        criteria.cuentaIds.sorted(),
+        criteria.medios.sorted().map { it.name },
     )

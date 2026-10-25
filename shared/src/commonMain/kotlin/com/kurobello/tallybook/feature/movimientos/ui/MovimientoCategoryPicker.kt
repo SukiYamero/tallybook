@@ -10,6 +10,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.defaultViewModelCreationExtras
 import androidx.lifecycle.repeatOnLifecycle
@@ -18,9 +19,11 @@ import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreOwner
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.ui.account.CuentaPickerSheet
 import com.kurobello.tallybook.core.ui.tag.EtiquetaPickerSheet
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryEffect
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
+import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoCuentaUi
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormState
 import kotlinx.coroutines.flow.Flow
@@ -108,8 +111,30 @@ internal fun MovimientoEtiquetaPickerSheet(
   )
 }
 
+/** The account picker every movimiento surface opens, over the field's compatible options. */
+@Composable
+internal fun MovimientoCuentaPickerSheet(
+    visible: Boolean,
+    field: MovimientoCuentaUi,
+    onSelect: (String) -> Unit,
+    picker: MovimientoPickerState,
+) {
+  CuentaPickerSheet(
+      visible = visible,
+      cuentas = field.options,
+      selectedId = field.selected?.id,
+      onSelect = onSelect,
+      onDismiss = picker.onDismiss,
+      primaryMoneda = field.primaryMoneda,
+  )
+}
+
 internal const val QUICK_CATEGORY_ADD_KEY = "quick-category-add"
 internal const val QUICK_CATEGORY_MANAGE_KEY = "quick-category-manage"
+
+@Composable
+internal fun rememberQuickCategoryViewModel(key: String): QuickCategoryViewModel =
+    rememberHostScopedViewModel(key)
 
 /**
  * A quick-create ViewModel scoped to the calling host's composition: it is cleared when that host
@@ -117,7 +142,7 @@ internal const val QUICK_CATEGORY_MANAGE_KEY = "quick-category-manage"
  * parent owner.
  */
 @Composable
-internal fun rememberQuickCategoryViewModel(key: String): QuickCategoryViewModel {
+internal inline fun <reified T : ViewModel> rememberHostScopedViewModel(key: String): T {
   val parent = requireNotNull(LocalViewModelStoreOwner.current)
   // Intent extras may contain newly copied Bundles on every read of the same Activity.
   val extras = remember(parent) { parent.defaultViewModelCreationExtras }

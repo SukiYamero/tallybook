@@ -1,10 +1,15 @@
 package com.kurobello.tallybook.core.data.export
 
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.Transferencia
+import kotlin.time.Instant
+import kotlinx.datetime.LocalDate
 
 private const val BYTE_ORDER_MARK = "﻿"
 private const val RECORD_SEPARATOR = "\r\n"
@@ -29,22 +34,39 @@ data class MovimientoCsvLabels(
     val currencyHeader: String,
     val expenseLabel: String,
     val incomeLabel: String,
+    val accountHeader: String,
+    val medioHeader: String,
+    val destinationAccountHeader: String,
+    val destinationAmountHeader: String,
+    val destinationCurrencyHeader: String,
+    val transferLabel: String,
+    val medioLabels: Map<MedioPago, String>,
+)
+
+/** Live rows only: tombstoned rows never reach an export. */
+data class MovimientoExportContent(
+    val movimientos: List<Movimiento>,
+    val transferencias: List<Transferencia>,
+    val cuentas: List<Cuenta>,
+    val categorias: List<Categoria>,
+    val etiquetas: List<Etiqueta>,
 )
 
 /**
  * RFC 4180 document (CRLF records, every record terminated) prefixed with a UTF-8 BOM so Excel
  * detects the encoding. Amounts are unsigned plain decimals with `Moneda.scale` digits after a `.`:
  * the type column carries the direction, and a locale-free number stays importable everywhere. Tags
- * keep the movimiento's display order, joined by " · ".
+ * keep the movimiento's display order, joined by " · ". The account columns follow the original
+ * nine so spreadsheets built on earlier exports keep lining up; a [Transferencia] is one row whose
+ * amount and account are its origin side, with the destination side in the last three columns.
  */
-fun buildMovimientoCsv(
-    movimientos: List<Movimiento>,
-    categorias: List<Categoria>,
-    etiquetas: List<Etiqueta>,
-    labels: MovimientoCsvLabels,
-): String {
-  val categoriasById = categorias.associateBy(Categoria::id)
-  val etiquetasById = etiquetas.associateBy(Etiqueta::id)
+fun buildMovimientoCsv(content: MovimientoExportContent, labels: MovimientoCsvLabels): String {
+  val names =
+      CsvNames(
+          categorias = content.categorias.associateBy(Categoria::id),
+          etiquetas = content.etiquetas.associateBy(Etiqueta::id),
+          cuentas = content.cuentas.associate { it.id to it.nombre },
+      )
   val header =
       listOf(
           labels.dateHeader,
@@ -56,30 +78,17 @@ fun buildMovimientoCsv(
           labels.descriptionHeader,
           labels.amountHeader,
           labels.currencyHeader,
+          labels.accountHeader,
+          labels.medioHeader,
+          labels.destinationAccountHeader,
+          labels.destinationAmountHeader,
+          labels.destinationCurrencyHeader,
       )
   val rows =
-      movimientos
-          .sortedWith(
-              compareByDescending<Movimiento> { it.fecha }
-                  .thenByDescending { it.createdAt }
-                  .thenByDescending { it.id },
-          )
-          .map { movimiento ->
-            val categoria = categoriasById[movimiento.categoriaId]
-            listOf(
-                movimiento.fecha.toString(),
-                labels.typeLabel(movimiento.tipo),
-                categoria?.nombre.orEmpty(),
-                categoria?.parentName(categoriasById).orEmpty(),
-                movimiento.etiquetaIds
-                    .mapNotNull(etiquetasById::get)
-                    .joinToString(TAG_SEPARATOR, transform = Etiqueta::nombre),
-                movimiento.titulo.orEmpty(),
-                movimiento.descripcion.orEmpty(),
-                movimiento.monto.toPlainUnsignedDecimal(),
-                movimiento.monto.moneda.name,
-            )
-          }
+      (content.movimientos.map { it.toRecord(names, labels) } +
+              content.transferencias.map { it.toRecord(names, labels) })
+          .sortedWith(NEWEST_FIRST)
+          .map(CsvRecord::cells)
   return buildString {
     append(BYTE_ORDER_MARK)
     (listOf(header) + rows).forEach { record ->
@@ -88,6 +97,76 @@ fun buildMovimientoCsv(
     }
   }
 }
+
+private class CsvNames(
+    val categorias: Map<String, Categoria>,
+    val etiquetas: Map<String, Etiqueta>,
+    val cuentas: Map<String, String>,
+)
+
+private class CsvRecord(
+    val fecha: LocalDate,
+    val createdAt: Instant,
+    val id: String,
+    val cells: List<String>,
+)
+
+private val NEWEST_FIRST =
+    compareByDescending<CsvRecord> { it.fecha }
+        .thenByDescending { it.createdAt }
+        .thenByDescending { it.id }
+
+private fun Movimiento.toRecord(names: CsvNames, labels: MovimientoCsvLabels): CsvRecord {
+  val categoria = names.categorias[categoriaId]
+  return CsvRecord(
+      fecha = fecha,
+      createdAt = createdAt,
+      id = id,
+      cells =
+          listOf(
+              fecha.toString(),
+              labels.typeLabel(tipo),
+              categoria?.nombre.orEmpty(),
+              categoria?.parentName(names.categorias).orEmpty(),
+              etiquetaIds
+                  .mapNotNull(names.etiquetas::get)
+                  .joinToString(TAG_SEPARATOR, transform = Etiqueta::nombre),
+              titulo.orEmpty(),
+              descripcion.orEmpty(),
+              monto.toPlainUnsignedDecimal(),
+              monto.moneda.name,
+              names.cuentas[cuentaId].orEmpty(),
+              labels.medioLabels.getValue(medio),
+              "",
+              "",
+              "",
+          ),
+  )
+}
+
+private fun Transferencia.toRecord(names: CsvNames, labels: MovimientoCsvLabels): CsvRecord =
+    CsvRecord(
+        fecha = fecha,
+        createdAt = createdAt,
+        id = id,
+        cells =
+            listOf(
+                fecha.toString(),
+                labels.transferLabel,
+                "",
+                "",
+                "",
+                "",
+                descripcion.orEmpty(),
+                montoOrigen.toPlainUnsignedDecimal(),
+                montoOrigen.moneda.name,
+                names.cuentas[cuentaOrigenId].orEmpty(),
+                "",
+                names.cuentas[cuentaDestinoId].orEmpty(),
+                montoDestino.toPlainUnsignedDecimal(),
+                montoDestino.moneda.name,
+            ),
+    )
 
 // A root category is its own top level, so its parent cell repeats its name; a parent that no
 // longer exists stays empty.

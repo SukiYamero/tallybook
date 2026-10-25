@@ -13,11 +13,16 @@ import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.db.SqlPreparedStatement
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.kurobello.tallybook.core.data.ActividadRepository
+import com.kurobello.tallybook.core.data.ActividadRepositoryImpl
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.CuentaRepository
+import com.kurobello.tallybook.core.data.CuentaRepositoryImpl
+import com.kurobello.tallybook.core.data.CuentaSeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
@@ -28,17 +33,25 @@ import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
+import com.kurobello.tallybook.core.data.SaldoRepository
+import com.kurobello.tallybook.core.data.SaldoRepositoryImpl
 import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.cashCuenta
+import com.kurobello.tallybook.core.data.insertCuentaRow
 import com.kurobello.tallybook.core.data.insertLegacy
+import com.kurobello.tallybook.core.data.seedDefaultCuenta
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.ChangeStamp
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -49,6 +62,8 @@ import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.di.DispatcherQualifier
 import com.kurobello.tallybook.di.entryModule
 import com.kurobello.tallybook.di.viewModelModule
+import com.kurobello.tallybook.feature.history.ui.HistoryMovimientoRowUi
+import com.kurobello.tallybook.feature.history.ui.HistoryRowUi
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryFailure
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryProjection
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryScope
@@ -159,6 +174,7 @@ class HistoryIntegrationTest {
       graph.submit("income", "20,00", TipoMovimiento.INGRESO, TODAY)
       val selected = graph.history.uiState.value.selection
       val period = graph.period
+      graph.addCashCuenta(Moneda.USD)
       repeat(6) { index ->
         assertEquals(
             DataOutcome.Success(Unit),
@@ -201,11 +217,11 @@ class HistoryIntegrationTest {
       graph.start()
       graph.insertLegacy(row("missing", TODAY, category = "later-category", title = null))
       runCurrent()
-      assertEquals("Unknown category", graph.period.groups.single().rows.single().title)
+      assertEquals("Unknown category", graph.period.groups.single().rows.single().movimientoTitle)
       val originalSummary = graph.period.summary
       graph.history.onPresentationChanged("Sin categoría")
       runCurrent()
-      assertEquals("Sin categoría", graph.period.groups.single().rows.single().title)
+      assertEquals("Sin categoría", graph.period.groups.single().rows.single().movimientoTitle)
       assertEquals(
           DataOutcome.Success(Unit),
           graph.categorias.ensureSeeded(
@@ -221,7 +237,7 @@ class HistoryIntegrationTest {
           ),
       )
       runCurrent()
-      assertEquals("Recovered category", graph.period.groups.single().rows.single().title)
+      assertEquals("Recovered category", graph.period.groups.single().rows.single().movimientoTitle)
       assertEquals(originalSummary, graph.period.summary)
       assertEquals(
           DataOutcome.Success(Unit),
@@ -236,7 +252,7 @@ class HistoryIntegrationTest {
       runCurrent()
       val historical = graph.history.uiState.value.selection
       assertEquals(1, graph.period.movementCount)
-      assertEquals(DataOutcome.Success(Unit), graph.movimientos.delete("prior-year"))
+      assertEquals("prior-year", graph.movimientos.deleteAndCapture("prior-year").capturedId())
       runCurrent()
       assertEquals(0, graph.period.movementCount)
       assertEquals(historical, graph.history.uiState.value.selection)
@@ -244,7 +260,7 @@ class HistoryIntegrationTest {
       graph.history.onYearSelected(2026)
       runCurrent()
       assertTrue(2024 in graph.history.uiState.value.availableYears)
-      assertEquals(DataOutcome.Success(Unit), graph.movimientos.delete("missing"))
+      assertEquals("missing", graph.movimientos.deleteAndCapture("missing").capturedId())
       runCurrent()
       assertEquals(emptyList(), graph.history.uiState.value.years.persisted)
       assertEquals(
@@ -387,6 +403,14 @@ class HistoryIntegrationTest {
             TestChangeClock(),
         )
     val movimientos = MovimientoRepositoryImpl(database, fixture.dispatcher, TestChangeClock())
+    private val cuentas =
+        CuentaRepositoryImpl(
+            database,
+            fixture.dispatcher,
+            IdGenerator { error("Not used by this test") },
+            fixture.clock,
+            TestChangeClock(),
+        )
     private val etiquetas =
         EtiquetaRepositoryImpl(
             database,
@@ -421,8 +445,11 @@ class HistoryIntegrationTest {
               }
               single<AppPreferencesRepository> { preferences }
               single<MovimientoRepository> { movimientos }
+              single<SaldoRepository> { SaldoRepositoryImpl(database, fixture.dispatcher) }
+              single<ActividadRepository> { ActividadRepositoryImpl(database, fixture.dispatcher) }
               single<CategoriaRepository> { categorias }
               single<EtiquetaRepository> { etiquetas }
+              single<CuentaRepository> { cuentas }
               single<Clock> { fixture.clock }
               single<TimeZoneProvider> { TimeZoneProvider { fixture.clock.zone } }
               single<IdGenerator> { IdGenerator { nextId } }
@@ -434,6 +461,10 @@ class HistoryIntegrationTest {
       history = model()
     }
 
+    fun addCashCuenta(moneda: Moneda) {
+      database.insertCuentaRow(cashCuenta(moneda), ChangeStamp.SEED)
+    }
+
     suspend fun start() {
       val bootstrap =
           LocalDataBootstrapper(
@@ -443,6 +474,8 @@ class HistoryIntegrationTest {
               preferences,
               categorias,
               CategorySeedProvider { it.key },
+              CuentaSeedProvider(fixture.clock) { it.key },
+              { database.seedDefaultCuenta(it, IdGenerator { "cash" }, fixture.dispatcher) },
               TestChangeClock(),
               { DataOutcome.Success(null) },
           )
@@ -612,9 +645,17 @@ class HistoryIntegrationTest {
             titulo = title,
             descripcion = null,
             createdAt = Instant.parse("2026-09-20T12:00:00Z"),
+            cuentaId = Cuenta.defaultCashId(currency),
+            medio = MedioPago.EFECTIVO,
         )
 
     fun <T> assertSuccess(outcome: DataOutcome<T>): T =
         assertIs<DataOutcome.Success<T>>(outcome).data
   }
 }
+
+private val HistoryRowUi.movimientoTitle: String
+  get() = assertIs<HistoryMovimientoRowUi>(this).title
+
+private fun DataOutcome<Movimiento?>.capturedId(): String? =
+    assertIs<DataOutcome.Success<Movimiento?>>(this).data?.id

@@ -13,6 +13,7 @@ import com.kurobello.tallybook.core.model.CategoriaWrite
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.ChangeStamp
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
@@ -353,7 +354,7 @@ class CategoriaRepositoryTest {
     TallybookDatabase.Schema.create(driver)
     var nextId = 0
     try {
-      val database = TallybookDatabase(driver)
+      val database = TallybookDatabase(driver).apply { seedCashCuentas() }
       val repository =
           CategoriaRepositoryImpl(
               database,
@@ -389,12 +390,13 @@ class CategoriaRepositoryTest {
         id,
         "GASTO",
         1_000,
-        moneda.name,
         "2026-10-01",
         null,
         null,
         "2026-10-01T12:00:00Z",
         categoriaId,
+        Cuenta.defaultCashId(moneda),
+        "EFECTIVO",
         ChangeStamp.SEED.value,
     )
   }

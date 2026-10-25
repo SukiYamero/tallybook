@@ -24,13 +24,17 @@ import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoActions
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoUiState
+import com.kurobello.tallybook.feature.movimientos.viewmodel.COP_CASH
+import com.kurobello.tallybook.feature.movimientos.viewmodel.CuentaSelectionState
 import com.kurobello.tallybook.feature.movimientos.viewmodel.EtiquetasLoad
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoFormError
+import com.kurobello.tallybook.feature.movimientos.viewmodel.SelectionOwner
 import kotlin.test.assertEquals
 import kotlin.time.Instant
 import kotlinx.coroutines.runBlocking
@@ -499,7 +503,10 @@ class MovimientoFormTest {
             tipo = tipo,
             amountInput = amountInput,
             fecha = LocalDate(2026, 9, 15),
-            moneda = Moneda.COP,
+            primaryMoneda = Moneda.COP,
+            cuentas = listOf(COP_CASH),
+            cuentaChoice =
+                CuentaSelectionState(MedioPago.EFECTIVO, COP_CASH.id, SelectionOwner.DEFAULT),
             categorias = categorias,
             categoriaId = categoriaId,
             titulo = titulo,
@@ -578,5 +585,9 @@ class MovimientoFormTest {
     }
 
     override fun onSubmit() = Unit
+
+    override fun onMedioSelected(medio: MedioPago) = Unit
+
+    override fun onCuentaSelected(id: String) = Unit
   }
 }

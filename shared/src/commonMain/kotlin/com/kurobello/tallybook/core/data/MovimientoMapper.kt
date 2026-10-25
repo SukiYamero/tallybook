@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.core.data
 
 import com.kurobello.tallybook.core.database.Movimiento_con_etiquetas as DatabaseMovimiento
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -26,6 +27,8 @@ internal fun DatabaseMovimiento.toDomain(): Movimiento {
       titulo = titulo,
       descripcion = descripcion,
       createdAt = Instant.parse(created_at),
+      cuentaId = cuenta_id,
+      medio = MedioPago.valueOf(medio_pago),
       etiquetaIds = etiqueta_ids.toOrderedIds(),
   )
 }

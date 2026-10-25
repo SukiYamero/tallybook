@@ -3,14 +3,14 @@
 Profile is the fifth bottom-navigation position (Home, History, Add, Search, Profile): a retained
 primary destination whose root Back returns to Home. The user accepted the Android flow; the reviewed
 implementation is integrated into `main`. [Business logic](../business-logic.md#moneda-e-idioma) owns
-currency, language, export and theme rules; [UI architecture](../ui/architecture.md#tallybook-destination-rule)
+currency, language and theme rules and the [CSV export](../business-logic.md#csv-export); [UI architecture](../ui/architecture.md#tallybook-destination-rule)
 owns the destination set and modal admission.
 
 ## Sections
 
-- **Your data.** A card stating that records stay on this device, the Categories and Tags cards
-  (secondary destinations described in [Custom categories](custom-categories.md) and
-  [Tags](tags.md)), and CSV export. The first card is the slot the
+- **Your data.** A card stating that records stay on this device, the Accounts, Categories and Tags
+  cards (secondary destinations described in [Accounts](accounts.md),
+  [Custom categories](custom-categories.md) and [Tags](tags.md)), and CSV export. The first card is the slot the
   [Google + Drive plan](../tasks/google-drive-persistence.md) replaces with account, access mode and
   backup status.
 - **Preferences.** Main currency and language open one shared option sheet; theme (System, Light,
@@ -34,8 +34,9 @@ owns the destination set and modal admission.
   After each applied locale, `CategoriaRepository.localizeSeeded` rewrites seeded category names and
   skips the write when nothing changed. Region-based currency inference reads the device locale, not
   the override.
-- CSV export builds an RFC 4180 document (UTF-8 BOM, CRLF, formula-injection guard, unsigned amounts
-  with `Moneda.scale` decimals, localized headers) on the computation dispatcher and opens the platform
+- CSV export reads one database snapshot and builds an RFC 4180 document (UTF-8 BOM, CRLF,
+  formula-injection guard, unsigned amounts with `Moneda.scale` decimals, localized headers) on the
+  computation dispatcher and opens the platform
   share sheet: Android `FileProvider` scoped to `cache/exports/` (cleared before each export) with an
   `ACTION_SEND` chooser, iOS `UIActivityViewController`.
 

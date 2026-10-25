@@ -24,7 +24,9 @@ class ManageMovimientoControllerTest {
     fixture.repository.current = managementMovimiento()
     val collected = mutableStateOf(fixture.viewModel.uiState.value)
     val coordinator = PrimaryModalCoordinator(AddMovimientoSheetSession()) { false }
-    coordinator.attachManagement(ManageMovimientoController(fixture.viewModel, collected))
+    coordinator.attachManagement(
+        ManageMovimientoController(fixture.viewModel, collected, fixture.feedback)
+    )
     val coverage = mutableListOf<Boolean>()
     backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
       snapshotFlow { coordinator.isContentCovered }.collect { coverage += it }

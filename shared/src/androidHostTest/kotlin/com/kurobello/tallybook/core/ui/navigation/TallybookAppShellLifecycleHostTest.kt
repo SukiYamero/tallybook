@@ -31,35 +31,47 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.compose.LocalSavedStateRegistryOwner
 import androidx.savedstate.savedState
+import com.kurobello.tallybook.core.data.ActividadRepository
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
+import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeSaldoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.SaldoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
+import com.kurobello.tallybook.core.data.cashCuenta
+import com.kurobello.tallybook.core.model.Actividad
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.map
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.di.DispatcherQualifier
 import com.kurobello.tallybook.di.viewModelModule
+import com.kurobello.tallybook.feature.history.ui.HistoryMovimientoRowUi
 import com.kurobello.tallybook.feature.history.ui.rememberHistoryRouteState
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryScope
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryUiState
@@ -252,6 +264,7 @@ internal class TallybookAppShellLifecycleHostTest {
               .first()
               .rows
               .first()
+              .let { assertIs<HistoryMovimientoRowUi>(it) }
               .title,
       )
     }
@@ -273,6 +286,9 @@ private class ShellSuite(private val scope: TestScope) {
           module {
             single<AppPreferencesRepository> { ShellPreferences() }
             single<MovimientoRepository> { repository }
+            single<ActividadRepository> { repository }
+            single<CuentaRepository> { FakeCuentaRepository(listOf(cashCuenta(Moneda.USD))) }
+            single<SaldoRepository> { FakeSaldoRepository() }
             single<EtiquetaRepository> { FakeEtiquetaRepository() }
             single<CategoriaRepository> { ShellCategories() }
             single<Clock> {
@@ -427,7 +443,8 @@ private class ShellHarness(
               Profile,
               UiCatalog,
               Categories,
-              Tags -> Unit
+              Tags,
+              Accounts -> Unit
             }
             SideEffect {
               owners[destination] = owner
@@ -497,7 +514,22 @@ private class ShellHarness(
   }
 }
 
-private class ShellMovimientos : MovimientoRepository {
+private class ShellMovimientos : MovimientoRepository, ActividadRepository {
+  override fun observeActividadRange(
+      moneda: Moneda,
+      range: MovimientoDateRange,
+  ): Flow<DataOutcome<List<Actividad>>> =
+      observeRange(moneda, range).map { outcome -> outcome.map { it.map(Actividad::DeMovimiento) } }
+
+  override suspend fun defaultSelection(
+      primary: Moneda,
+      tipo: TipoMovimiento,
+      medio: MedioPago?,
+  ): DataOutcome<CuentaSelection?> =
+      DataOutcome.Success(
+          CuentaSelection(Cuenta.defaultCashId(primary), medio ?: MedioPago.EFECTIVO, primary)
+      )
+
   val rows =
       MutableStateFlow(
           listOf(
@@ -514,7 +546,7 @@ private class ShellMovimientos : MovimientoRepository {
   ): Flow<DataOutcome<MovimientoSearchSnapshot>> =
       error("Search reads are not expected in this fixture")
 
-  override fun observeRange(
+  private fun observeRange(
       moneda: Moneda,
       range: MovimientoDateRange,
   ): Flow<DataOutcome<List<Movimiento>>> = flow {
@@ -554,22 +586,20 @@ private class ShellMovimientos : MovimientoRepository {
         }
       }
 
-  override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = flow {
-    activeRecent += 1
-    try {
-      emitAll(rows.map { DataOutcome.Success(it.sortedWith(shellStorageOrder).take(limit)) })
-    } finally {
-      activeRecent -= 1
-    }
-  }
-
   override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> = rows.map {
     DataOutcome.Success(it.map { row -> row.fecha.year }.distinct())
   }
 
-  override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> = rows.map {
+  override fun observeSummary(
+      moneda: Moneda,
+      range: MovimientoDateRange,
+  ): Flow<DataOutcome<MovimientoSummary>> = rows.map {
+    val inRange = it.filter { row -> row.fecha in range.start..range.end }
     DataOutcome.Success(
-        MovimientoSummary(Money(0, moneda), Money(it.sumOf { row -> row.monto.minorUnits }, moneda))
+        MovimientoSummary(
+            Money(0, moneda),
+            Money(inRange.sumOf { row -> row.monto.minorUnits }, moneda),
+        )
     )
   }
 
@@ -602,6 +632,8 @@ private class ShellMovimientos : MovimientoRepository {
             etiquetaIds = changes.etiquetaIds,
             titulo = changes.titulo,
             descripcion = changes.descripcion,
+            cuentaId = changes.cuentaId,
+            medio = changes.medio,
         )
     val values = rows.value.map { if (it.id == id) updated else it }
     rows.value = values
@@ -615,23 +647,15 @@ private class ShellMovimientos : MovimientoRepository {
     return DataOutcome.Success(captured)
   }
 
-  override suspend fun restoreDeleted(
-      movimiento: Movimiento
-  ): DataOutcome<MovimientoRestoreResult> {
+  override suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<RestoreResult> {
     val current = rows.value.firstOrNull { it.id == movimiento.id }
     if (current != null)
         return DataOutcome.Success(
-            if (current == movimiento) MovimientoRestoreResult.AlreadyPresent
-            else MovimientoRestoreResult.Conflict
+            if (current == movimiento) RestoreResult.AlreadyPresent else RestoreResult.Conflict
         )
     val values = rows.value + movimiento
     rows.value = values
-    return DataOutcome.Success(MovimientoRestoreResult.Restored)
-  }
-
-  override suspend fun delete(id: String): DataOutcome<Unit> {
-    rows.value = rows.value.filter { it.id != id }
-    return DataOutcome.Success(Unit)
+    return DataOutcome.Success(RestoreResult.Restored)
   }
 
   override suspend fun getAll(): DataOutcome<List<Movimiento>> = DataOutcome.Success(rows.value)
@@ -682,6 +706,8 @@ private fun shellRow(id: String, date: LocalDate) =
         null,
         null,
         Instant.parse("2026-10-05T12:00:00Z"),
+        Cuenta.defaultCashId(Moneda.USD),
+        MedioPago.EFECTIVO,
     )
 
 private class ShellUnitApplier : AbstractApplier<Unit>(Unit) {

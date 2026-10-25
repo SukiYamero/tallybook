@@ -6,13 +6,20 @@ import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
-import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.SearchTipo
+import com.kurobello.tallybook.core.model.TipoCuenta
+import com.kurobello.tallybook.core.model.Transferencia
 import com.kurobello.tallybook.core.model.map
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
+import com.kurobello.tallybook.feature.search.ui.SearchResultRowUi
+import com.kurobello.tallybook.feature.search.ui.SearchTransferenciaRowUi
 import kotlin.coroutines.CoroutineContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -144,7 +151,7 @@ class SearchViewModelTest {
     runCurrent()
     advanceTimeBy(100)
     val id = requireNotNull(vm.onOpenFilters())
-    vm.onFilterDraftChanged(id, vm.uiState.value.filters.copy(tipo = TipoMovimiento.GASTO))
+    vm.onFilterDraftChanged(id, vm.uiState.value.filters.copy(tipo = SearchTipo.GASTO))
     runCurrent()
     assertEquals(1, fixture.movimientos.starts)
     assertNull(vm.uiState.value.filters.tipo)
@@ -179,7 +186,7 @@ class SearchViewModelTest {
         first,
         vm.uiState.value.filters.copy(
             preset = SearchDatePreset.Last7Days,
-            tipo = TipoMovimiento.INGRESO,
+            tipo = SearchTipo.INGRESO,
             categoryIds = setOf("selected"),
         ),
     )
@@ -212,7 +219,7 @@ class SearchViewModelTest {
     assertEquals(1, vm.uiState.value.currentCount)
     vm.onFiltersHidden(id)
     val nextId = requireNotNull(vm.onOpenFilters())
-    vm.onFilterDraftChanged(nextId, defaults.copy(tipo = TipoMovimiento.GASTO))
+    vm.onFilterDraftChanged(nextId, defaults.copy(tipo = SearchTipo.GASTO))
     val currentSession = vm.uiState.value.filterSession
     vm.onClearFilters(id)
     assertEquals(currentSession, vm.uiState.value.filterSession)
@@ -230,7 +237,7 @@ class SearchViewModelTest {
         applied,
         vm.uiState.value.filters.copy(
             preset = SearchDatePreset.Last7Days,
-            tipo = TipoMovimiento.INGRESO,
+            tipo = SearchTipo.INGRESO,
             categoryIds = setOf("other"),
         ),
     )
@@ -474,7 +481,11 @@ class SearchViewModelTest {
       runCurrent()
     }
     assertEquals(2, vm.uiState.value.currentCount)
-    assertTrue(vm.uiState.value.displayResults!!.rows.all { it.categoryLabel == "Snacks" })
+    assertTrue(
+        vm.uiState.value.displayResults!!.rows.all {
+          (it as SearchResultRowUi).categoryLabel == "Snacks"
+        }
+    )
   }
 
   @Test
@@ -542,6 +553,96 @@ class SearchViewModelTest {
   }
 
   @Test
+  fun transfersAreResultsFoundByDescriptionAndAccountNames() = runTest {
+    val fixture = SearchFixture(this)
+    val bank = searchCuenta("bank", "Banco Pichincha", Moneda.USD)
+    fixture.cuentas.cuentas.value += bank
+    fixture.movimientos.transferencias =
+        listOf(searchTransfer("move", USD_CASH.id, bank.id, "Ahorro del mes"))
+    fixture.movimientos.restore()
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+    assertEquals(3, vm.uiState.value.currentCount)
+
+    for (query in listOf("pichincha", "ahorro", "cash")) {
+      vm.onQueryChanged(query)
+      runCurrent()
+      advanceTimeBy(250)
+      runCurrent()
+      val row = assertIs<SearchTransferenciaRowUi>(vm.uiState.value.displayResults!!.rows.single())
+      assertEquals(bank, row.destino)
+      assertEquals(USD_CASH, row.origen)
+    }
+  }
+
+  @Test
+  fun aMissingSelectedAccountStaysAppliedUntilRemoved() = runTest {
+    val fixture = SearchFixture(this)
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+    vm.onShowFilters(emptySet(), emptySet(), setOf("gone"))
+    fixture.cuentas.cuentas.value = fixture.cuentas.cuentas.value.toList()
+    runCurrent()
+    assertEquals(setOf("gone"), vm.uiState.value.filters.cuentaIds)
+    assertEquals(setOf("gone"), vm.uiState.value.criteria?.cuentaIds)
+    assertTrue(vm.uiState.value.canOpenFilters)
+
+    vm.onRemoveCuentaFilter("gone")
+    vm.onRemoveMedioFilter(MedioPago.EFECTIVO)
+    assertFalse(vm.uiState.value.filters.hasActiveFilters)
+  }
+
+  @Test
+  fun currencySelectorAppearsWithSeveralCurrenciesAndKeepsTheAppliedFilters() = runTest {
+    val fixture = SearchFixture(this)
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+    assertFalse(vm.uiState.value.showsMonedaSelector)
+    assertEquals(Moneda.USD, vm.uiState.value.moneda)
+
+    fixture.cuentas.cuentas.value += searchCuenta("cop", "Efectivo", Moneda.COP)
+    runCurrent()
+    assertTrue(vm.uiState.value.showsMonedaSelector)
+    assertEquals(Moneda.USD, vm.uiState.value.moneda)
+
+    vm.onShowFilters(emptySet(), setOf("t_empresa"))
+    vm.onMonedaSelected(Moneda.COP)
+    runCurrent()
+    assertEquals(Moneda.COP, vm.uiState.value.moneda)
+    assertEquals(setOf("t_empresa"), vm.uiState.value.filters.etiquetaIds)
+    assertEquals(Moneda.COP, fixture.movimientos.requests.last().moneda)
+    assertEquals(setOf("t_empresa"), fixture.movimientos.requests.last().etiquetaIds)
+  }
+
+  @Test
+  fun viewMovementsSwitchesToTheAccountsCurrencyTogetherWithItsFilter() = runTest {
+    val fixture = SearchFixture(this)
+    val nequi = searchCuenta("nequi", "Nequi", Moneda.COP)
+    fixture.cuentas.cuentas.value += nequi
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+    vm.onQueryChanged("cafe")
+    val before = fixture.movimientos.requests.size
+
+    vm.onShowFilters(emptySet(), emptySet(), setOf(nequi.id), Moneda.COP)
+    runCurrent()
+
+    assertEquals("", vm.uiState.value.rawQuery)
+    assertEquals(Moneda.COP, vm.uiState.value.moneda)
+    assertEquals(
+        SearchFilters.initial(TODAY).copy(cuentaIds = setOf(nequi.id)),
+        vm.uiState.value.filters,
+    )
+    val issued = fixture.movimientos.requests.drop(before)
+    assertTrue(issued.isNotEmpty())
+    assertTrue(issued.all { it.moneda == Moneda.COP && it.cuentaIds == setOf(nequi.id) })
+  }
+
+  @Test
   fun listenersStopAtFiveSecondsAndOwnerClearKeepsInjectedSiblingAlive() = runTest {
     val fixture = SearchFixture(this)
     val vm = fixture.create()
@@ -583,3 +684,26 @@ private class HoldingDispatcher : CoroutineDispatcher() {
     while (pending.isNotEmpty()) pending.removeAt(0).run()
   }
 }
+
+private fun searchCuenta(id: String, nombre: String, moneda: Moneda) =
+    Cuenta(
+        id,
+        nombre,
+        TipoCuenta.BANCO,
+        Money(0, moneda),
+        null,
+        false,
+        Instant.parse("2026-01-02T00:00:00Z"),
+    )
+
+private fun searchTransfer(id: String, origen: String, destino: String, descripcion: String) =
+    Transferencia(
+        id,
+        origen,
+        destino,
+        Money(500, Moneda.USD),
+        Money(500, Moneda.USD),
+        TODAY,
+        descripcion,
+        Instant.parse("2026-10-06T13:00:00Z"),
+    )

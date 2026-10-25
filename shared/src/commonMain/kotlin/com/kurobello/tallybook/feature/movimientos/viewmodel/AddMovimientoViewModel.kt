@@ -5,23 +5,33 @@ import androidx.lifecycle.viewModelScope
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
+import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.entry.SentenceSelection
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.PhraseReviewFlag
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.map
+import com.kurobello.tallybook.core.text.AmountInputResult
 import com.kurobello.tallybook.core.text.normalizeOptionalText
+import com.kurobello.tallybook.core.text.parseAmountInput
+import com.kurobello.tallybook.core.text.reformatAmountInput
+import com.kurobello.tallybook.core.text.toAmountInput
 import kotlin.time.Clock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,6 +45,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onStart
@@ -84,7 +95,6 @@ internal class AddMovimientoViewModel(
                 tipo = initialDraft.tipo,
                 amountInput = initialDraft.amountInput,
                 fecha = initialDraft.fecha,
-                moneda = Moneda.COP,
                 categorias = emptyList(),
                 categoriaId = initialDraft.categoriaId,
                 titulo = initialDraft.titulo,
@@ -102,17 +112,19 @@ internal class AddMovimientoViewModel(
   init {
     coroutineScope.launch {
       combine(
-              repositories.preferenceLoadStates(retryLoadRequests),
+              repositories.preferenceLoadStates(retryLoadRequests).flatMapLatest { preferences ->
+                repositories.cuentaLoadStates(preferences).map { cuentas -> preferences to cuentas }
+              },
               repositories.categoriaLoadStates(retryLoadRequests),
-          ) { preferences, categorias ->
-            LoadSnapshot.from(preferences, categorias)
+          ) { (preferences, cuentas), categorias ->
+            LoadSnapshot.from(preferences, cuentas, categorias)
           }
           .collect { snapshot ->
             preferredLocale.value = snapshot.appLocale
             uiState.update { current ->
               current
+                  .withCatalog(snapshot)
                   .copy(
-                      moneda = snapshot.moneda ?: current.moneda,
                       categorias = snapshot.categorias ?: current.categorias,
                       isLoading = snapshot.isLoading,
                       error =
@@ -129,11 +141,26 @@ internal class AddMovimientoViewModel(
   }
 
   override fun onTipoChanged(tipo: TipoMovimiento) {
-    updateFields { copy(tipo = tipo) }
+    updateFields { copy(tipo = tipo, cuentaChoice = cuentaChoice.forTipo(tipo)) }
   }
 
   override fun onAmountChanged(value: String) {
-    updateFields { copy(amountInput = value, amountNeedsReview = false) }
+    updateFields { copy(amountInput = value, amountNeedsReview = false, amountEdited = true) }
+  }
+
+  override fun onMedioSelected(medio: MedioPago) {
+    updateCuentaChoice {
+      if (medio.allows(selectionTipo)) shownChoice.withMedio(medio, cuentas, cuentaDefaults)
+      else null
+    }
+  }
+
+  override fun onCuentaSelected(id: String) {
+    updateCuentaChoice {
+      cuentas
+          .firstOrNull { it.id == id && !it.archivada }
+          ?.let { shownChoice.withCuenta(it, selectionTipo) }
+    }
   }
 
   override fun onFechaChanged(value: LocalDate) {
@@ -201,6 +228,7 @@ internal class AddMovimientoViewModel(
               step = AddMovimientoStep.SUMMARY,
               tipo = interpretation.tipo,
               amountInput = parsed.monto?.toAmountInput().orEmpty(),
+              amountEdited = false,
               fecha = parsed.fecha ?: today,
               titulo = text,
               amountNeedsReview =
@@ -222,6 +250,10 @@ internal class AddMovimientoViewModel(
               categoriasEdited = categoriasEdited,
               etiquetaIds = manualEtiquetaIds,
               etiquetasEdited = etiquetasEdited,
+              cuentaChoice =
+                  cuentaChoice
+                      .withoutSentence(cuentaDefaults, initialDraft.tipo)
+                      .forTipo(initialDraft.tipo),
           )
     }
   }
@@ -293,13 +325,23 @@ internal class AddMovimientoViewModel(
     coroutineScope.launch {
       var saved = false
       try {
-        when (repositories.movimientos.insert(movement)) {
+        when (val outcome = repositories.movimientos.insert(movement)) {
           is DataOutcome.Success -> {
             effectChannel.send(AddMovimientoEffect.Saved)
             saved = true
           }
-          is DataOutcome.Failure ->
-              uiState.update { it.copy(error = MovimientoFormError.SAVE_FAILED) }
+          is DataOutcome.Failure -> {
+            // Every refusal is invalid input; re-reading the cuenta tells a refused one apart.
+            val rejected =
+                outcome.error is DataError.InvalidInput &&
+                    (repositories.cuentas.getById(movement.cuentaId) as? DataOutcome.Success)
+                        ?.data
+                        ?.accepts(movement.medio, movement.monto.moneda) != true
+            uiState.update { current ->
+              if (rejected) current.withRejectedCuenta()
+              else current.copy(error = MovimientoFormError.SAVE_FAILED)
+            }
+          }
         }
       } finally {
         if (!saved) {
@@ -310,6 +352,53 @@ internal class AddMovimientoViewModel(
   }
 
   private fun captureToday(): LocalDate = clock.todayIn(timeZoneProvider.current())
+
+  private fun AddMovimientoUiState.withRejectedCuenta(): AddMovimientoUiState =
+      copy(
+          cuentaRejected = true,
+          step = if (step == AddMovimientoStep.SUMMARY) AddMovimientoStep.FORM else step,
+          formOpenedFromSummary = formOpenedFromSummary || step == AddMovimientoStep.SUMMARY,
+      )
+
+  /** The choice as the user sees it, with the only compatible cuenta standing for an empty one. */
+  private val AddMovimientoUiState.shownChoice: CuentaSelectionState
+    get() = cuentaChoice.copy(cuentaId = cuentaField.selected?.id)
+
+  private fun updateCuentaChoice(choose: AddMovimientoUiState.() -> CuentaSelectionState?) {
+    updateFields {
+      val choice = choose() ?: return@updateFields this
+      val previous = moneda
+      copy(cuentaChoice = choice, cuentaRejected = false).withRederivedAmount(previous)
+    }
+    if (uiState.value.step == AddMovimientoStep.PHRASE) refreshPreview(debounce = false)
+  }
+
+  private fun AddMovimientoUiState.withRederivedAmount(previous: Moneda): AddMovimientoUiState {
+    val text = phrase.trim()
+    val ownsAmount = step != AddMovimientoStep.PHRASE && !amountEdited
+    if (moneda == previous || !ownsAmount || text.isEmpty())
+        return copy(amountInput = amountInput.reformatAmountInput(previous, moneda))
+    val parsed = entryEngine.parse(text, phraseContext(today), moneda, cuentas)
+    return copy(
+        amountInput = parsed.monto?.toAmountInput().orEmpty(),
+        amountNeedsReview =
+            parsed.monto != null && PhraseReviewFlag.AMBIGUOUS_AMOUNT in parsed.reviewFlags,
+    )
+  }
+
+  // Only the default follows new catalog data; a sentence or user choice is re-layered elsewhere.
+  private fun AddMovimientoUiState.withCatalog(snapshot: LoadSnapshot): AddMovimientoUiState {
+    val catalog = snapshot.cuentas
+    val updated =
+        copy(
+            primaryMoneda = snapshot.moneda ?: primaryMoneda,
+            cuentas = catalog?.cuentas ?: cuentas,
+            cuentaDefaults = catalog?.defaults ?: cuentaDefaults,
+        )
+    return if (cuentaChoice.owner == SelectionOwner.DEFAULT)
+        updated.copy(cuentaChoice = baseSelection(updated.cuentaDefaults, updated.selectionTipo))
+    else updated
+  }
 
   private fun updateFields(transform: AddMovimientoUiState.() -> AddMovimientoUiState) {
     uiState.update { current ->
@@ -329,6 +418,10 @@ internal class AddMovimientoViewModel(
           etiquetaIds = initialDraft.etiquetaIds,
           titulo = initialDraft.titulo,
           descripcion = initialDraft.descripcion,
+          cuentaChoice = baseSelection(cuentaDefaults, initialDraft.tipo),
+          sentenceSelection = SentenceSelection.EMPTY,
+          amountEdited = false,
+          cuentaRejected = false,
           submitAttempted = false,
           phrase = "",
           preview = null,
@@ -341,8 +434,8 @@ internal class AddMovimientoViewModel(
           formOpenedFromSummary = false,
       )
 
-  // A category or tags picked in the sentence dialog do not guard it: only a typed sentence is
-  // worth confirming.
+  // A category, tags, medio or cuenta picked in the sentence dialog do not guard it: only a typed
+  // sentence is worth confirming.
   private fun AddMovimientoUiState.withDirtyState(): AddMovimientoUiState {
     val draft = toDraft()
     val comparable =
@@ -350,6 +443,8 @@ internal class AddMovimientoViewModel(
             draft.copy(
                 categoriaId = initialDraft.categoriaId,
                 etiquetaIds = initialDraft.etiquetaIds,
+                cuentaId = initialDraft.cuentaId,
+                medio = initialDraft.medio,
             )
         else draft
     return copy(hasUnsavedChanges = phrase.isNotBlank() || comparable != initialDraft)
@@ -397,8 +492,11 @@ internal class AddMovimientoViewModel(
           titulo = initialDraft.titulo,
           descripcion = initialDraft.descripcion,
           amountNeedsReview = false,
+          amountEdited = false,
           categoriaId = manualCategoriaId,
           etiquetaIds = manualEtiquetaIds,
+          cuentaChoice = cuentaChoice.withoutSentence(cuentaDefaults, initialDraft.tipo),
+          sentenceSelection = SentenceSelection.EMPTY,
       )
 
   private val AddMovimientoUiState.manualCategoriaId: String?
@@ -422,7 +520,20 @@ internal class AddMovimientoViewModel(
           categoriaId =
               if (categoriasEdited) categoriaId else interpretation.preselectedCategoriaId,
           etiquetaIds = if (etiquetasEdited) etiquetaIds else interpretation.etiquetaIds,
+          sentenceSelection = interpretation.sentence,
+          cuentaChoice = sentenceChoice(interpretation.sentence, interpretation.tipo),
       )
+
+  private fun AddMovimientoUiState.sentenceChoice(
+      sentence: SentenceSelection,
+      tipo: TipoMovimiento,
+  ): CuentaSelectionState =
+      cuentaChoice.withSentence(sentence, cuentas, cuentaDefaults, tipo).forTipo(tipo)
+
+  private fun AddMovimientoUiState.sentenceCuentas() =
+      SentenceCuentas(cuentas, primaryMoneda ?: moneda) { sentence, tipo ->
+        monedaOf(sentenceChoice(sentence, tipo), tipo)
+      }
 
   // Dismissals belong to the subject they were made for; a different sentence starts clean.
   private fun AddMovimientoUiState.interpreting(
@@ -454,7 +565,7 @@ internal class AddMovimientoViewModel(
           state.phraseContext(today),
           suggestionIndex,
           state.candidates(),
-          state.etiquetas,
+          SentenceCatalogs(state.etiquetas, state.sentenceCuentas()),
       )
 
   private fun refreshPreview(debounce: Boolean) {
@@ -470,7 +581,7 @@ internal class AddMovimientoViewModel(
               snapshot.phraseContext(snapshot.today),
               suggestionIndex,
               snapshot.candidates(),
-              snapshot.etiquetas,
+              SentenceCatalogs(snapshot.etiquetas, snapshot.sentenceCuentas()),
           )
       uiState.update { current ->
         if (current.step == AddMovimientoStep.PHRASE && current.phrase.trim() == text) {
@@ -509,10 +620,10 @@ internal class AddMovimientoViewModel(
                 .observeCategoryHistory(HISTORY_LIMIT)
                 .map { outcome -> (outcome as? DataOutcome.Success)?.data.orEmpty() }
                 .catch { emit(emptyList()) },
-            uiState.map { it.moneda }.distinctUntilChanged(),
+            uiState.map { (it.primaryMoneda ?: it.moneda) to it.cuentas }.distinctUntilChanged(),
             preferredLocale,
-        ) { history, moneda, locale ->
-          HistoryInputs(history, moneda, locale)
+        ) { history, (moneda, cuentas), locale ->
+          HistoryInputs(history, moneda, cuentas, locale)
         }
         .mapLatest { inputs ->
           val context =
@@ -521,7 +632,7 @@ internal class AddMovimientoViewModel(
                   entryEngine.resolveLocale(inputs.locale),
                   captureToday(),
               )
-          entryEngine.buildIndex(inputs.history, context, clock.now())
+          entryEngine.buildIndex(inputs.history, context, clock.now(), inputs.cuentas)
         }
         .collect { index ->
           suggestionIndex = index
@@ -539,6 +650,7 @@ private data class Interpreted(
 private class HistoryInputs(
     val history: List<CategoryHistoryRow>,
     val moneda: Moneda,
+    val cuentas: List<Cuenta>,
     val locale: AppLocale?,
 )
 
@@ -547,6 +659,7 @@ internal data class AddMovimientoRepositories(
     val categorias: CategoriaRepository,
     val movimientos: MovimientoRepository,
     val etiquetas: EtiquetaRepository,
+    val cuentas: CuentaRepository,
 )
 
 private fun AddMovimientoUiState.toMovimientoOrNull(
@@ -556,8 +669,11 @@ private fun AddMovimientoUiState.toMovimientoOrNull(
 ): Movimiento? {
   val amount = (parseAmountInput(amountInput, moneda) as? AmountInputResult.Valid)?.money
   val categoriaId = effectiveCategoriaId
+  val cuenta = cuentaField.selected
+  val medio = cuentaField.effectiveMedio(tipo)
   val isValid = fecha <= createdAt.toLocalDateTime(timeZone).date && !isLoading && error == null
-  return if (amount == null || categoriaId == null || !isValid) null
+  if (amount == null || categoriaId == null || !isValid) return null
+  return if (cuenta == null || medio == null) null
   else
       Movimiento(
           id = idGenerator.next(),
@@ -568,6 +684,8 @@ private fun AddMovimientoUiState.toMovimientoOrNull(
           titulo = titulo.normalizeOptionalText(),
           descripcion = descripcion.normalizeOptionalText(),
           createdAt = createdAt,
+          cuentaId = cuenta.id,
+          medio = medio,
           etiquetaIds = selectedEtiquetas.map(Etiqueta::id),
       )
 }
@@ -581,6 +699,33 @@ private sealed interface LoadState<out T> {
 private fun AddMovimientoRepositories.preferenceLoadStates(
     retryRequests: Flow<Int>
 ): Flow<LoadState<AppPreferencesState>> = retryRequests.loadStates { preferences.preferences }
+
+/** The live cuentas plus the defaults resolved against them, once the primary currency is known. */
+private data class CuentaCatalog(val cuentas: List<Cuenta>, val defaults: CuentaDefaults)
+
+@OptIn(ExperimentalCoroutinesApi::class)
+private fun AddMovimientoRepositories.cuentaLoadStates(
+    preferences: LoadState<AppPreferencesState>
+): Flow<LoadState<CuentaCatalog>?> {
+  val primary =
+      ((preferences as? LoadState.Value)?.outcome as? DataOutcome.Success)
+          ?.data
+          ?.let { it as? AppPreferencesState.Ready }
+          ?.value
+          ?.monedaPrincipal ?: return flowOf(null)
+  return cuentas
+      .observeAll()
+      .mapLatest<DataOutcome<List<Cuenta>>, LoadState<CuentaCatalog>?> { outcome ->
+        LoadState.Value(
+            when (outcome) {
+              is DataOutcome.Failure -> outcome
+              is DataOutcome.Success ->
+                  movimientos.cuentaDefaults(primary).map { CuentaCatalog(outcome.data, it) }
+            }
+        )
+      }
+      .onStart { emit(LoadState.Loading) }
+}
 
 private fun AddMovimientoRepositories.categoriaLoadStates(
     retryRequests: Flow<Int>
@@ -598,6 +743,7 @@ private fun <T> Flow<Int>.loadStates(source: () -> Flow<DataOutcome<T>>): Flow<L
 private data class LoadSnapshot(
     val moneda: Moneda?,
     val appLocale: AppLocale?,
+    val cuentas: CuentaCatalog?,
     val categorias: List<Categoria>?,
     val isLoading: Boolean,
     val error: MovimientoFormError?,
@@ -605,8 +751,10 @@ private data class LoadSnapshot(
   companion object {
     fun from(
         preferences: LoadState<AppPreferencesState>,
+        cuentas: LoadState<CuentaCatalog>?,
         categorias: LoadState<List<Categoria>>,
     ): LoadSnapshot {
+      val cuentaOutcome = (cuentas as? LoadState.Value)?.outcome
       val loaded =
           (preferences as? LoadState.Value)
               ?.outcome
@@ -617,15 +765,20 @@ private data class LoadSnapshot(
       return LoadSnapshot(
           moneda = loaded?.monedaPrincipal,
           appLocale = loaded?.appLocale,
+          cuentas = (cuentaOutcome as? DataOutcome.Success)?.data,
           categorias =
               (categorias as? LoadState.Value)?.outcome.let { it as? DataOutcome.Success }?.data,
-          isLoading = preferences is LoadState.Loading || categorias is LoadState.Loading,
+          isLoading =
+              preferences is LoadState.Loading ||
+                  cuentas is LoadState.Loading ||
+                  categorias is LoadState.Loading,
           error =
               when {
                 (preferences as? LoadState.Value)?.outcome is DataOutcome.Failure ->
                     MovimientoFormError.PREFERENCES_UNAVAILABLE
                 (categorias as? LoadState.Value)?.outcome is DataOutcome.Failure ->
                     MovimientoFormError.CATEGORIES_UNAVAILABLE
+                cuentaOutcome is DataOutcome.Failure -> MovimientoFormError.ACCOUNTS_UNAVAILABLE
                 else -> null
               },
       )

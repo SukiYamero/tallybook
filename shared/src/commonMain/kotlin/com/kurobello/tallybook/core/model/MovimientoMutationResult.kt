@@ -5,8 +5,12 @@ enum class MovimientoUpdateResult {
   NotFound,
 }
 
-enum class MovimientoRestoreResult {
+/** Undo of a deleted movimiento or transferencia. */
+enum class RestoreResult {
   Restored,
   AlreadyPresent,
   Conflict,
+
+  /** A cuenta the snapshot uses no longer exists; the money never moves to another cuenta. */
+  MissingCuenta,
 }

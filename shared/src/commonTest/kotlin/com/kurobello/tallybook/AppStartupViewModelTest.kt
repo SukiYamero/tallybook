@@ -3,11 +3,13 @@ package com.kurobello.tallybook
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.CuentaSeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
 import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.AppLocale
+import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.DataError
@@ -16,10 +18,13 @@ import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.ThemeMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 
@@ -79,6 +84,8 @@ class AppStartupViewModelTest {
           preferencesRepository = preferences,
           categoriaRepository = SuccessfulCategoriaRepository(),
           categorySeedProvider = CategorySeedProvider { "Category" },
+          cuentaSeedProvider = CuentaSeedProvider(StartupClock) { "Cash" },
+          seedDefaultCuenta = { DataOutcome.Success(Unit) },
           changeClock = TestChangeClock(),
           storedMaxChangeStamp = { DataOutcome.Success(null) },
       )
@@ -89,7 +96,8 @@ class AppStartupViewModelTest {
     var initializeCalls = 0
       private set
 
-    override val preferences: Flow<DataOutcome<AppPreferencesState>> = emptyFlow()
+    override val preferences: Flow<DataOutcome<AppPreferencesState>> =
+        flowOf(DataOutcome.Success(AppPreferencesState.Ready(AppPreferences(Moneda.COP))))
 
     override suspend fun initialize(monedaPrincipal: Moneda): DataOutcome<Unit> {
       recordInitialize()
@@ -137,4 +145,8 @@ class AppStartupViewModelTest {
   private data object TestDeviceLocaleProvider : DeviceLocaleProvider {
     override fun currentLanguageTag(): String = "es-CO"
   }
+}
+
+private object StartupClock : Clock {
+  override fun now(): Instant = Instant.parse("2026-10-24T09:00:00Z")
 }

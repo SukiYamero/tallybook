@@ -32,10 +32,21 @@ internal fun ManageMovimientoRoute(
                 ),
             catalog = session.categorias,
         )
+        val quickCuenta = rememberQuickCuentaViewModel(QUICK_CUENTA_MANAGE_KEY)
+        val quickCuentaState by quickCuenta.uiState.collectAsStateWithLifecycle()
         ManageMovimientoContent(
             session,
             actions,
             CategoryPickerCreation(quickCategoryState, quickCategory),
+            session.form?.let { form ->
+              CuentaCreation(
+                  quickCuentaState,
+                  quickCuenta,
+                  quickCuenta.effects,
+                  form.moneda,
+                  pinsMoneda = true,
+              )
+            },
         )
       }
     }

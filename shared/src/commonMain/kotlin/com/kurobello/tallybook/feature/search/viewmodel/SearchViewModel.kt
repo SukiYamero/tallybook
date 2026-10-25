@@ -5,8 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.model.MedioPago
+import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.monedas
 import com.kurobello.tallybook.core.text.normalizeSearchText
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import kotlinx.coroutines.CoroutineDispatcher
@@ -47,6 +51,7 @@ internal class SearchViewModel(
               restored.filters,
               initialToday,
               label = unknownCategoryLabel,
+              selectedMoneda = restored.moneda,
           )
       )
   private var observationEpoch = 0L
@@ -55,6 +60,7 @@ internal class SearchViewModel(
   private var preferenceLoad: SearchSourceLoad<AppPreferencesState> = SearchSourceLoad.Loading
   private var categoryLoad: SearchSourceLoad<List<Categoria>> = SearchSourceLoad.Loading
   private var etiquetaLoad: SearchSourceLoad<List<Etiqueta>> = SearchSourceLoad.Loading
+  private var cuentaLoad: SearchSourceLoad<List<Cuenta>> = SearchSourceLoad.Loading
   private var readLoad: SearchRead = SearchRead(null, SearchSourceLoad.Loading)
 
   val uiState: StateFlow<SearchUiState>
@@ -66,7 +72,7 @@ internal class SearchViewModel(
     }
     installSearchCheckpoint(savedStateHandle) {
       val input = inputs.value
-      input.filters.savedInput(input.rawQuery)
+      input.filters.savedInput(input.rawQuery, input.selectedMoneda)
     }
   }
 
@@ -140,18 +146,38 @@ internal class SearchViewModel(
     it.copy(filters = it.filters.copy(etiquetaIds = it.filters.etiquetaIds - id))
   }
 
-  override fun onShowFilters(categoryIds: Set<String>, etiquetaIds: Set<String>) {
+  override fun onRemoveCuentaFilter(id: String) = changeInputs {
+    it.copy(filters = it.filters.copy(cuentaIds = it.filters.cuentaIds - id))
+  }
+
+  override fun onRemoveMedioFilter(medio: MedioPago) = changeInputs {
+    it.copy(filters = it.filters.copy(medios = it.filters.medios - medio))
+  }
+
+  override fun onMonedaSelected(moneda: Moneda) = changeInputs {
+    if (it.monedas?.contains(moneda) != false) it.copy(selectedMoneda = moneda) else it
+  }
+
+  override fun onShowFilters(
+      categoryIds: Set<String>,
+      etiquetaIds: Set<String>,
+      cuentaIds: Set<String>,
+      moneda: Moneda?,
+  ) {
     val categories = categoryIds.filterNot { it.isBlank() }.toSet()
     val etiquetas = etiquetaIds.filterNot { it.isBlank() }.toSet()
-    if (categories.isEmpty() && etiquetas.isEmpty()) return
+    val cuentas = cuentaIds.filterNot { it.isBlank() }.toSet()
+    if (categories.isEmpty() && etiquetas.isEmpty() && cuentas.isEmpty()) return
     onQueryChanged("")
     val today = dateProvider.today()
     changeInputs {
       val session = it.session
       it.copy(
           today = today,
+          selectedMoneda = moneda ?: it.selectedMoneda,
           filters =
-              SearchFilters.initial(today).copy(categoryIds = categories, etiquetaIds = etiquetas),
+              SearchFilters.initial(today)
+                  .copy(categoryIds = categories, etiquetaIds = etiquetas, cuentaIds = cuentas),
           session =
               if (session is SearchFilterSession.Editing) session.cancel(session.sessionId)
               else session,
@@ -249,12 +275,16 @@ internal class SearchViewModel(
     if (previous == current) return
     val oldCriteria = uiState.value.criteria
     uiState.update {
+      val moneda = it.primary?.let(current::viewedMoneda) ?: it.moneda
       it.copy(
           rawQuery = current.rawQuery,
           filters = current.filters,
           today = current.today,
           filterSession = current.session,
           sessionMinimumYear = current.sessionMinimumYear,
+          moneda = moneda,
+          monedas = current.monedas.orEmpty(),
+          years = if (moneda != it.moneda) null else it.years,
       )
     }
     val sourceChanged = oldCriteria != uiState.value.criteria || previous.reload != current.reload
@@ -278,10 +308,12 @@ internal class SearchViewModel(
           if (!isActive(epoch, reload)) return
           candidateGeneration += 1
           preferenceLoad = load
-          val currency = (load.data as? AppPreferencesState.Ready)?.value?.monedaPrincipal
+          val primary = (load.data as? AppPreferencesState.Ready)?.value?.monedaPrincipal
+          val currency = primary?.let(inputs.value::viewedMoneda)
           uiState.update { state ->
             state.copy(
                 moneda = currency ?: state.moneda,
+                primary = primary ?: state.primary,
                 years = if (currency != null && currency != state.moneda) null else state.years,
                 preferenceFailure = preferenceFailure(),
             )
@@ -318,6 +350,27 @@ internal class SearchViewModel(
           load.data?.let { catalog ->
             val known = catalog.mapTo(mutableSetOf()) { it.id }
             changeInputs { it.retainingEtiquetas(known) }
+          }
+          updatePending(SearchWork.Reading)
+        }
+
+        // Unlike a deleted tag, a missing selected account stays applied for explicit removal,
+        // like a missing category; only a currency left without accounts is dropped.
+        override fun onCuentas(reload: Long, load: SearchSourceLoad<List<Cuenta>>) {
+          if (!isActive(epoch, reload)) return
+          candidateGeneration += 1
+          cuentaLoad = load
+          uiState.update { state ->
+            state.copy(cuentas = SearchCuentaState(load.data ?: state.cuentas.values, load.failure))
+          }
+          load.data?.let { catalog ->
+            val monedas = catalog.monedas()
+            changeInputs {
+              it.copy(
+                  monedas = monedas,
+                  selectedMoneda = it.selectedMoneda?.takeIf { moneda -> moneda in monedas },
+              )
+            }
           }
           updatePending(SearchWork.Reading)
         }
@@ -376,6 +429,7 @@ internal class SearchViewModel(
         ?: preferenceFailure()?.let { SearchFailure.Repository(SearchSource.Preferences, it) }
         ?: categoryLoad.failure?.let { SearchFailure.Repository(SearchSource.Categories, it) }
         ?: etiquetaLoad.failure?.let { SearchFailure.Repository(SearchSource.Etiquetas, it) }
+        ?: cuentaLoad.failure?.let { SearchFailure.Repository(SearchSource.Cuentas, it) }
         ?: readLoad
             .takeIf { it.request?.let(::requestMatches) == true }
             ?.load

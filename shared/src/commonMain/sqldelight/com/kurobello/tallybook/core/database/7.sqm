@@ -1,0 +1,138 @@
+-- The currency moves from each movimiento to its cuenta. movimiento is rebuilt so the migrated DDL
+-- matches a fresh install exactly; the view goes first because renaming a table rewrites the views
+-- that reference it.
+DROP VIEW movimiento_con_etiquetas;
+
+DROP INDEX movimiento_recent;
+
+DROP INDEX movimiento_by_categoria;
+
+ALTER TABLE movimiento RENAME TO movimiento_legacy;
+
+CREATE TABLE cuenta (
+    id TEXT NOT NULL PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    tipo TEXT NOT NULL CHECK (tipo IN ('EFECTIVO', 'BANCO', 'CREDITO')),
+    moneda TEXT NOT NULL,
+    saldo_inicial_minor INTEGER NOT NULL DEFAULT 0,
+    dia_corte INTEGER CHECK (dia_corte BETWEEN 1 AND 31),
+    archivada INTEGER NOT NULL DEFAULT 0 CHECK (archivada IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT
+);
+
+-- Tombstones count too, so every movimiento keeps a cuenta that owns its currency. The IDs match
+-- Cuenta.defaultCashId and the stamp is ChangeStamp.SEED, so installations agree on these rows. A
+-- currency with only tombstoned movimientos gets its cuenta already tombstoned: no live account
+-- appears that the user never had, and Undo of those rows reports the cuenta missing.
+-- created_at is the earliest instant of the currency; julianday orders "10:00:00Z" before
+-- "10:00:00.5Z", which text order does not, and an unparseable value only wins when nothing parses.
+INSERT INTO cuenta(id, nombre, tipo, moneda, saldo_inicial_minor, dia_corte, archivada, created_at, updated_at, deleted_at)
+SELECT
+    'cuenta_efectivo_' || lower(monedas.monto_moneda),
+    'Efectivo',
+    'EFECTIVO',
+    monedas.monto_moneda,
+    0,
+    NULL,
+    0,
+    (
+        SELECT earliest.created_at
+        FROM movimiento_legacy AS earliest
+        WHERE earliest.monto_moneda = monedas.monto_moneda
+        ORDER BY julianday(earliest.created_at) IS NULL, julianday(earliest.created_at), earliest.created_at
+        LIMIT 1
+    ),
+    '0000000000000-0000-0000000000000000',
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM movimiento_legacy AS live
+            WHERE live.monto_moneda = monedas.monto_moneda AND live.deleted_at IS NULL
+        ) THEN NULL
+        ELSE '0000000000000-0000-0000000000000000'
+    END
+FROM (SELECT DISTINCT monto_moneda FROM movimiento_legacy) AS monedas;
+
+CREATE TABLE movimiento (
+    id TEXT NOT NULL PRIMARY KEY,
+    tipo TEXT NOT NULL,
+    monto_minor INTEGER NOT NULL,
+    fecha TEXT NOT NULL,
+    descripcion TEXT,
+    created_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00Z',
+    titulo TEXT,
+    categoria_id TEXT NOT NULL,
+    cuenta_id TEXT NOT NULL,
+    medio_pago TEXT NOT NULL CHECK (medio_pago IN ('EFECTIVO', 'DEBITO', 'TRANSFERENCIA', 'CREDITO')),
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT
+);
+
+-- Stamps are copied unchanged: assigning the account is a migration, not a user change.
+INSERT INTO movimiento(id, tipo, monto_minor, fecha, descripcion, created_at, titulo, categoria_id, cuenta_id, medio_pago, updated_at, deleted_at)
+SELECT
+    id,
+    tipo,
+    monto_minor,
+    fecha,
+    descripcion,
+    created_at,
+    titulo,
+    categoria_id,
+    'cuenta_efectivo_' || lower(monto_moneda),
+    'EFECTIVO',
+    updated_at,
+    deleted_at
+FROM movimiento_legacy;
+
+DROP TABLE movimiento_legacy;
+
+CREATE INDEX movimiento_recent ON movimiento(fecha DESC, created_at DESC, id DESC)
+WHERE deleted_at IS NULL;
+
+CREATE INDEX movimiento_by_categoria ON movimiento(categoria_id)
+WHERE deleted_at IS NULL;
+
+CREATE INDEX movimiento_by_cuenta ON movimiento(cuenta_id)
+WHERE deleted_at IS NULL;
+
+CREATE TABLE transferencia (
+    id TEXT NOT NULL PRIMARY KEY,
+    cuenta_origen_id TEXT NOT NULL,
+    cuenta_destino_id TEXT NOT NULL,
+    monto_origen_minor INTEGER NOT NULL CHECK (monto_origen_minor > 0),
+    monto_destino_minor INTEGER NOT NULL CHECK (monto_destino_minor > 0),
+    fecha TEXT NOT NULL,
+    descripcion TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT,
+    CHECK (cuenta_origen_id <> cuenta_destino_id)
+);
+
+CREATE INDEX transferencia_by_origen ON transferencia(cuenta_origen_id)
+WHERE deleted_at IS NULL;
+
+CREATE INDEX transferencia_by_destino ON transferencia(cuenta_destino_id)
+WHERE deleted_at IS NULL;
+
+CREATE INDEX transferencia_recent ON transferencia(fecha DESC, created_at DESC, id DESC)
+WHERE deleted_at IS NULL;
+
+CREATE VIEW movimiento_con_etiquetas AS
+SELECT
+    movimiento.*,
+    cuenta.moneda AS monto_moneda,
+    COALESCE(
+        (
+            SELECT group_concat(movimiento_etiqueta.posicion || char(31) || movimiento_etiqueta.etiqueta_id, char(30))
+            FROM movimiento_etiqueta
+            WHERE movimiento_etiqueta.movimiento_id = movimiento.id
+        ),
+        ''
+    ) AS etiqueta_ids
+FROM movimiento
+JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+WHERE movimiento.deleted_at IS NULL;

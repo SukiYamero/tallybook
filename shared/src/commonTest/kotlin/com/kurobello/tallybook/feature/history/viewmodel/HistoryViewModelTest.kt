@@ -2,31 +2,43 @@ package com.kurobello.tallybook.feature.history.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
+import com.kurobello.tallybook.core.data.ActividadRepository
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
+import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
+import com.kurobello.tallybook.core.model.Actividad
+import com.kurobello.tallybook.core.model.ActividadRecentOrder
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.ThemeMode
+import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.Transferencia
+import com.kurobello.tallybook.core.model.map
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
+import com.kurobello.tallybook.feature.history.ui.HistoryMovimientoRowUi
+import com.kurobello.tallybook.feature.history.ui.HistoryTransferenciaRowUi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -44,6 +56,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -94,7 +107,6 @@ class HistoryViewModelTest {
     assertEquals(1, content.value.movementCount)
     assertEquals(Money(-100, Moneda.USD), content.value.summary.balance)
     assertEquals(1, fixture.preferences.source.starts)
-    assertEquals(0, fixture.movimientos.summary(Moneda.USD).starts)
     assertEquals(1, fixture.movimientos.activeRanges)
     first.cancel()
     runCurrent()
@@ -128,7 +140,6 @@ class HistoryViewModelTest {
     assertEquals(0, fixture.movimientos.activeRanges)
     assertEquals(0, fixture.preferences.source.active)
     assertEquals(0, fixture.categorias.source.active)
-    assertEquals(0, fixture.movimientos.activeSummaries)
     assertEquals(0, fixture.movimientos.activeYears)
     fixture.movimientos.insert(movimiento("hidden", LocalDate(2024, 2, 23)))
     var firstState: HistoryUiState? = null
@@ -163,10 +174,8 @@ class HistoryViewModelTest {
     fixture.movimientos
         .range(Moneda.USD, MovimientoDateRange(TODAY, TODAY))
         .emit(DataOutcome.Success(listOf(movimiento("today", TODAY))))
-    fixture.movimientos.summary(Moneda.USD).emit(DataOutcome.Failure(failure))
     runCurrent()
     assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
-    assertEquals(0, fixture.movimientos.summary(Moneda.USD).starts)
   }
 
   @Test
@@ -183,7 +192,10 @@ class HistoryViewModelTest {
     runCurrent()
     val content =
         assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period)
-    assertEquals("Sin categoría", content.value.groups.single().rows.single().title)
+    assertEquals(
+        "Sin categoría",
+        assertIs<HistoryMovimientoRowUi>(content.value.groups.single().rows.single()).title,
+    )
     assertEquals(starts, fixture.movimientos.totalRangeStarts)
     fixture.movimientos.years(Moneda.USD).emit(DataOutcome.Success(emptyList()))
     vm.onYearSelected(2026)
@@ -220,7 +232,6 @@ class HistoryViewModelTest {
             .value
             .movementCount,
     )
-    assertEquals(0, fixture.movimientos.summary(Moneda.USD).starts)
     assertEquals(1, fixture.movimientos.years(Moneda.USD).starts)
     assertEquals(1, fixture.categorias.source.starts)
     val afterSelection = states.size
@@ -283,9 +294,6 @@ class HistoryViewModelTest {
             )
         )
     )
-    fixture.movimientos
-        .summary(Moneda.USD)
-        .emit(DataOutcome.Failure(DataError.Local(ArithmeticException())))
     runCurrent()
     assertEquals(
         HistoryFailure.CalculationOverflow,
@@ -300,7 +308,6 @@ class HistoryViewModelTest {
     val failure = DataError.Local(IllegalStateException())
     val categoryFixture = HistoryFixture(this)
     categoryFixture.movimientos.range(Moneda.USD, MovimientoDateRange(TODAY, TODAY)).emit(null)
-    categoryFixture.movimientos.summary(Moneda.USD).emit(null)
     categoryFixture.categorias.source.emit(DataOutcome.Failure(failure))
     val categoryVm = categoryFixture.create()
     backgroundScope.launch { categoryVm.uiState.collect {} }
@@ -380,6 +387,80 @@ class HistoryViewModelTest {
   }
 
   @Test
+  fun transfersBecomeRowsWithTheirAccountsWithoutChangingTotalsOrCount() = runTest {
+    val fixture = HistoryFixture(this, listOf(movimiento("today", TODAY)))
+    val nequi = cuenta("usd-bank", Moneda.USD, "Bank")
+    fixture.cuentas.cuentas.value += nequi
+    fixture.movimientos.transferencias =
+        listOf(transferencia("move", "cuenta_efectivo_usd", nequi.id, TODAY, 250, 250))
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+
+    val content =
+        assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period).value
+    assertEquals(1, content.movementCount)
+    assertEquals(Money(-100, Moneda.USD), content.summary.balance)
+    val row = assertIs<HistoryTransferenciaRowUi>(content.groups.single().rows.first())
+    assertEquals(Money(250, Moneda.USD), row.monto)
+    assertEquals(listOf("cuenta_efectivo_usd", nequi.id), listOf(row.origen?.id, row.destino?.id))
+    assertFalse(vm.uiState.value.showsMonedaSelector)
+  }
+
+  @Test
+  fun currencySelectorAppearsWithSeveralCurrenciesAndKeepsThePeriod() = runTest {
+    val fixture =
+        HistoryFixture(
+            this,
+            listOf(movimiento("usd", TODAY), movimiento("cop", TODAY, moneda = Moneda.COP)),
+        )
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+    assertEquals(Moneda.USD, vm.uiState.value.moneda)
+    assertFalse(vm.uiState.value.showsMonedaSelector)
+
+    fixture.cuentas.cuentas.value += cuenta("cuenta_efectivo_cop", Moneda.COP)
+    runCurrent()
+    assertTrue(vm.uiState.value.showsMonedaSelector)
+    assertEquals(listOf(Moneda.COP, Moneda.USD), vm.uiState.value.monedas)
+    assertEquals(Moneda.USD, vm.uiState.value.moneda)
+
+    vm.onScopeChanged(HistoryScope.Month)
+    vm.onMonedaSelected(Moneda.COP)
+    assertEquals(Moneda.COP, vm.uiState.value.moneda)
+    runCurrent()
+    val content =
+        assertIs<RetainedLoadState.Ready<HistoryProjection.Content>>(vm.uiState.value.period).value
+    assertEquals(listOf("cop"), content.groups.flatMap { it.rows }.map { it.id })
+    assertEquals(HistoryScope.Month, vm.uiState.value.selection.scope)
+    assertEquals(
+        HistorySavedInput(1, "Month", TODAY.toString(), "COP"),
+        historySavedInput(vm.uiState.value.selection, Moneda.COP),
+    )
+  }
+
+  @Test
+  fun aSelectedCurrencyLeftWithoutAccountsFallsBackToPrimary() = runTest {
+    val fixture = HistoryFixture(this, listOf(movimiento("cop", TODAY, moneda = Moneda.COP)))
+    val cop = cuenta("cuenta_efectivo_cop", Moneda.COP)
+    fixture.cuentas.cuentas.value += cop
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+    vm.onMonedaSelected(Moneda.COP)
+    runCurrent()
+    assertEquals(Moneda.COP, vm.uiState.value.moneda)
+
+    fixture.cuentas.cuentas.value -= cop
+    runCurrent()
+    assertEquals(Moneda.USD, vm.uiState.value.moneda)
+    assertFalse(vm.uiState.value.showsMonedaSelector)
+    vm.onMonedaSelected(Moneda.COP)
+    assertEquals(Moneda.USD, vm.uiState.value.moneda)
+  }
+
+  @Test
   fun refreshesOnceAndClearsOnlyOwnedProducerFromInjectedScope() = runTest {
     val fixture = HistoryFixture(this)
     val vm = fixture.create()
@@ -412,13 +493,14 @@ private class HistoryFixture(private val scope: TestScope, rows: List<Movimiento
   val preferences = HistoryPreferences()
   val movimientos = HistoryMovimientos(rows)
   val categorias = HistoryCategorias()
+  val cuentas = FakeCuentaRepository(listOf(cuenta("cuenta_efectivo_usd", Moneda.USD)))
   val clock = HistoryClock()
   var zoneReads = 0
   var zone: TimeZone = TimeZone.UTC
 
   fun create(handle: SavedStateHandle = SavedStateHandle()): HistoryViewModel =
       HistoryViewModel(
-          HistoryRepositories(preferences, movimientos, categorias),
+          HistoryRepositories(preferences, movimientos, categorias, cuentas),
           handle,
           "Missing category",
           HistoryDateProvider(
@@ -501,15 +583,20 @@ private class HistoryCategorias : CategoriaRepository by UnsupportedCategoriaRep
 
 private data class ReadKey(val moneda: Moneda, val range: MovimientoDateRange)
 
-private class HistoryMovimientos(private var rows: List<Movimiento>) : MovimientoRepository {
+private class HistoryMovimientos(private var rows: List<Movimiento>) :
+    MovimientoRepository, ActividadRepository {
+  var transferencias: List<Transferencia> = emptyList()
+
+  override suspend fun defaultSelection(
+      primary: Moneda,
+      tipo: TipoMovimiento,
+      medio: MedioPago?,
+  ): DataOutcome<CuentaSelection?> = error("Default selections are not expected in this fixture")
+
   private val ranges = mutableMapOf<ReadKey, HistorySource<List<Movimiento>>>()
-  private val summaries = mutableMapOf<Moneda, HistorySource<MovimientoSummary>>()
   private val metadata = mutableMapOf<Moneda, HistorySource<List<Int>>>()
   val activeRanges
     get() = ranges.values.sumOf { it.active }
-
-  val activeSummaries
-    get() = summaries.values.sumOf { it.active }
 
   val activeYears
     get() = metadata.values.sumOf { it.active }
@@ -521,9 +608,6 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) : Movimient
       ranges.getOrPut(ReadKey(moneda, range)) {
         HistorySource(DataOutcome.Success(filtered(moneda, range)))
       }
-
-  fun summary(moneda: Moneda) =
-      summaries.getOrPut(moneda) { HistorySource(DataOutcome.Success(summaryFor(moneda))) }
 
   fun years(moneda: Moneda) =
       metadata.getOrPut(moneda) {
@@ -539,38 +623,36 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) : Movimient
           .filter { it.monto.moneda == moneda && it.fecha >= range.start && it.fecha <= range.end }
           .sortedByDescending { it.fecha }
 
-  private fun summaryFor(moneda: Moneda) =
-      MovimientoSummary(
-          Money(
-              rows
-                  .filter { it.monto.moneda == moneda && it.tipo == TipoMovimiento.INGRESO }
-                  .sumOf { it.monto.minorUnits },
-              moneda,
-          ),
-          Money(
-              rows
-                  .filter { it.monto.moneda == moneda && it.tipo == TipoMovimiento.GASTO }
-                  .sumOf { it.monto.minorUnits },
-              moneda,
-          ),
-      )
-
   override fun observeFiltered(
       criteria: MovimientoReadCriteria
   ): Flow<DataOutcome<MovimientoSearchSnapshot>> =
       error("Search reads are not expected in this fixture")
 
-  override fun observeRange(moneda: Moneda, range: MovimientoDateRange) =
-      range(moneda, range).observe()
+  override fun observeActividadRange(
+      moneda: Moneda,
+      range: MovimientoDateRange,
+  ): Flow<DataOutcome<List<Actividad>>> =
+      range(moneda, range).observe().map { outcome ->
+        outcome.map { movimientos ->
+          val transfers =
+              transferencias
+                  .filter { it.fecha >= range.start && it.fecha <= range.end }
+                  .mapNotNull { Actividad.DeTransferencia.of(it, moneda) }
+          val rows = movimientos.map(Actividad::DeMovimiento)
+          if (transfers.isEmpty()) rows else (rows + transfers).sortedWith(ActividadRecentOrder)
+        }
+      }
 
   override fun observeYears(moneda: Moneda) = years(moneda).observe()
 
-  override fun observeSummary(moneda: Moneda) = summary(moneda).observe()
+  override fun observeSummary(
+      moneda: Moneda,
+      range: MovimientoDateRange,
+  ): Flow<DataOutcome<MovimientoSummary>> =
+      error("Range summaries are not expected in this fixture")
 
   override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
       error("Scoped recent reads are not expected in this fixture")
-
-  override fun observeRecent(limit: Int) = flow { emit(DataOutcome.Success(rows.take(limit))) }
 
   override suspend fun getAll() = DataOutcome.Success(rows)
 
@@ -587,7 +669,6 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) : Movimient
     ranges.forEach { (key, source) ->
       source.emit(DataOutcome.Success(filtered(key.moneda, key.range)))
     }
-    summaries.forEach { (moneda, source) -> source.emit(DataOutcome.Success(summaryFor(moneda))) }
     metadata.forEach { (moneda, source) ->
       source.emit(
           DataOutcome.Success(
@@ -618,6 +699,8 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) : Movimient
             etiquetaIds = changes.etiquetaIds,
             titulo = changes.titulo,
             descripcion = changes.descripcion,
+            cuentaId = changes.cuentaId,
+            medio = changes.medio,
         )
     val values = rows.map { if (it.id == id) updated else it }
     rows = values
@@ -633,23 +716,49 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) : Movimient
     return DataOutcome.Success(captured)
   }
 
-  override suspend fun restoreDeleted(
-      movimiento: Movimiento
-  ): DataOutcome<MovimientoRestoreResult> {
+  override suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<RestoreResult> {
     val current = rows.firstOrNull { it.id == movimiento.id }
     if (current != null)
         return DataOutcome.Success(
-            if (current == movimiento) MovimientoRestoreResult.AlreadyPresent
-            else MovimientoRestoreResult.Conflict
+            if (current == movimiento) RestoreResult.AlreadyPresent else RestoreResult.Conflict
         )
     val values = rows + movimiento
     rows = values
     publishRows()
-    return DataOutcome.Success(MovimientoRestoreResult.Restored)
+    return DataOutcome.Success(RestoreResult.Restored)
   }
-
-  override suspend fun delete(id: String) = DataOutcome.Success(Unit)
 }
+
+@Suppress("LongParameterList")
+private fun transferencia(
+    id: String,
+    origen: String,
+    destino: String,
+    fecha: LocalDate,
+    montoOrigen: Long,
+    montoDestino: Long,
+) =
+    Transferencia(
+        id,
+        origen,
+        destino,
+        Money(montoOrigen, if (origen.endsWith("cop")) Moneda.COP else Moneda.USD),
+        Money(montoDestino, if (destino.endsWith("cop")) Moneda.COP else Moneda.USD),
+        fecha,
+        null,
+        Instant.parse("2026-10-05T01:00:00Z"),
+    )
+
+private fun cuenta(id: String, moneda: Moneda, nombre: String = id) =
+    Cuenta(
+        id,
+        nombre,
+        TipoCuenta.EFECTIVO,
+        Money(0, moneda),
+        null,
+        false,
+        Instant.parse("2026-01-01T00:00:00Z"),
+    )
 
 private fun movimiento(
     id: String,
@@ -666,4 +775,6 @@ private fun movimiento(
         null,
         null,
         Instant.parse("2026-10-05T00:00:00Z"),
+        Cuenta.defaultCashId(moneda),
+        MedioPago.EFECTIVO,
     )

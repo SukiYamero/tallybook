@@ -11,6 +11,7 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.CategorySeedCatalog
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
+import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
@@ -19,6 +20,7 @@ import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.data.entry.CategoryAppearanceSuggester
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
+import com.kurobello.tallybook.core.data.entry.CuentaMatcher
 import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.core.model.AppLocale
@@ -27,22 +29,26 @@ import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
-import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
-import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.ThemeMode
+import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
+import com.kurobello.tallybook.feature.accounts.viewmodel.QuickCuentaViewModel
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoRepositories
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
+import com.kurobello.tallybook.feature.movimientos.viewmodel.COP_CASH
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoEntryEngine
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -78,6 +84,7 @@ class AddMovimientoSheetRouteTest {
               onDismiss = { dismissCount += 1 },
               viewModel = viewModel,
               quickCategoryViewModel = quickCategoryViewModel(scope),
+              quickCuentaViewModel = QuickCuentaViewModel(FakeCuentaRepository(), scope),
           )
         }
       }
@@ -117,6 +124,7 @@ class AddMovimientoSheetRouteTest {
               onHidden = { hidden += 1 },
               viewModel = viewModel,
               quickCategoryViewModel = quickCategoryViewModel(scope),
+              quickCuentaViewModel = QuickCuentaViewModel(FakeCuentaRepository(), scope),
           )
         }
       }
@@ -141,6 +149,7 @@ class AddMovimientoSheetRouteTest {
                   categorias = FakeCategoriaRepository(),
                   movimientos = movementRepository,
                   etiquetas = FakeEtiquetaRepository(),
+                  cuentas = FakeCuentaRepository(listOf(COP_CASH)),
               ),
           idGenerator = IdGenerator { "movement-id" },
           clock = FixedClock,
@@ -150,6 +159,7 @@ class AddMovimientoSheetRouteTest {
                   parser = MovimientoPhraseParser(),
                   suggester = CategorySuggester(CategoryKeywordDictionary.builtIn),
                   etiquetaMatcher = EtiquetaMatcher(),
+                  cuentaMatcher = CuentaMatcher(),
                   localeProvider = FixedDeviceLocale,
                   computationDispatcher = Dispatchers.Default,
               ),
@@ -203,28 +213,24 @@ class AddMovimientoSheetRouteTest {
   }
 
   private class FakeMovimientoRepository : MovimientoRepository {
+    override suspend fun defaultSelection(
+        primary: Moneda,
+        tipo: TipoMovimiento,
+        medio: MedioPago?,
+    ): DataOutcome<CuentaSelection?> =
+        DataOutcome.Success(
+            CuentaSelection(Cuenta.defaultCashId(primary), medio ?: MedioPago.EFECTIVO, primary)
+        )
+
     val inserted = mutableStateListOf<Movimiento>()
 
     override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
         error("Scoped recent reads are not expected in this fixture")
 
-    override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> = emptyFlow()
-
-    override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> = emptyFlow()
-
-    override fun observeFiltered(
-        criteria: MovimientoReadCriteria
-    ): Flow<DataOutcome<MovimientoSearchSnapshot>> =
-        error("Search reads are not expected in this fixture")
-
-    override fun observeRange(
+    override fun observeSummary(
         moneda: Moneda,
         range: MovimientoDateRange,
-    ): Flow<DataOutcome<List<Movimiento>>> =
-        error("History range reads are not expected in this fixture")
-
-    override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> =
-        error("History year reads are not expected in this fixture")
+    ): Flow<DataOutcome<MovimientoSummary>> = emptyFlow()
 
     override fun observeCategoryHistory(limit: Int): Flow<DataOutcome<List<CategoryHistoryRow>>> =
         emptyFlow()
@@ -257,6 +263,8 @@ class AddMovimientoSheetRouteTest {
               etiquetaIds = changes.etiquetaIds,
               titulo = changes.titulo,
               descripcion = changes.descripcion,
+              cuentaId = changes.cuentaId,
+              medio = changes.medio,
           )
       val values = inserted.map { if (it.id == id) updated else it }
       inserted.clear()
@@ -272,22 +280,17 @@ class AddMovimientoSheetRouteTest {
       return DataOutcome.Success(captured)
     }
 
-    override suspend fun restoreDeleted(
-        movimiento: Movimiento
-    ): DataOutcome<MovimientoRestoreResult> {
+    override suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<RestoreResult> {
       val current = inserted.firstOrNull { it.id == movimiento.id }
       if (current != null)
           return DataOutcome.Success(
-              if (current == movimiento) MovimientoRestoreResult.AlreadyPresent
-              else MovimientoRestoreResult.Conflict
+              if (current == movimiento) RestoreResult.AlreadyPresent else RestoreResult.Conflict
           )
       val values = inserted + movimiento
       inserted.clear()
       inserted.addAll(values)
-      return DataOutcome.Success(MovimientoRestoreResult.Restored)
+      return DataOutcome.Success(RestoreResult.Restored)
     }
-
-    override suspend fun delete(id: String): DataOutcome<Unit> = DataOutcome.Success(Unit)
   }
 
   private object FixedClock : Clock {

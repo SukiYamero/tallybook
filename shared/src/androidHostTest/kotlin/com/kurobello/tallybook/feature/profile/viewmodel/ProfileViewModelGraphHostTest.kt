@@ -6,19 +6,26 @@ import com.kurobello.tallybook.core.data.AppInfo
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepository
+import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeTransferenciaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.TransferenciaRepository
 import com.kurobello.tallybook.core.data.export.MovimientoCsvLabels
 import com.kurobello.tallybook.core.data.export.MovimientoExportSharer
+import com.kurobello.tallybook.core.data.export.MovimientoExportSource
+import com.kurobello.tallybook.core.data.export.RepositoryExportSource
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.di.DispatcherQualifier
@@ -72,6 +79,11 @@ internal class ProfileViewModelGraphHostTest {
             single<MovimientoRepository> { ProfileFakeMovimientos() }
             single<EtiquetaRepository> { FakeEtiquetaRepository() }
             single<CategoriaRepository> { ProfileFakeCategorias }
+            single<CuentaRepository> { FakeCuentaRepository() }
+            single<TransferenciaRepository> { FakeTransferenciaRepository() }
+            single<MovimientoExportSource> {
+              RepositoryExportSource(get(), get(), get(), get(), get())
+            }
             single<MovimientoExportSharer> { sharer }
             single<Clock> {
               object : Clock {
@@ -146,6 +158,13 @@ private val LABELS =
         "Currency",
         "Expense",
         "Income",
+        "Account",
+        "Payment method",
+        "Destination account",
+        "Destination amount",
+        "Destination currency",
+        "Transfer",
+        MedioPago.entries.associateWith { it.name },
     )
 
 private class RecordingSharer : MovimientoExportSharer {

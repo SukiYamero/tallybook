@@ -1,0 +1,42 @@
+-- Query-only: balances are derived, never stored. Each component is an exact integer SUM() in the
+-- cuenta's own minor units, so Kotlin only combines them with Money's checked operators and two
+-- currencies never meet. Every subquery repeats deleted_at IS NULL so it can search the partial
+-- per-cuenta indexes instead of scanning the table once per cuenta.
+selectCuentaSaldos:
+SELECT
+    cuenta.*,
+    (
+        SELECT COALESCE(SUM(movimiento.monto_minor), 0)
+        FROM movimiento
+        WHERE movimiento.cuenta_id = cuenta.id AND movimiento.deleted_at IS NULL AND movimiento.tipo = 'INGRESO'
+    ) AS ingresos_minor,
+    (
+        SELECT COALESCE(SUM(movimiento.monto_minor), 0)
+        FROM movimiento
+        WHERE movimiento.cuenta_id = cuenta.id AND movimiento.deleted_at IS NULL AND movimiento.tipo = 'GASTO'
+    ) AS gastos_minor,
+    (
+        SELECT COALESCE(SUM(transferencia.monto_destino_minor), 0)
+        FROM transferencia
+        WHERE transferencia.cuenta_destino_id = cuenta.id AND transferencia.deleted_at IS NULL
+    ) AS entradas_minor,
+    (
+        SELECT COALESCE(SUM(transferencia.monto_origen_minor), 0)
+        FROM transferencia
+        WHERE transferencia.cuenta_origen_id = cuenta.id AND transferencia.deleted_at IS NULL
+    ) AS salidas_minor
+FROM cuenta
+WHERE cuenta.deleted_at IS NULL
+ORDER BY cuenta.created_at, cuenta.id;
+
+-- The cycle bounds come from creditCycle as inclusive canonical dates, so SQL holds no date math.
+-- Transfers stay out: paying the card lowers the deuda, not what was spent in the cycle.
+sumCicloByCuenta:
+SELECT
+    COALESCE(SUM(CASE WHEN tipo = 'GASTO' THEN monto_minor ELSE 0 END), 0) AS gastos_minor,
+    COALESCE(SUM(CASE WHEN tipo = 'INGRESO' THEN monto_minor ELSE 0 END), 0) AS ingresos_minor
+FROM movimiento
+WHERE cuenta_id = :cuenta_id
+  AND fecha >= :start_date
+  AND fecha <= :end_date
+  AND deleted_at IS NULL;

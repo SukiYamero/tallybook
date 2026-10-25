@@ -1,5 +1,6 @@
 package com.kurobello.tallybook.feature.search.viewmodel
 
+import com.kurobello.tallybook.core.model.MedioPago
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -27,6 +28,19 @@ class SearchFilterSessionTest {
     val reopened = assertIs<SearchFilterSession.Editing>(closing.hidden(id).open(nextId, applied))
     assertEquals(applied, reopened.draft)
     assertEquals(setOf("kept"), applied.categoryIds)
+  }
+
+  @Test
+  fun accountAndMedioDraftsCommitOnlyOnApplyAndClearDropsThem() {
+    val opened = SearchFilterSession.Hidden.open(id, applied)
+    val edited = opened.edit(id) { it.toggleCuenta("nequi").toggleMedio(MedioPago.CREDITO) }
+    assertEquals(applied, (opened as SearchFilterSession.Editing).draft)
+    val committed = edited.apply(id, applied.customEnd).committed
+    assertEquals(setOf("nequi"), committed?.cuentaIds)
+    assertEquals(setOf(MedioPago.CREDITO), committed?.medios)
+    val cleared = edited.clear(id, applied.customEnd).committed
+    assertEquals(emptySet(), cleared?.cuentaIds)
+    assertEquals(emptySet(), cleared?.medios)
   }
 
   @Test

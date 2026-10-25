@@ -47,6 +47,8 @@ import com.kurobello.tallybook.core.ui.component.TallybookSurfaceStyle
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.rememberTallybookTapFeedback
 import com.kurobello.tallybook.core.ui.movimiento.BalanceCard
+import com.kurobello.tallybook.core.ui.movimiento.BalanceCardAction
+import com.kurobello.tallybook.core.ui.movimiento.BalanceCardLabels
 import com.kurobello.tallybook.core.ui.movimiento.BalanceCardSkeleton
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoRow
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoRowSkeleton
@@ -59,6 +61,9 @@ import tallybook.shared.generated.resources.home_empty_body
 import tallybook.shared.generated.resources.home_empty_title
 import tallybook.shared.generated.resources.home_load_error_body
 import tallybook.shared.generated.resources.home_load_error_title
+import tallybook.shared.generated.resources.home_month_expenses
+import tallybook.shared.generated.resources.home_month_income
+import tallybook.shared.generated.resources.home_open_accounts
 import tallybook.shared.generated.resources.home_recent
 import tallybook.shared.generated.resources.home_search_placeholder
 import tallybook.shared.generated.resources.loading
@@ -262,16 +267,28 @@ internal fun HomeEmpty(onAddMovimiento: () -> Unit) {
   }
 }
 
+/** Shown whenever a snapshot exists, so Accounts stays one tap away even before any movimiento. */
+internal fun LazyListScope.homeBalance(uiState: HomeUiState, onOpenAccounts: (() -> Unit)?) {
+  item(key = "balance") {
+    val actionLabel = stringResource(Res.string.home_open_accounts)
+    BalanceCard(
+        summary = uiState.summary,
+        modifier = Modifier.fillMaxWidth().padding(bottom = TallybookTheme.spacing.space18),
+        balance = uiState.totalBalance,
+        secondaryLabels =
+            BalanceCardLabels(
+                income = stringResource(Res.string.home_month_income),
+                expenses = stringResource(Res.string.home_month_expenses),
+            ),
+        action = onOpenAccounts?.let { BalanceCardAction(actionLabel, it) },
+    )
+  }
+}
+
 internal fun LazyListScope.homePopulated(
     uiState: HomeUiState,
     onOpenMovimiento: ((String) -> Unit)? = null,
 ) {
-  item {
-    BalanceCard(
-        summary = uiState.summary,
-        modifier = Modifier.fillMaxWidth().padding(bottom = TallybookTheme.spacing.space18),
-    )
-  }
   item {
     TallybookText(
         text = stringResource(Res.string.home_recent),

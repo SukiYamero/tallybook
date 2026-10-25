@@ -1,6 +1,8 @@
 package com.kurobello.tallybook.feature.search.viewmodel
 
-import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.MedioPago
+import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.SearchTipo
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -20,7 +22,7 @@ class SearchSavedInputTest {
           .copy(
               preset = SearchDatePreset.Custom,
               customStart = LocalDate(2027, 12, 31),
-              tipo = TipoMovimiento.GASTO,
+              tipo = SearchTipo.GASTO,
               categoryIds = setOf("z-missing", "a"),
               etiquetaIds = setOf("t_viaje", "t_empresa"),
           )
@@ -37,6 +39,61 @@ class SearchSavedInputTest {
     val restored = SearchSavedInput.restore(Json.decodeFromString<SearchSavedInput>(encoded), today)
     assertEquals(raw, restored.rawQuery)
     assertEquals(filters, restored.filters)
+  }
+
+  @Test
+  fun accountsMediosTransferTypeAndCurrencyRoundTripWithStableOrder() {
+    val withAccounts =
+        filters.copy(
+            tipo = SearchTipo.TRANSFERENCIA,
+            cuentaIds = setOf("z-nu", "a-nequi"),
+            medios = setOf(MedioPago.CREDITO, MedioPago.EFECTIVO),
+        )
+    val input = withAccounts.savedInput(raw, Moneda.USD)
+    assertEquals("transferencia", input.tipo)
+    assertEquals(listOf("a-nequi", "z-nu"), input.cuentaIds)
+    assertEquals(listOf("EFECTIVO", "CREDITO"), input.medios)
+    assertEquals("USD", input.moneda)
+    val restored =
+        SearchSavedInput.restore(
+            Json.decodeFromString<SearchSavedInput>(Json.encodeToString(input)),
+            today,
+        )
+    assertEquals(withAccounts, restored.filters)
+    assertEquals(Moneda.USD, restored.moneda)
+  }
+
+  @Test
+  fun previousTipoTokensRestoreTheSameSearchTypeWithoutCurrency() {
+    val legacy =
+        Json.decodeFromString<SearchSavedInput>(
+            """{"version":1,"rawQuery":"","preset":"all","customStart":"2028-03-01",""" +
+                """"customEnd":"2028-03-01","tipo":"ingreso","categoryIds":["a"]}"""
+        )
+    val restored = SearchSavedInput.restore(legacy, today)
+    assertEquals(
+        SearchFilters.initial(today).copy(tipo = SearchTipo.INGRESO, categoryIds = setOf("a")),
+        restored.filters,
+    )
+    assertEquals(null, restored.moneda)
+  }
+
+  @Test
+  fun unknownMediosAndCurrencyAreDroppedAndBlankAccountsCleaned() {
+    val restored =
+        SearchSavedInput.restore(
+            filters
+                .savedInput(raw)
+                .copy(
+                    cuentaIds = listOf(" ", "nequi"),
+                    medios = listOf("CHEQUE", "DEBITO"),
+                    moneda = "XYZ",
+                ),
+            today,
+        )
+    assertEquals(setOf("nequi"), restored.filters.cuentaIds)
+    assertEquals(setOf(MedioPago.DEBITO), restored.filters.medios)
+    assertEquals(null, restored.moneda)
   }
 
   @Test

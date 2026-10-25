@@ -23,6 +23,7 @@ internal fun HistoryRoute(
     bottomBarClearance: Dp,
     modifier: Modifier = Modifier,
     onOpenMovimiento: ((String) -> Unit)? = null,
+    onOpenTransferencia: ((String) -> Unit)? = null,
 ) {
   val label = stringResource(Res.string.unknown_category)
   val viewModel: HistoryViewModel = koinViewModel { parametersOf(label) }
@@ -30,7 +31,7 @@ internal fun HistoryRoute(
   HistoryScreen(
       state.value,
       viewModel,
-      HistoryNavigationCallbacks(onAdd, onOpenMovimiento),
+      HistoryNavigationCallbacks(onAdd, onOpenMovimiento, onOpenTransferencia),
       bottomBarClearance,
       modifier,
   )

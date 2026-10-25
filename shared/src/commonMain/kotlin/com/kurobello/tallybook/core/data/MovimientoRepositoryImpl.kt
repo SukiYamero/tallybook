@@ -1,28 +1,31 @@
 package com.kurobello.tallybook.core.data
 
-import app.cash.sqldelight.Query
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
-import com.kurobello.tallybook.core.database.Movimiento as StoredMovimiento
 import com.kurobello.tallybook.core.database.Movimiento_con_etiquetas as DatabaseMovimiento
+import com.kurobello.tallybook.core.database.SelectSelectionCandidates
+import com.kurobello.tallybook.core.database.SelectStoredMovimientoById as StoredMovimiento
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.ChangeStamp
+import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.CuentaRejection
+import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
-import com.kurobello.tallybook.core.model.MovimientoReadCriteria
-import com.kurobello.tallybook.core.model.MovimientoRestoreResult
-import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.RestoreResult
+import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.time.Instant
 import kotlinx.coroutines.CoroutineDispatcher
@@ -34,7 +37,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 
 // Reads and identity-safe mutations share one storage/error boundary and legacy validation policy.
@@ -44,142 +46,6 @@ internal class MovimientoRepositoryImpl(
     private val dispatcher: CoroutineDispatcher,
     private val changeClock: ChangeClock,
 ) : MovimientoRepository {
-
-  override fun observeFiltered(
-      criteria: MovimientoReadCriteria
-  ): Flow<DataOutcome<MovimientoSearchSnapshot>> {
-    val categoryIds = criteria.categoryIds.sorted()
-    val etiquetaIds = criteria.etiquetaIds.sorted()
-    val invalidInput =
-        when {
-          categoryIds.any { it.isBlank() } ->
-              DataError.InvalidInput("Categoria ids must not be blank")
-          etiquetaIds.any { it.isBlank() } ->
-              DataError.InvalidInput("Etiqueta ids must not be blank")
-          else -> criteria.range?.let(::validateRange)
-        }
-    if (invalidInput != null) return flowOf(DataOutcome.Failure(invalidInput))
-    return flow {
-          val queries = database.movimientoQueries
-          emitAll(
-              filteredQuery(criteria, categoryIds, etiquetaIds).asFlow().map { invalidatedQuery ->
-                withContext(dispatcher) {
-                  val (rows, years) =
-                      database.transactionWithResult {
-                        invalidatedQuery.executeAsList() to
-                            queries.selectMovimientoYears(criteria.moneda.name).executeAsList()
-                      }
-                  val context = currentCoroutineContext()
-                  context.ensureActive()
-                  val movimientos = rows.map { row ->
-                    context.ensureActive()
-                    row.toDomain()
-                  }
-                  val persistedYears = years.map { year ->
-                    context.ensureActive()
-                    parseStoredYear(year)
-                  }
-                  context.ensureActive()
-                  MovimientoSearchSnapshot(movimientos, persistedYears)
-                }
-              }
-          )
-        }
-        .flowOn(dispatcher)
-        .asLocalDataOutcome()
-  }
-
-  // Each combination of the optional id sets has its own query: an empty IN list cannot mean "no
-  // restriction".
-  private fun filteredQuery(
-      criteria: MovimientoReadCriteria,
-      categoryIds: List<String>,
-      etiquetaIds: List<String>,
-  ): Query<DatabaseMovimiento> {
-    val queries = database.movimientoQueries
-    val moneda = criteria.moneda.name
-    val start = criteria.range?.start?.toString()
-    val end = criteria.range?.end?.toString()
-    val tipo = criteria.tipo?.name
-    return when {
-      categoryIds.isEmpty() && etiquetaIds.isEmpty() ->
-          queries.selectFilteredMovimientos(moneda, start, end, tipo)
-      etiquetaIds.isEmpty() ->
-          queries.selectFilteredMovimientosByCategory(moneda, start, end, tipo, categoryIds)
-      categoryIds.isEmpty() ->
-          queries.selectFilteredMovimientosByEtiqueta(moneda, start, end, tipo, etiquetaIds)
-      else ->
-          queries.selectFilteredMovimientosByCategoryAndEtiqueta(
-              moneda,
-              start,
-              end,
-              tipo,
-              categoryIds,
-              etiquetaIds,
-          )
-    }
-  }
-
-  override fun observeRange(
-      moneda: Moneda,
-      range: MovimientoDateRange,
-  ): Flow<DataOutcome<List<Movimiento>>> {
-    validateRange(range)?.let {
-      return flowOf(DataOutcome.Failure(it))
-    }
-    return flow {
-          emitAll(
-              database.movimientoQueries
-                  .selectMovimientosInRange(
-                      moneda.name,
-                      range.start.toString(),
-                      range.end.toString(),
-                  )
-                  .asFlow()
-                  .mapToList(dispatcher)
-                  .map { rows ->
-                    rows.map { row ->
-                      currentCoroutineContext().ensureActive()
-                      row.toDomain()
-                    }
-                  }
-          )
-        }
-        .flowOn(dispatcher)
-        .asLocalDataOutcome()
-  }
-
-  override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> =
-      flow {
-            emitAll(
-                database.movimientoQueries
-                    .selectMovimientoYears(moneda.name)
-                    .asFlow()
-                    .mapToList(dispatcher)
-                    .map { rows ->
-                      rows.map { row ->
-                        currentCoroutineContext().ensureActive()
-                        parseStoredYear(row)
-                      }
-                    }
-            )
-          }
-          .flowOn(dispatcher)
-          .asLocalDataOutcome()
-
-  override fun observeRecent(limit: Int): Flow<DataOutcome<List<Movimiento>>> =
-      if (limit <= 0) {
-        flowOf(
-            DataOutcome.Failure(DataError.InvalidInput("Recent movimiento limit must be positive"))
-        )
-      } else {
-        database.movimientoQueries
-            .selectRecentMovimientos(limit.toLong())
-            .asFlow()
-            .mapToList(dispatcher)
-            .map { rows -> rows.map { it.toDomain() } }
-            .asLocalDataOutcome()
-      }
 
   override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
       if (limit <= 0) {
@@ -228,27 +94,20 @@ internal class MovimientoRepositoryImpl(
             .asLocalDataOutcome()
       }
 
-  override fun observeSummary(moneda: Moneda): Flow<DataOutcome<MovimientoSummary>> =
-      database.movimientoQueries
-          .sumMovimientosByTipo(moneda.name)
-          .asFlow()
-          .mapToList(dispatcher)
-          .map { rows ->
-            MovimientoSummary(
-                ingresos =
-                    Money(
-                        rows.firstOrNull { it.tipo == TipoMovimiento.INGRESO.name }?.total_minor
-                            ?: 0,
-                        moneda,
-                    ),
-                gastos =
-                    Money(
-                        rows.firstOrNull { it.tipo == TipoMovimiento.GASTO.name }?.total_minor ?: 0,
-                        moneda,
-                    ),
-            )
-          }
-          .asLocalDataOutcome()
+  override fun observeSummary(
+      moneda: Moneda,
+      range: MovimientoDateRange,
+  ): Flow<DataOutcome<MovimientoSummary>> {
+    validateRange(range)?.let {
+      return flowOf(DataOutcome.Failure(it))
+    }
+    return database.movimientoQueries
+        .sumMovimientosByTipoInRange(moneda.name, range.start.toString(), range.end.toString())
+        .asFlow()
+        .mapToList(dispatcher)
+        .map { rows -> summaryOf(moneda, rows.associate { it.tipo to it.total_minor }) }
+        .asLocalDataOutcome()
+  }
 
   override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> {
     validate(movimiento)?.let {
@@ -256,7 +115,9 @@ internal class MovimientoRepositoryImpl(
     }
     return runLocalDataOperation(dispatcher) {
           database.transactionWithResult {
-            val missing = missingReference(movimiento.categoriaId, movimiento.etiquetaIds)
+            val missing =
+                missingReference(movimiento.categoriaId, movimiento.etiquetaIds)
+                    ?: invalidCuenta(movimiento.cuentaId, movimiento.medio, movimiento.monto)
             if (missing != null) {
               DataOutcome.Failure(missing)
             } else {
@@ -311,6 +172,9 @@ internal class MovimientoRepositoryImpl(
                 ?.let {
                   return@transactionWithResult DataOutcome.Failure(it)
                 }
+            invalidCuenta(changes.cuentaId, changes.medio, changes.monto, stored = current)?.let {
+              return@transactionWithResult DataOutcome.Failure(it)
+            }
             if (current.changes() == changes) {
               return@transactionWithResult DataOutcome.Success(MovimientoUpdateResult.Updated)
             }
@@ -323,6 +187,8 @@ internal class MovimientoRepositoryImpl(
                         titulo = changes.titulo,
                         descripcion = changes.descripcion,
                         categoria_id = changes.categoriaId,
+                        cuenta_id = changes.cuentaId,
+                        medio_pago = changes.medio.name,
                         updated_at = changeClock.next().value,
                         id = id,
                     )
@@ -362,9 +228,7 @@ internal class MovimientoRepositoryImpl(
         .flatten()
   }
 
-  override suspend fun restoreDeleted(
-      movimiento: Movimiento
-  ): DataOutcome<MovimientoRestoreResult> {
+  override suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<RestoreResult> {
     validateRestorable(movimiento)?.let {
       return DataOutcome.Failure(it)
     }
@@ -373,24 +237,32 @@ internal class MovimientoRepositoryImpl(
         val queries = database.movimientoQueries
         val restorable = withSurvivingReferences(movimiento)
         val live = queries.selectMovimientoById(movimiento.id).executeAsOneOrNull()
-        val tombstone =
-            if (live == null) {
-              queries.selectStoredMovimientoById(movimiento.id).executeAsOneOrNull()
-            } else null
+        if (live != null) {
+          return@transactionWithResult if (live.isIdenticalTo(restorable)) {
+            RestoreResult.AlreadyPresent
+          } else RestoreResult.Conflict
+        }
+        // An archived cuenta still takes its movimiento back: Undo returns money where it was.
+        val cuenta =
+            database.cuentaQueries
+                .selectCuentaById(movimiento.cuentaId)
+                .executeAsOneOrNull()
+                ?.toDomain()
+        val tombstone = queries.selectStoredMovimientoById(movimiento.id).executeAsOneOrNull()
         when {
-          live != null ->
-              if (live.isIdenticalTo(restorable)) MovimientoRestoreResult.AlreadyPresent
-              else MovimientoRestoreResult.Conflict
+          cuenta == null -> RestoreResult.MissingCuenta
+          !cuenta.accepts(movimiento.medio, movimiento.monto.moneda, movimiento.cuentaId) ->
+              RestoreResult.Conflict
           tombstone == null -> {
             queries.deleteMovimientoEtiquetas(movimiento.id)
             insertRow(restorable, changeClock.next())
-            MovimientoRestoreResult.Restored
+            RestoreResult.Restored
           }
           tombstone.holdsContentOf(movimiento) -> {
             revive(restorable, changeClock.next())
-            MovimientoRestoreResult.Restored
+            RestoreResult.Restored
           }
-          else -> MovimientoRestoreResult.Conflict
+          else -> RestoreResult.Conflict
         }
       }
     }
@@ -418,12 +290,13 @@ internal class MovimientoRepositoryImpl(
                 id = movimiento.id,
                 tipo = movimiento.tipo.name,
                 monto_minor = movimiento.monto.minorUnits,
-                monto_moneda = movimiento.monto.moneda.name,
                 fecha = movimiento.fecha.toString(),
                 titulo = movimiento.titulo,
                 descripcion = movimiento.descripcion,
                 created_at = movimiento.createdAt.toString(),
                 categoria_id = movimiento.categoriaId,
+                cuenta_id = movimiento.cuentaId,
+                medio_pago = movimiento.medio.name,
                 updated_at = stamp.value,
             )
             .value == 1L
@@ -464,6 +337,28 @@ internal class MovimientoRepositoryImpl(
     )
   }
 
+  // Checked inside the write transaction so an archive or delete cannot slip between check and
+  // write. A medio never outlives its cuenta's type: the type is locked while a live movimiento
+  // uses it.
+  private fun invalidCuenta(
+      cuentaId: String,
+      medio: MedioPago,
+      monto: Money,
+      stored: Movimiento? = null,
+  ): DataError.InvalidInput? {
+    val cuenta =
+        database.cuentaQueries.selectCuentaById(cuentaId).executeAsOneOrNull()?.toDomain()
+            ?: return DataError.InvalidInput("Unknown cuenta $cuentaId")
+    return when (cuenta.rejectionFor(medio, monto.moneda, stored?.cuentaId)) {
+      null -> null
+      CuentaRejection.ARCHIVED -> DataError.InvalidInput("Cuenta $cuentaId is archived")
+      CuentaRejection.MEDIO_MISMATCH ->
+          DataError.InvalidInput("Medio $medio does not fit a ${cuenta.tipo} cuenta")
+      CuentaRejection.MONEDA_MISMATCH ->
+          DataError.InvalidInput("Movimiento currency must be its cuenta's ${cuenta.moneda}")
+    }
+  }
+
   private fun categoriaExists(id: String): Boolean =
       database.categoriaQueries.selectCategoriaById(id).executeAsOneOrNull() != null
 
@@ -481,30 +376,45 @@ internal class MovimientoRepositoryImpl(
       when {
         changes.monto.minorUnits <= 0 ->
             DataError.InvalidInput("Movimiento amount must be positive")
+        changes.monto.minorUnits > Money.MAX_MINOR_UNITS ->
+            DataError.InvalidInput("Movimiento amount exceeds the maximum")
+        !changes.medio.allows(changes.tipo) ->
+            DataError.InvalidInput("Medio ${changes.medio} does not allow ${changes.tipo}")
         else ->
             validateReferences(changes.categoriaId, changes.etiquetaIds)
                 ?: validateTitle(changes.titulo)
                 ?: validateDescription(changes.descripcion)
       }
 
-  override suspend fun delete(id: String): DataOutcome<Unit> =
-      runLocalDataOperation(dispatcher) {
-        database.transaction {
-          val queries = database.movimientoQueries
-          if (queries.selectMovimientoById(id).executeAsOneOrNull() != null) {
-            check(
-                queries.tombstoneMovimiento(stamp = changeClock.next().value, id = id).value == 1L
-            )
-          }
-          queries.deleteMovimientoEtiquetas(id)
-        }
-      }
+  override suspend fun defaultSelection(
+      primary: Moneda,
+      tipo: TipoMovimiento,
+      medio: MedioPago?,
+  ): DataOutcome<CuentaSelection?> {
+    if (medio != null && !medio.allows(tipo)) {
+      return DataOutcome.Failure(DataError.InvalidInput("Medio $medio does not allow $tipo"))
+    }
+    return runLocalDataOperation(dispatcher) {
+      database.movimientoQueries
+          .selectSelectionCandidates(
+              cash_id = Cuenta.defaultCashId(primary),
+              primary = primary.name,
+              medio = medio?.name,
+          )
+          .executeAsList()
+          .firstNotNullOfOrNull { it.toSelection(tipo, medio) }
+    }
+  }
 
   private fun validate(movimiento: Movimiento): DataError.InvalidInput? =
       when {
         movimiento.monto.minorUnits <= 0 ->
             DataError.InvalidInput("Movimiento amount must be positive")
+        movimiento.monto.minorUnits > Money.MAX_MINOR_UNITS ->
+            DataError.InvalidInput("Movimiento amount exceeds the maximum")
         movimiento.id.isEmpty() -> DataError.InvalidInput("Movimiento id must not be empty")
+        !movimiento.medio.allows(movimiento.tipo) ->
+            DataError.InvalidInput("Medio ${movimiento.medio} does not allow ${movimiento.tipo}")
         else ->
             validateReferences(movimiento.categoriaId, movimiento.etiquetaIds)
                 ?: validateTitle(movimiento.titulo)
@@ -513,7 +423,34 @@ internal class MovimientoRepositoryImpl(
 }
 
 private fun Movimiento.changes(): MovimientoChanges =
-    MovimientoChanges(tipo, monto, fecha, categoriaId, etiquetaIds, titulo, descripcion)
+    MovimientoChanges(
+        tipo,
+        monto,
+        fecha,
+        categoriaId,
+        etiquetaIds,
+        titulo,
+        descripcion,
+        cuentaId,
+        medio,
+    )
+
+// A last used medio follows the tipo the way a draft does; any other candidate gets the medio its
+// cuenta type implies. Either way the pair must still be compatible, e.g. after a cuenta changed
+// type.
+private fun SelectSelectionCandidates.toSelection(
+    tipo: TipoMovimiento,
+    requested: MedioPago?,
+): CuentaSelection? {
+  val tipoCuenta = TipoCuenta.valueOf(this.tipo)
+  val medio =
+      requested
+          ?: medio_pago?.let { MedioPago.valueOf(it).forTipo(tipo) }
+          ?: tipoCuenta.defaultMedio(tipo)
+  return if (tipoCuenta in medio.compatibleTipos) {
+    CuentaSelection(cuentaId = id, medio = medio, moneda = Moneda.valueOf(moneda))
+  } else null
+}
 
 // An unreadable occupied ID must block restoration rather than become a retryable failure.
 private fun DatabaseMovimiento.isIdenticalTo(movimiento: Movimiento): Boolean =
@@ -531,6 +468,8 @@ private fun StoredMovimiento.holdsContentOf(snapshot: Movimiento): Boolean =
           monto_minor == snapshot.monto.minorUnits &&
           monto_moneda == snapshot.monto.moneda.name &&
           categoria_id == snapshot.categoriaId &&
+          cuenta_id == snapshot.cuentaId &&
+          medio_pago == snapshot.medio.name &&
           titulo == snapshot.titulo &&
           descripcion == snapshot.descripcion &&
           LocalDate.parse(fecha) == snapshot.fecha &&
@@ -538,6 +477,12 @@ private fun StoredMovimiento.holdsContentOf(snapshot: Movimiento): Boolean =
     } catch (_: IllegalArgumentException) {
       false
     }
+
+private fun summaryOf(moneda: Moneda, totals: Map<String, Long?>): MovimientoSummary =
+    MovimientoSummary(
+        ingresos = Money(totals[TipoMovimiento.INGRESO.name] ?: 0, moneda),
+        gastos = Money(totals[TipoMovimiento.GASTO.name] ?: 0, moneda),
+    )
 
 private fun validateTitle(titulo: String?): DataError.InvalidInput? =
     if ((titulo?.length ?: 0) > MOVIMIENTO_TITLE_MAX_LENGTH) {
@@ -567,7 +512,7 @@ private fun validateReferences(
       else -> null
     }
 
-private fun parseStoredYear(value: String): Int {
+internal fun parseStoredYear(value: String): Int {
   val canonicalDate = "$value-01-01"
   val date = LocalDate.parse(canonicalDate)
   require(date.toString() == canonicalDate) {
@@ -576,7 +521,7 @@ private fun parseStoredYear(value: String): Int {
   return date.year
 }
 
-private fun validateRange(range: MovimientoDateRange): DataError.InvalidInput? =
+internal fun validateRange(range: MovimientoDateRange): DataError.InvalidInput? =
     if (
         range.start.year != range.end.year &&
             (range.start.year < 0 || range.end.year > MAX_FOUR_DIGIT_YEAR)

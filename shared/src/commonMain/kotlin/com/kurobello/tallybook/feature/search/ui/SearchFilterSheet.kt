@@ -19,7 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.SearchTipo
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetLayout
 import com.kurobello.tallybook.core.ui.component.TallybookButton
@@ -27,9 +27,6 @@ import com.kurobello.tallybook.core.ui.component.TallybookChoicePill
 import com.kurobello.tallybook.core.ui.component.TallybookDateChipPicker
 import com.kurobello.tallybook.core.ui.component.TallybookModalBottomSheet
 import com.kurobello.tallybook.core.ui.component.TallybookSectionHeading
-import com.kurobello.tallybook.core.ui.component.TallybookSegmentOption
-import com.kurobello.tallybook.core.ui.component.TallybookSegmentedControl
-import com.kurobello.tallybook.core.ui.component.TallybookSegmentedControlStyle
 import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
@@ -63,6 +60,7 @@ import tallybook.shared.generated.resources.search_start_date
 import tallybook.shared.generated.resources.search_this_month
 import tallybook.shared.generated.resources.search_this_year
 import tallybook.shared.generated.resources.search_type
+import tallybook.shared.generated.resources.search_type_transfers
 
 @Composable
 internal fun SearchFilterSheet(
@@ -131,6 +129,7 @@ internal fun SearchFilterSheetContent(
       SearchTypeFilters(filters.tipo, enabled) {
         actions.onFilterDraftChanged(id, filters.copy(tipo = it))
       }
+      SearchPaymentFilters(uiState, filters, enabled) { actions.onFilterDraftChanged(id, it) }
       SearchCategoryFilters(
           uiState.categories.values.orEmpty(),
           filters.categoryIds,
@@ -158,39 +157,69 @@ internal fun SearchFilterSheetContent(
   }
 }
 
+/** Medio and Account, the dimensions that place a movimiento's money. */
+@Composable
+private fun SearchPaymentFilters(
+    uiState: SearchUiState,
+    filters: SearchFilters,
+    enabled: Boolean,
+    onChange: (SearchFilters) -> Unit,
+) {
+  SearchMedioFilters(
+      filters.medios,
+      enabled,
+      { onChange(filters.toggleMedio(it)) },
+      Modifier.fillMaxWidth(),
+  )
+  val moneda = uiState.moneda ?: return
+  SearchAccountFilters(
+      uiState.cuentas.values.orEmpty(),
+      moneda,
+      uiState.primary ?: moneda,
+      filters.cuentaIds,
+      enabled,
+      { onChange(filters.toggleCuenta(it)) },
+      Modifier.fillMaxWidth(),
+  )
+}
+
+// Wrapping pills rather than a segmented control: four labels, one of them "Between accounts",
+// do not fit one row of a phone at larger font scales.
 @Composable
 private fun SearchTypeFilters(
-    selectedType: TipoMovimiento?,
+    selectedType: SearchTipo?,
     enabled: Boolean,
-    onSelect: (TipoMovimiento?) -> Unit,
+    onSelect: (SearchTipo?) -> Unit,
 ) {
   Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8)) {
     TallybookSectionHeading(stringResource(Res.string.search_type))
-    TallybookSegmentedControl(
-        options =
-            listOf(
-                TallybookSegmentOption<TipoMovimiento?>(
-                    null,
-                    stringResource(Res.string.search_all_types),
-                ),
-                TallybookSegmentOption(
-                    TipoMovimiento.GASTO,
-                    stringResource(Res.string.search_expenses),
-                ),
-                TallybookSegmentOption(
-                    TipoMovimiento.INGRESO,
-                    stringResource(Res.string.search_income),
-                ),
-            ),
-        selected = selectedType,
-        onSelect = onSelect,
-        modifier = Modifier.fillMaxWidth(),
-        enabled = enabled,
-        style = TallybookSegmentedControlStyle.Neutral,
-        labelStyle = TallybookTheme.typography.controlValue,
-    )
+    FlowRow(
+        modifier = Modifier.selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+        verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+    ) {
+      (listOf(null) + SearchTipo.entries).forEach { tipo ->
+        TallybookChoicePill(
+            searchTipoLabel(tipo),
+            selectedType == tipo,
+            { onSelect(tipo) },
+            enabled = enabled,
+        )
+      }
+    }
   }
 }
+
+private val searchTipoResources: Map<SearchTipo, StringResource> =
+    mapOf(
+        SearchTipo.GASTO to Res.string.search_expenses,
+        SearchTipo.INGRESO to Res.string.search_income,
+        SearchTipo.TRANSFERENCIA to Res.string.search_type_transfers,
+    )
+
+@Composable
+internal fun searchTipoLabel(tipo: SearchTipo?): String =
+    stringResource(tipo?.let(searchTipoResources::getValue) ?: Res.string.search_all_types)
 
 @Composable
 private fun SearchFilterFooter(

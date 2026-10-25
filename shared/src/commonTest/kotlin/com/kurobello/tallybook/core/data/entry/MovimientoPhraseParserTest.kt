@@ -546,7 +546,7 @@ class MovimientoPhraseParserTest {
 
   @Test
   fun returnsEmptyResultForBlankOrUnrecognizableInput() {
-    val empty = ParsedMovimientoPhrase(null, null, null, "", emptySet())
+    val empty = ParsedMovimientoPhrase(null, null, null, "", emptySet(), null, emptySet())
 
     assertEquals(empty, parse(""))
     assertEquals(empty, parse("   \n\t "))

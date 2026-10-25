@@ -12,11 +12,15 @@ import androidx.savedstate.savedState
 import androidx.savedstate.serialization.encodeToSavedState
 import androidx.savedstate.write
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.kurobello.tallybook.core.data.ActividadRepository
+import com.kurobello.tallybook.core.data.ActividadRepositoryImpl
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
+import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
@@ -26,17 +30,23 @@ import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.cashCuenta
 import com.kurobello.tallybook.core.data.insertLegacy
+import com.kurobello.tallybook.core.data.seedCashCuentas
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.di.DispatcherQualifier
 import com.kurobello.tallybook.di.viewModelModule
+import com.kurobello.tallybook.feature.history.ui.HistoryMovimientoRowUi
 import java.sql.Driver
 import java.sql.DriverManager
 import kotlin.io.path.createTempDirectory
@@ -87,7 +97,7 @@ internal class HistoryViewModelGraphHostTest {
         DriverManager.registerDriver(jdbc)
         val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
         TallybookDatabase.Schema.create(driver)
-        val database = TallybookDatabase(driver)
+        val database = TallybookDatabase(driver).apply { seedCashCuentas() }
         val directory = createTempDirectory("tallybook-history-vm-")
         val factory =
             PreferencesDataStoreFactory(
@@ -113,6 +123,8 @@ internal class HistoryViewModelGraphHostTest {
               module {
                 single<AppPreferencesRepository> { preferences }
                 single<MovimientoRepository> { movimientos }
+                single<ActividadRepository> { ActividadRepositoryImpl(database, dispatcher) }
+                single<CuentaRepository> { FakeCuentaRepository(listOf(cashCuenta(Moneda.USD))) }
                 single<EtiquetaRepository> { FakeEtiquetaRepository() }
                 single<CategoriaRepository> { categorias }
                 single<Clock> {
@@ -189,6 +201,7 @@ internal class HistoryViewModelGraphHostTest {
                   .single()
                   .rows
                   .single()
+                  .let { assertIs<HistoryMovimientoRowUi>(it) }
                   .title,
           )
           database.insertLegacy(row("outside", LocalDate(2026, 10, 4), Moneda.USD))
@@ -205,7 +218,7 @@ internal class HistoryViewModelGraphHostTest {
           assertEquals(
               Money(-250, Moneda.USD),
               assertIs<DataOutcome.Success<MovimientoSummary>>(
-                      movimientos.observeSummary(Moneda.USD).first()
+                      movimientos.observeSummary(Moneda.USD, allDates).first()
                   )
                   .data
                   .balance,
@@ -316,4 +329,8 @@ private fun row(id: String, date: LocalDate, moneda: Moneda) =
         null,
         null,
         Instant.parse("2026-10-05T00:00:00Z"),
+        Cuenta.defaultCashId(moneda),
+        MedioPago.EFECTIVO,
     )
+
+private val allDates = MovimientoDateRange(LocalDate(2000, 1, 1), LocalDate(2100, 12, 31))

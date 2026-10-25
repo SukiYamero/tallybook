@@ -1,0 +1,16 @@
+<resources>
+    <string name="activity_missing_account">Account unavailable</string>
+    <string name="account_view_movements">View movements</string>
+    <string name="search_type_transfers">Between accounts</string>
+    <string name="search_accounts_label">Accounts</string>
+    <string name="csv_header_account">Account</string>
+    <string name="csv_header_medio">Payment method</string>
+    <string name="csv_header_destination_account">Destination account</string>
+    <string name="csv_header_destination_amount">Destination amount</string>
+    <string name="csv_header_destination_currency">Destination currency</string>
+    <string name="csv_transfer_type">Transfer between accounts</string>
+    <plurals name="history_transfer_count">
+        <item quantity="one">%1$d transfer between accounts</item>
+        <item quantity="other">%1$d transfers between accounts</item>
+    </plurals>
+</resources>

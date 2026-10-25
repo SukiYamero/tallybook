@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import androidx.compose.runtime.Stable
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlinx.datetime.LocalDate
 
@@ -18,7 +19,15 @@ internal interface MovimientoEtiquetaActions {
 }
 
 @Stable
-internal interface MovimientoFormActions : MovimientoEtiquetaActions {
+internal interface MovimientoCuentaActions {
+  /** Keeps a compatible cuenta, otherwise selects the default cuenta for [medio]. */
+  fun onMedioSelected(medio: MedioPago)
+
+  fun onCuentaSelected(id: String)
+}
+
+@Stable
+internal interface MovimientoFormActions : MovimientoEtiquetaActions, MovimientoCuentaActions {
   fun onTipoChanged(tipo: TipoMovimiento)
 
   fun onAmountChanged(value: String)

@@ -1,6 +1,7 @@
 # History
 
-History is a shared Android/iOS primary destination for browsing persisted movimientos. Domain rules
+History is a shared Android/iOS primary destination for browsing persisted movimientos and the
+transfers between the user's accounts. Domain rules
 remain in [business-logic.md](../business-logic.md); layout, safe areas, tokens and navigation remain
 in [UI architecture](../ui/architecture.md). The [visual reference](references/history-screen.png)
 guides composition; its sample data, chart and eye control do not enable additional functionality.
@@ -12,9 +13,10 @@ guides composition; its sample data, chart and eye control do not enable additio
   [UI architecture](../ui/architecture.md#balance-summary-cards).
 - The screen uses Day/Week/Month and year context, with a scrollable selected-period summary and
   date-grouped rows (title with category fallback, then description, no date) that open [movimiento management](manage-movimientos.md).
-  There is no fixed global-balance banner. Home retains its global balance. The History header starts 20dp below the top safe inset.
-- SQLDelight owns persisted movements. Currency/date-bounded repository observations feed one
-  History ViewModel selection and a pure rows/count/totals projection. Loading, empty, failures,
+  There is no fixed balance banner. Home retains the total balance. The History header starts 20dp below the top safe inset.
+- SQLDelight owns persisted movements. `ActividadRepository` reads movimientos and transfers of the
+  viewed currency and date range in one snapshot, feeding one History ViewModel selection and a pure
+  rows/count/totals projection. Loading, empty, failures,
   retry, cancellation and stale-request protection use the same ownership boundary.
 - Home and History share retained snapshot state, deferred initial loading and reusable skeletons.
   Their contracts live in [UI architecture](../ui/architecture.md) and the shared primitives are listed

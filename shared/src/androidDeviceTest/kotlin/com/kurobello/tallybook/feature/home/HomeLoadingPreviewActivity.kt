@@ -7,6 +7,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 
 class HomeLoadingPreviewActivity : ComponentActivity() {
@@ -14,7 +15,12 @@ class HomeLoadingPreviewActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     val empty =
         HomeUiState.ready(
-            HomeContent(HomeUiState.emptySummary(Moneda.USD), emptyList(), emptyMap())
+            HomeContent(
+                HomeUiState.emptySummary(Moneda.USD),
+                emptyList(),
+                emptyMap(),
+                Money(0, Moneda.USD),
+            )
         )
     val state =
         when {

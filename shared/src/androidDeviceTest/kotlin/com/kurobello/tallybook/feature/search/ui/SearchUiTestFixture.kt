@@ -3,7 +3,9 @@ package com.kurobello.tallybook.feature.search.ui
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
@@ -34,6 +36,8 @@ internal val searchTestMovement =
         "Morning coffee",
         null,
         Instant.parse("2026-10-06T12:00:00Z"),
+        Cuenta.defaultCashId(Moneda.USD),
+        MedioPago.EFECTIVO,
     )
 internal val searchTestResults =
     SearchResultsUi(
@@ -83,7 +87,24 @@ internal open class SearchTestActions : SearchActions {
     events += "remove-tag:$id"
   }
 
-  override fun onShowFilters(categoryIds: Set<String>, etiquetaIds: Set<String>) {
+  override fun onRemoveCuentaFilter(id: String) {
+    events += "remove-cuenta:$id"
+  }
+
+  override fun onRemoveMedioFilter(medio: MedioPago) {
+    events += "remove-medio:$medio"
+  }
+
+  override fun onMonedaSelected(moneda: Moneda) {
+    events += "moneda:$moneda"
+  }
+
+  override fun onShowFilters(
+      categoryIds: Set<String>,
+      etiquetaIds: Set<String>,
+      cuentaIds: Set<String>,
+      moneda: Moneda?,
+  ) {
     events += "show-filters:$categoryIds:$etiquetaIds"
   }
 
