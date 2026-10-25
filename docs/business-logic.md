@@ -608,7 +608,7 @@ one currency at a time. Presentation lives in
   through October 24. A day the previous period lacks moves to its last day (31 → 30, February 29 →
   28). A historical period is compared whole against the whole previous one. Without gasto in the
   comparison no variation is shown. A variation is the size of the change relative to the previous
-  amount, rounded half away from zero.
+  amount, rounded half away from zero; above 999% it reads ">999%".
 - **Currency.** One currency, with the same selector rule as History; no FX conversion.
 - **What counts.** Live movimientos in the currency, each on its `fecha` whatever its medio (a credit
   purchase counts when it was made). Transfers are neither gasto nor ingreso. Otros counts like any
