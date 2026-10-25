@@ -18,6 +18,7 @@ import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
 import com.kurobello.tallybook.core.model.SearchTipo
 import com.kurobello.tallybook.core.model.TipoCuenta
@@ -209,6 +210,8 @@ private object SearchPreviewActions : SearchActions {
       etiquetaIds: Set<String>,
       cuentaIds: Set<String>,
       moneda: Moneda?,
+      range: MovimientoDateRange?,
+      tipo: SearchTipo?,
   ) = Unit
 
   override fun onRetry() = Unit

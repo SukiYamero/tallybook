@@ -1,6 +1,9 @@
 package com.kurobello.tallybook.core.ui.navigation
 
 import androidx.compose.runtime.mutableStateOf
+import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.MovimientoDateRange
+import com.kurobello.tallybook.core.model.SearchTipo
 import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSession
 import com.kurobello.tallybook.feature.search.ui.SearchFilterRequest
 import kotlin.test.Test
@@ -8,6 +11,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.json.Json
 
 internal class PrimaryNavigationTest {
@@ -160,6 +164,34 @@ internal class PrimaryNavigationTest {
     val request = assertNotNull(navigator.searchFilterRequest)
     assertEquals(SearchFilterRequest(request.token, etiquetaIds = setOf("t_empresa")), request)
     assertEquals(Home, navigator.state.back().selected)
+  }
+
+  @Test
+  fun aFilterRequestCarriesItsRangeAndTipoToSearch() {
+    val navigation = mutableStateOf(PrimaryNavigationState())
+    val modals = PrimaryModalCoordinator(AddMovimientoSheetSession()) { false }
+    val navigator = PrimaryNavigator(navigation, modals, catalogEnabled = false)
+    val range = MovimientoDateRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30))
+
+    navigator.showSearchFilter(
+        categoryIds = setOf("food"),
+        moneda = Moneda.COP,
+        range = range,
+        tipo = SearchTipo.GASTO,
+    )
+
+    assertEquals(Search, navigator.state.selected)
+    val request = assertNotNull(navigator.searchFilterRequest)
+    assertEquals(
+        SearchFilterRequest(
+            request.token,
+            categoryIds = setOf("food"),
+            moneda = Moneda.COP,
+            range = range,
+            tipo = SearchTipo.GASTO,
+        ),
+        request,
+    )
   }
 
   @Test

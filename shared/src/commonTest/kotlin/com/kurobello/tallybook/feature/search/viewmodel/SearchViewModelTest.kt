@@ -12,9 +12,12 @@ import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
+import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import com.kurobello.tallybook.core.model.SearchTipo
 import com.kurobello.tallybook.core.model.TipoCuenta
+import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.model.Transferencia
 import com.kurobello.tallybook.core.model.map
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
@@ -287,6 +290,105 @@ class SearchViewModelTest {
     assertEquals(setOf("t_empresa"), vm.uiState.value.filters.etiquetaIds)
     assertEquals(listOf("0"), vm.uiState.value.displayResults?.rows?.map { it.id })
     assertEquals(1, vm.uiState.value.currentCount)
+  }
+
+  @Test
+  fun showFiltersAppliesExactlyTheRequestedCategoryCurrencyRangeAndTipo() = runTest {
+    val fixture = SearchFixture(this)
+    val nequi = searchCuenta("nequi", "Nequi", Moneda.COP)
+    fixture.cuentas.cuentas.value += nequi
+    val range = MovimientoDateRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30))
+    val inRange = LocalDate(2026, 9, 15)
+    listOf(
+            searchMovimiento("match", nequi, inRange),
+            searchMovimiento("before", nequi, LocalDate(2026, 8, 31)),
+            searchMovimiento("after", nequi, LocalDate(2026, 10, 1)),
+            searchMovimiento("ingreso", nequi, inRange, TipoMovimiento.INGRESO),
+            searchMovimiento("other", nequi, inRange, categoriaId = "other"),
+            searchMovimiento("usd", USD_CASH, inRange),
+        )
+        .forEach(fixture.movimientos::add)
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+    vm.onQueryChanged("cafe")
+
+    vm.onShowFilters(setOf("food"), emptySet(), emptySet(), Moneda.COP, range, SearchTipo.GASTO)
+    runCurrent()
+
+    assertEquals("", vm.uiState.value.rawQuery)
+    assertEquals(Moneda.COP, vm.uiState.value.moneda)
+    assertEquals(
+        SearchFilters(
+            SearchDatePreset.Custom,
+            range.start,
+            range.end,
+            SearchTipo.GASTO,
+            categoryIds = setOf("food"),
+        ),
+        vm.uiState.value.filters,
+    )
+    assertEquals(range, vm.uiState.value.criteria?.range)
+    assertEquals(listOf("match"), vm.uiState.value.displayResults?.rows?.map { it.id })
+    assertEquals(1, vm.uiState.value.currentCount)
+  }
+
+  @Test
+  fun aRequestedRangeAcrossTheYearBoundaryIsValid() = runTest {
+    val fixture = SearchFixture(this)
+    val range = MovimientoDateRange(LocalDate(2025, 12, 29), LocalDate(2026, 1, 4))
+    listOf(
+            searchMovimiento("dec", USD_CASH, LocalDate(2025, 12, 31)),
+            searchMovimiento("jan", USD_CASH, LocalDate(2026, 1, 2)),
+            searchMovimiento("outside", USD_CASH, LocalDate(2026, 1, 5)),
+        )
+        .forEach(fixture.movimientos::add)
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+
+    vm.onShowFilters(setOf("food"), emptySet(), range = range, tipo = SearchTipo.GASTO)
+    runCurrent()
+
+    assertNull(vm.uiState.value.results.failure)
+    assertEquals(range, vm.uiState.value.criteria?.range)
+    assertEquals(listOf("jan", "dec"), vm.uiState.value.displayResults?.rows?.map { it.id })
+  }
+
+  @Test
+  fun aRequestedRangeKeepsItsStartYearSelectable() = runTest {
+    val fixture = SearchFixture(this)
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+    assertFalse(2018 in vm.uiState.value.availableYears)
+
+    vm.onShowFilters(
+        setOf("food"),
+        emptySet(),
+        range = MovimientoDateRange(LocalDate(2018, 12, 28), LocalDate(2019, 1, 3)),
+    )
+    runCurrent()
+
+    assertTrue(2018 in vm.uiState.value.availableYears)
+  }
+
+  @Test
+  fun aRequestedRangeEndingInTheFutureShowsTheDateErrorUnclamped() = runTest {
+    val fixture = SearchFixture(this)
+    val vm = fixture.create()
+    backgroundScope.launch { vm.uiState.collect {} }
+    runCurrent()
+    val tomorrow = LocalDate(2026, 10, 7)
+
+    vm.onShowFilters(setOf("food"), emptySet(), range = MovimientoDateRange(TODAY, tomorrow))
+    runCurrent()
+
+    assertEquals(tomorrow, vm.uiState.value.filters.customEnd)
+    assertEquals(
+        SearchFailure.InvalidDates(SearchDateFailure.FutureDate),
+        vm.uiState.value.results.failure,
+    )
   }
 
   @Test
@@ -694,6 +796,27 @@ private fun searchCuenta(id: String, nombre: String, moneda: Moneda) =
         null,
         false,
         Instant.parse("2026-01-02T00:00:00Z"),
+    )
+
+private fun searchMovimiento(
+    id: String,
+    cuenta: Cuenta,
+    fecha: LocalDate,
+    tipo: TipoMovimiento = TipoMovimiento.GASTO,
+    categoriaId: String = "food",
+) =
+    Movimiento(
+        id,
+        tipo,
+        Money(100, cuenta.moneda),
+        fecha,
+        categoriaId,
+        id,
+        null,
+        Instant.parse("2026-10-06T12:00:00Z"),
+        cuenta.id,
+        MedioPago.EFECTIVO,
+        emptyList(),
     )
 
 private fun searchTransfer(id: String, origen: String, destino: String, descripcion: String) =

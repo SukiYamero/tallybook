@@ -155,6 +155,11 @@ internal class SearchMovimientos : MovimientoRepository, ActividadRepository {
     source.value = DataOutcome.Success(snapshot())
   }
 
+  fun add(movimiento: Movimiento) {
+    rows = rows + movimiento
+    restore()
+  }
+
   private fun snapshot() =
       MovimientoSearchSnapshot(
           (rows.map(Actividad::DeMovimiento) +

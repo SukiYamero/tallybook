@@ -6,6 +6,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.MovimientoDateRange
+import com.kurobello.tallybook.core.model.SearchTipo
 import com.kurobello.tallybook.feature.search.ui.SearchFilterRequest
 
 /**
@@ -48,15 +50,26 @@ internal class PrimaryNavigator(
   }
 
   /** [moneda] switches Search's currency first, e.g. to an account's own one. */
+  @Suppress("LongParameterList")
   fun showSearchFilter(
       categoryIds: Set<String> = emptySet(),
       etiquetaIds: Set<String> = emptySet(),
       cuentaIds: Set<String> = emptySet(),
       moneda: Moneda? = null,
+      range: MovimientoDateRange? = null,
+      tipo: SearchTipo? = null,
   ) {
     if (navigate { select(Search) }) {
       searchFilterRequest =
-          SearchFilterRequest(++nextToken, categoryIds, etiquetaIds, cuentaIds, moneda)
+          SearchFilterRequest(
+              ++nextToken,
+              categoryIds,
+              etiquetaIds,
+              cuentaIds,
+              moneda,
+              range,
+              tipo,
+          )
     }
   }
 

@@ -170,6 +170,8 @@ private fun SearchFilterRequestEffect(
           request.etiquetaIds,
           request.cuentaIds,
           request.moneda,
+          request.range,
+          request.tipo,
       )
       latestHandled.value(request.token)
     }
