@@ -31,6 +31,8 @@ import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.TransferenciaRepository
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.data.export.MovimientoExportSharer
+import com.kurobello.tallybook.core.data.export.MovimientoExportSource
+import com.kurobello.tallybook.core.data.export.RepositoryExportSource
 import com.kurobello.tallybook.core.model.Actividad
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
@@ -114,6 +116,9 @@ internal class PrimaryDeviceShell {
           }
           single<TimeZoneProvider> { TimeZoneProvider { TimeZone.UTC } }
           single<AppInfo> { AppInfo { "1.0" } }
+          single<MovimientoExportSource> {
+            RepositoryExportSource(get(), get(), get(), get(), get())
+          }
           single<MovimientoExportSharer> {
             object : MovimientoExportSharer {
               override suspend fun share(fileName: String, csv: String) = DataOutcome.Success(Unit)
