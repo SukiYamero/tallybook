@@ -25,13 +25,16 @@ import com.patrykandpatrick.vico.compose.common.DashedShape
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.LineComponent
 
-/** Monthly totals of one category as columns, with [average] as a dashed reference line. */
+/**
+ * Monthly totals of one category as columns, with [average] as a dashed reference line; a null
+ * [average] draws none.
+ */
 @Suppress("LongParameterList")
 @Composable
 internal fun TallybookCategoryTrendChart(
     values: List<Double>,
     labels: List<String>,
-    average: Double,
+    average: Double?,
     partialLast: Boolean,
     color: Color,
     contentDescription: String,
@@ -56,7 +59,7 @@ internal fun TallybookCategoryTrendChart(
 @Composable
 private fun CategoryTrendCanvas(
     values: List<Double>,
-    average: Double,
+    average: Double?,
     partialIndices: Set<Int>,
     color: Color,
 ) {
@@ -77,7 +80,7 @@ private fun CategoryTrendCanvas(
             partialX = partialIndices,
         )
       }
-  val maxY = maxOf(values.maxOrNull() ?: 0.0, average)
+  val maxY = maxOf(values.maxOrNull() ?: 0.0, average ?: 0.0)
   val rangeProvider =
       remember(maxY) {
         CartesianLayerRangeProvider.fixed(minY = 0.0, maxY = maxY.takeIf { it > 0.0 })
@@ -105,11 +108,12 @@ private fun CategoryTrendCanvas(
 }
 
 @Composable
-private fun rememberAverageDecorations(average: Double): List<Decoration> {
+private fun rememberAverageDecorations(average: Double?): List<Decoration> {
   val colors = TallybookChartTheme.colors
   val dimensions = TallybookTheme.dimensions
   val baseline = rememberBaseline(colors.baseline)
   return remember(baseline, average, colors.average, dimensions) {
+    if (average == null) return@remember baseline
     baseline +
         HorizontalLine(
             y = { average },

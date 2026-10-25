@@ -73,8 +73,8 @@
     <string name="statistics_empty_body">Para ver para onde vai seu dinheiro e como está seu mês, registre uma movimentação nesta moeda.</string>
     <string name="statistics_detail_close">Fechar</string>
     <string name="statistics_detail_subtitle">%1$s · %2$s</string>
-    <string name="statistics_detail_share_month">%1$s do seu gasto do mês</string>
-    <string name="statistics_detail_share_year">%1$s do seu gasto do ano</string>
+    <string name="statistics_detail_share_month">%1$s do seu gasto de %2$s</string>
+    <string name="statistics_detail_share_year">%1$s do seu gasto de %2$d</string>
     <string name="statistics_detail_months_month">Últimos 6 meses</string>
     <string name="statistics_detail_months_year">Meses de %1$d</string>
     <string name="statistics_detail_average">Média %1$s</string>

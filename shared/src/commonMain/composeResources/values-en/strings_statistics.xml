@@ -73,8 +73,8 @@
     <string name="statistics_empty_body">To see where your money goes and how your month is going, add a movement in this currency.</string>
     <string name="statistics_detail_close">Close</string>
     <string name="statistics_detail_subtitle">%1$s · %2$s</string>
-    <string name="statistics_detail_share_month">%1$s of your spending this month</string>
-    <string name="statistics_detail_share_year">%1$s of your spending this year</string>
+    <string name="statistics_detail_share_month">%1$s of your spending in %2$s</string>
+    <string name="statistics_detail_share_year">%1$s of your spending in %2$d</string>
     <string name="statistics_detail_months_month">Last 6 months</string>
     <string name="statistics_detail_months_year">Months of %1$d</string>
     <string name="statistics_detail_average">Average %1$s</string>

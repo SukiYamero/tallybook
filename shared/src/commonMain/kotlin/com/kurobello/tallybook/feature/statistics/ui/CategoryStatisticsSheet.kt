@@ -22,6 +22,7 @@ import com.kurobello.tallybook.core.model.StatisticsScope
 import com.kurobello.tallybook.core.ui.category.CategoryAvatar
 import com.kurobello.tallybook.core.ui.chart.TallybookCategoryTrendChart
 import com.kurobello.tallybook.core.ui.chart.TallybookDistributionRow
+import com.kurobello.tallybook.core.ui.chart.color
 import com.kurobello.tallybook.core.ui.chart.shareFraction
 import com.kurobello.tallybook.core.ui.chart.shareText
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
@@ -198,13 +199,20 @@ private fun DetailTotal(content: CategoryDetailContent) {
   val facts =
       listOfNotNull(
               summary.shareBasisPoints?.let { basisPoints ->
-                stringResource(
-                    when (content.scope) {
-                      StatisticsScope.Month -> Res.string.statistics_detail_share_month
-                      StatisticsScope.Year -> Res.string.statistics_detail_share_year
-                    },
-                    shareText(basisPoints),
-                )
+                when (content.scope) {
+                  StatisticsScope.Month ->
+                      stringResource(
+                          Res.string.statistics_detail_share_month,
+                          shareText(basisPoints),
+                          monthName(content.period.start.month),
+                      )
+                  StatisticsScope.Year ->
+                      stringResource(
+                          Res.string.statistics_detail_share_year,
+                          shareText(basisPoints),
+                          content.period.start.year,
+                      )
+                }
               },
               pluralStringResource(Res.plurals.history_movement_count, count, count),
           )
@@ -279,7 +287,7 @@ private fun DetailMonths(content: CategoryDetailContent) {
     TallybookCategoryTrendChart(
         values = content.months.map { it.value },
         labels = labels,
-        average = content.average?.value ?: 0.0,
+        average = content.average?.value,
         partialLast = content.months.lastOrNull()?.partial == true,
         color = content.color.color(),
         contentDescription =

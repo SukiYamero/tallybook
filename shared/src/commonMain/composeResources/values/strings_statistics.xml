@@ -73,8 +73,8 @@
     <string name="statistics_empty_body">Para ver en qué se va tu plata y cómo viene tu mes, registra un movimiento en esta moneda.</string>
     <string name="statistics_detail_close">Cerrar</string>
     <string name="statistics_detail_subtitle">%1$s · %2$s</string>
-    <string name="statistics_detail_share_month">%1$s de tu gasto del mes</string>
-    <string name="statistics_detail_share_year">%1$s de tu gasto del año</string>
+    <string name="statistics_detail_share_month">%1$s de tu gasto de %2$s</string>
+    <string name="statistics_detail_share_year">%1$s de tu gasto de %2$d</string>
     <string name="statistics_detail_months_month">Últimos 6 meses</string>
     <string name="statistics_detail_months_year">Meses de %1$d</string>
     <string name="statistics_detail_average">Promedio %1$s</string>
