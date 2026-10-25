@@ -11,7 +11,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
-import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -145,9 +144,10 @@ class HomeScreenTest {
   }
 
   @Test
-  fun reservedNavigationDestinationsHaveNoClickAction() {
-    val unavailableLabels =
+  fun everyPrimaryDestinationIsASelectableTabAndOnlyHomeIsSelected() {
+    val otherDestinations =
         listOf(
+            Res.string.navigation_history,
             Res.string.navigation_search,
             Res.string.navigation_profile,
         )
@@ -156,11 +156,12 @@ class HomeScreenTest {
     composeRule
         .onNodeWithContentDescription(localizedString(Res.string.navigation_home))
         .assertHasClickAction()
-    unavailableLabels.forEach { label ->
+        .assertIsSelected()
+    otherDestinations.forEach { label ->
       composeRule
           .onNodeWithContentDescription(localizedString(label))
-          .assertHasNoClickAction()
-          .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
+          .assertHasClickAction()
+          .assert(SemanticsMatcher.expectValue(SemanticsProperties.Selected, false))
     }
     composeRule
         .onNodeWithContentDescription(localizedString(Res.string.navigation_add_movement))
