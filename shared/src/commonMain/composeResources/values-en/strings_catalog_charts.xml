@@ -1,0 +1,20 @@
+<resources>
+    <string name="ui_catalog_charts">Charts</string>
+    <string name="ui_catalog_chart_donut">Donut</string>
+    <string name="ui_catalog_chart_distribution">Distribution rows</string>
+    <string name="ui_catalog_chart_trend">Trend</string>
+    <string name="ui_catalog_chart_pace">Monthly pace</string>
+    <string name="ui_catalog_chart_category_trend">Category months</string>
+    <string name="ui_catalog_chart_nine_slices">Nine slices</string>
+    <string name="ui_catalog_chart_single_value">One value</string>
+    <string name="ui_catalog_chart_all_zero">All zero</string>
+    <string name="ui_catalog_chart_long_text">Long text</string>
+    <string name="ui_catalog_chart_sample_summary">Fixed sample data: %1$s</string>
+    <string name="ui_catalog_chart_today">Today · %1$s</string>
+    <string name="ui_catalog_chart_long_label">Family-shared subscriptions and digital services</string>
+    <string name="ui_catalog_chart_donut_caption">7 categories</string>
+    <string name="ui_catalog_chart_share">%1$d%%</string>
+    <string name="ui_catalog_chart_change_up">▲ %1$d%%</string>
+    <string name="ui_catalog_chart_change_down">▼ %1$d%%</string>
+    <string name="ui_catalog_chart_change_flat">=</string>
+</resources>
