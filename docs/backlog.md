@@ -6,25 +6,20 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 
 Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 
-1. Estadísticas → *Producto*.
-2. Prueba completa en iPhone físico → *iOS physical end-to-end*.
-3. Tarjeta de crédito completa (cupo, vencimiento, recordatorio) → *Accounts follow-ups*.
-4. Presupuestos (sobre las consultas de Estadísticas) → *Accounts follow-ups*.
-5. Movimientos recurrentes → *Producto*.
-6. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
-   accessibility*, *Profile polish*.
-7. Google login + backup en Drive, cuando 1, 3, 4 y 5 estén cerrados → [plan](tasks/google-drive-persistence.md).
-8. Dictado por voz → *Smart entry polish*.
-9. Pulido chico → *Sentence amount above the cap*, *`ioDispatcher` en iOS*, *Unified Custom date-range picker*.
-10. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
-11. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
+1. Prueba completa en iPhone físico → *iOS physical end-to-end*.
+2. Tarjeta de crédito completa (cupo, vencimiento, recordatorio) → *Accounts follow-ups*.
+3. Presupuestos (sobre las consultas de Estadísticas) → *Accounts follow-ups*.
+4. Movimientos recurrentes → *Producto*.
+5. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
+   and Statistics accessibility*, *Profile polish*.
+6. Google login + backup en Drive, cuando 2, 3 y 4 estén cerrados → [plan](tasks/google-drive-persistence.md).
+7. Dictado por voz → *Smart entry polish*.
+8. Pulido chico → *Sentence amount above the cap*, *`ioDispatcher` en iOS*, *Unified Custom date-range picker*.
+9. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
+10. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
 
 ## Producto
 
-- **Estadísticas** — Gasto por categoría del período (partes de un todo, posible por la categoría
-  única), comparación con el período anterior, evolución mes a mes y totales por tag, cuenta y medio.
-  Reusa el selector de período de Historial y agregados `SUM()` en SQL; falta decidir gráficos (Canvas
-  propio o librería compatible con CMP 1.11).
 - **Movimientos recurrentes** — Sueldo, alquiler, suscripciones: se generan al abrir la app (sin
   trabajo en segundo plano) y se confirman con el flujo de resumen existente.
 
@@ -46,7 +41,8 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
   and Pay card with transfer Undo, the Medio and Account sections with the account picker and in-place
   creation, sentence medio/account detection, History/Search currency selector and transfer rows, the
   Search medio/account/type filters, VoiceOver announcement of a row's medio, and the installation
-  node's exclusion from iOS backups.
+  node's exclusion from iOS backups. Statistics too: tab, Home card, scopes, dimensions, category sheet
+  with View movements, and the Vico charts' animation and column taps.
   Precise management evidence lives in [Manage movimientos](features/manage-movimientos.md#verification-boundaries).
   Compilation does not establish runtime behavior; follow the physical-device policy in `AGENTS.md`.
 
@@ -65,10 +61,13 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
   installation node's exclusion from auto backup and device transfer is covered only by host tests of
   the extraction rules. See [Accounts](features/accounts.md#verification-boundaries).
 
-- **Management accessibility on Android** — Verify TalkBack announcements/focus and enlarged-text
-  snackbar, Undo, Close and sheet-action reachability on a confirmed physical device. Manual Xiaomi
-  main-flow checks do not establish these cases; see
-  [Manage movimientos](features/manage-movimientos.md#verification-boundaries).
+- **Management and Statistics accessibility on Android** — Verify TalkBack announcements/focus and
+  enlarged-text snackbar, Undo, Close and sheet-action reachability on a confirmed physical device.
+  Manual Xiaomi main-flow checks do not establish these cases; see
+  [Manage movimientos](features/manage-movimientos.md#verification-boundaries). Statistics needs the
+  same passes: TalkBack on the chart summaries and the category sheet, and enlarged text on its cards
+  and rows, plus a light-theme and es-AR/pt-BR visual pass
+  (only dark theme in English was checked). TalkBack reads change labels like "▲ 12%" literally.
 
 - **Taxonomía detallada de errores** — `DataError` arranca con `Local`/`Unknown` en
   `docs/tasks/fundacion/wave-1/task1/task.md`; falta expandirlo (causas de red granulares, mapeo a
@@ -80,6 +79,10 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
   `Dispatchers.Default`). Mover el test a `commonTest` requiere reescribir esa aserción.
 
 ## Baja
+
+- **Search query-change scroll** — `SearchRoute` resets the list with `scrollToItem(0)` when the
+  query changes; like the first-entry focus bug, it can wait forever if the list was never measured
+  (a restored Search showing a changed query). Switch it to `requestScrollToItem(0)`.
 
 - **Smart entry polish** — Voice dictation is a placeholder (UI only). The sentence step's root is
   focusable to keep Android from auto-focusing the input, which adds an unlabeled focus stop;
@@ -102,7 +105,8 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
   - Credit cards: limit, due date and payment reminders.
   - Exchange rates and FX conversion between currencies.
   - Transfers between own accounts from the sentence dialog.
-  - Budgets and statistics, which consume the account and medio dimensions.
+  - Budgets, built on the Statistics queries (`StatisticsRepository`) and their account and medio
+    dimensions.
   - Investment and asset accounts.
   - Excluding an account from totals.
 

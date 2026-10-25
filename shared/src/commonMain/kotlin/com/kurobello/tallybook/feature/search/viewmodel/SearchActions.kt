@@ -2,6 +2,8 @@ package com.kurobello.tallybook.feature.search.viewmodel
 
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.MovimientoDateRange
+import com.kurobello.tallybook.core.model.SearchTipo
 
 // Explicit callbacks keep the filter transaction and synchronous shell guards under one owner.
 @Suppress("TooManyFunctions")
@@ -28,15 +30,19 @@ internal interface SearchActions {
   fun onMonedaSelected(moneda: Moneda)
 
   /**
-   * Resets the query and filters to All history, every type and exactly [categoryIds],
-   * [etiquetaIds] and [cuentaIds], after switching to [moneda] when given. Blank IDs are ignored,
-   * and a request without any ID keeps the current input.
+   * Resets the query and filters to exactly [categoryIds], [etiquetaIds], [cuentaIds] and [tipo]
+   * (every type when null) over [range] as a Custom date (All history when null), after switching
+   * to [moneda] when given. Blank IDs are ignored, and a request without any ID keeps the current
+   * input. A future [range] is kept as given, so it shows the invalid-date failure.
    */
+  @Suppress("LongParameterList")
   fun onShowFilters(
       categoryIds: Set<String>,
       etiquetaIds: Set<String>,
       cuentaIds: Set<String> = emptySet(),
       moneda: Moneda? = null,
+      range: MovimientoDateRange? = null,
+      tipo: SearchTipo? = null,
   )
 
   fun onRetry()

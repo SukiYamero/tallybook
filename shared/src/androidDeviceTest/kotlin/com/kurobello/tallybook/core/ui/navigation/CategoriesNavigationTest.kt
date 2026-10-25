@@ -30,7 +30,6 @@ import tallybook.shared.generated.resources.category_hide_named
 import tallybook.shared.generated.resources.category_view_movimientos_count
 import tallybook.shared.generated.resources.navigation_home
 import tallybook.shared.generated.resources.navigation_profile
-import tallybook.shared.generated.resources.navigation_search
 import tallybook.shared.generated.resources.profile_categories_body
 import tallybook.shared.generated.resources.search_remove_filter
 
@@ -70,7 +69,7 @@ internal class CategoriesNavigationTest {
               runBlocking { getPluralString(Res.plurals.category_view_movimientos_count, 60, 60) }
           )
           .performClick()
-      searchTab().assertIsSelected()
+      composeRule.assertSearchShownWithNoTabSelected()
       composeRule
           .onNodeWithContentDescription(
               runBlocking { getString(Res.string.search_remove_filter, "Food") }
@@ -84,11 +83,6 @@ internal class CategoriesNavigationTest {
   private fun profileTab() =
       composeRule.onNode(
           hasContentDescription(text(Res.string.navigation_profile)) and hasClickAction()
-      )
-
-  private fun searchTab() =
-      composeRule.onNode(
-          hasContentDescription(text(Res.string.navigation_search)) and hasClickAction()
       )
 
   private fun homeTab() = composeRule.onNodeWithContentDescription(text(Res.string.navigation_home))

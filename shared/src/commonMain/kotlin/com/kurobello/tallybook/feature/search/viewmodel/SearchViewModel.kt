@@ -10,6 +10,8 @@ import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.MovimientoDateRange
+import com.kurobello.tallybook.core.model.SearchTipo
 import com.kurobello.tallybook.core.model.monedas
 import com.kurobello.tallybook.core.text.normalizeSearchText
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
@@ -163,6 +165,8 @@ internal class SearchViewModel(
       etiquetaIds: Set<String>,
       cuentaIds: Set<String>,
       moneda: Moneda?,
+      range: MovimientoDateRange?,
+      tipo: SearchTipo?,
   ) {
     val categories = categoryIds.filterNot { it.isBlank() }.toSet()
     val etiquetas = etiquetaIds.filterNot { it.isBlank() }.toSet()
@@ -170,14 +174,22 @@ internal class SearchViewModel(
     if (categories.isEmpty() && etiquetas.isEmpty() && cuentas.isEmpty()) return
     onQueryChanged("")
     val today = dateProvider.today()
+    val initial = SearchFilters.initial(today)
     changeInputs {
       val session = it.session
       it.copy(
           today = today,
           selectedMoneda = moneda ?: it.selectedMoneda,
           filters =
-              SearchFilters.initial(today)
-                  .copy(categoryIds = categories, etiquetaIds = etiquetas, cuentaIds = cuentas),
+              initial.copy(
+                  preset = if (range != null) SearchDatePreset.Custom else initial.preset,
+                  customStart = range?.start ?: initial.customStart,
+                  customEnd = range?.end ?: initial.customEnd,
+                  tipo = tipo,
+                  categoryIds = categories,
+                  etiquetaIds = etiquetas,
+                  cuentaIds = cuentas,
+              ),
           session =
               if (session is SearchFilterSession.Editing) session.cancel(session.sessionId)
               else session,

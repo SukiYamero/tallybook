@@ -9,7 +9,9 @@ import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
+import com.kurobello.tallybook.core.model.SearchTipo
 import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
@@ -117,6 +119,8 @@ internal open class SearchTestActions : SearchActions {
       etiquetaIds: Set<String>,
       cuentaIds: Set<String>,
       moneda: Moneda?,
+      range: MovimientoDateRange?,
+      tipo: SearchTipo?,
   ) {
     events += "show-filters:$categoryIds:$etiquetaIds"
   }

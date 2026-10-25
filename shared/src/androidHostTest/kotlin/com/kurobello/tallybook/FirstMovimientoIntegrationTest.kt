@@ -16,6 +16,7 @@ import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.SaldoRepositoryImpl
+import com.kurobello.tallybook.core.data.StatisticsRepositoryImpl
 import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.cashCuenta
@@ -40,6 +41,7 @@ import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.feature.home.HomeRepositories
 import com.kurobello.tallybook.feature.home.HomeViewModel
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoRepositories
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
@@ -134,10 +136,14 @@ class FirstMovimientoIntegrationTest {
 
           val home =
               HomeViewModel(
-                  preferencesRepository = preferences,
-                  movimientoRepository = movimientos,
-                  categoriaRepository = categorias,
-                  saldoRepository = SaldoRepositoryImpl(database, dispatcher),
+                  repositories =
+                      HomeRepositories(
+                          preferences,
+                          movimientos,
+                          categorias,
+                          SaldoRepositoryImpl(database, dispatcher),
+                          StatisticsRepositoryImpl(database, dispatcher),
+                      ),
                   today = CivilToday(FixedClock(FIXED_INSTANT), TimeZoneProvider { TimeZone.UTC }),
                   scope = scopes.newScope(dispatcher),
               )

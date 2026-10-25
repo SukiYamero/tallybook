@@ -16,6 +16,7 @@ accepted scope, integration details and verification boundaries.
 | Single category and tags | DONE | [Tags](tags.md) |
 | Sync-ready persistence (change stamps and tombstones) | DONE | [Accounts and sync-ready persistence](accounts.md) |
 | Accounts, payment method and transfers | DONE | [Accounts, payment method and transfers](accounts.md) |
+| Statistics | DONE | [Statistics](statistics.md) |
 
 ## Status rules
 

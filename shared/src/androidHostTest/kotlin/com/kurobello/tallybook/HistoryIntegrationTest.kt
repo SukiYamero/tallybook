@@ -35,6 +35,8 @@ import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
 import com.kurobello.tallybook.core.data.SaldoRepository
 import com.kurobello.tallybook.core.data.SaldoRepositoryImpl
+import com.kurobello.tallybook.core.data.StatisticsRepository
+import com.kurobello.tallybook.core.data.StatisticsRepositoryImpl
 import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.cashCuenta
@@ -446,6 +448,9 @@ class HistoryIntegrationTest {
               single<AppPreferencesRepository> { preferences }
               single<MovimientoRepository> { movimientos }
               single<SaldoRepository> { SaldoRepositoryImpl(database, fixture.dispatcher) }
+              single<StatisticsRepository> {
+                StatisticsRepositoryImpl(database, fixture.dispatcher)
+              }
               single<ActividadRepository> { ActividadRepositoryImpl(database, fixture.dispatcher) }
               single<CategoriaRepository> { categorias }
               single<EtiquetaRepository> { etiquetas }

@@ -35,11 +35,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import com.composables.icons.lucide.ChartColumn
 import com.composables.icons.lucide.History
 import com.composables.icons.lucide.House
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Plus
-import com.composables.icons.lucide.Search
 import com.composables.icons.lucide.User
 import com.kurobello.tallybook.core.ui.component.TallybookSurface
 import com.kurobello.tallybook.core.ui.component.TallybookSurfaceStyle
@@ -52,7 +52,7 @@ import tallybook.shared.generated.resources.navigation_add_movement
 import tallybook.shared.generated.resources.navigation_history
 import tallybook.shared.generated.resources.navigation_home
 import tallybook.shared.generated.resources.navigation_profile
-import tallybook.shared.generated.resources.navigation_search
+import tallybook.shared.generated.resources.navigation_statistics
 
 @Composable
 internal fun TallybookBottomNavigation(
@@ -124,9 +124,13 @@ private val leadingTabs =
 
 private val trailingTabs =
     listOf(
-        PrimaryTab(Search, Lucide.Search, Res.string.navigation_search),
+        PrimaryTab(Statistics, Lucide.ChartColumn, Res.string.navigation_statistics),
         PrimaryTab(Profile, Lucide.User, Res.string.navigation_profile),
     )
+
+/** The bar's tabs in order; a selected destination outside them leaves every tab unselected. */
+internal val primaryTabDestinations: List<Destination> =
+    (leadingTabs + trailingTabs).map { it.destination }
 
 @Composable
 private fun BottomNavigationIcon(

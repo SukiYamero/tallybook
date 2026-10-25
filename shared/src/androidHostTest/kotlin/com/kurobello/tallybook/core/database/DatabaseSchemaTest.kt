@@ -23,6 +23,7 @@ import java.sql.SQLException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
@@ -977,8 +978,22 @@ class DatabaseSchemaTest {
   }
 
   @Test
-  fun `sumMovimientosPorCategoria totals minor units per categoria and tipo`() {
+  fun `sumGastoPorCategoriaRaiz totals gasto per root categoria inside the range`() {
     val db = inMemoryDatabase()
+    db.categoriaQueries.insertCategoria(
+        "cat_cafe",
+        "Cafe",
+        "cat_comida",
+        "coffee",
+        "amber",
+        ChangeStamp.SEED.value,
+    )
+    db.insert(
+        id = "child",
+        montoMinor = 600,
+        categoriaId = "cat_cafe",
+        fecha = "2026-09-12",
+    )
     db.insert(
         id = "in1",
         montoMinor = 1_500,
@@ -1038,39 +1053,38 @@ class DatabaseSchemaTest {
 
     val totals =
         db.movimientoQueries
-            .sumMovimientosPorCategoria("COP", "2026-09-01", "2026-09-30")
+            .sumGastoPorCategoriaRaiz("COP", "2026-09-01", "2026-09-30")
             .executeAsList()
-            .associate { (it.categoria_id to it.tipo) to it.total_minor }
+            .associate { it.root_id to it.total_minor }
 
-    assertEquals(
-        mapOf(
-            ("cat_comida" to "GASTO") to 4_000L,
-            ("cat_comida" to "INGRESO") to 700L,
-            ("cat_transporte" to "GASTO") to 2_700L,
-        ),
-        totals,
-    )
+    assertEquals(mapOf("cat_comida" to 4_600L, "cat_transporte" to 2_700L), totals)
   }
 
   @Test
-  fun `sumMovimientosPorCategoria totals add up to the totals per tipo`() {
+  fun `sumGastoPorCategoriaRaiz totals add up to the gasto total`() {
     val db = inMemoryDatabase()
-    db.insert(id = "comida", montoMinor = 1_000, categoriaId = "cat_comida")
-    db.insert(id = "social", montoMinor = 500, categoriaId = "cat_social")
-
-    val perCategoria =
-        db.movimientoQueries
-            .sumMovimientosPorCategoria("COP", "2026-09-01", "2026-09-30")
-            .executeAsList()
-            .associate { (it.categoria_id to it.tipo) to it.total_minor }
-
-    assertEquals(
-        mapOf(("cat_comida" to "GASTO") to 1_000L, ("cat_social" to "GASTO") to 500L),
-        perCategoria,
+    db.categoriaQueries.insertCategoria(
+        "cat_comida",
+        "Comida",
+        null,
+        "utensils",
+        "amber",
+        ChangeStamp.SEED.value,
     )
+    db.insert(id = "comida", montoMinor = 1_000, categoriaId = "cat_comida")
+    db.insert(id = "unknown", montoMinor = 500, categoriaId = "cat_missing")
+    db.insert(id = "ingreso", tipo = "INGRESO", montoMinor = 9_000, categoriaId = "cat_comida")
+
+    val perRoot =
+        db.movimientoQueries
+            .sumGastoPorCategoriaRaiz("COP", "2026-09-01", "2026-09-30")
+            .executeAsList()
+            .associate { it.root_id to it.total_minor }
+
+    assertEquals(mapOf("cat_comida" to 1_000L, "cat_missing" to 500L), perRoot)
     assertEquals(
-        mapOf("GASTO" to 1_500L),
-        db.movimientoQueries.totalsByTipo("COP"),
+        db.movimientoQueries.totalsByTipo("COP").getValue("GASTO"),
+        perRoot.values.sumOf { checkNotNull(it) },
     )
   }
 
@@ -1178,12 +1192,38 @@ class DatabaseSchemaTest {
           mapOf("GASTO" to 100L),
           movimientos.totalsByTipo("COP"),
       )
+      db.insert(
+          id = "gone_gasto",
+          montoMinor = 700,
+          categoriaId = "cat_live",
+          etiquetaIds = listOf("tag_live"),
+      )
+      db.insert(id = "gone_usd", montoMinor = 300, moneda = "USD")
+      driver.execute(
+          null,
+          "UPDATE movimiento SET deleted_at = updated_at WHERE id IN ('gone_gasto', 'gone_usd')",
+          0,
+      )
+      assertTrue(movimientos.existsMovimientoEnMoneda("COP").executeAsOne())
+      assertFalse(movimientos.existsMovimientoEnMoneda("USD").executeAsOne())
       assertEquals(
-          listOf(Triple("cat_live", "GASTO", 100L)),
+          listOf("cat_live" to 100L),
           movimientos
-              .sumMovimientosPorCategoria("COP", "2024-01-01", "2026-12-31")
+              .sumGastoPorCategoriaRaiz("COP", "2024-01-01", "2026-12-31")
               .executeAsList()
-              .map { Triple(it.categoria_id, it.tipo, it.total_minor) },
+              .map { it.root_id to it.total_minor },
+      )
+      assertEquals(
+          listOf("tag_live" to 100L),
+          movimientos.sumGastoPorEtiqueta("COP", "2024-01-01", "2026-12-31").executeAsList().map {
+            it.etiqueta_id to it.total_minor
+          },
+      )
+      assertEquals(
+          1L,
+          movimientos
+              .countGastoCategoria("COP", "2024-01-01", "2026-12-31", "cat_live")
+              .executeAsOne(),
       )
       assertEquals(1L, categorias.countMovimientosForCategoria("cat_live").executeAsOne())
       assertEquals(
@@ -1221,10 +1261,76 @@ class DatabaseSchemaTest {
       val db = TallybookDatabase(driver)
       val expected =
           mapOf<String, Pair<() -> Any, String>>(
-              "sumMovimientosPorCategoria" to
+              "sumMovimientosByTipoInRange" to
                   ({
                     db.movimientoQueries
-                        .sumMovimientosPorCategoria("COP", "2026-09-01", "2026-09-30")
+                        .sumMovimientosByTipoInRange("COP", "2026-09-01", "2026-09-30")
+                        .executeAsList()
+                  } to "SEARCH movimiento USING INDEX movimiento_recent (fecha>? AND fecha<?)"),
+              "sumGastoPorCategoriaRaiz" to
+                  ({
+                    db.movimientoQueries
+                        .sumGastoPorCategoriaRaiz("COP", "2026-09-01", "2026-09-30")
+                        .executeAsList()
+                  } to "SEARCH movimiento USING INDEX movimiento_recent (fecha>? AND fecha<?)"),
+              "sumGastoPorSubcategoria" to
+                  ({
+                    db.movimientoQueries
+                        .sumGastoPorSubcategoria("COP", "2026-09-01", "2026-09-30", "cat")
+                        .executeAsList()
+                  } to "SEARCH movimiento USING INDEX movimiento_recent (fecha>? AND fecha<?)"),
+              "sumGastoCategoriaPorMes" to
+                  ({
+                    db.movimientoQueries
+                        .sumGastoCategoriaPorMes("COP", "2026-09-01", "2026-09-30", "cat")
+                        .executeAsList()
+                  } to "SEARCH movimiento USING INDEX movimiento_recent (fecha>? AND fecha<?)"),
+              "countGastoCategoria" to
+                  ({
+                    db.movimientoQueries
+                        .countGastoCategoria("COP", "2026-09-01", "2026-09-30", "cat")
+                        .executeAsList()
+                  } to "SEARCH movimiento USING INDEX movimiento_recent (fecha>? AND fecha<?)"),
+              "selectGastosMasGrandesCategoria" to
+                  ({
+                    db.movimientoQueries
+                        .selectGastosMasGrandesCategoria(
+                            "COP",
+                            "2026-09-01",
+                            "2026-09-30",
+                            "cat",
+                            3,
+                        )
+                        .executeAsList()
+                  } to "SEARCH movimiento USING INDEX movimiento_recent (fecha>? AND fecha<?)"),
+              "sumGastoPorEtiqueta" to
+                  ({
+                    db.movimientoQueries
+                        .sumGastoPorEtiqueta("COP", "2026-09-01", "2026-09-30")
+                        .executeAsList()
+                  } to "SEARCH movimiento USING INDEX movimiento_recent (fecha>? AND fecha<?)"),
+              "sumGastoPorCuenta" to
+                  ({
+                    db.movimientoQueries
+                        .sumGastoPorCuenta("COP", "2026-09-01", "2026-09-30")
+                        .executeAsList()
+                  } to "SEARCH movimiento USING INDEX movimiento_recent (fecha>? AND fecha<?)"),
+              "sumGastoPorMedio" to
+                  ({
+                    db.movimientoQueries
+                        .sumGastoPorMedio("COP", "2026-09-01", "2026-09-30")
+                        .executeAsList()
+                  } to "SEARCH movimiento USING INDEX movimiento_recent (fecha>? AND fecha<?)"),
+              "sumPorMes" to
+                  ({
+                    db.movimientoQueries
+                        .sumPorMes("COP", "2026-09-01", "2026-09-30")
+                        .executeAsList()
+                  } to "SEARCH movimiento USING INDEX movimiento_recent (fecha>? AND fecha<?)"),
+              "sumGastoPorDia" to
+                  ({
+                    db.movimientoQueries
+                        .sumGastoPorDia("COP", "2026-09-01", "2026-09-30")
                         .executeAsList()
                   } to "SEARCH movimiento USING INDEX movimiento_recent (fecha>? AND fecha<?)"),
               "countMovimientosForCategoria" to

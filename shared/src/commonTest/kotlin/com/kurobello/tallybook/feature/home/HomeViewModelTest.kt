@@ -9,6 +9,7 @@ import com.kurobello.tallybook.core.data.FakeSaldoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MutableClock
 import com.kurobello.tallybook.core.data.SaldoRepository
+import com.kurobello.tallybook.core.data.StatisticsRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.AppLocale
@@ -16,27 +17,40 @@ import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
+import com.kurobello.tallybook.core.model.CategoryStatisticsRequest
+import com.kurobello.tallybook.core.model.CategoryStatisticsSnapshot
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Change
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.CuentaSaldo
 import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.DayGasto
+import com.kurobello.tallybook.core.model.DimensionTotal
+import com.kurobello.tallybook.core.model.Direction
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
+import com.kurobello.tallybook.core.model.MonthTotals
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.RestoreResult
+import com.kurobello.tallybook.core.model.StatisticsKey
+import com.kurobello.tallybook.core.model.StatisticsRequest
+import com.kurobello.tallybook.core.model.StatisticsScope
+import com.kurobello.tallybook.core.model.StatisticsSnapshot
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.statisticsRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
@@ -51,11 +65,13 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.YearMonth
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
@@ -290,10 +306,13 @@ class HomeViewModelTest {
     val categorias = FakeCategoriaRepository(DataOutcome.Success(emptyList()))
     val vm =
         HomeViewModel(
-            preferences,
-            movimientos,
-            categorias,
-            primarySaldos(),
+            HomeRepositories(
+                preferences,
+                movimientos,
+                categorias,
+                primarySaldos(),
+                FakeHomeStatistics(),
+            ),
             today(),
             backgroundScope,
         )
@@ -338,10 +357,13 @@ class HomeViewModelTest {
     val preferences = FakePreferencesRepository(readyPreferences(Moneda.USD))
     val vm =
         HomeViewModel(
-            preferences,
-            movimientos,
-            FakeCategoriaRepository(DataOutcome.Success(listOf(category))),
-            primarySaldos(),
+            HomeRepositories(
+                preferences,
+                movimientos,
+                FakeCategoriaRepository(DataOutcome.Success(listOf(category))),
+                primarySaldos(),
+                FakeHomeStatistics(),
+            ),
             today(),
             backgroundScope,
         )
@@ -534,6 +556,142 @@ class HomeViewModelTest {
     assertEquals(failure, vm.uiState.value.error)
   }
 
+  @Test
+  fun theStatisticsCardReadsThisMonthInThePrimaryCurrency() = runTest {
+    val statistics = FakeHomeStatistics()
+    readyHome(statistics)
+    runCurrent()
+
+    assertEquals(
+        listOf(statisticsRequest(StatisticsScope.Month, OCTOBER_24, Moneda.COP, OCTOBER_24)),
+        statistics.requests,
+    )
+  }
+
+  @Test
+  fun theStatisticsCardShowsTheTopThreeCategoriasTheRestAndThePace() = runTest {
+    val statistics =
+        FakeHomeStatistics(
+            DataOutcome.Success(
+                monthSnapshot(
+                    categorias =
+                        listOf(
+                            "a" to 4_000L,
+                            "b" to 3_000L,
+                            "c" to 2_000L,
+                            "d" to 500L,
+                            "e" to 500L,
+                        ),
+                    previousMonthGastos = 10_000,
+                )
+            )
+        )
+    val vm = readyHome(statistics)
+    runCurrent()
+
+    assertEquals(
+        HomeStatistics(
+            top =
+                listOf(
+                    HomeCategoryShare("a", 4_000),
+                    HomeCategoryShare("b", 3_000),
+                    HomeCategoryShare("c", 2_000),
+                ),
+            otherBasisPoints = 1_000,
+            pace = Change(29, Direction.Up),
+        ),
+        vm.uiState.value.statistics,
+    )
+  }
+
+  @Test
+  fun aFourthCategoriaJoinsTheRestOfTheCard() = runTest {
+    val statistics =
+        FakeHomeStatistics(
+            DataOutcome.Success(
+                monthSnapshot(
+                    categorias = listOf("a" to 5_000L, "b" to 2_000L, "c" to 2_000L, "d" to 1_000L)
+                )
+            )
+        )
+    val vm = readyHome(statistics)
+    runCurrent()
+
+    val card = assertNotNull(vm.uiState.value.statistics)
+    assertEquals(listOf("a", "b", "c"), card.top.map { it.categoriaId })
+    assertEquals(1_000, card.otherBasisPoints)
+  }
+
+  @Test
+  fun withoutAPreviousMonthWithGastoTheCardHasNoPace() = runTest {
+    val statistics =
+        FakeHomeStatistics(DataOutcome.Success(monthSnapshot(categorias = listOf("a" to 2_400L))))
+    val vm = readyHome(statistics)
+    runCurrent()
+
+    val card = assertNotNull(vm.uiState.value.statistics)
+    assertEquals(listOf(HomeCategoryShare("a", 10_000)), card.top)
+    assertEquals(0, card.otherBasisPoints)
+    assertNull(card.pace)
+  }
+
+  @Test
+  fun aMonthWithoutGastoHidesTheStatisticsCard() = runTest {
+    val statistics = FakeHomeStatistics()
+    val vm = readyHome(statistics)
+    runCurrent()
+    assertTrue(vm.uiState.value.hasSnapshot)
+    assertNull(vm.uiState.value.statistics)
+
+    statistics.emit(DataOutcome.Success(monthSnapshot(categorias = listOf("a" to 100L))))
+    runCurrent()
+    assertNotNull(vm.uiState.value.statistics)
+
+    statistics.emit(DataOutcome.Success(monthSnapshot(categorias = emptyList())))
+    runCurrent()
+    assertNull(vm.uiState.value.statistics)
+  }
+
+  @Test
+  fun aStatisticsReadFailureHidesOnlyTheCard() = runTest {
+    val statistics =
+        FakeHomeStatistics(DataOutcome.Success(monthSnapshot(categorias = listOf("a" to 100L))))
+    val vm =
+        createViewModel(
+            FakePreferencesRepository(readyPreferences(Moneda.COP)),
+            FakeMovimientoRepository(
+                recent = DataOutcome.Success(emptyList()),
+                summary = DataOutcome.Success(summary(Moneda.COP)),
+            ),
+            FakeCategoriaRepository(DataOutcome.Success(emptyList())),
+            backgroundScope,
+            statistics = statistics,
+        )
+    runCurrent()
+    assertNotNull(vm.uiState.value.statistics)
+
+    statistics.emit(DataOutcome.Failure(DataError.Local(IllegalStateException())))
+    runCurrent()
+
+    assertNull(vm.uiState.value.statistics)
+    assertNull(vm.uiState.value.error)
+    assertTrue(vm.uiState.value.hasSnapshot)
+    assertFalse(vm.uiState.value.isLoading)
+    assertEquals(summary(Moneda.COP), vm.uiState.value.summary)
+  }
+
+  private fun TestScope.readyHome(statistics: FakeHomeStatistics): HomeViewModel =
+      createViewModel(
+          FakePreferencesRepository(readyPreferences(Moneda.COP)),
+          FakeMovimientoRepository(
+              recent = DataOutcome.Success(emptyList()),
+              summary = DataOutcome.Success(summary(Moneda.COP)),
+          ),
+          FakeCategoriaRepository(DataOutcome.Success(emptyList())),
+          backgroundScope,
+          statistics = statistics,
+      )
+
   private fun createViewModel(
       preferences: AppPreferencesRepository,
       movimientos: MovimientoRepository = FakeMovimientoRepository(),
@@ -541,18 +699,38 @@ class HomeViewModelTest {
       scope: CoroutineScope,
       saldos: SaldoRepository = primarySaldos(),
       today: CivilToday = today(),
+      statistics: StatisticsRepository = FakeHomeStatistics(),
   ): HomeViewModel {
     val viewModel =
         HomeViewModel(
-            preferencesRepository = preferences,
-            movimientoRepository = movimientos,
-            categoriaRepository = categorias,
-            saldoRepository = saldos,
+            repositories =
+                HomeRepositories(preferences, movimientos, categorias, saldos, statistics),
             today = today,
             scope = scope,
         )
     scope.launch { viewModel.uiState.collect {} }
     return viewModel
+  }
+
+  /** Answers every read with the latest [emit]; the default is a month without gasto. */
+  private class FakeHomeStatistics(
+      initial: DataOutcome<StatisticsSnapshot>? = null,
+  ) : StatisticsRepository {
+    private val values = MutableStateFlow(initial)
+    val requests = mutableListOf<StatisticsRequest>()
+
+    override fun observe(request: StatisticsRequest): Flow<DataOutcome<StatisticsSnapshot>> = flow {
+      requests += request
+      emitAll(values.map { it ?: DataOutcome.Success(monthSnapshot(request.moneda, emptyList())) })
+    }
+
+    override fun observeCategory(
+        request: CategoryStatisticsRequest
+    ): Flow<DataOutcome<CategoryStatisticsSnapshot>> = error("Home reads no category statistics")
+
+    fun emit(value: DataOutcome<StatisticsSnapshot>) {
+      values.value = value
+    }
   }
 
   private class FakePreferencesRepository(
@@ -711,6 +889,44 @@ class HomeViewModelTest {
 
   private companion object {
     val OCTOBER = MovimientoDateRange(LocalDate(2026, 10, 1), LocalDate(2026, 10, 31))
+    val OCTOBER_24 = LocalDate(2026, 10, 24)
+
+    /**
+     * October up to the 24th in COP: every gasto falls on the 1st, so the pace projects the month
+     * at 31/24 of it.
+     */
+    fun monthSnapshot(
+        moneda: Moneda = Moneda.COP,
+        categorias: List<Pair<String, Long>>,
+        previousMonthGastos: Long = 0,
+    ): StatisticsSnapshot {
+      val gastos = Money(categorias.sumOf { it.second }, moneda)
+      val daily =
+          (1..OCTOBER_24.day).map { day ->
+            DayGasto(LocalDate(2026, 10, day), if (day == 1) gastos else Money(0, moneda))
+          }
+      return StatisticsSnapshot(
+          current = MovimientoSummary(Money(0, moneda), gastos),
+          previous = null,
+          categorias =
+              categorias.map { (id, amount) ->
+                DimensionTotal(StatisticsKey.Categoria(id), Money(amount, moneda), null)
+              },
+          etiquetas = emptyList(),
+          cuentas = emptyList(),
+          medios = emptyList(),
+          months =
+              listOf(
+                  MonthTotals(
+                      YearMonth(2026, 9),
+                      MovimientoSummary(Money(0, moneda), Money(previousMonthGastos, moneda)),
+                  ),
+                  MonthTotals(YearMonth(2026, 10), MovimientoSummary(Money(0, moneda), gastos)),
+              ),
+          daily = daily,
+          hasAnyMovimiento = categorias.isNotEmpty(),
+      )
+    }
 
     fun today(at: MutableClock = MutableClock(Instant.parse("2026-10-24T12:00:00Z"))) =
         CivilToday(at, TimeZoneProvider { TimeZone.UTC })

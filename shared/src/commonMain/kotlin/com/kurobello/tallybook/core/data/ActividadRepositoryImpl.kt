@@ -1,7 +1,6 @@
 package com.kurobello.tallybook.core.data
 
 import app.cash.sqldelight.Query
-import app.cash.sqldelight.coroutines.asFlow
 import com.kurobello.tallybook.core.database.Movimiento_con_etiquetas as DatabaseMovimiento
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.database.Transferencia_con_monedas as DatabaseTransferencia
@@ -14,18 +13,10 @@ import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoReadCriteria
 import com.kurobello.tallybook.core.model.MovimientoSearchSnapshot
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.mapLatest
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.yield
 
 internal class ActividadRepositoryImpl(
     private val database: TallybookDatabase,
@@ -41,7 +32,7 @@ internal class ActividadRepositoryImpl(
     }
     val start = range.start.toString()
     val end = range.end.toString()
-    return snapshots {
+    return localSnapshots(dispatcher) {
       val movimientos = database.movimientoQueries.selectMovimientosInRange(moneda.name, start, end)
       val transferencias =
           database.transferenciaQueries.selectTransferenciasInRange(
@@ -49,7 +40,7 @@ internal class ActividadRepositoryImpl(
               end,
               moneda.name,
           )
-      rereading(movimientos, transferencias) {
+      rereading(dispatcher, movimientos, transferencias) {
         val (movimientoRows, transferenciaRows) =
             database.transactionWithResult {
               movimientos.executeAsList() to transferencias.executeAsList()
@@ -59,10 +50,11 @@ internal class ActividadRepositoryImpl(
     }
   }
 
-  override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> = snapshots {
-    val years = database.transferenciaQueries.selectActividadYears(moneda.name)
-    rereading(years) { parseYears(years.executeAsList()) }
-  }
+  override fun observeYears(moneda: Moneda): Flow<DataOutcome<List<Int>>> =
+      localSnapshots(dispatcher) {
+        val years = database.transferenciaQueries.selectActividadYears(moneda.name)
+        rereading(dispatcher, years) { parseYears(years.executeAsList()) }
+      }
 
   override fun observeFiltered(
       criteria: MovimientoReadCriteria
@@ -81,7 +73,7 @@ internal class ActividadRepositoryImpl(
         }
     if (invalidInput != null) return flowOf(DataOutcome.Failure(invalidInput))
     val cuentaFilter = if (cuentaIds.isEmpty()) 0L else 1L
-    return snapshots {
+    return localSnapshots(dispatcher) {
       val movimientos = filteredMovimientos(criteria, categoryIds, etiquetaIds, cuentaIds)
       val transferencias =
           database.transferenciaQueries.selectFilteredTransferencias(
@@ -93,7 +85,7 @@ internal class ActividadRepositoryImpl(
           )
       // Both queries are observed whatever the criteria exclude, so a write to either table
       // re-reads the years the snapshot carries.
-      rereading(movimientos, transferencias) {
+      rereading(dispatcher, movimientos, transferencias) {
         val (rows, years) =
             database.transactionWithResult {
               val movimientoRows =
@@ -177,25 +169,6 @@ internal class ActividadRepositoryImpl(
       }
     }
   }
-
-  // Queries are built inside the flow so a storage failure while building them is a Local outcome.
-  private fun <T> snapshots(source: suspend () -> Flow<T>): Flow<DataOutcome<T>> =
-      flow { emitAll(source()) }.flowOn(dispatcher).asLocalDataOutcome()
-
-  /**
-   * Runs [read] once and again whenever a table behind [queries] changes. A newer change cancels
-   * the read in flight, which checks cancellation while mapping, and a read finishing after it was
-   * superseded or its collector left never publishes.
-   */
-  @OptIn(ExperimentalCoroutinesApi::class)
-  private fun <T> rereading(vararg queries: Query<*>, read: suspend () -> T): Flow<T> =
-      combine(queries.map { it.asFlow() }) {}
-          .mapLatest {
-            // mapLatest starts this block undispatched, and a blocking read never suspends: without
-            // yielding first, the next change could not arrive to cancel it.
-            yield()
-            withContext(dispatcher) { read().also { currentCoroutineContext().ensureActive() } }
-          }
 
   private suspend fun merge(
       moneda: Moneda,

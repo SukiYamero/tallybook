@@ -435,12 +435,17 @@ The approved order and ownership are:
 | Home | Primary destination | Daily | Enabled; fresh launch starts here |
 | History | Primary destination | Frequent | Enabled; retained period and scroll |
 | Add movement | Contextual action | Frequent | Opens the existing movement sheet |
-| Search | Primary destination | Frequent | Enabled; retained query, filters and scroll |
+| Statistics | Primary destination | Frequent | Enabled; retained period, currency and dimension |
 | Profile | Primary destination | Occasional | Enabled; preferences and the account/data slot |
 
+Search is a primary destination without a tab: retained query, filters and scroll, entered only from
+Home's search field and the "View movements" intents (category, tag and account sheets, and
+Statistics). While it is shown no tab is selected, and its root Back selects Home. If primary
+destinations outgrow the bar, a menu is evaluated before adding a sixth position.
+
 The bar uses icons without visible labels. Every icon still has a localized accessibility description.
-The centered Add movement action opens the shared creation session; Home, History, Search and Profile
-expose selected tab semantics.
+The centered Add movement action opens the shared creation session; Home, History, Statistics and
+Profile expose selected tab semantics.
 
 `TallybookAppShell` measures the persistent bar before composing primary content and publishes its
 actual occupied clearance, including its sole bottom safe inset. Home and History use the screen
@@ -453,13 +458,17 @@ History is visited lazily and retained when hidden. Official saveable and ViewMo
 hoisted above the active display, in that order, with stable content keys and parent creation extras.
 Snapshotting extras for each parent lifetime prevents Activity Intent Bundles from resetting stores.
 Tabs select existing entries; History root Back selects Home, Home root delegates platform exit, and
-Search and Profile root Back select Home. One `secondary` slot shows a secondary destination over the
-selected primary with the bottom bar hidden: the UI catalog over any primary, Categories and Tags only
-over Profile, Accounts over Home or Profile (`PrimaryNavigator.openSecondary`). Back closes the
+Search, Statistics and Profile root Back select Home. One `secondary` slot shows a secondary
+destination over the selected primary with the bottom bar hidden: the UI catalog over any primary,
+Categories and Tags only over Profile, Accounts over Home or Profile (`PrimaryNavigator.openSecondary`). Back closes the
 secondary first, and selecting any primary clears it. Home search opens Search with a one-time focus
 intent; "View N movements" in a Categories or Tags sheet, or "View movements" in an account sheet,
 selects Search, once that sheet has hidden, with a one-shot `SearchFilterRequest` (category, tag or
-account ids, plus the account's currency) that the retained Search ViewModel applies once.
+account ids, plus the account's currency) that the retained Search ViewModel applies once. Statistics
+sends the same request, with the extra fields its [filter rule](../business-logic.md#search-and-filters)
+names, from a tag or account row directly and from its category sheet's "View N movements" once the
+sheet has hidden. That sheet opens through the shell's modal coordinator, so navigation and creation
+wait while it is up.
 
 Home/History repository observations use five-second subscription sharing. Feature routes revalidate
 before lifecycle collection. `RetainedLoadState<Content, Failure>` is the shared snapshot contract:
@@ -610,6 +619,47 @@ the count line names them in a second part ("N movimientos · M transferencias e
 when there are any. History has no text-search field, non-date filters, balance-visibility
 toggle or fourth annual scope. Search is a separate destination.
 
+## Statistics presentation
+
+[Business logic](../business-logic.md#statistics) owns scopes, comparison, sums and thresholds; this
+section owns layout. Statistics starts with the same frame and `space20` top as History: a
+`TallybookPeriodPickerHeader` with the month or year as title, a "Through <day>" subtitle while the
+period is in progress and the year menu in Month scope; a `MonedaSelector` while accounts exist in
+more than one currency; a neutral Month/Year `TallybookSegmentedControl`; and a
+`TallybookPeriodPickerRow` of month or year chips. Cards follow in this order, each a
+`TallybookSurface` with a heading:
+
+- **Summary:** gasto as the headline with its variation and the compared amount, then ingresos and
+  balance side by side. A variation reads up (danger) or down (success), since more gasto is
+  unfavorable, and its accessibility label says the direction in words.
+- **Where did your money go?:** a neutral dimension control (Categories, Tags, Accounts, Medios), the
+  donut with the total and a group count in its center (no donut for Tags, which shows its note
+  instead), then one `TallybookDistributionRow` per group and a hint naming what a tap opens. Medio
+  rows are not interactive.
+- **Evolution:** the selected month's gastos, ingresos and balance above the `TallybookTrendChart`,
+  a legend, and a note for a partial last month.
+- **Pace** (`TallybookPaceChart`) and **What changed** (icon rows), only when they apply.
+
+The header has no movement count. A first read uses `LoadingPresentation` with two skeleton cards;
+a failed refresh keeps the cards with "Previous data" under the summary and an error card with retry
+below it; a failure without content shows only the error card. With no movimiento in the currency the
+header and selector stay and a single empty card replaces the controls and cards.
+
+The category detail is a `TallybookModalBottomSheet` with the pattern of the Categories chip sheet:
+title, period subtitle and a ghost close button; a sunken total card with the real category avatar,
+share, count and variation; the `TallybookCategoryTrendChart` with its average; subcategory rows in
+the category's chart color; the three largest gastos; and a full-width "View N movements" button.
+While it closes it keeps the content it last rendered, and it closes when the selection, currency or
+day changes.
+
+Group colors come from `colors.chart` by rank (`chartPaletteIndex`): ranks below 3 use their own index
+and later ranks the next one, skipping index 3, whose red reads as gasto. Otras and any group past the
+palette use `foreground.faint`. Category tints are not used, because several roots share a tint.
+Home's "Your month in numbers" card colors its categories by the same rank rule.
+
+Charts expose no semantics of their own: every chart is one node whose `contentDescription` carries
+the localized summary, and the card's numbers repeat that information without the drawing.
+
 ## Remaining product decisions
 
 The bottom navigation pattern, ordered positions, and centered placement of `Create movimiento` are
@@ -691,14 +741,14 @@ politely, not each keystroke or placeholder. Filter active/expanded state and ch
 meaningful without dots/color. Avoid repeating the same status through multiple live regions.
 
 The content list has one saveable scroll owner. Temporary skeleton/error lists use unsaved state so
-they do not clamp its retained position. Tab return and same-request updates preserve scroll; a newly
-settled text/structural query resets results to the top once. Restoration preserves the saved content
+they do not clamp its retained position. Returning to Search and same-request updates preserve
+scroll; a newly settled text/structural query resets results to the top once. Restoration preserves the saved content
 position until rebuilt results can render; it must not trigger the new-query reset accidentally.
 
 Home-to-Search focus is a one-time navigation intent: reveal the lazy header/field, wait for its
 composition and successful focus, then acknowledge the token. This explicit entry may reset retained
-scroll to reveal the field; ordinary tab return retains position. Cancel the intent if Search becomes
-inactive before completion. Tab selection/recomposition/restore never repeatedly refocuses or reopens
+scroll to reveal the field; an ordinary return retains position. Cancel the intent if Search becomes
+inactive before completion. Selection/recomposition/restore never repeatedly refocuses or reopens
 the keyboard. Opening filters
 hides IME; dismissal returns accessibility focus to the filter button without forcing text keyboard.
 The shell blocks navigation/creation while filters are Editing or Closing; actions carry session

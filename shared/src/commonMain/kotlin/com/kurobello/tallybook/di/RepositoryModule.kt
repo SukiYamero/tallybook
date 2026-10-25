@@ -15,6 +15,8 @@ import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.SaldoRepository
 import com.kurobello.tallybook.core.data.SaldoRepositoryImpl
+import com.kurobello.tallybook.core.data.StatisticsRepository
+import com.kurobello.tallybook.core.data.StatisticsRepositoryImpl
 import com.kurobello.tallybook.core.data.TransferenciaRepository
 import com.kurobello.tallybook.core.data.TransferenciaRepositoryImpl
 import com.kurobello.tallybook.core.data.export.DatabaseMovimientoExportSource
@@ -93,6 +95,12 @@ val repositoryModule = module {
   }
   single<ActividadRepository> {
     ActividadRepositoryImpl(
+        database = get(),
+        dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
+    )
+  }
+  single<StatisticsRepository> {
+    StatisticsRepositoryImpl(
         database = get(),
         dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
     )

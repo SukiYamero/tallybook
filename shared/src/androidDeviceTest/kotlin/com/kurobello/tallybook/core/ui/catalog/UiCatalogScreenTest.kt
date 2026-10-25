@@ -1,12 +1,12 @@
 package com.kurobello.tallybook.core.ui.catalog
 
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertAll
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
-import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
@@ -18,6 +18,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -26,6 +27,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToKey
 import androidx.compose.ui.test.performTextInput
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
@@ -44,7 +46,7 @@ import tallybook.shared.generated.resources.navigation_add_movement
 import tallybook.shared.generated.resources.navigation_history
 import tallybook.shared.generated.resources.navigation_home
 import tallybook.shared.generated.resources.navigation_profile
-import tallybook.shared.generated.resources.navigation_search
+import tallybook.shared.generated.resources.navigation_statistics
 import tallybook.shared.generated.resources.tag_picker_title
 import tallybook.shared.generated.resources.ui_catalog_actions
 import tallybook.shared.generated.resources.ui_catalog_amount_inputs
@@ -198,16 +200,19 @@ class UiCatalogScreenTest {
         listOf(
             Res.string.navigation_home,
             Res.string.navigation_history,
-            Res.string.navigation_search,
+            Res.string.navigation_statistics,
             Res.string.navigation_profile,
         )
     composeRule.setContent { UiCatalogRoute() }
 
+    // The Statistics tab shares its label with the catalog's Statistics screen list.
     unavailableDestinations.forEach { destination ->
-      composeRule
-          .onNodeWithContentDescription(localizedString(destination))
-          .assertHasNoClickAction()
-          .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
+      val matches = composeRule.onAllNodesWithContentDescription(localizedString(destination))
+      assertTrue(matches.fetchSemanticsNodes().isNotEmpty())
+      matches.assertAll(
+          SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick) and
+              SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected)
+      )
     }
     composeRule
         .onNodeWithContentDescription(localizedString(Res.string.navigation_add_movement))

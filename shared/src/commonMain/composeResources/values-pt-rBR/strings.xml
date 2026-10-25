@@ -77,7 +77,7 @@
     <string name="navigation_home">Início</string>
     <string name="navigation_history">Histórico</string>
     <string name="navigation_add_movement">Adicionar movimento</string>
-    <string name="navigation_search">Pesquisar</string>
+    <string name="navigation_statistics">Estatísticas</string>
     <string name="navigation_profile">Perfil</string>
 
     <string name="add_movimiento_pane_title">Adicionar movimento</string>

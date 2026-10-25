@@ -28,6 +28,9 @@ internal data class HomeUiState(
   val categoriasById
     get() = content.cachedValue?.categoriasById.orEmpty()
 
+  val statistics: HomeStatistics?
+    get() = content.cachedValue?.statistics
+
   val error: DataError?
     get() = content.failure
 

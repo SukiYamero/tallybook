@@ -99,6 +99,26 @@ Existing and future bottom sheets use these shared headings and the standard def
 | `TallybookBottomNavigation` | Stable primary destinations and the centered Add movimiento action | A `null` selection callback renders a non-interactive bar for catalogs and fixtures. |
 | `TallybookNavHost` | Connecting approved routes to shared navigation UI | It owns route composition, not feature business logic. |
 
+## Charts
+
+`core/ui/chart` holds the Statistics drawings. Values are `Double`s derived from `Money` for drawing
+only; callers format every visible amount. Each chart is a single accessibility node whose required
+`contentDescription` carries the localized summary. Column and line charts use Vico (see
+[stack](../stack.md)); the donut and bars are plain Compose. Colors follow the
+[rank rule](architecture.md#statistics-presentation).
+
+| Component | Use it for | Notes |
+|---|---|---|
+| `TallybookDonut`, `DonutSlice` | Parts of a whole, such as an exclusive distribution | Slices in basis points (10,000 fills the ring) drawn clockwise from the top over a track; a total above 100% is clipped. The `center` slot holds the total and caption. |
+| `TallybookDistributionRow` | One group of a distribution: color dot, name, optional `ChangeIndicator`, amount, share and a proportional bar | The caller passes the share text and its `fraction`. With `onClick` the whole row is one button with the shared tap feedback; without it the row is merged, non-interactive content. At least the minimum touch target tall; the name wraps to two lines and the share column grows with font scale. |
+| `TallybookTrendChart`, `TrendPoint` | Monthly gastos and ingresos as grouped columns with the balance as a line | Unselected months dim and a partial month keeps a full-color outline over a faint fill. Every month is an equal-width tap target and a custom accessibility action; the selected month is the node's state. |
+| `TallybookPaceChart` | The month's cumulative gasto against a straight line to the average month, with a dotted projection to the month's end | One value per elapsed day, the last being today, which carries a persistent labelled marker. |
+| `TallybookCategoryTrendChart` | One category's monthly totals as columns in its color, with the average as a dashed line | `partialLast` gives the last column the partial treatment. |
+| `TallybookChartTheme`, `ProvideTallybookChartTheme` | Series colors (gastos danger, ingresos brand, balance primary foreground, average faint), chart alphas and the animation spec | Every Vico chart is wrapped in the provider, so Vico defaults come from Tallybook tokens instead of Material. |
+| `chartPaletteIndex`, `chartRankColor`, `chartRestColor` | The color of the n-th ranked group, shared by Statistics and Home | `chartPaletteIndex` is the pure rule (null past the palette); the composables resolve it, falling back to `chartRestColor` (`foreground.faint`). |
+| `shareText`, `shareFraction` | A share in basis points as rounded percent text, or as a bar fraction | Percent text rounds half up; the small-share wording follows [business logic](../business-logic.md#statistics). |
+| `ChartSlotLabels`, `EmphasisColumnProvider` | Month labels under column charts, and column styling for selection and partial months | Internal parts of the column charts: the labels share Vico's equal x slots, so a label sits under its column. |
+
 ## Reference environment
 
 `UiCatalogScreen` is the in-app debug catalog used to inspect component states, themes, and interaction

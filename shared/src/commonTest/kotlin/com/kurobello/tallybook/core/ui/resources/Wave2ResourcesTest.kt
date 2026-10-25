@@ -65,7 +65,7 @@ class Wave2ResourcesTest {
             Res.string.navigation_home,
             Res.string.navigation_history,
             Res.string.navigation_add_movement,
-            Res.string.navigation_search,
+            Res.string.navigation_statistics,
             Res.string.navigation_profile,
             Res.string.add_movimiento_pane_title,
             Res.string.expense,

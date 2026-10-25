@@ -7,6 +7,7 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CivilToday
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.SaldoRepository
+import com.kurobello.tallybook.core.data.StatisticsRepository
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.DataError
@@ -16,6 +17,9 @@ import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoPeriodRanges
 import com.kurobello.tallybook.core.model.MovimientoSummary
+import com.kurobello.tallybook.core.model.StatisticsScope
+import com.kurobello.tallybook.core.model.StatisticsSnapshot
+import com.kurobello.tallybook.core.model.statisticsRequest
 import com.kurobello.tallybook.core.ui.state.failed
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -33,14 +37,20 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.yearMonth
+
+internal data class HomeRepositories(
+    val preferences: AppPreferencesRepository,
+    val movimientos: MovimientoRepository,
+    val categorias: CategoriaRepository,
+    val saldos: SaldoRepository,
+    val statistics: StatisticsRepository,
+)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class HomeViewModel(
-    private val preferencesRepository: AppPreferencesRepository,
-    private val movimientoRepository: MovimientoRepository,
-    private val categoriaRepository: CategoriaRepository,
-    private val saldoRepository: SaldoRepository,
+    private val repositories: HomeRepositories,
     private val today: CivilToday,
     scope: CoroutineScope? = null,
 ) : ViewModel() {
@@ -95,7 +105,7 @@ internal class HomeViewModel(
   }
 
   private fun observeHomeState(): Flow<HomeUiState> =
-      preferencesRepository.preferences.flatMapLatest { it.toHomeStateFlow() }
+      repositories.preferences.preferences.flatMapLatest { it.toHomeStateFlow() }
 
   private fun DataOutcome<AppPreferencesState>.toHomeStateFlow(): Flow<HomeUiState> =
       when (this) {
@@ -114,14 +124,18 @@ internal class HomeViewModel(
 
   // Every resume resubscribes, so the month is read again then and rolls over like History.
   private fun observePersistedHome(moneda: Moneda): Flow<HomeUiState> {
-    val month = MovimientoPeriodRanges.calendarMonth(today.date().yearMonth)
+    val date = today.date()
+    val month = MovimientoPeriodRanges.calendarMonth(date.yearMonth)
+    val statistics = statisticsRequest(StatisticsScope.Month, date, moneda, date)
     return combine(
-        movimientoRepository.observeSummary(moneda, month).toLoadState(),
-        movimientoRepository.observeRecent(moneda, HOME_RECENT_LIMIT).toLoadState(),
-        categoriaRepository.observeAll().toLoadState(),
-        saldoRepository.observeTotales().toLoadState(),
-    ) { summary, recent, categorias, totales ->
-      HomeSnapshot.from(summary, recent, categorias, totales, moneda).toUiState(moneda)
+        repositories.movimientos.observeSummary(moneda, month).toLoadState(),
+        repositories.movimientos.observeRecent(moneda, HOME_RECENT_LIMIT).toLoadState(),
+        repositories.categorias.observeAll().toLoadState(),
+        repositories.saldos.observeTotales().toLoadState(),
+        repositories.statistics.observe(statistics).toLoadState(),
+    ) { summary, recent, categorias, totales, snapshot ->
+      HomeSnapshot.from(summary, recent, categorias, totales, snapshot, moneda, date)
+          .toUiState(moneda)
     }
   }
 }
@@ -142,6 +156,7 @@ private data class HomeSnapshot(
     val recent: List<Movimiento>?,
     val categoriasById: Map<String, Categoria>?,
     val totalBalance: Money?,
+    val statistics: HomeStatistics?,
     val error: DataError?,
     val isLoading: Boolean,
 ) {
@@ -156,23 +171,29 @@ private data class HomeSnapshot(
                     recent = requireNotNull(recent),
                     categoriasById = requireNotNull(categoriasById),
                     totalBalance = requireNotNull(totalBalance),
+                    statistics = statistics,
                 )
             )
       }
 
   companion object {
+    /** A failed [statistics] read only hides the card, so it is never a Home error. */
+    @Suppress("LongParameterList")
     fun from(
         summary: LoadState<MovimientoSummary>,
         recent: LoadState<List<Movimiento>>,
         categorias: LoadState<List<Categoria>>,
         totales: LoadState<Map<Moneda, Money>>,
+        statistics: LoadState<StatisticsSnapshot>,
         moneda: Moneda,
+        today: LocalDate,
     ): HomeSnapshot =
         HomeSnapshot(
             summary = summary.successOrNull(),
             recent = recent.successOrNull(),
             categoriasById = categorias.successOrNull()?.associateBy { it.id },
             totalBalance = totales.successOrNull()?.let { it[moneda] ?: Money(0, moneda) },
+            statistics = statistics.successOrNull()?.homeStatisticsOrNull(today),
             error =
                 summary.errorOrNull()
                     ?: recent.errorOrNull()
@@ -182,10 +203,19 @@ private data class HomeSnapshot(
                 summary is LoadState.Loading ||
                     recent is LoadState.Loading ||
                     categorias is LoadState.Loading ||
-                    totales is LoadState.Loading,
+                    totales is LoadState.Loading ||
+                    statistics is LoadState.Loading,
         )
   }
 }
+
+// A total past the Long range hides the card the same way a failed read does.
+private fun StatisticsSnapshot.homeStatisticsOrNull(today: LocalDate): HomeStatistics? =
+    try {
+      toHomeStatistics(today)
+    } catch (_: ArithmeticException) {
+      null
+    }
 
 private fun <T> LoadState<T>.successOrNull(): T? =
     (this as? LoadState.Value)?.outcome.let { it as? DataOutcome.Success }?.data

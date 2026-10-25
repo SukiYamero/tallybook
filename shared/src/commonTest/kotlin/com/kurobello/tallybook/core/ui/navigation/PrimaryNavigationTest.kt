@@ -1,13 +1,22 @@
 package com.kurobello.tallybook.core.ui.navigation
 
 import androidx.compose.runtime.mutableStateOf
+import com.kurobello.tallybook.core.model.MedioPago
+import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.MovimientoDateRange
+import com.kurobello.tallybook.core.model.SearchTipo
+import com.kurobello.tallybook.core.model.StatisticsKey
 import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSession
 import com.kurobello.tallybook.feature.search.ui.SearchFilterRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.json.Json
 
 internal class PrimaryNavigationTest {
@@ -98,6 +107,71 @@ internal class PrimaryNavigationTest {
   }
 
   @Test
+  fun statisticsRetainsItsOwnerAndBackReturnsHome() {
+    val statistics = PrimaryNavigationState().select(Statistics)
+    assertEquals(Statistics, statistics.selected)
+    assertEquals(listOf(Home, Statistics), statistics.retainedKeys)
+    assertEquals(listOf(Home, Statistics), statistics.displayedKeys)
+    assertSame(statistics, statistics.select(Statistics))
+    val search = statistics.select(Search)
+    assertEquals(listOf(Home, Search, Statistics), search.retainedKeys)
+    assertEquals(listOf(Home, Search), search.displayedKeys)
+    assertEquals(statistics.copy(searchVisited = true), search.select(Statistics))
+    val home = statistics.back()
+    assertEquals(Home, home.selected)
+    assertEquals(listOf(Home, Statistics), home.retainedKeys)
+    assertEquals(listOf(Home), home.displayedKeys)
+    assertEquals(statistics, statistics.openSecondary(UiCatalog).back())
+    assertEquals(statistics, initialPrimaryNavigation(Statistics))
+    assertEquals("primary-statistics", primaryContentKey(Statistics))
+  }
+
+  @Test
+  fun statisticsIsNeverASecondaryAndOpensOnlyTheCatalog() {
+    val statistics = PrimaryNavigationState().select(Statistics)
+    listOf(Categories, Tags, Accounts, Home, Search, Profile, Statistics).forEach {
+      assertSame(statistics, statistics.openSecondary(it))
+    }
+    val profile = PrimaryNavigationState().select(Profile)
+    assertSame(profile, profile.openSecondary(Statistics))
+    assertFailsWith<IllegalArgumentException> {
+      PrimaryNavigationState(Profile, profileVisited = true, secondary = Statistics)
+    }
+    assertFailsWith<IllegalArgumentException> { PrimaryNavigationState(Statistics) }
+  }
+
+  @Test
+  fun restoredStatisticsPreservesVisitedEntriesAndItsSelection() {
+    val original =
+        PrimaryNavigationState().select(History).select(Statistics).openSecondary(UiCatalog)
+    val restored =
+        Json.decodeFromString<PrimaryNavigationState>(
+            Json.encodeToString(PrimaryNavigationState.serializer(), original)
+        )
+    assertEquals(original, restored)
+    assertEquals(listOf(Home, History, Statistics, UiCatalog), restored.retainedKeys)
+    assertEquals(Statistics, restored.back().selected)
+  }
+
+  @Test
+  fun aSnapshotSavedBeforeStatisticsExistedRestoresUnvisited() {
+    val saved =
+        """{"selected":{"type":"com.kurobello.tallybook.core.ui.navigation.Search"},""" +
+            """"historyVisited":true,"secondary":null,"searchVisited":true,""" +
+            """"profileVisited":true}"""
+
+    val restored = Json.decodeFromString<PrimaryNavigationState>(saved)
+
+    assertEquals(Search, restored.selected)
+    assertEquals(false, restored.statisticsVisited)
+    assertEquals(listOf(Home, History, Search, Profile), restored.retainedKeys)
+    assertEquals(
+        listOf(Home, History, Search, Statistics, Profile),
+        restored.select(Statistics).retainedKeys,
+    )
+  }
+
+  @Test
   fun categoriesOpensOnlyOverProfileAndBackReturnsToProfile() {
     val home = PrimaryNavigationState()
     assertSame(home, home.openSecondary(Categories))
@@ -160,6 +234,105 @@ internal class PrimaryNavigationTest {
     val request = assertNotNull(navigator.searchFilterRequest)
     assertEquals(SearchFilterRequest(request.token, etiquetaIds = setOf("t_empresa")), request)
     assertEquals(Home, navigator.state.back().selected)
+  }
+
+  @Test
+  fun aFilterRequestCarriesItsRangeAndTipoToSearch() {
+    val navigation = mutableStateOf(PrimaryNavigationState())
+    val modals = PrimaryModalCoordinator(AddMovimientoSheetSession()) { false }
+    val navigator = PrimaryNavigator(navigation, modals, catalogEnabled = false)
+    val range = MovimientoDateRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 30))
+
+    navigator.showSearchFilter(
+        categoryIds = setOf("food"),
+        moneda = Moneda.COP,
+        range = range,
+        tipo = SearchTipo.GASTO,
+    )
+
+    assertEquals(Search, navigator.state.selected)
+    val request = assertNotNull(navigator.searchFilterRequest)
+    assertEquals(
+        SearchFilterRequest(
+            request.token,
+            categoryIds = setOf("food"),
+            moneda = Moneda.COP,
+            range = range,
+            tipo = SearchTipo.GASTO,
+        ),
+        request,
+    )
+  }
+
+  @Test
+  fun statisticsTakesSearchsTabSoSearchSelectsNoTab() {
+    assertEquals(listOf(Home, History, Statistics, Profile), primaryTabDestinations)
+    assertFalse(Search in primaryTabDestinations)
+    assertTrue(PrimaryNavigationState().select(Search).selected !in primaryTabDestinations)
+  }
+
+  @Test
+  fun aStatisticsGroupOpensSearchOverItsGastosWhileItsSelectionStays() {
+    val navigation = mutableStateOf(PrimaryNavigationState())
+    val modals = PrimaryModalCoordinator(AddMovimientoSheetSession()) { false }
+    val navigator = PrimaryNavigator(navigation, modals, catalogEnabled = false)
+    val range = MovimientoDateRange(LocalDate(2026, 10, 1), LocalDate(2026, 10, 24))
+    navigator.select(Statistics)
+
+    navigator.showStatisticsFilter(StatisticsKey.Categoria("food"), Moneda.COP, range)
+    val category = assertNotNull(navigator.searchFilterRequest)
+    navigator.showStatisticsFilter(StatisticsKey.Etiqueta("trip"), Moneda.COP, range)
+    val tag = assertNotNull(navigator.searchFilterRequest)
+    navigator.showStatisticsFilter(StatisticsKey.Cuenta("cash"), Moneda.USD, range)
+    val cuenta = assertNotNull(navigator.searchFilterRequest)
+
+    assertEquals(
+        SearchFilterRequest(
+            category.token,
+            categoryIds = setOf("food"),
+            moneda = Moneda.COP,
+            range = range,
+            tipo = SearchTipo.GASTO,
+        ),
+        category,
+    )
+    assertEquals(
+        SearchFilterRequest(
+            tag.token,
+            etiquetaIds = setOf("trip"),
+            moneda = Moneda.COP,
+            range = range,
+            tipo = SearchTipo.GASTO,
+        ),
+        tag,
+    )
+    assertEquals(
+        SearchFilterRequest(
+            cuenta.token,
+            cuentaIds = setOf("cash"),
+            moneda = Moneda.USD,
+            range = range,
+            tipo = SearchTipo.GASTO,
+        ),
+        cuenta,
+    )
+    assertEquals(Search, navigator.state.selected)
+    assertEquals(listOf(Home, Search, Statistics), navigator.state.retainedKeys)
+    navigator.back()
+    assertEquals(Home, navigator.state.selected)
+  }
+
+  @Test
+  fun aMedioOpensNoSearch() {
+    val navigation = mutableStateOf(PrimaryNavigationState().select(Statistics))
+    val modals = PrimaryModalCoordinator(AddMovimientoSheetSession()) { false }
+    val navigator = PrimaryNavigator(navigation, modals, catalogEnabled = false)
+    val range = MovimientoDateRange(LocalDate(2026, 10, 1), LocalDate(2026, 10, 24))
+
+    navigator.showStatisticsFilter(StatisticsKey.Medio(MedioPago.EFECTIVO), Moneda.COP, range)
+
+    assertEquals(Statistics, navigator.state.selected)
+    assertNull(navigator.searchFilterRequest)
   }
 
   @Test

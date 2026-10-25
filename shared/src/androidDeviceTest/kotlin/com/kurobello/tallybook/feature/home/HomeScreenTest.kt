@@ -7,7 +7,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
@@ -22,8 +24,10 @@ import androidx.compose.ui.unit.dp
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.model.Change
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
+import com.kurobello.tallybook.core.model.Direction
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
@@ -45,16 +49,24 @@ import tallybook.shared.generated.resources.app_name
 import tallybook.shared.generated.resources.home_add_first
 import tallybook.shared.generated.resources.home_empty_title
 import tallybook.shared.generated.resources.home_load_error_title
+import tallybook.shared.generated.resources.home_month_expenses
 import tallybook.shared.generated.resources.home_recent
 import tallybook.shared.generated.resources.home_search_placeholder
+import tallybook.shared.generated.resources.home_statistics_open
+import tallybook.shared.generated.resources.home_statistics_title
 import tallybook.shared.generated.resources.loading
 import tallybook.shared.generated.resources.navigation_add_movement
 import tallybook.shared.generated.resources.navigation_history
 import tallybook.shared.generated.resources.navigation_home
 import tallybook.shared.generated.resources.navigation_profile
-import tallybook.shared.generated.resources.navigation_search
+import tallybook.shared.generated.resources.navigation_statistics
 import tallybook.shared.generated.resources.retry
+import tallybook.shared.generated.resources.statistics_pace_above
+import tallybook.shared.generated.resources.statistics_pace_even
+import tallybook.shared.generated.resources.statistics_share
+import tallybook.shared.generated.resources.statistics_share_item
 import tallybook.shared.generated.resources.ui_catalog_title
+import tallybook.shared.generated.resources.unknown_category
 
 class HomeScreenTest {
 
@@ -132,7 +144,7 @@ class HomeScreenTest {
             homeLabel,
             localizedString(Res.string.navigation_history),
             localizedString(Res.string.navigation_add_movement),
-            localizedString(Res.string.navigation_search),
+            localizedString(Res.string.navigation_statistics),
             localizedString(Res.string.navigation_profile),
         )
     composeRule.setContent { TallybookTheme { HostedHomeScreen(HomeUiState.loading(), {}, {}) } }
@@ -148,7 +160,7 @@ class HomeScreenTest {
     val otherDestinations =
         listOf(
             Res.string.navigation_history,
-            Res.string.navigation_search,
+            Res.string.navigation_statistics,
             Res.string.navigation_profile,
         )
     composeRule.setContent { TallybookTheme { HostedHomeScreen(HomeUiState.loading(), {}, {}) } }
@@ -261,6 +273,93 @@ class HomeScreenTest {
     composeRule.onNodeWithText("-$\u00A01,00").assertIsDisplayed()
   }
 
+  @Test
+  fun statisticsCardFollowsTheBalanceAndItsTapOpensStatistics() {
+    var opened = 0
+    val title = localizedString(Res.string.home_statistics_title)
+    composeRule.setContent {
+      TallybookTheme {
+        HomeScreen(
+            statisticsState(pace = Change(15, Direction.Up)),
+            {},
+            {},
+            onOpenStatistics = { opened += 1 },
+        )
+      }
+    }
+
+    composeRule.onNodeWithText(title, useUnmergedTree = true).assertIsDisplayed()
+    composeRule.onNodeWithText(legend("Comida", 60), useUnmergedTree = true).assertIsDisplayed()
+    composeRule
+        .onNodeWithText(
+            legend(localizedString(Res.string.unknown_category), 25),
+            useUnmergedTree = true,
+        )
+        .assertIsDisplayed()
+    composeRule
+        .onNodeWithText(
+            runBlocking { getString(Res.string.statistics_pace_above, "15") },
+            useUnmergedTree = true,
+        )
+        .assertIsDisplayed()
+    val expenses =
+        composeRule
+            .onNodeWithText(localizedString(Res.string.home_month_expenses), useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
+    val card =
+        composeRule.onNodeWithText(title, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+    assertTrue(card.top > expenses.bottom)
+
+    composeRule
+        .onNode(hasClickLabel(localizedString(Res.string.home_statistics_open)))
+        .assertHasClickAction()
+        .performClick()
+    composeRule.runOnIdle { assertEquals(1, opened) }
+  }
+
+  @Test
+  fun statisticsCardWithoutPaceShowsNoPaceLine() {
+    composeRule.setContent {
+      TallybookTheme { HomeScreen(statisticsState(pace = null), {}, {}, onOpenStatistics = {}) }
+    }
+
+    composeRule
+        .onNodeWithText(localizedString(Res.string.home_statistics_title), useUnmergedTree = true)
+        .assertIsDisplayed()
+    composeRule
+        .onNodeWithText(localizedString(Res.string.statistics_pace_even), useUnmergedTree = true)
+        .assertDoesNotExist()
+    composeRule
+        .onNodeWithText(
+            runBlocking { getString(Res.string.statistics_pace_above, "15") },
+            useUnmergedTree = true,
+        )
+        .assertDoesNotExist()
+  }
+
+  @Test
+  fun withoutMonthStatisticsHomeShowsNoCard() {
+    composeRule.setContent { TallybookTheme { HomeScreen(populatedState, {}, {}) } }
+
+    composeRule
+        .onNodeWithText(localizedString(Res.string.home_statistics_title), useUnmergedTree = true)
+        .assertDoesNotExist()
+  }
+
+  private fun hasClickLabel(label: String) =
+      SemanticsMatcher("onClick label is $label") {
+        it.config.getOrNull(SemanticsActions.OnClick)?.label == label
+      }
+
+  private fun legend(nombre: String, percent: Int): String = runBlocking {
+    getString(
+        Res.string.statistics_share_item,
+        nombre,
+        getString(Res.string.statistics_share, percent),
+    )
+  }
+
   private fun localizedString(resource: StringResource): String = runBlocking {
     getString(resource)
   }
@@ -303,6 +402,26 @@ class HomeScreenTest {
                 recent = listOf(movimiento),
                 categoriasById = mapOf(categoria.id to categoria),
                 totalBalance = Money(250_000, Moneda.COP),
+            )
+        )
+
+    fun statisticsState(pace: Change?) =
+        HomeUiState.ready(
+            HomeContent(
+                summary = MovimientoSummary(Money(100, Moneda.COP), Money(100, Moneda.COP)),
+                recent = listOf(movimiento),
+                categoriasById = mapOf(categoria.id to categoria),
+                totalBalance = Money(250_000, Moneda.COP),
+                statistics =
+                    HomeStatistics(
+                        top =
+                            listOf(
+                                HomeCategoryShare(categoria.id, 6_000),
+                                HomeCategoryShare("deleted", 2_500),
+                            ),
+                        otherBasisPoints = 1_500,
+                        pace = pace,
+                    ),
             )
         )
   }

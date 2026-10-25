@@ -32,6 +32,7 @@ import com.kurobello.tallybook.feature.movimientos.ui.rememberOpenMovimiento
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewModel
 import com.kurobello.tallybook.feature.profile.ui.ProfileRoute
 import com.kurobello.tallybook.feature.search.ui.SearchRoute
+import com.kurobello.tallybook.feature.statistics.ui.StatisticsRoute
 import com.kurobello.tallybook.feature.tags.ui.TagsRoute
 import com.kurobello.tallybook.feature.transfers.ui.TransferSheetRoute
 import com.kurobello.tallybook.feature.transfers.ui.recentTransferenciasContent
@@ -143,7 +144,6 @@ private fun PrimaryRoute(
     openers: ManagementOpeners,
 ) {
   val state = navigator.state
-  val openManagement = openers.movimiento
   when (destination) {
     Home ->
         HomeRoute(
@@ -151,20 +151,21 @@ private fun PrimaryRoute(
             bottomBarClearance = clearance,
             onOpenCatalog = navigator.openCatalog,
             onSearch = navigator::openSearch,
-            onOpenMovimiento = openManagement,
+            onOpenMovimiento = openers.movimiento,
             onOpenAccounts = { navigator.openSecondary(Accounts) },
+            onOpenStatistics = { navigator.select(Statistics) },
         )
     History ->
         HistoryRoute(
             navigator::openCreation,
             clearance,
-            onOpenMovimiento = openManagement,
+            onOpenMovimiento = openers.movimiento,
             onOpenTransferencia = { id -> openers.transfer(TransferEntry.Existing(id)) },
         )
     Search ->
         SearchRoute(
             onAdd = navigator::openCreation,
-            onOpenMovimiento = openManagement,
+            onOpenMovimiento = openers.movimiento,
             onOpenTransferencia = { id -> openers.transfer(TransferEntry.Existing(id)) },
             bottomBarClearance = clearance,
             modals = navigator.modals,
@@ -174,6 +175,7 @@ private fun PrimaryRoute(
             onSearchFilterRequestHandled = navigator::acknowledgeSearchFilter,
             active = state.selected == Search && state.secondary == null,
         )
+    Statistics -> StatisticsDestination(navigator, clearance)
     Profile ->
         ProfileRoute(
             bottomBarClearance = clearance,
@@ -198,6 +200,17 @@ private fun PrimaryRoute(
         )
     Accounts -> AccountsDestination(navigator, openers.transfer)
   }
+}
+
+@Composable
+private fun StatisticsDestination(navigator: PrimaryNavigator, clearance: Dp) {
+  StatisticsRoute(
+      onOpenSearch = navigator::showStatisticsFilter,
+      onOpenCreation = navigator::openCreation,
+      clearance = clearance,
+      modals = navigator.modals,
+      active = navigator.state.selected == Statistics && navigator.state.secondary == null,
+  )
 }
 
 @Composable
@@ -245,6 +258,7 @@ internal fun primaryContentKey(destination: Destination): String =
       Home -> "primary-home"
       History -> "primary-history"
       Search -> "primary-search"
+      Statistics -> "primary-statistics"
       Profile -> "primary-profile"
       UiCatalog -> "ui-catalog"
       Categories -> "secondary-categories"
