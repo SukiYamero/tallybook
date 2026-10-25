@@ -365,6 +365,11 @@ nombres de las categorías predefinidas siguen el idioma activo; la moneda infer
 - Recent movimientos are the six newest whose account is in the primary currency, filtered before the
   limit and ordered by `fecha DESC, created_at DESC, id DESC`, so newer foreign-currency rows cannot
   hide eligible ones. Transfers are not listed on Home.
+- "Your month in numbers" sits between the balance and the recent movimientos while this month has
+  gasto in the primary currency: the three largest root categories of the month's
+  [distribution](#statistics), every other one as a single rest share, and the month's pace when it
+  applies. Tapping it opens Statistics with its retained selection. A failed read hides the card
+  instead of becoming a Home error.
 
 ## CSV export
 
@@ -478,8 +483,9 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
 ## Tracking and History
 
 History browses movimientos and transfers with three scopes: Day, Week and Month. A year selector supplies
-calendar context; Year is not a fourth scope. Search is a separate destination. Text search and
-non-date filters belong to Search; charts do not belong to History selection.
+calendar context; Year is not a fourth scope. Text search and non-date filters belong to
+[Search](#search-and-filters), a separate destination; charts belong to [Statistics](#statistics), not
+to History selection.
 
 - Fresh History entry selects Day at today. Scope and one civil-date anchor own selection; context,
   selected chips, options and read range are derived.
@@ -556,8 +562,12 @@ this section owns agreed product rules, not delivery status.
   or tag is selected; an account filter matches either side of a transfer.
 - The account dimension lists the viewed currency's accounts, archived included, plus selected
   accounts of another currency and a localized fallback for selected IDs no account holds. A missing
-  selected account stays applied until removed. "View movements" in an account sheet opens Search
-  with that account's currency and only that account selected.
+  selected account stays applied until removed.
+- A filter request from another surface ("View movements" in a category, tag or account sheet, or a
+  [Statistics](#statistics) drill-down) clears the text and replaces the filters with exactly the
+  requested IDs, switching to the requested currency (an account's own one) when given. A Statistics
+  request also sets type gasto and the period as a Custom range; the others keep All history and
+  every type.
 - Filter edits form a draft. Apply atomically commits and closes; Back, scrim or drag discards and
   closes. Clear atomically commits default filters and closes, resetting Custom endpoints to current
   today and preserving raw search text. Apply is available for
@@ -573,9 +583,77 @@ this section owns agreed product rules, not delivery status.
   means currency data exists but criteria/text match none. Currency presence metadata and structural rows come from
   the same database read snapshot.
 - Applied filters, raw text and the selected currency survive supported saved-owner recreation. Results, categories, loading,
-  jobs, focus, keyboard and open/closing drafts are not saved. Tab changes retain the entry and scroll.
+  jobs, focus, keyboard and open/closing drafts are not saved. Leaving Search retains the entry and
+  scroll.
   Raw text never enters preferences, analytics or logs. Restoration follows the existing platform
   scope; no iOS cross-process persistence bridge is added.
+
+## Statistics
+
+Statistics answers where the money went, whether a period is unusual and how the trend looks, over
+one currency at a time. Presentation lives in
+[UI architecture](ui/architecture.md#statistics-presentation).
+
+- **Scopes.** Month (default) and Year; there is no Week, because History's week blocks have
+  different lengths. A fresh entry selects the current month. A period in progress ends today. Month
+  chips are the selected year's months up to today, with a year menu; Year chips are the selectable
+  years under [History's rule](#tracking-and-history). Changing year keeps the month and the
+  day-of-month where valid, clamped to month end and to today. On resume a selection in the period in
+  progress follows today; a historical one stays fixed.
+- **Retention.** Scope, anchor, selected currency and distribution dimension survive like History's
+  selection; unknown or malformed values recover to the current month, the primary currency and
+  Categories.
+- **Comparison.** A period in progress is compared with the same stretch of the previous period:
+  October 1–24 against September 1–24, and a year through October 24 against the previous year
+  through October 24. A day the previous period lacks moves to its last day (31 → 30, February 29 →
+  28). A historical period is compared whole against the whole previous one. Without gasto in the
+  comparison no variation is shown. A variation is the size of the change relative to the previous
+  amount, rounded half away from zero.
+- **Currency.** One currency, with the same selector rule as History; no FX conversion.
+- **What counts.** Live movimientos in the currency, each on its `fecha` whatever its medio (a credit
+  purchase counts when it was made). Transfers are neither gasto nor ingreso. Otros counts like any
+  other category. A movimiento whose category is hidden, deleted or missing still counts; a missing
+  one groups under its own ID with History's unknown-category label, so category totals always add
+  up to the period's gasto. All sums are exact minor units in SQL.
+- **Summary.** The period's gasto with its variation and the compared amount, plus ingresos and
+  balance (ingresos − gastos).
+- **Distribution.** Gastos only, grouped by Categories (summed into their root through `padre_id`),
+  Tags, Accounts or Medios. Rows list every group with gasto in the period, by amount descending then
+  ID, each with its variation, amount and share.
+  - Categories, Accounts and Medios are exclusive: shares are measured against their own sum and add
+    up to exactly 100%, the largest absorbing the rounding remainder. The donut shows at most six
+    slices: with more than six groups, the five largest plus "Otras". The list keeps every group;
+    the ones folded into Otras take its color.
+  - Tags overlap: a movimiento counts whole under each of its tags, so each share is measured against
+    the period's gasto, there is no donut, and a note says the shares do not add up to 100%.
+  - A share that rounds below 1% reads "<1%".
+  - Tapping a category row opens its detail; a tag or account row opens Search on that group's gastos
+    in the period (a [filter request](#search-and-filters)); a medio row does nothing.
+- **Evolution.** Monthly gastos and ingresos with the balance as a line. Month shows the six months
+  ending in the selected one; Year shows the selected year's months through the period's end. A
+  month in progress is marked partial with its last counted day. The last month starts selected, and
+  selecting a month shows its values.
+- **Pace.** Only for the current month with gasto. Daily cumulative gasto is compared against the
+  average of up to the three latest whole months with gasto among the previous five. Projection =
+  gasto to date ÷ elapsed days × days in the month; its variation against that average is the pace.
+  Without any previous whole month with gasto there is no pace.
+- **What changed.** Up to three deterministic findings, in this order: the category that rose the
+  most and the one that fell the most, by amount, each only when its variation is at least 10% and
+  the difference reaches 5% of the period's gasto (a category that fell to zero qualifies); and the
+  day with the most gasto when at least two days had gasto. Without findings the section is hidden.
+- **Without gasto in the period.** The distribution shows a brief empty message; pace and "What
+  changed" are hidden; the summary and evolution stay.
+- **Category detail.** A sheet for a root category: total, its share of the period's gasto,
+  movimiento count and variation; the evolution months with the average of the complete ones (a month
+  in progress is excluded); subcategories with the root's own movimientos as "General", when there is
+  more than one group; and the three largest gastos (monto, then `fecha`, descending). "View N
+  movements" appears while N > 0 and, once the sheet has closed, opens Search filtered by the root
+  (children included), the currency, type gasto and the period. N equals Search's count for that
+  filter.
+- **States.** A refresh keeps the previous content (`RetainedLoadState`). A failed read shows an
+  error card with retry, keeping any previous content marked as previous data. With no movimiento at
+  all in the currency, a single empty state offers to add one through the same creation flow as the
+  centered add action.
 
 ## Change stamps and tombstones
 

@@ -32,6 +32,13 @@ feature que las necesita, no antes.
   accesibilidad/foco/estado y el cableado del gesto de drag — **no trae animaciones ni feeling nativo**,
   eso se diseña encima con las APIs de animación de Compose, igual que ya hacían con el `BottomSheet`
   bespoke de la web. La arquitectura y las reglas de uso viven únicamente en `docs/ui/architecture.md`.
+- **Gráficos**: Vico (`com.patrykandpatrick.vico:compose`) **fijado en 3.2.3**, porque el AAR de
+  Android de la 3.3.0 declara `minCompileSdk=37` y el proyecto compila con 36. Antes de subir de
+  versión, revisar el `minCompileSdk` del AAR. Publica `iosArm64` e `iosSimulatorArm64` y exige
+  `kotlinx-coroutines` 1.11.0. Se usa solo para los gráficos cartesianos (`CartesianChart` con
+  `ColumnCartesianLayer` y `LineCartesianLayer`: evolución, ritmo y meses de una categoría), pintado
+  con los tokens. La dona y las barras de distribución son Compose propio: la dona de Vico es
+  experimental y esas formas no tienen ejes. Componentes en `docs/ui/components.md`.
 - **Imágenes / preferencias / listas paginadas**: Coil 3, DataStore, Paging 3 — ya cubiertos por skills
   instaladas (`android-skills:coil-compose`, `android-skills:datastore`, `android-skills:paging`), sin
   nada que decidir.

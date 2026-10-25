@@ -20,7 +20,7 @@ references; their sample data and quantity-bearing Apply button are not requirem
   stay live while delayed feedback applies only to the result region. Pending status shows Loading.
 - Decorated Navigation 3 entries retain the actual SavedStateHandle and ViewModel owner. Retained
   entry content reads the current provider to keep presentation/focus inputs fresh. Home entry
-  reveals/focuses the field once; tab return retains position. Creation remains shell-owned, with
+  reveals/focuses the field once; any other return retains position. Creation remains shell-owned, with
   modal exclusion and origin-checked callbacks.
 - The filter sheet uses 72% of available height, a scrolling body and fixed footer. Clear commits
   default filters, closes and preserves raw text. Custom shows labeled From/To controls with inclusive

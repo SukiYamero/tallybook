@@ -1,6 +1,6 @@
 # Profile and preferences
 
-Profile is the fifth bottom-navigation position (Home, History, Add, Search, Profile): a retained
+Profile is the fifth bottom-navigation position (Home, History, Add, Statistics, Profile): a retained
 primary destination whose root Back returns to Home. The user accepted the Android flow; the reviewed
 implementation is integrated into `main`. [Business logic](../business-logic.md#moneda-e-idioma) owns
 currency, language and theme rules and the [CSV export](../business-logic.md#csv-export); [UI architecture](../ui/architecture.md#tallybook-destination-rule)
