@@ -632,8 +632,8 @@ class AddMovimientoSheetTest {
 
   @Suppress("TooManyFunctions")
   private class SheetRecordingActions(
-      private val onSubmitRequested: () -> Unit = {},
       private val onPhraseRecorded: (String) -> Unit = {},
+      private val onSubmitRequested: () -> Unit = {},
   ) : AddMovimientoActions {
     var submitCount = 0
     var continueCount = 0
