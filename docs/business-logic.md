@@ -378,6 +378,52 @@ nombres de las categorías predefinidas siguen el idioma activo; la moneda infer
   [distribution](#statistics), every other one as a single rest share, and the month's pace when it
   applies. Tapping it opens Statistics with its retained selection. A failed read hides the card
   instead of becoming a Home error.
+- While any [recurrente](#recurrentes) occurrence is pending, a compact row "N recurrentes por
+  confirmar" sits under the balance card and opens Recurrentes. N counts occurrences, not
+  recurrencias. It never changes the balance, the month's totals or the recent movimientos, and a
+  failed read hides only the row.
+
+## Recurrentes
+
+Rent, bills, salary and subscriptions repeat: the user registers one once and confirms each due date
+with the real amount. An unconfirmed occurrence is never money that moved, so it counts in no saldo,
+Home total, History, Search, Statistics or CSV export until it becomes a movimiento.
+
+- **Template.** A `recurrencia` holds the movimiento fields (tipo, monto, cuenta, medio, categoría,
+  tags, título, descripción), `frecuencia` (`SEMANAL`, `MENSUAL`, `ANUAL`), `fechaAncla`,
+  `proximaFecha` and `createdAt`, with change stamps and tombstone like every root entity (see
+  [Change stamps and tombstones](#change-stamps-and-tombstones)); `recurrencia_etiqueta` is its child
+  table. `movimiento.recurrencia_id` (nullable) links a confirmed movimiento to its recurrencia.
+- **Creating.** The creation form and the sentence summary offer Repetir (Mensual by default,
+  Semanal, Anual). Saving with it on creates the movimiento as usual plus its recurrencia in one
+  write: `fechaAncla` is the movimiento's fecha and `proximaFecha` the first occurrence strictly after
+  both that fecha and today. The editor of an existing movimiento never offers it.
+- **Occurrences.** Occurrence n is `fechaAncla + n` periods, always counted from the anchor so it
+  never drifts; a monthly or annual day past the month's end falls on its last day, like `diaCorte`
+  (31 → 30 April → 31 May; 29 February → 28 February in non-leap years). Pending means every
+  occurrence from `proximaFecha` through today, read from the injected civil day, never the clock.
+- **Recurrentes (Profile, or the Home row).** Pending occurrences come first, oldest due date first
+  across recurrencias, headed by their count; then every live recurrencia by next date. Only a
+  recurrencia's oldest pending date can be acted on; later ones wait for it. With no recurrencia the
+  section shows an empty state.
+- **Pagado** confirms the oldest pending occurrence: the movimiento is created with
+  `recurrencia_id`, the amount prefilled with the template's and the fecha with the due date, both
+  editable (fecha up to today). A different amount also becomes the template's amount. Confirming late
+  does not move it into another month, because its fecha starts at the due date, not today. **Todavía no** closes and leaves
+  it pending. **Saltar** skips that occurrence without money. Pagado and Saltar each advance
+  `proximaFecha` by one occurrence in one transaction and one stamp, and offer Undo.
+- **Undo** of Pagado or Saltar restores `proximaFecha` and the amount and tombstones the created
+  movimiento, only while neither the recurrencia nor that movimiento changed since (compared by
+  stamp); otherwise nothing is written and the conflict feedback says so.
+- **Template problems.** Pagado only takes amount and fecha. An archived or deleted cuenta, or a
+  hidden or deleted category, makes the confirm fail with a message that offers the recurrencia's
+  sheet, where the template is fixed first.
+- **Editing.** A recurrencia opens in the movimiento form, its date replaced by frecuencia and next
+  date. Those two are locked, with the reason shown, while any occurrence is pending; saving a new
+  frecuencia or next date re-anchors `fechaAncla` and `proximaFecha` on that date. Every other field
+  can always change and applies to pending and future occurrences. Past movimientos never change.
+- **Deleting** asks first and has no Undo. It tombstones the recurrencia; its movimientos keep
+  `recurrencia_id`. Deleting or re-dating a confirmed movimiento does not bring its occurrence back.
 
 ## CSV export
 
