@@ -52,6 +52,7 @@ internal fun MovimientoForm(
     headerAction: (@Composable () -> Unit)? = null,
     supportingContent: (@Composable () -> Unit)? = null,
     footerContent: (@Composable () -> Unit)? = null,
+    dateContent: (@Composable () -> Unit)? = null,
     interactionEnabled: Boolean = true,
     categoryCreation: CategoryPickerCreation? = null,
     onDeselectCategoria: (() -> Unit)? = null,
@@ -106,6 +107,7 @@ internal fun MovimientoForm(
                 onCreateCuenta = onCreateCuenta,
             ),
         fieldFocus = fieldFocus.copy(amountModifier = Modifier.revealWhenFocused()),
+        dateContent = dateContent,
     )
     val textEnabled = interactionEnabled && !uiState.isSubmitting
     MovimientoOptionalTextField(

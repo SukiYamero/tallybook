@@ -1,0 +1,51 @@
+<resources>
+    <string name="recurrencia_repeat_label">Repeat</string>
+    <string name="recurrencia_repeat_body">We’ll have it ready to confirm on each date, so you won’t enter it again.</string>
+    <string name="recurrencia_frequency_label">Frequency</string>
+    <string name="frecuencia_semanal">Weekly</string>
+    <string name="frecuencia_mensual">Monthly</string>
+    <string name="frecuencia_anual">Yearly</string>
+    <string name="profile_recurrentes_label">Recurring</string>
+    <string name="profile_recurrentes_body">Confirm the payments and income that repeat.</string>
+    <string name="recurrentes_title">Recurring</string>
+    <plurals name="recurrentes_pending_heading">
+        <item quantity="one">%1$d to confirm</item>
+        <item quantity="other">%1$d to confirm</item>
+    </plurals>
+    <string name="recurrentes_scheduled_heading">Scheduled</string>
+    <string name="recurrentes_empty_title">No recurring movements yet</string>
+    <string name="recurrentes_empty_body">To stop entering rent or salary every month, turn on Repeat when you add them.</string>
+    <string name="recurrentes_load_error">We couldn’t load your recurring movements. Your data is still saved; try again.</string>
+    <string name="recurrencia_pending_since">Due since %1$s</string>
+    <string name="recurrencia_pending_after_previous">Confirm the earlier date first</string>
+    <string name="recurrencia_schedule">%1$s · Next: %2$s</string>
+    <string name="recurrencia_open">Open recurring movement</string>
+    <string name="recurrencia_open_pending">Confirm this date</string>
+    <string name="recurrencia_confirm_title">Confirm recurring movement</string>
+    <string name="recurrencia_confirm_body">Adjust the amount or date if they changed, so your balance shows what really happened.</string>
+    <string name="recurrencia_paid">Paid</string>
+    <string name="recurrencia_not_yet">Not yet</string>
+    <string name="recurrencia_skip">Skip</string>
+    <string name="recurrencia_edit">Edit recurring movement</string>
+    <string name="recurrencia_confirm_error">We couldn’t record it. What you entered is still here; try again.</string>
+    <string name="recurrencia_confirm_template_error">To record it, check the recurring movement’s account or category: one of them is no longer available.</string>
+    <string name="recurrencia_skip_error">We couldn’t skip this date. Try again.</string>
+    <string name="recurrencia_next_date">Next date</string>
+    <string name="recurrencia_schedule_locked">To change the frequency or next date, first confirm or skip what’s pending.</string>
+    <string name="recurrencia_delete">Delete recurring movement</string>
+    <string name="recurrencia_delete_title">Delete this recurring movement?</string>
+    <string name="recurrencia_delete_message">Movements you already recorded stay; only new dates stop appearing.</string>
+    <string name="recurrencia_delete_error">We couldn’t delete it. Your data is still saved; try again.</string>
+    <string name="recurrencia_updated">Recurring movement updated</string>
+    <string name="recurrencia_deleted">Recurring movement deleted</string>
+    <string name="recurrencia_confirmed">Movement recorded</string>
+    <string name="recurrencia_skipped">Date skipped</string>
+    <string name="recurrencia_undone">Change undone</string>
+    <string name="recurrencia_undo_error">We couldn’t undo it. Your data is still saved; try again.</string>
+    <string name="recurrencia_undo_conflict">We didn’t undo it because it changed since then. The current version was kept.</string>
+    <string name="recurrencia_undoing">Undoing</string>
+    <plurals name="home_recurrentes_pending">
+        <item quantity="one">%1$d recurring movement to confirm</item>
+        <item quantity="other">%1$d recurring movements to confirm</item>
+    </plurals>
+</resources>

@@ -24,12 +24,12 @@ import com.kurobello.tallybook.core.text.parseAmountInput
 import com.kurobello.tallybook.core.text.toAmountInput
 import com.kurobello.tallybook.core.ui.component.DismissalDecision
 import com.kurobello.tallybook.core.ui.component.dismissalDecision
-import com.kurobello.tallybook.core.ui.feedback.DeletedSnapshot
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackKind
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackQueue
 import com.kurobello.tallybook.core.ui.feedback.ManagementOutcome
 import com.kurobello.tallybook.core.ui.feedback.ManagementSessionHandle
 import com.kurobello.tallybook.core.ui.feedback.ManagementSubject
+import com.kurobello.tallybook.core.ui.feedback.UndoSnapshot
 import kotlin.time.Clock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -319,7 +319,7 @@ internal class ManageMovimientoViewModel(
                     kind =
                         if (outcome.data == null) ManagementFeedbackKind.Missing
                         else ManagementFeedbackKind.Deleted,
-                    deleted = outcome.data?.let(DeletedSnapshot::OfMovimiento),
+                    undo = outcome.data?.let(UndoSnapshot::OfMovimiento),
                 ),
             )
       }
@@ -583,7 +583,7 @@ private fun Movimiento.toChanges() =
 
 private fun String?.normalizeOptionalTextOrNull(): String? = this?.normalizeOptionalText()
 
-private fun EditMovimientoUiState.toChangesOrNull(): MovimientoChanges? {
+internal fun EditMovimientoUiState.toChangesOrNull(): MovimientoChanges? {
   val amount = (parseAmountInput(amountInput, moneda) as? AmountInputResult.Valid)?.money
   val categoria = categoriaId
   val cuenta = cuentaField.selected

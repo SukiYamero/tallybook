@@ -1,0 +1,84 @@
+-- A template for the movimiento each occurrence creates once confirmed; it never counts as money.
+-- Like movimiento it has no currency column: the currency is cuenta.moneda. fecha_ancla is the
+-- occurrence every later one is computed from, so a day past a month's end never drifts.
+-- updated_at has no DEFAULT so a write that forgets its ChangeStamp fails instead of becoming SEED.
+CREATE TABLE recurrencia (
+    id TEXT NOT NULL PRIMARY KEY,
+    tipo TEXT NOT NULL CHECK (tipo IN ('GASTO', 'INGRESO')),
+    monto_minor INTEGER NOT NULL CHECK (monto_minor > 0),
+    titulo TEXT,
+    descripcion TEXT,
+    categoria_id TEXT NOT NULL,
+    cuenta_id TEXT NOT NULL,
+    medio_pago TEXT NOT NULL CHECK (medio_pago IN ('EFECTIVO', 'DEBITO', 'TRANSFERENCIA', 'CREDITO')),
+    frecuencia TEXT NOT NULL CHECK (frecuencia IN ('SEMANAL', 'MENSUAL', 'ANUAL')),
+    fecha_ancla TEXT NOT NULL,
+    proxima_fecha TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT
+);
+
+-- Owned by its recurrencia the way movimiento_etiqueta is by its movimiento. No etiqueta index: an
+-- installation holds a handful of recurrencias.
+CREATE TABLE recurrencia_etiqueta (
+    recurrencia_id TEXT NOT NULL,
+    etiqueta_id TEXT NOT NULL,
+    posicion INTEGER NOT NULL,
+    PRIMARY KEY (recurrencia_id, etiqueta_id)
+);
+
+-- The same shape as movimiento_con_etiquetas, so one mapper format parses both etiqueta lists.
+CREATE VIEW recurrencia_con_etiquetas AS
+SELECT
+    recurrencia.*,
+    cuenta.moneda AS monto_moneda,
+    COALESCE(
+        (
+            SELECT group_concat(recurrencia_etiqueta.posicion || char(31) || recurrencia_etiqueta.etiqueta_id, char(30))
+            FROM recurrencia_etiqueta
+            WHERE recurrencia_etiqueta.recurrencia_id = recurrencia.id
+        ),
+        ''
+    ) AS etiqueta_ids
+FROM recurrencia
+JOIN cuenta ON cuenta.id = recurrencia.cuenta_id
+WHERE recurrencia.deleted_at IS NULL;
+
+insertRecurrencia:
+INSERT INTO recurrencia(id, tipo, monto_minor, titulo, descripcion, categoria_id, cuenta_id, medio_pago, frecuencia, fecha_ancla, proxima_fecha, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+insertRecurrenciaEtiqueta:
+INSERT INTO recurrencia_etiqueta(recurrencia_id, etiqueta_id, posicion)
+VALUES (?, ?, ?);
+
+selectLiveRecurrencias:
+SELECT *
+FROM recurrencia_con_etiquetas
+ORDER BY proxima_fecha, created_at, id;
+
+selectRecurrenciaById:
+SELECT *
+FROM recurrencia_con_etiquetas
+WHERE id = ?;
+
+updateRecurrencia:
+UPDATE recurrencia
+SET tipo = :tipo, monto_minor = :monto_minor, titulo = :titulo, descripcion = :descripcion, categoria_id = :categoria_id, cuenta_id = :cuenta_id, medio_pago = :medio_pago, frecuencia = :frecuencia, fecha_ancla = :fecha_ancla, proxima_fecha = :proxima_fecha, updated_at = :updated_at
+WHERE id = :id AND deleted_at IS NULL;
+
+-- Confirm, skip and their Undo move only the next date and the amount.
+updateRecurrenciaOccurrence:
+UPDATE recurrencia
+SET proxima_fecha = :proxima_fecha, monto_minor = :monto_minor, updated_at = :updated_at
+WHERE id = :id AND deleted_at IS NULL;
+
+deleteRecurrenciaEtiquetas:
+DELETE FROM recurrencia_etiqueta
+WHERE recurrencia_id = ?;
+
+tombstoneRecurrencia:
+UPDATE recurrencia
+SET updated_at = :stamp, deleted_at = :stamp
+WHERE id = :id AND deleted_at IS NULL;

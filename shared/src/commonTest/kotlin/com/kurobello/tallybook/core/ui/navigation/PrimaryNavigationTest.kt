@@ -398,6 +398,27 @@ internal class PrimaryNavigationTest {
   }
 
   @Test
+  fun recurrentesOpensOverHomeOrProfileAndBackReturnsToThatPrimary() {
+    val home = PrimaryNavigationState()
+    val fromHome = home.openSecondary(Recurrentes)
+    assertEquals(listOf(Home, Recurrentes), fromHome.displayedKeys)
+    assertEquals(home, fromHome.back())
+
+    val history = home.select(History)
+    assertSame(history, history.openSecondary(Recurrentes))
+
+    val profile = home.select(Profile)
+    val fromProfile = profile.openSecondary(Recurrentes)
+    assertEquals(listOf(Home, Profile, Recurrentes), fromProfile.retainedKeys)
+    assertEquals(profile, fromProfile.back())
+    assertEquals(
+        initialPrimaryNavigation(Profile).openSecondary(Recurrentes),
+        initialPrimaryNavigation(Recurrentes),
+    )
+    assertEquals("secondary-recurrentes", primaryContentKey(Recurrentes))
+  }
+
+  @Test
   fun snapshotWithAccountsOpenOverHomeRestoresTheSecondarySlot() {
     val original = PrimaryNavigationState().openSecondary(Accounts)
     val restored =

@@ -1,0 +1,51 @@
+<resources>
+    <string name="recurrencia_repeat_label">Repetir</string>
+    <string name="recurrencia_repeat_body">Para você não precisar registrar de novo, deixamos pronto para confirmar em cada data.</string>
+    <string name="recurrencia_frequency_label">Frequência</string>
+    <string name="frecuencia_semanal">Semanal</string>
+    <string name="frecuencia_mensual">Mensal</string>
+    <string name="frecuencia_anual">Anual</string>
+    <string name="profile_recurrentes_label">Recorrentes</string>
+    <string name="profile_recurrentes_body">Confirme os pagamentos e recebimentos que se repetem.</string>
+    <string name="recurrentes_title">Recorrentes</string>
+    <plurals name="recurrentes_pending_heading">
+        <item quantity="one">%1$d para confirmar</item>
+        <item quantity="other">%1$d para confirmar</item>
+    </plurals>
+    <string name="recurrentes_scheduled_heading">Programados</string>
+    <string name="recurrentes_empty_title">Você ainda não tem recorrentes</string>
+    <string name="recurrentes_empty_body">Para não registrar todo mês o aluguel ou o salário, ative Repetir ao adicioná-los.</string>
+    <string name="recurrentes_load_error">Não conseguimos carregar seus recorrentes. Seus dados continuam salvos; tente de novo.</string>
+    <string name="recurrencia_pending_since">Pendente desde %1$s</string>
+    <string name="recurrencia_pending_after_previous">Confirme primeiro a data anterior</string>
+    <string name="recurrencia_schedule">%1$s · Próxima: %2$s</string>
+    <string name="recurrencia_open">Abrir recorrente</string>
+    <string name="recurrencia_open_pending">Confirmar esta data</string>
+    <string name="recurrencia_confirm_title">Confirmar recorrente</string>
+    <string name="recurrencia_confirm_body">Ajuste o valor ou a data se mudaram, para que seu saldo mostre o que realmente aconteceu.</string>
+    <string name="recurrencia_paid">Pago</string>
+    <string name="recurrencia_not_yet">Ainda não</string>
+    <string name="recurrencia_skip">Pular</string>
+    <string name="recurrencia_edit">Editar recorrente</string>
+    <string name="recurrencia_confirm_error">Não conseguimos registrar. O que você digitou continua aqui; tente de novo.</string>
+    <string name="recurrencia_confirm_template_error">Para registrar, revise a conta ou a categoria do recorrente: alguma não está mais disponível.</string>
+    <string name="recurrencia_skip_error">Não conseguimos pular esta data. Tente de novo.</string>
+    <string name="recurrencia_next_date">Próxima data</string>
+    <string name="recurrencia_schedule_locked">Para mudar a frequência ou a próxima data, primeiro confirme ou pule o que está pendente.</string>
+    <string name="recurrencia_delete">Excluir recorrente</string>
+    <string name="recurrencia_delete_title">Excluir este recorrente?</string>
+    <string name="recurrencia_delete_message">As movimentações já registradas continuam; só deixam de aparecer novas datas.</string>
+    <string name="recurrencia_delete_error">Não conseguimos excluir. Seus dados continuam salvos; tente de novo.</string>
+    <string name="recurrencia_updated">Recorrente atualizado</string>
+    <string name="recurrencia_deleted">Recorrente excluído</string>
+    <string name="recurrencia_confirmed">Movimentação registrada</string>
+    <string name="recurrencia_skipped">Data pulada</string>
+    <string name="recurrencia_undone">Alteração desfeita</string>
+    <string name="recurrencia_undo_error">Não conseguimos desfazer. Seus dados continuam salvos; tente de novo.</string>
+    <string name="recurrencia_undo_conflict">Não desfizemos porque mudou desde então. A versão atual foi mantida.</string>
+    <string name="recurrencia_undoing">Desfazendo</string>
+    <plurals name="home_recurrentes_pending">
+        <item quantity="one">%1$d recorrente para confirmar</item>
+        <item quantity="other">%1$d recorrentes para confirmar</item>
+    </plurals>
+</resources>

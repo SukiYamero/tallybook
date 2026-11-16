@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import androidx.compose.runtime.Stable
+import com.kurobello.tallybook.core.model.Frecuencia
 
 @Stable
 internal interface AddMovimientoActions : MovimientoFormActions {
@@ -19,4 +20,9 @@ internal interface AddMovimientoActions : MovimientoFormActions {
   fun onCategoriaCleared()
 
   fun onStepBack()
+
+  /** Turning Repetir on starts with a monthly frecuencia. */
+  fun onRepetirChanged(enabled: Boolean)
+
+  fun onFrecuenciaChanged(frecuencia: Frecuencia)
 }

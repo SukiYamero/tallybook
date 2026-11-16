@@ -20,8 +20,10 @@ internal object TallybookDimensions {
   val homeHeaderHeight = 44.dp
   val homeSearchHeight = 46.dp
   val homeSearchIcon = iconMedium
-  val homeEmptyIconContainer = 56.dp
-  val homeEmptyIcon = iconLarge
+  val emptyStateIconContainer = 56.dp
+  val emptyStateIcon = iconLarge
+  val homeEmptyIconContainer = emptyStateIconContainer
+  val homeEmptyIcon = emptyStateIcon
   val bottomNavigationContentHeight = 72.dp
   val bottomNavigationIcon = iconLarge
   val bottomNavigationSelectedContainer = 44.dp
@@ -59,6 +61,10 @@ internal object TallybookDimensions {
   val categoryDetailsActionSpacing = TallybookSpacing.space32
   val yearMenuMaximumWidth = 128.dp
   val segmentedControlMinimumHeight = minimumTouchTarget
+  val switchTrackWidth = 44.dp
+  val switchTrackHeight = TallybookSpacing.space24
+  val switchThumbSize = TallybookSpacing.space20
+  val switchThumbInset = TallybookSpacing.space2
   val movementSummaryIcon = iconSmall
   val chartDonutSize = 176.dp
   val chartDonutThickness = TallybookSpacing.space24

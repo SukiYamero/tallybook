@@ -4,6 +4,7 @@ package com.kurobello.tallybook.feature.movimientos.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import com.kurobello.tallybook.core.model.Frecuencia
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -99,6 +100,10 @@ private object PreviewAddMovimientoActions : AddMovimientoActions {
   override fun onSuggestionSelected(id: String) = Unit
 
   override fun onStepBack() = Unit
+
+  override fun onRepetirChanged(enabled: Boolean) = Unit
+
+  override fun onFrecuenciaChanged(frecuencia: Frecuencia) = Unit
 
   override fun onRetryLoad() = Unit
 

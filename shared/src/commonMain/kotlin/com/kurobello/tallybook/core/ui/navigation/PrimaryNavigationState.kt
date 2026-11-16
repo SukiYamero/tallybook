@@ -76,7 +76,8 @@ private fun Destination.opensOver(primary: Destination): Boolean =
       UiCatalog -> true
       Categories,
       Tags -> primary == Profile
-      Accounts -> primary == Home || primary == Profile
+      Accounts,
+      Recurrentes -> primary == Home || primary == Profile
       Home,
       History,
       Search,
@@ -94,5 +95,6 @@ internal fun initialPrimaryNavigation(start: Destination): PrimaryNavigationStat
       UiCatalog -> PrimaryNavigationState(secondary = UiCatalog)
       Categories,
       Tags,
-      Accounts -> PrimaryNavigationState(Profile, profileVisited = true, secondary = start)
+      Accounts,
+      Recurrentes -> PrimaryNavigationState(Profile, profileVisited = true, secondary = start)
     }

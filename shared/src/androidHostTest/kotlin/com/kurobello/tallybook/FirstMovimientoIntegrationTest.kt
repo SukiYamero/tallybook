@@ -9,6 +9,7 @@ import com.kurobello.tallybook.core.data.CuentaRepositoryImpl
 import com.kurobello.tallybook.core.data.CuentaSeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
+import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
@@ -143,6 +144,7 @@ class FirstMovimientoIntegrationTest {
                           categorias,
                           SaldoRepositoryImpl(database, dispatcher),
                           StatisticsRepositoryImpl(database, dispatcher),
+                          FakeRecurrenciaRepository(),
                       ),
                   today = CivilToday(FixedClock(FIXED_INSTANT), TimeZoneProvider { TimeZone.UTC }),
                   scope = scopes.newScope(dispatcher),
@@ -163,6 +165,7 @@ class FirstMovimientoIntegrationTest {
                           movimientos,
                           etiquetas,
                           cuentas,
+                          FakeRecurrenciaRepository(),
                       ),
                   id = "expense",
                   scope = scopes.newScope(dispatcher),
@@ -192,6 +195,7 @@ class FirstMovimientoIntegrationTest {
                           movimientos,
                           etiquetas,
                           cuentas,
+                          FakeRecurrenciaRepository(),
                       ),
                   id = "income",
                   scope = scopes.newScope(dispatcher),
@@ -336,7 +340,14 @@ class FirstMovimientoIntegrationTest {
           assertEquals(DataOutcome.Success(Unit), bootstrapper.initialize())
 
           val repositories =
-              AddMovimientoRepositories(preferences, categorias, movimientos, etiquetas, cuentas)
+              AddMovimientoRepositories(
+                  preferences,
+                  categorias,
+                  movimientos,
+                  etiquetas,
+                  cuentas,
+                  FakeRecurrenciaRepository(),
+              )
           val first =
               createMovimientoViewModel(
                   repositories,

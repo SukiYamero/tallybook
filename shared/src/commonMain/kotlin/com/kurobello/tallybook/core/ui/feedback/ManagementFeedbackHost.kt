@@ -40,6 +40,14 @@ import tallybook.shared.generated.resources.movimiento_restored
 import tallybook.shared.generated.resources.movimiento_restoring
 import tallybook.shared.generated.resources.movimiento_undo
 import tallybook.shared.generated.resources.movimiento_updated
+import tallybook.shared.generated.resources.recurrencia_confirmed
+import tallybook.shared.generated.resources.recurrencia_deleted
+import tallybook.shared.generated.resources.recurrencia_skipped
+import tallybook.shared.generated.resources.recurrencia_undo_conflict
+import tallybook.shared.generated.resources.recurrencia_undo_error
+import tallybook.shared.generated.resources.recurrencia_undoing
+import tallybook.shared.generated.resources.recurrencia_undone
+import tallybook.shared.generated.resources.recurrencia_updated
 import tallybook.shared.generated.resources.retry
 import tallybook.shared.generated.resources.transferencia_deleted
 import tallybook.shared.generated.resources.transferencia_missing
@@ -150,6 +158,8 @@ private fun ManagementFeedback.toSnackbarMessage(): TallybookSnackbarMessage {
 internal val managementFeedbackActions: Map<ManagementFeedbackKind, StringResource> =
     mapOf(
         ManagementFeedbackKind.Deleted to Res.string.movimiento_undo,
+        ManagementFeedbackKind.Confirmed to Res.string.movimiento_undo,
+        ManagementFeedbackKind.Skipped to Res.string.movimiento_undo,
         ManagementFeedbackKind.RestoreFailed to Res.string.retry,
     )
 
@@ -157,6 +167,8 @@ internal val managementFeedbackStatuses: Map<ManagementFeedbackKind, TallybookSn
     mapOf(
         ManagementFeedbackKind.Saved to TallybookSnackbarStatus.Success,
         ManagementFeedbackKind.Deleted to TallybookSnackbarStatus.Success,
+        ManagementFeedbackKind.Confirmed to TallybookSnackbarStatus.Success,
+        ManagementFeedbackKind.Skipped to TallybookSnackbarStatus.Success,
         ManagementFeedbackKind.Restored to TallybookSnackbarStatus.Success,
         ManagementFeedbackKind.Missing to TallybookSnackbarStatus.Warning,
         ManagementFeedbackKind.RestoreConflict to TallybookSnackbarStatus.Warning,
@@ -175,6 +187,18 @@ private val movimientoMessages: Map<ManagementFeedbackKind, StringResource> =
         ManagementFeedbackKind.RestoreMissingCuenta to Res.string.movimiento_restore_missing_cuenta,
     )
 
+/** Only the kinds a recurrencia produces: it has no Missing state and no cuenta to lose on Undo. */
+private val recurrenciaMessages: Map<ManagementFeedbackKind, StringResource> =
+    mapOf(
+        ManagementFeedbackKind.Saved to Res.string.recurrencia_updated,
+        ManagementFeedbackKind.Deleted to Res.string.recurrencia_deleted,
+        ManagementFeedbackKind.Confirmed to Res.string.recurrencia_confirmed,
+        ManagementFeedbackKind.Skipped to Res.string.recurrencia_skipped,
+        ManagementFeedbackKind.Restored to Res.string.recurrencia_undone,
+        ManagementFeedbackKind.RestoreFailed to Res.string.recurrencia_undo_error,
+        ManagementFeedbackKind.RestoreConflict to Res.string.recurrencia_undo_conflict,
+    )
+
 internal val managementFeedbackMessages:
     Map<ManagementSubject, Map<ManagementFeedbackKind, StringResource>> =
     mapOf(
@@ -190,10 +214,12 @@ internal val managementFeedbackMessages:
                 ManagementFeedbackKind.RestoreMissingCuenta to
                     Res.string.transferencia_restore_missing_cuenta,
             ),
+        ManagementSubject.Recurrencia to recurrenciaMessages,
     )
 
 internal val managementFeedbackRestoring: Map<ManagementSubject, StringResource> =
     mapOf(
         ManagementSubject.Movimiento to Res.string.movimiento_restoring,
         ManagementSubject.Transferencia to Res.string.transferencia_restoring,
+        ManagementSubject.Recurrencia to Res.string.recurrencia_undoing,
     )

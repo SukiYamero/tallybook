@@ -267,6 +267,66 @@ class DatabaseSchemaTest {
       }
 
   @Test
+  fun `migration from schema 10 adds recurrencias and keeps every movimiento unlinked`() =
+      withSnapshot(version = 10) { driver ->
+        val seed = ChangeStamp.SEED.value
+        val stamp = "1772352000000-0003-0123456789abcdef"
+        driver.execute(
+            null,
+            "INSERT INTO cuenta(id, nombre, tipo, moneda, color, created_at, updated_at) VALUES " +
+                "('cash', 'Efectivo', 'EFECTIVO', 'COP', 'emerald', '2026-01-01T00:00:00Z', " +
+                "'$seed')",
+            0,
+        )
+        driver.execute(
+            null,
+            "INSERT INTO movimiento(id, tipo, monto_minor, fecha, descripcion, created_at, " +
+                "titulo, categoria_id, cuenta_id, medio_pago, updated_at, deleted_at) VALUES " +
+                "('live', 'GASTO', 1000, '2026-02-01', 'nota', '2026-02-01T00:00:00Z', 'pan', " +
+                "'cat_comida', 'cash', 'EFECTIVO', '$stamp', NULL), " +
+                "('gone', 'INGRESO', 500, '2026-02-02', NULL, '2026-02-02T00:00:00Z', NULL, " +
+                "'cat_ingresos', 'cash', 'EFECTIVO', '$stamp', '$stamp')",
+            0,
+        )
+        driver.execute(
+            null,
+            "INSERT INTO movimiento_etiqueta(movimiento_id, etiqueta_id, posicion) " +
+                "VALUES ('live', 'tag', 0)",
+            0,
+        )
+        val fieldsBefore = driver.movimientoFields()
+
+        TallybookDatabase.Schema.migrate(
+            driver,
+            oldVersion = 10,
+            newVersion = TallybookDatabase.Schema.version,
+        )
+
+        assertEquals(fieldsBefore, driver.movimientoFields())
+        assertEquals(
+            listOf("gone -", "live -"),
+            driver.queryStrings(
+                "SELECT id || ' ' || COALESCE(recurrencia_id, '-') FROM movimiento ORDER BY id"
+            ),
+        )
+        assertEquals(
+            listOf("live COP 0\u001Ftag"),
+            driver.queryStrings(
+                "SELECT id || ' ' || monto_moneda || ' ' || etiqueta_ids " +
+                    "FROM movimiento_con_etiquetas"
+            ),
+        )
+        assertEquals(
+            listOf("0"),
+            driver.queryStrings(
+                "SELECT (SELECT COUNT(*) FROM recurrencia) + " +
+                    "(SELECT COUNT(*) FROM recurrencia_etiqueta)"
+            ),
+        )
+        assertEquals(freshSchema(), driver.schemaObjects())
+      }
+
+  @Test
   fun `fresh schema rejects invalid cuenta and transferencia rows`() {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       TallybookDatabase.Schema.create(driver)
@@ -772,6 +832,7 @@ class DatabaseSchemaTest {
                 "categoria_id",
                 "cuenta_id",
                 "medio_pago",
+                "recurrencia_id",
                 "updated_at",
                 "deleted_at",
             ),
@@ -800,7 +861,11 @@ class DatabaseSchemaTest {
             driver.queryStrings("SELECT name FROM pragma_index_info('movimiento_recent')"),
         )
         assertEquals(
-            listOf("movimiento_con_etiquetas", "transferencia_con_monedas"),
+            listOf(
+                "movimiento_con_etiquetas",
+                "recurrencia_con_etiquetas",
+                "transferencia_con_monedas",
+            ),
             driver.queryStrings("SELECT name FROM sqlite_master WHERE type = 'view' ORDER BY name"),
         )
         assertEquals(
@@ -810,6 +875,8 @@ class DatabaseSchemaTest {
                 "etiqueta",
                 "movimiento",
                 "movimiento_etiqueta",
+                "recurrencia",
+                "recurrencia_etiqueta",
                 "transferencia",
             ),
             driver.queryStrings(
@@ -845,6 +912,14 @@ class DatabaseSchemaTest {
               "saldo_inicial_minor || ' ' || COALESCE(dia_corte, '-') || ' ' || archivada || ' ' || " +
               "created_at || ' ' || updated_at || ' ' || COALESCE(deleted_at, '-') FROM cuenta " +
               "ORDER BY id"
+      )
+
+  private fun SqlDriver.movimientoFields(): List<String> =
+      queryStrings(
+          "SELECT id || ' ' || tipo || ' ' || monto_minor || ' ' || fecha || ' ' || " +
+              "COALESCE(descripcion, '-') || ' ' || created_at || ' ' || COALESCE(titulo, '-') || " +
+              "' ' || categoria_id || ' ' || cuenta_id || ' ' || medio_pago || ' ' || updated_at || " +
+              "' ' || COALESCE(deleted_at, '-') FROM movimiento ORDER BY id"
       )
 
   private fun SqlDriver.movimientoStamps(): List<String> =
@@ -917,6 +992,7 @@ class DatabaseSchemaTest {
           cuenta_id = Cuenta.defaultCashId(Moneda.valueOf(moneda)),
           medio_pago = MedioPago.EFECTIVO.name,
           updated_at = ChangeStamp.SEED.value,
+          recurrencia_id = null,
       )
       etiquetaIds.forEachIndexed { posicion, etiquetaId ->
         movimientoQueries.insertMovimientoEtiqueta(id, etiquetaId, posicion.toLong())

@@ -104,6 +104,7 @@ class ReactiveRepositoryTest {
               "cuenta_efectivo_usd",
               "EFECTIVO",
               ChangeStamp.SEED.value,
+              null,
           )
           testScheduler.runCurrent()
           assertEquals(DataOutcome.Success(listOf(third, second)), emissions.last())
@@ -122,6 +123,7 @@ class ReactiveRepositoryTest {
               "cuenta_efectivo_cop",
               "EFECTIVO",
               ChangeStamp.SEED.value,
+              null,
           )
           testScheduler.runCurrent()
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(emissions.last()).error)

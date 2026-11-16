@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.Dp
 import com.composables.icons.lucide.ChevronRight
 import com.composables.icons.lucide.Hash
 import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Repeat
 import com.composables.icons.lucide.Smartphone
 import com.composables.icons.lucide.Tags
 import com.composables.icons.lucide.Wallet
@@ -54,6 +55,7 @@ import com.kurobello.tallybook.core.ui.layout.TallybookScreenFrame
 import com.kurobello.tallybook.core.ui.navigation.Accounts
 import com.kurobello.tallybook.core.ui.navigation.Categories
 import com.kurobello.tallybook.core.ui.navigation.Destination
+import com.kurobello.tallybook.core.ui.navigation.Recurrentes
 import com.kurobello.tallybook.core.ui.navigation.Tags
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.profile.viewmodel.ProfileActions
@@ -62,6 +64,7 @@ import com.kurobello.tallybook.feature.profile.viewmodel.ProfilePreferences
 import com.kurobello.tallybook.feature.profile.viewmodel.ProfileSetting
 import com.kurobello.tallybook.feature.profile.viewmodel.ProfileSheetKind
 import com.kurobello.tallybook.feature.profile.viewmodel.ProfileUiState
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.navigation_profile
@@ -82,6 +85,8 @@ import tallybook.shared.generated.resources.profile_language_note
 import tallybook.shared.generated.resources.profile_local_body
 import tallybook.shared.generated.resources.profile_local_title
 import tallybook.shared.generated.resources.profile_preferences_error
+import tallybook.shared.generated.resources.profile_recurrentes_body
+import tallybook.shared.generated.resources.profile_recurrentes_label
 import tallybook.shared.generated.resources.profile_save_error
 import tallybook.shared.generated.resources.profile_section_about
 import tallybook.shared.generated.resources.profile_section_data
@@ -123,24 +128,14 @@ internal fun ProfileScreen(
       )
       ProfileSection(stringResource(Res.string.profile_section_data)) {
         LocalDataCard()
-        NavigationCard(
-            icon = Lucide.Wallet,
-            title = stringResource(Res.string.profile_accounts_label),
-            body = stringResource(Res.string.profile_accounts_body),
-            onClick = { onOpenSecondary(Accounts) },
-        )
-        NavigationCard(
-            icon = Lucide.Tags,
-            title = stringResource(Res.string.profile_categories_label),
-            body = stringResource(Res.string.profile_categories_body),
-            onClick = { onOpenSecondary(Categories) },
-        )
-        NavigationCard(
-            icon = Lucide.Hash,
-            title = stringResource(Res.string.profile_tags_label),
-            body = stringResource(Res.string.profile_tags_body),
-            onClick = { onOpenSecondary(Tags) },
-        )
+        dataDestinations.forEach { card ->
+          NavigationCard(
+              icon = card.icon,
+              title = stringResource(card.title),
+              body = stringResource(card.body),
+              onClick = { onOpenSecondary(card.destination) },
+          )
+        }
         ExportCard(uiState.export, actions)
       }
       ProfileSection(stringResource(Res.string.profile_section_preferences)) {
@@ -153,6 +148,41 @@ internal fun ProfileScreen(
   }
   ProfileSheetHost(uiState, actions)
 }
+
+private class DataDestinationCard(
+    val icon: ImageVector,
+    val title: StringResource,
+    val body: StringResource,
+    val destination: Destination,
+)
+
+private val dataDestinations =
+    listOf(
+        DataDestinationCard(
+            Lucide.Wallet,
+            Res.string.profile_accounts_label,
+            Res.string.profile_accounts_body,
+            Accounts,
+        ),
+        DataDestinationCard(
+            Lucide.Tags,
+            Res.string.profile_categories_label,
+            Res.string.profile_categories_body,
+            Categories,
+        ),
+        DataDestinationCard(
+            Lucide.Hash,
+            Res.string.profile_tags_label,
+            Res.string.profile_tags_body,
+            Tags,
+        ),
+        DataDestinationCard(
+            Lucide.Repeat,
+            Res.string.profile_recurrentes_label,
+            Res.string.profile_recurrentes_body,
+            Recurrentes,
+        ),
+    )
 
 @Composable
 private fun ProfileSection(title: String, content: @Composable () -> Unit) {

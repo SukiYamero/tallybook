@@ -9,6 +9,7 @@ import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.RecurrenciaRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.entry.SentenceSelection
 import com.kurobello.tallybook.core.model.AppLocale
@@ -19,6 +20,7 @@ import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.model.Frecuencia
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MedioPago
@@ -280,6 +282,14 @@ internal class AddMovimientoViewModel(
     }
   }
 
+  override fun onRepetirChanged(enabled: Boolean) {
+    updateFields { copy(frecuencia = if (enabled) frecuencia ?: Frecuencia.MENSUAL else null) }
+  }
+
+  override fun onFrecuenciaChanged(frecuencia: Frecuencia) {
+    updateFields { if (this.frecuencia == null) this else copy(frecuencia = frecuencia) }
+  }
+
   override fun onDiscardChanges() {
     if (uiState.value.isSubmitting) return
     previewJob?.cancel()
@@ -322,10 +332,15 @@ internal class AddMovimientoViewModel(
       return
     }
     uiState.update { it.copy(isSubmitting = true) }
+    val frecuencia = uiState.value.frecuencia
+    val today = createdAt.toLocalDateTime(timeZone).date
     coroutineScope.launch {
       var saved = false
       try {
-        when (val outcome = repositories.movimientos.insert(movement)) {
+        val written =
+            if (frecuencia == null) repositories.movimientos.insert(movement)
+            else repositories.recurrencias.create(movement, frecuencia, today).map {}
+        when (val outcome = written) {
           is DataOutcome.Success -> {
             effectChannel.send(AddMovimientoEffect.Saved)
             saved = true
@@ -432,6 +447,7 @@ internal class AddMovimientoViewModel(
           amountNeedsReview = false,
           today = initialDraft.fecha,
           formOpenedFromSummary = false,
+          frecuencia = null,
       )
 
   // A category, tags, medio or cuenta picked in the sentence dialog do not guard it: only a typed
@@ -447,7 +463,9 @@ internal class AddMovimientoViewModel(
                 medio = initialDraft.medio,
             )
         else draft
-    return copy(hasUnsavedChanges = phrase.isNotBlank() || comparable != initialDraft)
+    return copy(
+        hasUnsavedChanges = phrase.isNotBlank() || comparable != initialDraft || frecuencia != null
+    )
   }
 
   private fun AddMovimientoUiState.withSuggestions(): AddMovimientoUiState =
@@ -660,6 +678,7 @@ internal data class AddMovimientoRepositories(
     val movimientos: MovimientoRepository,
     val etiquetas: EtiquetaRepository,
     val cuentas: CuentaRepository,
+    val recurrencias: RecurrenciaRepository,
 )
 
 private fun AddMovimientoUiState.toMovimientoOrNull(

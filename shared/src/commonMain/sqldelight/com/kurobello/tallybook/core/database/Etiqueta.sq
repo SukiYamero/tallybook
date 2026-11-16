@@ -52,6 +52,20 @@ deleteLinksForEtiqueta:
 DELETE FROM movimiento_etiqueta
 WHERE etiqueta_id = ?;
 
+touchRecurrenciasForEtiqueta:
+UPDATE recurrencia
+SET updated_at = :stamp
+WHERE deleted_at IS NULL
+  AND id IN (
+      SELECT recurrencia_id
+      FROM recurrencia_etiqueta
+      WHERE etiqueta_id = :etiqueta_id
+  );
+
+deleteRecurrenciaLinksForEtiqueta:
+DELETE FROM recurrencia_etiqueta
+WHERE etiqueta_id = ?;
+
 -- Any currency, like the count a categoria delete refuses on; the primary key makes every link a
 -- distinct movimiento.
 countMovimientosForEtiqueta:

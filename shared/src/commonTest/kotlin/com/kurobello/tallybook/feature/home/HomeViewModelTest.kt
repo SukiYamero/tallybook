@@ -5,9 +5,11 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.CivilToday
+import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.FakeSaldoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MutableClock
+import com.kurobello.tallybook.core.data.RecurrenciaRepository
 import com.kurobello.tallybook.core.data.SaldoRepository
 import com.kurobello.tallybook.core.data.StatisticsRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
@@ -29,6 +31,7 @@ import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.DayGasto
 import com.kurobello.tallybook.core.model.DimensionTotal
 import com.kurobello.tallybook.core.model.Direction
+import com.kurobello.tallybook.core.model.Frecuencia
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
@@ -38,6 +41,7 @@ import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.Recurrencia
 import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.StatisticsKey
 import com.kurobello.tallybook.core.model.StatisticsRequest
@@ -312,6 +316,7 @@ class HomeViewModelTest {
                 categorias,
                 primarySaldos(),
                 FakeHomeStatistics(),
+                FakeRecurrenciaRepository(),
             ),
             today(),
             backgroundScope,
@@ -363,6 +368,7 @@ class HomeViewModelTest {
                 FakeCategoriaRepository(DataOutcome.Success(listOf(category))),
                 primarySaldos(),
                 FakeHomeStatistics(),
+                FakeRecurrenciaRepository(),
             ),
             today(),
             backgroundScope,
@@ -680,6 +686,72 @@ class HomeViewModelTest {
     assertEquals(summary(Moneda.COP), vm.uiState.value.summary)
   }
 
+  @Test
+  fun pendingRecurrentesCountOccurrencesNotRecurrenciasAndLeaveTotalsAlone() = runTest {
+    val withoutPending =
+        createViewModel(
+            FakePreferencesRepository(readyPreferences(Moneda.COP)),
+            FakeMovimientoRepository(
+                recent = DataOutcome.Success(emptyList()),
+                summary = DataOutcome.Success(summary(Moneda.COP)),
+            ),
+            FakeCategoriaRepository(DataOutcome.Success(emptyList())),
+            backgroundScope,
+        )
+    val recurrencias =
+        FakeRecurrenciaRepository(
+            listOf(
+                pendingRecurrencia("rent", Frecuencia.MENSUAL, LocalDate(2026, 8, 5)),
+                pendingRecurrencia("gym", Frecuencia.SEMANAL, LocalDate(2026, 10, 20)),
+                pendingRecurrencia("insurance", Frecuencia.ANUAL, LocalDate(2026, 12, 1)),
+            )
+        )
+    val vm =
+        createViewModel(
+            FakePreferencesRepository(readyPreferences(Moneda.COP)),
+            FakeMovimientoRepository(
+                recent = DataOutcome.Success(emptyList()),
+                summary = DataOutcome.Success(summary(Moneda.COP)),
+            ),
+            FakeCategoriaRepository(DataOutcome.Success(emptyList())),
+            backgroundScope,
+            recurrencias = recurrencias,
+        )
+    runCurrent()
+
+    assertEquals(4, vm.uiState.value.pendingRecurrentes)
+    assertEquals(0, withoutPending.uiState.value.pendingRecurrentes)
+    assertEquals(withoutPending.uiState.value.summary, vm.uiState.value.summary)
+    assertEquals(withoutPending.uiState.value.totalBalance, vm.uiState.value.totalBalance)
+    assertEquals(withoutPending.uiState.value.recent, vm.uiState.value.recent)
+  }
+
+  @Test
+  fun aFailedPendingReadHidesOnlyTheRecurrentesRow() = runTest {
+    val recurrencias =
+        FakeRecurrenciaRepository(
+            listOf(pendingRecurrencia("rent", Frecuencia.MENSUAL, LocalDate(2026, 10, 5)))
+        )
+    recurrencias.failure = DataError.Local(IllegalStateException("disk"))
+    val vm =
+        createViewModel(
+            FakePreferencesRepository(readyPreferences(Moneda.COP)),
+            FakeMovimientoRepository(
+                recent = DataOutcome.Success(emptyList()),
+                summary = DataOutcome.Success(summary(Moneda.COP)),
+            ),
+            FakeCategoriaRepository(DataOutcome.Success(emptyList())),
+            backgroundScope,
+            recurrencias = recurrencias,
+        )
+    runCurrent()
+
+    assertEquals(0, vm.uiState.value.pendingRecurrentes)
+    assertNull(vm.uiState.value.error)
+    assertTrue(vm.uiState.value.hasSnapshot)
+    assertFalse(vm.uiState.value.isLoading)
+  }
+
   private fun TestScope.readyHome(statistics: FakeHomeStatistics): HomeViewModel =
       createViewModel(
           FakePreferencesRepository(readyPreferences(Moneda.COP)),
@@ -700,11 +772,19 @@ class HomeViewModelTest {
       saldos: SaldoRepository = primarySaldos(),
       today: CivilToday = today(),
       statistics: StatisticsRepository = FakeHomeStatistics(),
+      recurrencias: RecurrenciaRepository = FakeRecurrenciaRepository(),
   ): HomeViewModel {
     val viewModel =
         HomeViewModel(
             repositories =
-                HomeRepositories(preferences, movimientos, categorias, saldos, statistics),
+                HomeRepositories(
+                    preferences,
+                    movimientos,
+                    categorias,
+                    saldos,
+                    statistics,
+                    recurrencias,
+                ),
             today = today,
             scope = scope,
         )
@@ -953,6 +1033,23 @@ class HomeViewModelTest {
 
     fun readyPreferences(moneda: Moneda) =
         DataOutcome.Success(AppPreferencesState.Ready(AppPreferences(moneda)))
+
+    fun pendingRecurrencia(id: String, frecuencia: Frecuencia, proximaFecha: LocalDate) =
+        Recurrencia(
+            id = id,
+            tipo = TipoMovimiento.GASTO,
+            monto = Money(100, Moneda.COP),
+            categoriaId = "food",
+            titulo = id,
+            descripcion = null,
+            cuentaId = Cuenta.defaultCashId(Moneda.COP),
+            medio = MedioPago.EFECTIVO,
+            etiquetaIds = emptyList(),
+            frecuencia = frecuencia,
+            fechaAncla = proximaFecha,
+            proximaFecha = proximaFecha,
+            createdAt = Instant.parse("2026-08-01T00:00:00Z"),
+        )
 
     fun summary(moneda: Moneda) =
         MovimientoSummary(ingresos = Money(1_000, moneda), gastos = Money(250, moneda))

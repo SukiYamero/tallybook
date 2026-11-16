@@ -34,6 +34,7 @@ import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.model.Frecuencia
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -691,6 +692,10 @@ class AddMovimientoSheetTest {
     override fun onStepBack() {
       stepBackCount += 1
     }
+
+    override fun onRepetirChanged(enabled: Boolean) = Unit
+
+    override fun onFrecuenciaChanged(frecuencia: Frecuencia) = Unit
 
     override fun onRetryLoad() = Unit
 

@@ -9,8 +9,10 @@ import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.RecurrenciaRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
@@ -59,6 +61,7 @@ internal fun createAddViewModel(
     preferencesRepository: AppPreferencesRepository = AddFakePreferences(),
     etiquetaRepository: EtiquetaRepository = FakeEtiquetaRepository(),
     cuentaRepository: CuentaRepository = FakeCuentaRepository(addCashCuentas()),
+    recurrenciaRepository: RecurrenciaRepository = FakeRecurrenciaRepository(),
     clock: Clock = AddFixedClock(ADD_TEST_NOW),
     timeZone: TimeZone = TimeZone.UTC,
     computationDispatcher: CoroutineDispatcher = UnconfinedTestDispatcher(),
@@ -72,6 +75,7 @@ internal fun createAddViewModel(
                 movimientos = movimientoRepository,
                 etiquetas = etiquetaRepository,
                 cuentas = cuentaRepository,
+                recurrencias = recurrenciaRepository,
             ),
         idGenerator = IdGenerator { "movement-id" },
         clock = clock,

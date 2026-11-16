@@ -460,7 +460,7 @@ Snapshotting extras for each parent lifetime prevents Activity Intent Bundles fr
 Tabs select existing entries; History root Back selects Home, Home root delegates platform exit, and
 Search, Statistics and Profile root Back select Home. One `secondary` slot shows a secondary
 destination over the selected primary with the bottom bar hidden: the UI catalog over any primary,
-Categories and Tags only over Profile, Accounts over Home or Profile (`PrimaryNavigator.openSecondary`). Back closes the
+Categories and Tags only over Profile, Accounts and Recurrentes over Home or Profile (`PrimaryNavigator.openSecondary`). Back closes the
 secondary first, and selecting any primary clears it. Home search opens Search with a one-time focus
 intent; "View N movements" in a Categories or Tags sheet, or "View movements" in an account sheet,
 selects Search, once that sheet has hidden, with a one-shot `SearchFilterRequest` (category, tag or
@@ -802,8 +802,9 @@ Cancel and Save changes share one footer row. The whole footer is absent while I
 returns after dismissal; the existing scrolling/focus-reveal behavior keeps
 inputs reachable. Cancel/Back/discard behavior follows the domain contract.
 
-The shared form accepts optional header-action, supporting-content and footer slots; creation keeps
-its default header and submit footer. Management replaces the entire footer while retaining the shared
+The shared form accepts optional header-action, supporting-content, footer and date slots; creation keeps
+its default header, date field and submit footer, and places Repetir in its supporting content. The
+recurrencia sheet replaces the date with its schedule (frecuencia and next date). Management replaces the entire footer while retaining the shared
 submit readiness/loading behavior. Use separate content-detent identifiers for loading, read failure,
 missing, compact editor and expanded editor. Closing keeps the rendered editor snapshot and disables
 input until its originating hidden callback. Android reason-specific Back handling is composed
@@ -817,8 +818,11 @@ dialogs consume Back before their parent management surface.
 One remembered child ViewModel owner outside primary Navigation 3 entries hosts the shell's
 management view models. `ManagementFeedbackViewModel` owns the single `ManagementFeedbackQueue`
 (`core/ui/feedback`): the transient FIFO of feedback tokens, each holding at most one
-`DeletedSnapshot` (movimiento or transferencia), the claim/restore cycle and session admission, so
-an open management sheet blocks Undo claims and a claimed restore blocks new sheets.
+`UndoSnapshot` (a deleted movimiento or transferencia, or a confirmed or skipped recurrencia
+occurrence), the claim/restore cycle and session admission, so an open management sheet blocks Undo
+claims and a claimed restore blocks new sheets. A destination's own sheet (Recurrentes) emits its
+committed outcome as an effect once hidden and its route enqueues it without a session: the shell's
+modal coordinator already keeps that sheet and a claimed restore exclusive.
 `ManageMovimientoViewModel` lives in the same owner, receives that queue on creation and owns the
 read generation, management session, editable draft, mutation and the pending committed outcome it
 enqueues once its sheet is hidden. `ManageTransferenciaViewModel` (`feature/transfers`) lives in

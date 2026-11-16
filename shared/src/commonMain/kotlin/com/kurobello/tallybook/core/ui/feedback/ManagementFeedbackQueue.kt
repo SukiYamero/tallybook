@@ -26,7 +26,7 @@ internal data class ManagementFeedbackState(
  */
 internal class ManagementFeedbackQueue(
     private val scope: CoroutineScope,
-    private val restore: suspend (DeletedSnapshot) -> DataOutcome<RestoreResult>,
+    private val restore: suspend (UndoSnapshot) -> DataOutcome<RestoreResult>,
 ) {
   private var nextToken = 0L
 
@@ -43,15 +43,17 @@ internal class ManagementFeedbackQueue(
     return if (admitted) ManagementSessionHandle(::closeSession) else null
   }
 
+  /**
+   * For a destination's own sheet, which the shell's modal coordinator already keeps exclusive with
+   * a claimed restore, so it needs no session here.
+   */
+  fun enqueue(outcome: ManagementOutcome) {
+    val feedback = outcome.toFeedback()
+    state.update { it.copy(feedbackQueue = it.feedbackQueue + feedback) }
+  }
+
   private fun closeSession(outcome: ManagementOutcome?) {
-    val feedback = outcome?.let {
-      ManagementFeedback(
-          token = ++nextToken,
-          subject = it.subject,
-          kind = it.kind,
-          deleted = it.deleted,
-      )
-    }
+    val feedback = outcome?.toFeedback()
     state.update {
       it.copy(
           feedbackQueue = if (feedback == null) it.feedbackQueue else it.feedbackQueue + feedback,
@@ -60,13 +62,16 @@ internal class ManagementFeedbackQueue(
     }
   }
 
+  private fun ManagementOutcome.toFeedback() =
+      ManagementFeedback(token = ++nextToken, subject = subject, kind = kind, undo = undo)
+
   fun onFeedbackAction(token: Long, revision: Int) {
     val current = state.value
     val feedback = current.feedbackFor(token, revision)?.takeIf { current.openSessions == 0 }
-    val deleted = feedback?.deleted ?: return
+    val undo = feedback?.undo ?: return
     val claimed = feedback.copy(revision = revision + 1, isRestoring = true)
     if (state.compareAndSet(current, current.withHead(claimed))) {
-      scope.launch { complete(claimed, deleted, restore(deleted)) }
+      scope.launch { complete(claimed, undo, restore(undo)) }
     }
   }
 
@@ -83,7 +88,7 @@ internal class ManagementFeedbackQueue(
 
   private fun complete(
       claimed: ManagementFeedback,
-      deleted: DeletedSnapshot,
+      undo: UndoSnapshot,
       outcome: DataOutcome<RestoreResult>,
   ) {
     val kind =
@@ -99,7 +104,7 @@ internal class ManagementFeedbackQueue(
             revision = claimed.revision + 1,
             kind = kind,
             isRestoring = false,
-            deleted = deleted.takeIf { retryable },
+            undo = undo.takeIf { retryable },
         )
     state.update { latest ->
       if (latest.feedback == claimed) latest.withHead(completed) else latest

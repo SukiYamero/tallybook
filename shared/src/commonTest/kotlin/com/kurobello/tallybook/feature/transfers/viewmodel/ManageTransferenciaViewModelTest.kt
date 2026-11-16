@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.feature.transfers.viewmodel
 
 import com.kurobello.tallybook.core.data.FakeCuentaRepository
+import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.FakeTransferenciaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MutableClock
@@ -15,10 +16,10 @@ import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.Transferencia
 import com.kurobello.tallybook.core.model.TransferenciaUpdateResult
-import com.kurobello.tallybook.core.ui.feedback.DeletedSnapshot
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackKind
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackViewModel
 import com.kurobello.tallybook.core.ui.feedback.ManagementSubject
+import com.kurobello.tallybook.core.ui.feedback.UndoSnapshot
 import com.kurobello.tallybook.feature.accounts.viewmodel.AccountsPreferences
 import com.kurobello.tallybook.feature.movimientos.viewmodel.ManagementRepository
 import kotlin.test.Test
@@ -205,7 +206,7 @@ class ManageTransferenciaViewModelTest {
     assertEquals(ManagementSubject.Transferencia, feedback.subject)
     assertEquals(
         existing,
-        assertIs<DeletedSnapshot.OfTransferencia>(feedback.deleted).transferencia,
+        assertIs<UndoSnapshot.OfTransferencia>(feedback.undo).transferencia,
     )
 
     f.feedback.onFeedbackAction(feedback.token, feedback.revision)
@@ -293,7 +294,14 @@ private class TransferFixture(scope: CoroutineScope, initial: List<Transferencia
   val cuentas = FakeCuentaRepository(listOf(EFECTIVO, NEQUI, NU, DOLARES))
   val transferencias =
       GatedTransferencias(FakeTransferenciaRepository(cuentas, TODAY, initial = initial))
-  val feedback = ManagementFeedbackViewModel(ManagementRepository(), transferencias, scope).queue
+  val feedback =
+      ManagementFeedbackViewModel(
+              ManagementRepository(),
+              transferencias,
+              FakeRecurrenciaRepository(),
+              scope,
+          )
+          .queue
   private var nextId = 0
   val viewModel =
       ManageTransferenciaViewModel(

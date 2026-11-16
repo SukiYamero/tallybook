@@ -13,6 +13,7 @@ import com.kurobello.tallybook.core.data.CategorySeedCatalog
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
@@ -150,6 +151,7 @@ class AddMovimientoSheetRouteTest {
                   movimientos = movementRepository,
                   etiquetas = FakeEtiquetaRepository(),
                   cuentas = FakeCuentaRepository(listOf(COP_CASH)),
+                  recurrencias = FakeRecurrenciaRepository(),
               ),
           idGenerator = IdGenerator { "movement-id" },
           clock = FixedClock,

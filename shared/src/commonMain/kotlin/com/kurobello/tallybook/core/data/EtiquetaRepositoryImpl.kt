@@ -133,6 +133,8 @@ internal class EtiquetaRepositoryImpl(
                 val stamp = changeClock.next().value
                 queries.touchMovimientosForEtiqueta(stamp = stamp, etiqueta_id = id)
                 queries.deleteLinksForEtiqueta(id)
+                queries.touchRecurrenciasForEtiqueta(stamp = stamp, etiqueta_id = id)
+                queries.deleteRecurrenciaLinksForEtiqueta(id)
                 check(queries.tombstoneEtiqueta(stamp = stamp, id = id).value == 1L)
                 DataOutcome.Success(Unit)
               }

@@ -8,19 +8,25 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 
 1. Prueba completa en iPhone físico → *iOS physical end-to-end*.
 2. Presupuestos (sobre las consultas de Estadísticas) → *Accounts follow-ups*.
-3. Movimientos recurrentes → *Producto*.
-4. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
+3. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
    and Statistics accessibility*, *Profile polish*.
-5. Google login + backup en Drive, cuando 2 y 3 estén cerrados → [plan](tasks/google-drive-persistence.md).
+4. Google login + backup en Drive, cuando 2 esté cerrado → [plan](tasks/google-drive-persistence.md).
+5. Avisos de recurrentes por confirmar → *Producto*.
 6. Dictado por voz → *Smart entry polish*.
-7. Pulido chico → *Sentence amount above the cap*, *`ioDispatcher` en iOS*, *Unified Custom date-range picker*.
+7. Pulido chico → *Sentence amount above the cap*, *`ioDispatcher` en iOS*, *Unified Custom
+   date-range picker*, *Recurrentes copy*.
 8. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
 9. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
 
 ## Producto
 
-- **Movimientos recurrentes** — Sueldo, alquiler, suscripciones: se generan al abrir la app (sin
-  trabajo en segundo plano) y se confirman con el flujo de resumen existente.
+- **Avisos de recurrentes por confirmar** — Notificaciones locales programadas para la próxima fecha
+  de cada recurrencia (sin trabajo en segundo plano), que abren Recurrentes. Hoy los pendientes solo
+  se ven al abrir la app (fila de Inicio). Ver [Recurrentes](business-logic.md#recurrentes).
+
+- **Recurrentes copy** — A pending row reads "Pendiente desde el 15 de noviembre" for a single due
+  date ("Vence el …" reads better), and the second pending row of a recurrence truncates its
+  "confirm the earlier date first" note.
 
 ## Alta
 

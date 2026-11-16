@@ -237,7 +237,7 @@ class LocalDataBootstrapperTest {
   }
 
   @Test
-  fun `the stored maximum covers cuenta and transferencia stamps`() = runTest {
+  fun `the stored maximum covers cuenta transferencia and recurrencia stamps`() = runTest {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       val database = createSchemaWithReferences(driver)
       database.insertLegacy(
@@ -272,6 +272,26 @@ class LocalDataBootstrapperTest {
       driver.tombstone("transferencia", "move")
 
       assertEquals(DataOutcome.Success(transferenciaStamp), read())
+
+      val recurrenciaStamp = ChangeStamp.of(epochMillis = 9_003, counter = 0, node = NODE)
+      database.recurrenciaQueries.insertRecurrencia(
+          id = "rent",
+          tipo = "GASTO",
+          monto_minor = 100,
+          titulo = null,
+          descripcion = null,
+          categoria_id = "cat_comida",
+          cuenta_id = Cuenta.defaultCashId(Moneda.COP),
+          medio_pago = "EFECTIVO",
+          frecuencia = "MENSUAL",
+          fecha_ancla = "2026-10-01",
+          proxima_fecha = "2026-11-01",
+          created_at = NOW.toString(),
+          updated_at = recurrenciaStamp.value,
+      )
+      driver.tombstone("recurrencia", "rent")
+
+      assertEquals(DataOutcome.Success(recurrenciaStamp), read())
     }
   }
 

@@ -15,12 +15,12 @@ import com.kurobello.tallybook.core.model.TransferenciaUpdateResult
 import com.kurobello.tallybook.core.model.primaryMoneda
 import com.kurobello.tallybook.core.ui.component.DismissalDecision
 import com.kurobello.tallybook.core.ui.component.dismissalDecision
-import com.kurobello.tallybook.core.ui.feedback.DeletedSnapshot
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackKind
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackQueue
 import com.kurobello.tallybook.core.ui.feedback.ManagementOutcome
 import com.kurobello.tallybook.core.ui.feedback.ManagementSessionHandle
 import com.kurobello.tallybook.core.ui.feedback.ManagementSubject
+import com.kurobello.tallybook.core.ui.feedback.UndoSnapshot
 import kotlin.time.Clock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -159,7 +159,7 @@ internal class ManageTransferenciaViewModel(
                     kind =
                         if (outcome.data == null) ManagementFeedbackKind.Missing
                         else ManagementFeedbackKind.Deleted,
-                    deleted = outcome.data?.let(DeletedSnapshot::OfTransferencia),
+                    undo = outcome.data?.let(UndoSnapshot::OfTransferencia),
                 ),
             )
       }

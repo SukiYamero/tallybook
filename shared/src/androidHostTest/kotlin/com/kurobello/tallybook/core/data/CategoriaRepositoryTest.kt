@@ -398,6 +398,7 @@ class CategoriaRepositoryTest {
         Cuenta.defaultCashId(moneda),
         "EFECTIVO",
         ChangeStamp.SEED.value,
+        null,
     )
   }
 

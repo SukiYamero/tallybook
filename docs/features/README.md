@@ -17,6 +17,7 @@ accepted scope, integration details and verification boundaries.
 | Sync-ready persistence (change stamps and tombstones) | DONE | [Accounts and sync-ready persistence](accounts.md) |
 | Accounts, payment method and transfers | DONE | [Accounts, payment method and transfers](accounts.md) |
 | Statistics | DONE | [Statistics](statistics.md) |
+| Recurring movimientos | DONE | [Recurring movimientos](recurrentes.md) |
 
 ## Status rules
 
