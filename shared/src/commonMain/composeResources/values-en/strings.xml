@@ -556,4 +556,7 @@
     <string name="tag_deleted">Tag deleted</string>
     <string name="tag_delete_error">We couldn’t delete the tag. Your movements are still saved; try again.</string>
     <string name="search_tags_label">Tags</string>
+    <string name="rotate_notice_title">Best in portrait</string>
+    <string name="rotate_notice_body">For a better experience, we recommend rotating your phone.</string>
+    <string name="rotate_notice_dismiss">Got it</string>
 </resources>

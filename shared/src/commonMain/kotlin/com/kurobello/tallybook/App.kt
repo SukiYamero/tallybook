@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.ui.component.TallybookLoadingState
+import com.kurobello.tallybook.core.ui.component.TallybookRotateNotice
 import com.kurobello.tallybook.core.ui.component.TallybookViewportOverlayHost
 import com.kurobello.tallybook.core.ui.locale.ProvideAppLocale
 import com.kurobello.tallybook.core.ui.navigation.Destination
@@ -59,6 +60,7 @@ fun App(
             developmentToolsEnabled = developmentToolsEnabled,
             onRetry = viewModel::onRetry,
         )
+        TallybookRotateNotice()
       }
     }
   }

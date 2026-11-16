@@ -556,4 +556,7 @@
     <string name="tag_deleted">Tag eliminado</string>
     <string name="tag_delete_error">No pudimos eliminar el tag. Tus movimientos siguen guardados; intenta de nuevo.</string>
     <string name="search_tags_label">Tags</string>
+    <string name="rotate_notice_title">Mejor en vertical</string>
+    <string name="rotate_notice_body">Para que veas todo mejor, te recomendamos girar el teléfono.</string>
+    <string name="rotate_notice_dismiss">Entendido</string>
 </resources>
