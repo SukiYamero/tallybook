@@ -19,11 +19,16 @@ notice pending ones from Home.
   from a Profile row (next to Accounts/Categories/Tags) and from Home.
   - Pending list first, then live recurrences by next date; empty state when none exist.
   - Confirm sheet for a pending occurrence: amount (prefilled), fecha (due date), **Pagado**,
-    **Todavía no**, **Saltar**, and Edit (opens the full form with the draft).
-  - Recurrence sheet: edit fields; frequency/next date disabled with an explanation while pending
-    occurrences exist; delete with confirmation.
-  - Pagado/Saltar/delete feedback with Undo through the existing `ManagementFeedbackQueue`
-    (`core/ui/feedback`), generalized rather than duplicated.
+    **Todavía no**, **Saltar**, and Edit, which opens the recurrence sheet: `confirm` only takes amount
+    and fecha, so an archived cuenta or other field problem is fixed on the template first. A confirm
+    failure caused by the template's references says so and offers that sheet.
+  - Recurrence sheet: edit fields (reuse the movimiento form's field components); frequency/next date
+    disabled with an explanation while pending occurrences exist (`RecurrenciaWrite.ScheduleLocked`);
+    delete behind a confirmation dialog, without Undo.
+  - Pagado/Saltar feedback with Undo through the existing `ManagementFeedbackQueue`
+    (`core/ui/feedback`), generalized rather than duplicated; `OccurrenceUndoResult.Conflict` uses the
+    existing conflict feedback.
+  - The Home count and the section header count pending occurrences, not recurrences.
 - **Home row** — `feature/home`: compact row "N por confirmar" while N > 0, opening the section; it
   never changes balance or recent movimientos.
 - **Strings** — every locale folder (`values`, `values-es-rAR`, `values-en`, `values-pt-rBR`), copy
