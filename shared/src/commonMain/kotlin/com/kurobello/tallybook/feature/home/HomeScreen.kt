@@ -91,7 +91,7 @@ internal fun HomeScreen(
         contentPadding =
             PaddingValues(bottom = bottomBarClearance + TallybookTheme.spacing.space16),
     ) {
-      item { HomeHeader(modifier = Modifier.padding(bottom = TallybookTheme.spacing.space20)) }
+      item { HomeHeader() }
       item {
         HomeSearch(
             onClick = onSearch,

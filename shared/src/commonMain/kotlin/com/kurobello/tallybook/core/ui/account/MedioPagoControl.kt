@@ -93,7 +93,7 @@ private fun MedioPagoOption(
   val contentColor =
       when {
         !enabled -> colors.foreground.disabled
-        selected -> colors.brand.secondary
+        selected -> colors.brand.accent
         else -> colors.foreground.primary
       }
   Box(
@@ -123,7 +123,7 @@ private fun MedioPagoOption(
                 border =
                     BorderStroke(
                         TallybookTheme.dimensions.borderThin,
-                        if (selected) colors.brand.secondary else colors.border.subtle,
+                        if (selected) colors.brand.accent else colors.border.subtle,
                     ),
                 contentAlignment = Alignment.Center,
             ),
