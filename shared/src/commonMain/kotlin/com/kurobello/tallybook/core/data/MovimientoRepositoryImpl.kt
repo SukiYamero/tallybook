@@ -298,6 +298,7 @@ internal class MovimientoRepositoryImpl(
                 cuenta_id = movimiento.cuentaId,
                 medio_pago = movimiento.medio.name,
                 updated_at = stamp.value,
+                recurrencia_id = null,
             )
             .value == 1L
     )

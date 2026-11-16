@@ -317,6 +317,7 @@ class EtiquetaRepositoryTest {
           Cuenta.defaultCashId(moneda),
           "EFECTIVO",
           ChangeStamp.SEED.value,
+          null,
       )
       etiquetaIds.forEachIndexed { posicion, etiquetaId ->
         movimientoQueries.insertMovimientoEtiqueta(id, etiquetaId, posicion.toLong())

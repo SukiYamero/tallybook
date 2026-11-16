@@ -3,6 +3,7 @@
 -- SQLite instead of in Kotlin, which a TEXT or REAL column could not do without losing exactness.
 -- There is no currency column: the currency is cuenta.moneda, which the view exposes as monto_moneda.
 -- updated_at has no DEFAULT so a write that forgets its ChangeStamp fails instead of becoming SEED.
+-- recurrencia_id marks a confirmed occurrence and outlives its recurrencia's tombstone.
 CREATE TABLE movimiento (
     id TEXT NOT NULL PRIMARY KEY,
     tipo TEXT NOT NULL,
@@ -14,6 +15,7 @@ CREATE TABLE movimiento (
     categoria_id TEXT NOT NULL,
     cuenta_id TEXT NOT NULL,
     medio_pago TEXT NOT NULL CHECK (medio_pago IN ('EFECTIVO', 'DEBITO', 'TRANSFERENCIA', 'CREDITO')),
+    recurrencia_id TEXT,
     updated_at TEXT NOT NULL,
     deleted_at TEXT
 );
@@ -65,8 +67,8 @@ JOIN cuenta ON cuenta.id = movimiento.cuenta_id
 WHERE movimiento.deleted_at IS NULL;
 
 insertMovimiento:
-INSERT INTO movimiento(id, tipo, monto_minor, fecha, titulo, descripcion, created_at, categoria_id, cuenta_id, medio_pago, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO movimiento(id, tipo, monto_minor, fecha, titulo, descripcion, created_at, categoria_id, cuenta_id, medio_pago, updated_at, recurrencia_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 insertMovimientoEtiqueta:
 INSERT INTO movimiento_etiqueta(movimiento_id, etiqueta_id, posicion)

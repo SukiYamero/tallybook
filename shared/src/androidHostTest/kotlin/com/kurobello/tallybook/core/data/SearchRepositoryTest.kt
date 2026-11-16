@@ -358,6 +358,7 @@ class SearchRepositoryTest {
                   "cuenta_efectivo_cop",
                   "EFECTIVO",
                   ChangeStamp.SEED.value,
+                  null,
               )
               database.movimientoQueries.insertMovimiento(
                   "old-$index",
@@ -371,6 +372,7 @@ class SearchRepositoryTest {
                   "cuenta_efectivo_cop",
                   "EFECTIVO",
                   ChangeStamp.SEED.value,
+                  null,
               )
             }
             runCurrent()
@@ -574,6 +576,7 @@ class SearchRepositoryTest {
               "cuenta_efectivo_cop",
               "EFECTIVO",
               ChangeStamp.SEED.value,
+              null,
           )
           runCurrent()
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(emissions.last()).error)
@@ -597,6 +600,7 @@ class SearchRepositoryTest {
               "cuenta_efectivo_cop",
               "EFECTIVO",
               ChangeStamp.SEED.value,
+              null,
           )
           assertIs<DataError.Local>(assertIs<DataOutcome.Failure>(flow.first()).error)
           database.movimientoQueries.tombstoneMovimiento(ChangeStamp.SEED.value, "invalid-year")

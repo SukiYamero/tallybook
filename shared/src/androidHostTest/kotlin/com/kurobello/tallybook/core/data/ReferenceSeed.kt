@@ -48,6 +48,7 @@ internal fun TallybookDatabase.insertLegacy(
         movimiento.cuentaId,
         movimiento.medio.name,
         stamp.value,
+        null,
     )
     movimiento.etiquetaIds.forEachIndexed { posicion, etiquetaId ->
       movimientoQueries.insertMovimientoEtiqueta(movimiento.id, etiquetaId, posicion.toLong())

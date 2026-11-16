@@ -270,6 +270,7 @@ class SearchVolumeDeviceTest {
               Cuenta.defaultCashId(row.monto.moneda),
               "EFECTIVO",
               ChangeStamp.SEED.value,
+              null,
           )
         }
       }

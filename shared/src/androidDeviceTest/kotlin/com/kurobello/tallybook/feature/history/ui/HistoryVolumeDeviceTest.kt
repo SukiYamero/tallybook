@@ -369,6 +369,7 @@ class HistoryVolumeDeviceTest {
           Cuenta.defaultCashId(Moneda.valueOf(currency)),
           "EFECTIVO",
           ChangeStamp.SEED.value,
+          null,
       )
     }
 

@@ -964,6 +964,7 @@ class MovimientoRepositoryTest {
               "cuenta_efectivo_cop",
               "EFECTIVO",
               ChangeStamp.SEED.value,
+              null,
           )
         }
       }
@@ -1701,6 +1702,7 @@ class MovimientoRepositoryTest {
         "cuenta_efectivo_cop",
         "EFECTIVO",
         ChangeStamp.SEED.value,
+        null,
     )
   }
 
@@ -1717,6 +1719,7 @@ class MovimientoRepositoryTest {
         Cuenta.defaultCashId(row.monto.moneda),
         "EFECTIVO",
         ChangeStamp.SEED.value,
+        null,
     )
     row.etiquetaIds.forEachIndexed { posicion, etiquetaId ->
       database.movimientoQueries.insertMovimientoEtiqueta(row.id, etiquetaId, posicion.toLong())

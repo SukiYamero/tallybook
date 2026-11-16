@@ -84,6 +84,7 @@ class MovimientoMapperTest {
           categoria_id = "cat_comida",
           cuenta_id = "nequi",
           medio_pago = "TRANSFERENCIA",
+          recurrencia_id = null,
           updated_at = ChangeStamp.SEED.value,
           deleted_at = null,
           etiqueta_ids = "0\u001Fempresa",

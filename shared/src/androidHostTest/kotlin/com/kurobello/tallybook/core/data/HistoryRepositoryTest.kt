@@ -387,6 +387,7 @@ class HistoryRepositoryTest {
             "cuenta_efectivo_cop",
             "EFECTIVO",
             ChangeStamp.SEED.value,
+            null,
         )
         val wholeYear = MovimientoDateRange(LocalDate(2026, 1, 1), LocalDate(2026, 12, 31))
         val failure =
@@ -419,6 +420,7 @@ class HistoryRepositoryTest {
                 "cuenta_efectivo_cop",
                 "EFECTIVO",
                 ChangeStamp.SEED.value,
+                null,
             )
 
             assertIs<DataError.Local>(
@@ -450,6 +452,7 @@ class HistoryRepositoryTest {
               "cuenta_efectivo_cop",
               "EFECTIVO",
               ChangeStamp.SEED.value,
+              null,
           )
           val repository = HistoryReads(database, StandardTestDispatcher(testScheduler))
 
@@ -488,6 +491,7 @@ class HistoryRepositoryTest {
               "cuenta_efectivo_cop",
               "EFECTIVO",
               ChangeStamp.SEED.value,
+              null,
           )
           runCurrent()
           assertEquals(2, emissions.size)
@@ -528,6 +532,7 @@ class HistoryRepositoryTest {
                   "cuenta_efectivo_cop",
                   "EFECTIVO",
                   ChangeStamp.SEED.value,
+                  null,
               )
             }
             repeat(4000) { index ->
@@ -543,6 +548,7 @@ class HistoryRepositoryTest {
                   "cuenta_efectivo_usd",
                   "EFECTIVO",
                   ChangeStamp.SEED.value,
+                  null,
               )
               database.movimientoQueries.insertMovimiento(
                   "outside-$index",
@@ -556,6 +562,7 @@ class HistoryRepositoryTest {
                   "cuenta_efectivo_cop",
                   "EFECTIVO",
                   ChangeStamp.SEED.value,
+                  null,
               )
             }
           }
