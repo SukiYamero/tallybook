@@ -19,10 +19,12 @@ import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.CuentaRepositoryImpl
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.FakeTransferenciaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
+import com.kurobello.tallybook.core.data.RecurrenciaRepository
 import com.kurobello.tallybook.core.data.TestChangeClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.TransferenciaRepository
@@ -208,6 +210,7 @@ private class ManagementOwnerSuite(val scope: TestScope) {
               )
             }
             single<TransferenciaRepository> { FakeTransferenciaRepository() }
+            single<RecurrenciaRepository> { FakeRecurrenciaRepository() }
             single<CategoriaRepository> {
               CategoriaRepositoryImpl(
                   database,

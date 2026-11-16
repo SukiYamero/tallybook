@@ -74,7 +74,11 @@ internal val viewModelModule = module {
     )
   }
   viewModel {
-    ManagementFeedbackViewModel(movimientoRepository = get(), transferenciaRepository = get())
+    ManagementFeedbackViewModel(
+        movimientoRepository = get(),
+        transferenciaRepository = get(),
+        recurrenciaRepository = get(),
+    )
   }
   viewModel { parameters ->
     ManageMovimientoViewModel(

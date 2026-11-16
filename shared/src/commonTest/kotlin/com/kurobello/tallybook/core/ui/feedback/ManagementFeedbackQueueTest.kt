@@ -1,5 +1,6 @@
 package com.kurobello.tallybook.core.ui.feedback
 
+import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.FakeTransferenciaRepository
 import com.kurobello.tallybook.core.data.TransferenciaRepository
 import com.kurobello.tallybook.core.model.Cuenta
@@ -30,8 +31,8 @@ class ManagementFeedbackQueueTest {
   @Test
   fun mixedSnapshotsWaitInArrivalOrderAndRestoreThroughTheirOwnRepository() = runTest {
     val f = QueueFixture(backgroundScope)
-    val movimiento = DeletedSnapshot.OfMovimiento(managementMovimiento())
-    val transferencia = DeletedSnapshot.OfTransferencia(queueTransferencia())
+    val movimiento = UndoSnapshot.OfMovimiento(managementMovimiento())
+    val transferencia = UndoSnapshot.OfTransferencia(queueTransferencia())
     f.enqueue(
         ManagementOutcome(ManagementSubject.Movimiento, ManagementFeedbackKind.Deleted, movimiento)
     )
@@ -45,7 +46,7 @@ class ManagementFeedbackQueueTest {
     f.enqueue(ManagementOutcome(ManagementSubject.Transferencia, ManagementFeedbackKind.Saved))
 
     val first = assertNotNull(f.queue.state.value.feedback)
-    assertEquals(movimiento, first.deleted)
+    assertEquals(movimiento, first.undo)
     assertEquals(3, f.queue.state.value.feedbackQueue.size)
     f.queue.onFeedbackAction(first.token, first.revision)
     runCurrent()
@@ -56,7 +57,7 @@ class ManagementFeedbackQueueTest {
     f.queue.onFeedbackDismiss(restored.token, restored.revision)
 
     val second = assertNotNull(f.queue.state.value.feedback)
-    assertEquals(transferencia, second.deleted)
+    assertEquals(transferencia, second.undo)
     assertTrue(second.token > first.token)
     f.queue.onFeedbackAction(second.token, second.revision)
     runCurrent()
@@ -88,7 +89,7 @@ class ManagementFeedbackQueueTest {
         ManagementOutcome(
             ManagementSubject.Movimiento,
             ManagementFeedbackKind.Deleted,
-            DeletedSnapshot.OfMovimiento(managementMovimiento()),
+            UndoSnapshot.OfMovimiento(managementMovimiento()),
         )
     )
     val head = assertNotNull(f.queue.state.value.feedback)
@@ -139,7 +140,7 @@ class ManagementFeedbackQueueTest {
     assertEquals(ManagementFeedbackKind.RestoreFailed, failed.kind)
     assertEquals(first.token, failed.token)
     assertTrue(failed.revision > first.revision)
-    assertEquals(f.transferSnapshot, failed.deleted)
+    assertEquals(f.transferSnapshot, failed.undo)
     f.queue.onFeedbackAction(first.token, first.revision)
     f.queue.onFeedbackDismiss(first.token, first.revision)
     runCurrent()
@@ -176,7 +177,7 @@ class ManagementFeedbackQueueTest {
 
       val released = assertNotNull(f.queue.state.value.feedback)
       assertEquals(kind, released.kind)
-      assertNull(released.deleted)
+      assertNull(released.undo)
       f.queue.onFeedbackAction(released.token, released.revision)
       runCurrent()
       assertEquals(1, f.transferencias.restores)
@@ -255,7 +256,7 @@ class ManagementFeedbackQueueTest {
     runCurrent()
 
     val released = assertNotNull(f.queue.state.value.feedback)
-    assertNull(released.deleted)
+    assertNull(released.undo)
     assertEquals(ManagementSubject.Transferencia, released.subject)
   }
 
@@ -315,8 +316,10 @@ private class QueueFixture(scope: CoroutineScope) {
   val movimientos = ManagementRepository()
   val transferencias =
       GatedTransferencias().apply { restoreResult = DataOutcome.Success(RestoreResult.Restored) }
-  val queue = ManagementFeedbackViewModel(movimientos, transferencias, scope).queue
-  val transferSnapshot = DeletedSnapshot.OfTransferencia(queueTransferencia())
+  val queue =
+      ManagementFeedbackViewModel(movimientos, transferencias, FakeRecurrenciaRepository(), scope)
+          .queue
+  val transferSnapshot = UndoSnapshot.OfTransferencia(queueTransferencia())
 
   fun enqueue(outcome: ManagementOutcome) {
     assertNotNull(queue.openSession()).close(outcome)

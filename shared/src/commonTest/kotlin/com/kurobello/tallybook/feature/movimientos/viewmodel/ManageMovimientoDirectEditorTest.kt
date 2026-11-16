@@ -2,7 +2,7 @@ package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.TipoMovimiento
-import com.kurobello.tallybook.core.ui.feedback.DeletedSnapshot
+import com.kurobello.tallybook.core.ui.feedback.UndoSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -148,7 +148,7 @@ class ManageMovimientoDirectEditorTest {
     runCurrent()
     f.viewModel.onSheetHidden(failed.token)
     val feedback = assertNotNull(f.feedback.state.value.feedback)
-    assertEquals(DeletedSnapshot.OfMovimiento(captured), feedback.deleted)
+    assertEquals(UndoSnapshot.OfMovimiento(captured), feedback.undo)
     f.feedback.onFeedbackAction(feedback.token, feedback.revision)
     runCurrent()
     assertEquals(captured, f.repository.restored)

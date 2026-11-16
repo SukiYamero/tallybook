@@ -1,0 +1,51 @@
+<resources>
+    <string name="recurrencia_repeat_label">Repetir</string>
+    <string name="recurrencia_repeat_body">Para no volver a cargarlo, te lo dejamos listo para confirmar en cada fecha.</string>
+    <string name="recurrencia_frequency_label">Frecuencia</string>
+    <string name="frecuencia_semanal">Semanal</string>
+    <string name="frecuencia_mensual">Mensual</string>
+    <string name="frecuencia_anual">Anual</string>
+    <string name="profile_recurrentes_label">Recurrentes</string>
+    <string name="profile_recurrentes_body">Confirma los pagos y cobros que se repiten.</string>
+    <string name="recurrentes_title">Recurrentes</string>
+    <plurals name="recurrentes_pending_heading">
+        <item quantity="one">%1$d por confirmar</item>
+        <item quantity="other">%1$d por confirmar</item>
+    </plurals>
+    <string name="recurrentes_scheduled_heading">Programados</string>
+    <string name="recurrentes_empty_title">Todavía no tienes recurrentes</string>
+    <string name="recurrentes_empty_body">Para no cargar cada mes el alquiler o el sueldo, activa Repetir al registrarlos.</string>
+    <string name="recurrentes_load_error">No pudimos cargar tus recurrentes. Tus datos siguen guardados; intenta de nuevo.</string>
+    <string name="recurrencia_pending_since">Pendiente desde el %1$s</string>
+    <string name="recurrencia_pending_after_previous">Confirma primero la fecha anterior</string>
+    <string name="recurrencia_schedule">%1$s · Próxima: %2$s</string>
+    <string name="recurrencia_open">Abrir recurrente</string>
+    <string name="recurrencia_open_pending">Confirmar esta fecha</string>
+    <string name="recurrencia_confirm_title">Confirmar recurrente</string>
+    <string name="recurrencia_confirm_body">Para que tu saldo refleje lo que de verdad pasó, ajusta el monto o la fecha si cambiaron.</string>
+    <string name="recurrencia_paid">Pagado</string>
+    <string name="recurrencia_not_yet">Todavía no</string>
+    <string name="recurrencia_skip">Saltar</string>
+    <string name="recurrencia_edit">Editar recurrente</string>
+    <string name="recurrencia_confirm_error">No pudimos registrarlo. Lo que escribiste sigue aquí; intenta de nuevo.</string>
+    <string name="recurrencia_confirm_template_error">Para registrarlo, revisa la cuenta o la categoría del recurrente: alguna ya no está disponible.</string>
+    <string name="recurrencia_skip_error">No pudimos saltar esta fecha. Intenta de nuevo.</string>
+    <string name="recurrencia_next_date">Próxima fecha</string>
+    <string name="recurrencia_schedule_locked">Para cambiar la frecuencia o la próxima fecha, primero confirma o salta lo pendiente.</string>
+    <string name="recurrencia_delete">Eliminar recurrente</string>
+    <string name="recurrencia_delete_title">¿Eliminar este recurrente?</string>
+    <string name="recurrencia_delete_message">Los movimientos que ya registraste se conservan; solo dejan de aparecer fechas nuevas.</string>
+    <string name="recurrencia_delete_error">No pudimos eliminarlo. Tus datos siguen guardados; intenta de nuevo.</string>
+    <string name="recurrencia_updated">Recurrente actualizado</string>
+    <string name="recurrencia_deleted">Recurrente eliminado</string>
+    <string name="recurrencia_confirmed">Movimiento registrado</string>
+    <string name="recurrencia_skipped">Fecha saltada</string>
+    <string name="recurrencia_undone">Cambio deshecho</string>
+    <string name="recurrencia_undo_error">No pudimos deshacerlo. Tus datos siguen guardados; intenta de nuevo.</string>
+    <string name="recurrencia_undo_conflict">No lo deshicimos porque cambió desde entonces. Se conservó lo actual.</string>
+    <string name="recurrencia_undoing">Deshaciendo</string>
+    <plurals name="home_recurrentes_pending">
+        <item quantity="one">%1$d recurrente por confirmar</item>
+        <item quantity="other">%1$d recurrentes por confirmar</item>
+    </plurals>
+</resources>

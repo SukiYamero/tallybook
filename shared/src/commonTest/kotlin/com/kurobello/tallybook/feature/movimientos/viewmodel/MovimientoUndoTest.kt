@@ -226,7 +226,7 @@ class MovimientoUndoTest {
     runCurrent()
     val failed = assertNotNull(f.feedback.state.value.feedback)
     assertEquals(ManagementFeedbackKind.RestoreMissingCuenta, failed.kind)
-    assertNull(failed.deleted)
+    assertNull(failed.undo)
     assertFalse(failed.hasAction)
     f.feedback.onFeedbackAction(failed.token, failed.revision)
     runCurrent()

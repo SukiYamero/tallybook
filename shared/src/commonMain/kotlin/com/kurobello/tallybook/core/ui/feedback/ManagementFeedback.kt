@@ -3,12 +3,15 @@ package com.kurobello.tallybook.core.ui.feedback
 internal enum class ManagementSubject {
   Movimiento,
   Transferencia,
+  Recurrencia,
 }
 
 internal enum class ManagementFeedbackKind {
   Saved,
   Deleted,
   Missing,
+  Confirmed,
+  Skipped,
   Restored,
   RestoreFailed,
   RestoreConflict,
@@ -19,7 +22,7 @@ internal enum class ManagementFeedbackKind {
 internal data class ManagementOutcome(
     val subject: ManagementSubject,
     val kind: ManagementFeedbackKind,
-    val deleted: DeletedSnapshot? = null,
+    val undo: UndoSnapshot? = null,
 )
 
 internal data class ManagementFeedback(
@@ -28,9 +31,9 @@ internal data class ManagementFeedback(
     val subject: ManagementSubject,
     val kind: ManagementFeedbackKind,
     val isRestoring: Boolean = false,
-    val deleted: DeletedSnapshot? = null,
+    val undo: UndoSnapshot? = null,
 ) {
   /** Undo or retry, offered only while the snapshot is held. */
   val hasAction: Boolean
-    get() = deleted != null
+    get() = undo != null
 }
