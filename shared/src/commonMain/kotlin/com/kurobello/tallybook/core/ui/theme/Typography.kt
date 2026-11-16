@@ -36,6 +36,8 @@ internal data class TallybookTypography(
           lineHeight = TallybookTypeScale.size20,
           fontWeight = FontWeight.Normal,
       )
+  val noticeBody: TextStyle =
+      body.copy(fontSize = TallybookTypeScale.size17, lineHeight = TallybookTypeScale.size22)
   val balanceLabel: TextStyle =
       label.copy(fontSize = TallybookTypeScale.size15, lineHeight = TallybookTypeScale.size20)
   val balanceSecondaryAmount: TextStyle =

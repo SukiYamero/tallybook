@@ -556,4 +556,7 @@
     <string name="tag_deleted">Tag excluída</string>
     <string name="tag_delete_error">Não conseguimos excluir a tag. Suas movimentações continuam salvas; tente de novo.</string>
     <string name="search_tags_label">Tags</string>
+    <string name="rotate_notice_title">Melhor na vertical</string>
+    <string name="rotate_notice_body">Para uma experiência melhor, recomendamos girar o celular.</string>
+    <string name="rotate_notice_dismiss">Entendi</string>
 </resources>

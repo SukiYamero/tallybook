@@ -9,6 +9,9 @@ internal object TallybookDimensions {
   val screenTopFloor = TallybookSpacing.space24
   val screenBottomFloor = TallybookSpacing.space16
   val screenContentMaxWidth = 600.dp
+  val phoneShortestSideMaximum = 600.dp
+  val rotateNoticeMaximumWidth = 560.dp
+  val rotateNoticeIcon = 64.dp
   val modalSheetMaximumWidth = 640.dp
   val modalSheetDragAreaHeight = minimumTouchTarget
   val modalSheetDragHandleWidth = TallybookSpacing.space40
