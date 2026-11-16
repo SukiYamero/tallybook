@@ -10,9 +10,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
@@ -40,6 +39,7 @@ import com.composables.icons.lucide.Search
 import com.composables.icons.lucide.Wallet
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.ui.component.TallybookButton
+import com.kurobello.tallybook.core.ui.component.TallybookScreenHeader
 import com.kurobello.tallybook.core.ui.component.TallybookSkeletonLine
 import com.kurobello.tallybook.core.ui.component.TallybookSurface
 import com.kurobello.tallybook.core.ui.component.TallybookSurfaceDefaults
@@ -71,16 +71,14 @@ import tallybook.shared.generated.resources.retry
 
 @Composable
 internal fun HomeHeader(modifier: Modifier = Modifier) {
-  Row(
-      modifier = modifier.fillMaxWidth().heightIn(min = TallybookTheme.dimensions.homeHeaderHeight),
-      verticalAlignment = Alignment.CenterVertically,
-  ) {
-    TallybookText(
-        text = stringResource(Res.string.app_name),
-        modifier = Modifier.semantics { heading() },
-        style = TallybookTheme.typography.headline,
-    )
-  }
+  TallybookScreenHeader(
+      title = stringResource(Res.string.app_name),
+      modifier =
+          modifier.padding(
+              top = TallybookTheme.spacing.space20,
+              bottom = TallybookTheme.spacing.space20,
+          ),
+  )
 }
 
 @Composable
@@ -92,7 +90,7 @@ internal fun HomeSearch(modifier: Modifier = Modifier, onClick: (() -> Unit)? = 
       modifier =
           modifier
               .fillMaxWidth()
-              .heightIn(min = TallybookTheme.dimensions.minimumTouchTarget)
+              .height(TallybookTheme.dimensions.fieldMinimumHeight)
               .then(
                   if (onClick != null)
                       Modifier.clickable(
@@ -110,33 +108,33 @@ internal fun HomeSearch(modifier: Modifier = Modifier, onClick: (() -> Unit)? = 
           TallybookSurfaceDefaults.cardStyle()
               .copy(
                   contentColor = TallybookTheme.colors.foreground.tertiary,
-                  shape = RoundedCornerShape(TallybookTheme.radii.radius18),
+                  shape = RoundedCornerShape(TallybookTheme.radii.radius12),
                   border =
                       BorderStroke(
-                          TallybookTheme.dimensions.borderThin,
+                          TallybookTheme.dimensions.fieldBorderWidth,
                           TallybookTheme.colors.border.base,
                       ),
+                  contentAlignment = Alignment.CenterStart,
               ),
       isPressed = isPressed,
       hasTapFeedback = tapFeedback.isActive,
   ) {
     Row(
         modifier =
-            Modifier.fillMaxSize().padding(horizontal = TallybookTheme.spacing.space14).semantics(
-                mergeDescendants = true
-            ) {},
-        horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space10),
+            Modifier.padding(horizontal = TallybookTheme.dimensions.fieldHorizontalPadding)
+                .semantics(mergeDescendants = true) {},
+        horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
         verticalAlignment = Alignment.CenterVertically,
     ) {
       Image(
           imageVector = Lucide.Search,
           contentDescription = null,
-          modifier = Modifier.size(TallybookTheme.dimensions.homeSearchIcon),
+          modifier = Modifier.size(TallybookTheme.dimensions.fieldIconSize),
           colorFilter = ColorFilter.tint(TallybookTheme.colors.foreground.tertiary),
       )
       TallybookText(
           text = stringResource(Res.string.home_search_placeholder),
-          style = TallybookTheme.typography.bodySmall,
+          style = TallybookTheme.typography.body,
       )
     }
   }

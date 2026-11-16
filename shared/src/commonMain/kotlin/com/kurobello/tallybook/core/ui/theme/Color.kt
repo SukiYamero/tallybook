@@ -141,6 +141,8 @@ internal data class BrandColors(
     val onPrimary: Color,
     val secondary: Color,
     val onSecondary: Color,
+    /** Brand green that stays legible as text or border on the active theme's dark surfaces. */
+    val accent: Color,
 )
 
 @Immutable
@@ -209,6 +211,7 @@ internal val LightTallybookColors =
                 onPrimary = LightPrimaryForeground,
                 secondary = BrandSecondary,
                 onSecondary = BrandSecondaryForeground,
+                accent = BrandSecondary,
             ),
         foreground =
             ForegroundColors(
@@ -275,6 +278,7 @@ internal val DarkTallybookColors =
                 onPrimary = DarkPrimaryForeground,
                 secondary = BrandSecondary,
                 onSecondary = BrandSecondaryForeground,
+                accent = DarkPrimary,
             ),
         foreground =
             ForegroundColors(
