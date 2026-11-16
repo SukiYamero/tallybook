@@ -20,8 +20,10 @@ internal object TallybookDimensions {
   val homeHeaderHeight = 44.dp
   val homeSearchHeight = 46.dp
   val homeSearchIcon = iconMedium
-  val homeEmptyIconContainer = 56.dp
-  val homeEmptyIcon = iconLarge
+  val emptyStateIconContainer = 56.dp
+  val emptyStateIcon = iconLarge
+  val homeEmptyIconContainer = emptyStateIconContainer
+  val homeEmptyIcon = emptyStateIcon
   val bottomNavigationContentHeight = 72.dp
   val bottomNavigationIcon = iconLarge
   val bottomNavigationSelectedContainer = 44.dp

@@ -33,7 +33,8 @@ internal data class MovimientoFieldFocus(
     val amountModifier: Modifier = Modifier,
 )
 
-@Suppress("LongMethod")
+/** [dateContent] replaces the date field, e.g. with a recurrencia's schedule. */
+@Suppress("LongMethod", "LongParameterList")
 @Composable
 internal fun MovimientoPrimaryFields(
     uiState: MovimientoFormState,
@@ -41,6 +42,7 @@ internal fun MovimientoPrimaryFields(
     selection: MovimientoSelectionCallbacks,
     fieldFocus: MovimientoFieldFocus,
     interactionEnabled: Boolean = true,
+    dateContent: (@Composable () -> Unit)? = null,
 ) {
   val focusManager = LocalFocusManager.current
   val dataFieldsEnabled = interactionEnabled && !uiState.isSubmitting && !uiState.isLoading
@@ -77,22 +79,24 @@ internal fun MovimientoPrimaryFields(
         enabled = interactionEnabled && !uiState.isSubmitting,
     )
     Spacer(modifier = Modifier.height(TallybookTheme.spacing.space24))
-    MovimientoDateField(
-        state =
-            uiState.maxSelectableDate?.let {
-              MovimientoDateFieldState(
-                  uiState.fecha,
-                  dataFieldsEnabled,
-                  it,
-              )
-            }
-                ?: MovimientoDateFieldState(
-                    fecha = uiState.fecha,
-                    enabled = dataFieldsEnabled,
-                ),
-        onFechaChanged = actions::onFechaChanged,
-        modifier = Modifier.align(Alignment.CenterHorizontally),
-    )
+    if (dateContent != null) dateContent()
+    else
+        MovimientoDateField(
+            state =
+                uiState.maxSelectableDate?.let {
+                  MovimientoDateFieldState(
+                      uiState.fecha,
+                      dataFieldsEnabled,
+                      it,
+                  )
+                }
+                    ?: MovimientoDateFieldState(
+                        fecha = uiState.fecha,
+                        enabled = dataFieldsEnabled,
+                    ),
+            onFechaChanged = actions::onFechaChanged,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        )
     if (uiState.isFechaInvalid)
         TallybookText(
             stringResource(Res.string.movimiento_future_date),

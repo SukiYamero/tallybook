@@ -55,6 +55,7 @@ internal fun MovimientoRowContent(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     pending: Boolean = false,
+    onClickLabel: String? = null,
 ) {
   val amountText = signedMovimientoAmountText(movimiento.monto, movimiento.tipo)
   val labels = movimientoRowLabels(movimiento, pending)
@@ -62,7 +63,8 @@ internal fun MovimientoRowContent(
   val interactions = remember { MutableInteractionSource() }
   val isPressed by interactions.collectIsPressedAsState()
   val tapFeedback = rememberTallybookTapFeedback()
-  val rowModifier = movimientoRowClickModifier(modifier, onClick, interactions, tapFeedback)
+  val rowModifier =
+      movimientoRowClickModifier(modifier, onClick, onClickLabel, interactions, tapFeedback)
   TallybookSurface(
       modifier =
           rowModifier.semantics(mergeDescendants = true) { contentDescription = description },
@@ -155,10 +157,11 @@ internal fun movimientoRowDescription(
 private fun movimientoRowClickModifier(
     modifier: Modifier,
     onClick: (() -> Unit)?,
+    onClickLabel: String?,
     interactions: MutableInteractionSource,
     tapFeedback: TallybookTapFeedback,
 ): Modifier {
-  val label = stringResource(Res.string.movimiento_open_detail)
+  val label = onClickLabel ?: stringResource(Res.string.movimiento_open_detail)
   return if (onClick == null) modifier
   else
       modifier.clickable(

@@ -583,7 +583,7 @@ private fun Movimiento.toChanges() =
 
 private fun String?.normalizeOptionalTextOrNull(): String? = this?.normalizeOptionalText()
 
-private fun EditMovimientoUiState.toChangesOrNull(): MovimientoChanges? {
+internal fun EditMovimientoUiState.toChangesOrNull(): MovimientoChanges? {
   val amount = (parseAmountInput(amountInput, moneda) as? AmountInputResult.Valid)?.money
   val categoria = categoriaId
   val cuenta = cuentaField.selected

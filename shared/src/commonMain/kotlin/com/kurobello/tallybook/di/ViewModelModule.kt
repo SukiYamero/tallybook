@@ -19,6 +19,8 @@ import com.kurobello.tallybook.feature.movimientos.viewmodel.ManageMovimientoRep
 import com.kurobello.tallybook.feature.movimientos.viewmodel.ManageMovimientoViewModel
 import com.kurobello.tallybook.feature.profile.viewmodel.ProfileExportDependencies
 import com.kurobello.tallybook.feature.profile.viewmodel.ProfileViewModel
+import com.kurobello.tallybook.feature.recurrentes.viewmodel.RecurrentesRepositories
+import com.kurobello.tallybook.feature.recurrentes.viewmodel.RecurrentesViewModel
 import com.kurobello.tallybook.feature.search.viewmodel.SearchDateProvider
 import com.kurobello.tallybook.feature.search.viewmodel.SearchRepositories
 import com.kurobello.tallybook.feature.search.viewmodel.SearchViewModel
@@ -140,6 +142,18 @@ internal val viewModelModule = module {
     )
   }
   viewModel { QuickCuentaViewModel(cuentaRepository = get()) }
+  viewModel {
+    RecurrentesViewModel(
+        repositories =
+            RecurrentesRepositories(
+                recurrencias = get(),
+                categorias = get(),
+                cuentas = get(),
+                etiquetas = get(),
+            ),
+        today = CivilToday(get(), get()),
+    )
+  }
   viewModel { parameters ->
     ManageTransferenciaViewModel(
         repositories =

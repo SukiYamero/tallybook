@@ -22,3 +22,5 @@ import kotlinx.serialization.Serializable
 @Serializable data object Tags : Destination
 
 @Serializable data object Accounts : Destination
+
+@Serializable data object Recurrentes : Destination

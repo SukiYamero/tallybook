@@ -448,7 +448,8 @@ private class ShellHarness(
               UiCatalog,
               Categories,
               Tags,
-              Accounts -> Unit
+              Accounts,
+              Recurrentes -> Unit
             }
             SideEffect {
               owners[destination] = owner

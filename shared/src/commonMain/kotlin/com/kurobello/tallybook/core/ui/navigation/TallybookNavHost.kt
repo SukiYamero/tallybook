@@ -18,12 +18,11 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.serialization.NavBackStackSerializer
 import androidx.navigation3.ui.NavDisplay
 import com.kurobello.tallybook.core.ui.catalog.UiCatalogRoute
+import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackQueue
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackRoute
 import com.kurobello.tallybook.core.ui.layout.TallybookAppShell
 import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSession
 import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSessionLifecycle
-import com.kurobello.tallybook.feature.accounts.ui.AccountsRoute
-import com.kurobello.tallybook.feature.categories.ui.CategoriesRoute
 import com.kurobello.tallybook.feature.history.ui.HistoryRoute
 import com.kurobello.tallybook.feature.home.HomeRoute
 import com.kurobello.tallybook.feature.movimientos.ui.AddMovimientoSheetRoute
@@ -33,9 +32,7 @@ import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoViewMo
 import com.kurobello.tallybook.feature.profile.ui.ProfileRoute
 import com.kurobello.tallybook.feature.search.ui.SearchRoute
 import com.kurobello.tallybook.feature.statistics.ui.StatisticsRoute
-import com.kurobello.tallybook.feature.tags.ui.TagsRoute
 import com.kurobello.tallybook.feature.transfers.ui.TransferSheetRoute
-import com.kurobello.tallybook.feature.transfers.ui.recentTransferenciasContent
 import com.kurobello.tallybook.feature.transfers.viewmodel.TransferEntry
 import kotlinx.serialization.KSerializer
 import org.koin.compose.viewmodel.koinViewModel
@@ -77,7 +74,7 @@ fun TallybookNavHost(
         ManagementFeedbackRoute(feedbackState, feedback, modals, clearance)
       },
   ) { clearance ->
-    PrimaryNavigationDisplay(navigator, clearance, openers)
+    PrimaryNavigationDisplay(navigator, clearance, openers, feedback)
   }
   AddMovimientoSessionRoute(sheetSession)
   ManageMovimientoRoute(managementState, management)
@@ -119,12 +116,13 @@ private fun PrimaryNavigationDisplay(
     navigator: PrimaryNavigator,
     clearance: Dp,
     openers: ManagementOpeners,
+    feedback: ManagementFeedbackQueue,
 ) {
   val state = navigator.state
   val entries =
       rememberPrimaryEntries(state) { destination ->
         NavEntry(destination, contentKey = primaryContentKey(destination)) {
-          PrimaryRoute(destination, navigator, clearance, openers)
+          PrimaryRoute(destination, navigator, clearance, openers, feedback)
         }
       }
   NavDisplay(
@@ -142,6 +140,7 @@ private fun PrimaryRoute(
     navigator: PrimaryNavigator,
     clearance: Dp,
     openers: ManagementOpeners,
+    feedback: ManagementFeedbackQueue,
 ) {
   val state = navigator.state
   when (destination) {
@@ -184,21 +183,10 @@ private fun PrimaryRoute(
             onOpenSecondary = navigator::openSecondary,
         )
     UiCatalog -> UiCatalogRoute()
-    Categories ->
-        CategoriesRoute(
-            modals = navigator.modals,
-            active = state.secondary == Categories,
-            onBack = navigator::back,
-            onShowCategory = { id -> navigator.showSearchFilter(categoryIds = setOf(id)) },
-        )
-    Tags ->
-        TagsRoute(
-            modals = navigator.modals,
-            active = state.secondary == Tags,
-            onBack = navigator::back,
-            onShowTag = { id -> navigator.showSearchFilter(etiquetaIds = setOf(id)) },
-        )
+    Categories -> CategoriesDestination(navigator)
+    Tags -> TagsDestination(navigator)
     Accounts -> AccountsDestination(navigator, openers.transfer)
+    Recurrentes -> RecurrentesDestination(navigator, feedback)
   }
 }
 
@@ -210,24 +198,6 @@ private fun StatisticsDestination(navigator: PrimaryNavigator, clearance: Dp) {
       clearance = clearance,
       modals = navigator.modals,
       active = navigator.state.selected == Statistics && navigator.state.secondary == null,
-  )
-}
-
-@Composable
-private fun AccountsDestination(
-    navigator: PrimaryNavigator,
-    openTransfer: (TransferEntry) -> Unit,
-) {
-  AccountsRoute(
-      modals = navigator.modals,
-      active = navigator.state.secondary == Accounts,
-      onBack = navigator::back,
-      onTransfer = openTransfer,
-      onViewMovements = { cuentaId, moneda ->
-        navigator.showSearchFilter(cuentaIds = setOf(cuentaId), moneda = moneda)
-      },
-      trailingContent =
-          recentTransferenciasContent { id -> openTransfer(TransferEntry.Existing(id)) },
   )
 }
 
@@ -264,6 +234,7 @@ internal fun primaryContentKey(destination: Destination): String =
       Categories -> "secondary-categories"
       Tags -> "secondary-tags"
       Accounts -> "secondary-accounts"
+      Recurrentes -> "secondary-recurrentes"
     }
 
 internal fun destinationBackStackSerializer(): KSerializer<NavBackStack<Destination>> =
