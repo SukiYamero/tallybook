@@ -34,7 +34,7 @@ internal fun DatabaseMovimiento.toDomain(): Movimiento {
 }
 
 // The view concatenates "posicion<US>id" entries in unspecified order; posicion decides the order.
-private fun String.toOrderedIds(): List<String> =
+internal fun String.toOrderedIds(): List<String> =
     split(ENTRY_SEPARATOR)
         .filter(String::isNotEmpty)
         .map { entry ->

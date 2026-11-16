@@ -11,11 +11,11 @@ import kotlinx.datetime.LocalDate
 data class Recurrencia(
     val id: String,
     val tipo: TipoMovimiento,
-    /** The currency of [monto] is this cuenta's; the database stores it only there. */
     val monto: Money,
     val categoriaId: String,
     val titulo: String?,
     val descripcion: String?,
+    /** The currency of [monto] is this cuenta's; the database stores it only there. */
     val cuentaId: String,
     val medio: MedioPago,
     val etiquetaIds: List<String>,
