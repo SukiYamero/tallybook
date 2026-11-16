@@ -56,6 +56,24 @@ class AddMovimientoRepetirTest {
   }
 
   @Test
+  fun aBackDatedMovimientoWithRepetirSchedulesTheFirstOccurrenceAfterToday() = runTest {
+    val f = fixture()
+    f.viewModel.onFillManually()
+    f.viewModel.onAmountChanged("5000")
+    f.viewModel.onFechaChanged(LocalDate(2026, 6, 30))
+    f.viewModel.onRepetirChanged(true)
+
+    f.viewModel.onSubmit()
+    runCurrent()
+
+    assertEquals(LocalDate(2026, 6, 30), f.recurrencias.created.single().first.fecha)
+    val recurrencia = f.recurrencias.recurrencias.value.values.single()
+    assertEquals(LocalDate(2026, 6, 30), recurrencia.fechaAncla)
+    assertEquals(LocalDate(2026, 9, 30), recurrencia.proximaFecha)
+    assertEquals(emptyList(), recurrencia.pendingThrough(LocalDate(2026, 9, 15)))
+  }
+
+  @Test
   fun repetirFromTheSentenceSummaryStartsMonthlyAndSavesFromThere() = runTest {
     val f = fixture()
     f.viewModel.onPhraseChanged("Pagué el arriendo 1.200.000")

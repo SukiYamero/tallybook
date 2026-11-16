@@ -13,6 +13,7 @@ import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.OccurrenceResult
 import com.kurobello.tallybook.core.model.OccurrenceUndo
 import com.kurobello.tallybook.core.model.OccurrenceUndoResult
@@ -66,6 +67,49 @@ class RecurrenciaRepositoryTest {
       assertEquals(
           DataOutcome.Success(listOf(RecurrenciaWithPending(recurrencia, emptyList()))),
           fixture.repository.observeLive(today = JAN_31).first(),
+      )
+    }
+  }
+
+  @Test
+  fun `a back-dated movimiento starts the schedule after today with nothing pending`() = runTest {
+    withRepository { fixture ->
+      val today = LocalDate(2026, 11, 15)
+
+      val recurrencia = assertSuccess(fixture.repository.create(rent(), Frecuencia.MENSUAL, today))
+
+      assertEquals(JAN_31, recurrencia.fechaAncla)
+      assertEquals(LocalDate(2026, 11, 30), recurrencia.proximaFecha)
+      assertEquals(DataOutcome.Success(0), fixture.repository.observePendingCount(today).first())
+      assertEquals(listOf<String?>("rent"), fixture.driver.movimientoIds())
+    }
+  }
+
+  @Test
+  fun `a pending occurrence moves no money until it is confirmed`() = runTest {
+    withRepository { fixture ->
+      val saldos = SaldoRepositoryImpl(fixture.database, StandardTestDispatcher(testScheduler))
+      val february = MovimientoDateRange(LocalDate(2026, 2, 1), FEB_28)
+      fixture.created(today = JAN_31)
+      val totalBefore = assertSuccess(saldos.observeTotales().first()).getValue(Moneda.COP)
+
+      assertEquals(DataOutcome.Success(1), fixture.repository.observePendingCount(FEB_28).first())
+      assertEquals(totalBefore, assertSuccess(saldos.observeTotales().first()).getValue(Moneda.COP))
+      assertEquals(
+          Money(0, Moneda.COP),
+          assertSuccess(fixture.movimientos.observeSummary(Moneda.COP, february).first()).gastos,
+      )
+      assertEquals(listOf<String?>("rent"), fixture.driver.movimientoIds())
+
+      fixture.confirmed(Money(130_000, Moneda.COP), today = FEB_28)
+
+      assertEquals(
+          totalBefore - Money(130_000, Moneda.COP),
+          assertSuccess(saldos.observeTotales().first()).getValue(Moneda.COP),
+      )
+      assertEquals(
+          Money(130_000, Moneda.COP),
+          assertSuccess(fixture.movimientos.observeSummary(Moneda.COP, february).first()).gastos,
       )
     }
   }
