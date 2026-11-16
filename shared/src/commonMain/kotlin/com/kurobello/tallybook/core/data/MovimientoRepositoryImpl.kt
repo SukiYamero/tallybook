@@ -9,13 +9,9 @@ import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.Cuenta
-import com.kurobello.tallybook.core.model.CuentaRejection
 import com.kurobello.tallybook.core.model.CuentaSelection
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
-import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
-import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
-import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
@@ -46,6 +42,8 @@ internal class MovimientoRepositoryImpl(
     private val dispatcher: CoroutineDispatcher,
     private val changeClock: ChangeClock,
 ) : MovimientoRepository {
+
+  private val writes = MovimientoWrites(database)
 
   override fun observeRecent(moneda: Moneda, limit: Int): Flow<DataOutcome<List<Movimiento>>> =
       if (limit <= 0) {
@@ -110,18 +108,16 @@ internal class MovimientoRepositoryImpl(
   }
 
   override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> {
-    validate(movimiento)?.let {
+    validateMovimiento(movimiento)?.let {
       return DataOutcome.Failure(it)
     }
     return runLocalDataOperation(dispatcher) {
           database.transactionWithResult {
-            val missing =
-                missingReference(movimiento.categoriaId, movimiento.etiquetaIds)
-                    ?: invalidCuenta(movimiento.cuentaId, movimiento.medio, movimiento.monto)
+            val missing = writes.rejection(movimiento.changes())
             if (missing != null) {
               DataOutcome.Failure(missing)
             } else {
-              insertRow(movimiento, changeClock.next())
+              writes.insertRow(movimiento, changeClock.next())
               DataOutcome.Success(Unit)
             }
           }
@@ -147,7 +143,7 @@ internal class MovimientoRepositoryImpl(
       id: String,
       changes: MovimientoChanges,
   ): DataOutcome<MovimientoUpdateResult> {
-    (validateId(id) ?: validateChanges(changes))?.let {
+    (validateId(id) ?: validateMovimientoChanges(changes))?.let {
       return DataOutcome.Failure(it)
     }
     return runLocalDataOperation(dispatcher) {
@@ -163,18 +159,15 @@ internal class MovimientoRepositoryImpl(
                   DataError.InvalidInput("Movimiento currency cannot change")
               )
             }
-            // A stored categoria the catalog no longer has stays valid while the user keeps it.
-            missingReference(
-                    changes.categoriaId,
-                    changes.etiquetaIds,
+            writes
+                .rejection(
+                    changes,
                     keptCategoriaId = current.categoriaId,
+                    keptCuentaId = current.cuentaId,
                 )
                 ?.let {
                   return@transactionWithResult DataOutcome.Failure(it)
                 }
-            invalidCuenta(changes.cuentaId, changes.medio, changes.monto, stored = current)?.let {
-              return@transactionWithResult DataOutcome.Failure(it)
-            }
             if (current.changes() == changes) {
               return@transactionWithResult DataOutcome.Success(MovimientoUpdateResult.Updated)
             }
@@ -195,7 +188,7 @@ internal class MovimientoRepositoryImpl(
                     .value == 1L
             )
             queries.deleteMovimientoEtiquetas(id)
-            insertEtiquetas(id, changes.etiquetaIds)
+            writes.insertEtiquetas(id, changes.etiquetaIds)
             DataOutcome.Success(MovimientoUpdateResult.Updated)
           }
         }
@@ -215,11 +208,7 @@ internal class MovimientoRepositoryImpl(
               invalid != null -> DataOutcome.Failure(invalid)
               captured == null -> DataOutcome.Success(null)
               else -> {
-                check(
-                    queries.tombstoneMovimiento(stamp = changeClock.next().value, id = id).value ==
-                        1L
-                )
-                queries.deleteMovimientoEtiquetas(id)
+                writes.tombstone(id, changeClock.next())
                 DataOutcome.Success(captured)
               }
             }
@@ -255,7 +244,7 @@ internal class MovimientoRepositoryImpl(
               RestoreResult.Conflict
           tombstone == null -> {
             queries.deleteMovimientoEtiquetas(movimiento.id)
-            insertRow(restorable, changeClock.next())
+            writes.insertRow(restorable, changeClock.next())
             RestoreResult.Restored
           }
           tombstone.holdsContentOf(movimiento) -> {
@@ -280,112 +269,24 @@ internal class MovimientoRepositoryImpl(
             .value == 1L
     )
     queries.deleteMovimientoEtiquetas(movimiento.id)
-    insertEtiquetas(movimiento.id, movimiento.etiquetaIds)
+    writes.insertEtiquetas(movimiento.id, movimiento.etiquetaIds)
   }
-
-  private fun insertRow(movimiento: Movimiento, stamp: ChangeStamp) {
-    check(
-        database.movimientoQueries
-            .insertMovimiento(
-                id = movimiento.id,
-                tipo = movimiento.tipo.name,
-                monto_minor = movimiento.monto.minorUnits,
-                fecha = movimiento.fecha.toString(),
-                titulo = movimiento.titulo,
-                descripcion = movimiento.descripcion,
-                created_at = movimiento.createdAt.toString(),
-                categoria_id = movimiento.categoriaId,
-                cuenta_id = movimiento.cuentaId,
-                medio_pago = movimiento.medio.name,
-                updated_at = stamp.value,
-                recurrencia_id = null,
-            )
-            .value == 1L
-    )
-    insertEtiquetas(movimiento.id, movimiento.etiquetaIds)
-  }
-
-  private fun insertEtiquetas(movimientoId: String, etiquetaIds: List<String>) {
-    etiquetaIds.forEachIndexed { posicion, etiquetaId ->
-      check(
-          database.movimientoQueries
-              .insertMovimientoEtiqueta(movimientoId, etiquetaId, posicion.toLong())
-              .value == 1L
-      )
-    }
-  }
-
-  private fun missingReference(
-      categoriaId: String,
-      etiquetaIds: List<String>,
-      keptCategoriaId: String? = null,
-  ): DataError.InvalidInput? =
-      when {
-        categoriaId != keptCategoriaId && !categoriaExists(categoriaId) ->
-            DataError.InvalidInput("Unknown categoria $categoriaId")
-        existingEtiquetaIds(etiquetaIds).size != etiquetaIds.size ->
-            DataError.InvalidInput("Movimiento references an unknown etiqueta")
-        else -> null
-      }
 
   // Deleting a custom categoria is refused while a stored movimiento uses it, but a captured one no
   // longer counts; restoring it falls back to Otros, the same pending state creation uses.
   private fun withSurvivingReferences(movimiento: Movimiento): Movimiento {
-    val existing = existingEtiquetaIds(movimiento.etiquetaIds)
+    val existing = writes.existingEtiquetaIds(movimiento.etiquetaIds)
     return movimiento.copy(
-        categoriaId = movimiento.categoriaId.takeIf(::categoriaExists) ?: CATEGORIA_OTROS_ID,
+        categoriaId = movimiento.categoriaId.takeIf(writes::categoriaExists) ?: CATEGORIA_OTROS_ID,
         etiquetaIds = movimiento.etiquetaIds.filter { it in existing },
     )
   }
 
-  // Checked inside the write transaction so an archive or delete cannot slip between check and
-  // write. A medio never outlives its cuenta's type: the type is locked while a live movimiento
-  // uses it.
-  private fun invalidCuenta(
-      cuentaId: String,
-      medio: MedioPago,
-      monto: Money,
-      stored: Movimiento? = null,
-  ): DataError.InvalidInput? {
-    val cuenta =
-        database.cuentaQueries.selectCuentaById(cuentaId).executeAsOneOrNull()?.toDomain()
-            ?: return DataError.InvalidInput("Unknown cuenta $cuentaId")
-    return when (cuenta.rejectionFor(medio, monto.moneda, stored?.cuentaId)) {
-      null -> null
-      CuentaRejection.ARCHIVED -> DataError.InvalidInput("Cuenta $cuentaId is archived")
-      CuentaRejection.MEDIO_MISMATCH ->
-          DataError.InvalidInput("Medio $medio does not fit a ${cuenta.tipo} cuenta")
-      CuentaRejection.MONEDA_MISMATCH ->
-          DataError.InvalidInput("Movimiento currency must be its cuenta's ${cuenta.moneda}")
-    }
-  }
-
-  private fun categoriaExists(id: String): Boolean =
-      database.categoriaQueries.selectCategoriaById(id).executeAsOneOrNull() != null
-
-  private fun existingEtiquetaIds(ids: List<String>): Set<String> =
-      if (ids.isEmpty()) emptySet()
-      else database.etiquetaQueries.selectExistingEtiquetaIds(ids).executeAsList().toSet()
-
   private fun validateRestorable(movimiento: Movimiento): DataError.InvalidInput? =
-      validateId(movimiento.id) ?: validateChanges(movimiento.changes())
+      validateId(movimiento.id) ?: validateMovimientoChanges(movimiento.changes())
 
   private fun validateId(id: String): DataError.InvalidInput? =
       if (id.isBlank()) DataError.InvalidInput("Movimiento id must not be blank") else null
-
-  private fun validateChanges(changes: MovimientoChanges): DataError.InvalidInput? =
-      when {
-        changes.monto.minorUnits <= 0 ->
-            DataError.InvalidInput("Movimiento amount must be positive")
-        changes.monto.minorUnits > Money.MAX_MINOR_UNITS ->
-            DataError.InvalidInput("Movimiento amount exceeds the maximum")
-        !changes.medio.allows(changes.tipo) ->
-            DataError.InvalidInput("Medio ${changes.medio} does not allow ${changes.tipo}")
-        else ->
-            validateReferences(changes.categoriaId, changes.etiquetaIds)
-                ?: validateTitle(changes.titulo)
-                ?: validateDescription(changes.descripcion)
-      }
 
   override suspend fun defaultSelection(
       primary: Moneda,
@@ -406,35 +307,7 @@ internal class MovimientoRepositoryImpl(
           .firstNotNullOfOrNull { it.toSelection(tipo, medio) }
     }
   }
-
-  private fun validate(movimiento: Movimiento): DataError.InvalidInput? =
-      when {
-        movimiento.monto.minorUnits <= 0 ->
-            DataError.InvalidInput("Movimiento amount must be positive")
-        movimiento.monto.minorUnits > Money.MAX_MINOR_UNITS ->
-            DataError.InvalidInput("Movimiento amount exceeds the maximum")
-        movimiento.id.isEmpty() -> DataError.InvalidInput("Movimiento id must not be empty")
-        !movimiento.medio.allows(movimiento.tipo) ->
-            DataError.InvalidInput("Medio ${movimiento.medio} does not allow ${movimiento.tipo}")
-        else ->
-            validateReferences(movimiento.categoriaId, movimiento.etiquetaIds)
-                ?: validateTitle(movimiento.titulo)
-                ?: validateDescription(movimiento.descripcion)
-      }
 }
-
-private fun Movimiento.changes(): MovimientoChanges =
-    MovimientoChanges(
-        tipo,
-        monto,
-        fecha,
-        categoriaId,
-        etiquetaIds,
-        titulo,
-        descripcion,
-        cuentaId,
-        medio,
-    )
 
 // The SQL ranks every cuenta regardless of medio, so a requested medio rules out the incompatible
 // ones here, e.g. DEBITO skips a cash account.
@@ -480,34 +353,6 @@ private fun summaryOf(moneda: Moneda, totals: Map<String, Long?>): MovimientoSum
         ingresos = Money(totals[TipoMovimiento.INGRESO.name] ?: 0, moneda),
         gastos = Money(totals[TipoMovimiento.GASTO.name] ?: 0, moneda),
     )
-
-private fun validateTitle(titulo: String?): DataError.InvalidInput? =
-    if ((titulo?.length ?: 0) > MOVIMIENTO_TITLE_MAX_LENGTH) {
-      DataError.InvalidInput("Movimiento title is too long")
-    } else null
-
-private fun validateDescription(descripcion: String?): DataError.InvalidInput? =
-    if ((descripcion?.length ?: 0) > MOVIMIENTO_DESCRIPTION_MAX_LENGTH) {
-      DataError.InvalidInput("Movimiento description is too long")
-    } else null
-
-private fun validateReferences(
-    categoriaId: String,
-    etiquetaIds: List<String>,
-): DataError.InvalidInput? =
-    when {
-      categoriaId.isBlank() -> DataError.InvalidInput("Categoria id must not be blank")
-      etiquetaIds.size > MAX_ETIQUETAS_POR_MOVIMIENTO ->
-          DataError.InvalidInput(
-              "Movimiento allows $MAX_ETIQUETAS_POR_MOVIMIENTO etiquetas, got ${etiquetaIds.size}"
-          )
-      etiquetaIds.any { it.isBlank() } -> DataError.InvalidInput("Etiqueta id must not be blank")
-      etiquetaIds.any { id -> id.any { it in VIEW_SEPARATORS } } ->
-          DataError.InvalidInput("Etiqueta id must not contain a control separator")
-      etiquetaIds.toSet().size != etiquetaIds.size ->
-          DataError.InvalidInput("Movimiento etiquetas must be distinct")
-      else -> null
-    }
 
 internal fun parseStoredYear(value: String): Int {
   val canonicalDate = "$value-01-01"
