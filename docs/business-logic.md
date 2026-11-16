@@ -402,8 +402,10 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
 - 12 categorías padre, 58 en total (cada padre con 3–6 hijas). Estructura por entrada: `{id, nombre,
   padreId?, icono, color}`.
 - `icono` es un nombre de Lucide — compatible directo con `icons-lucide`, ya elegido.
-- `color` es un tinte con nombre (amber, blue, purple, rose, success...), no un hex — se resuelve contra
-  los tokens de tema (`docs/stack.md`), no es un color fijo grabado por categoría.
+- `color` es un tinte con nombre (`CategoryTint`: esmeralda, turquesa, azul, índigo, morado, rosa,
+  rojo, naranja, ámbar, gris), no un hex — se resuelve contra los tonos de gráfico del tema
+  (`docs/stack.md`), así cada tinte se distingue de los demás en claro y oscuro. La clave guardada no
+  cambia si el tinte se renombra.
 - Los ingresos son una categoría padre más (`cat_ingresos`, con `cat_sueldo`/`cat_freelance`/
   `cat_ventas`/`cat_regalo`/`cat_reembolso` como hijas) — no hay un campo `tipo` en la categoría, el
   tipo (gasto/ingreso) lo determina el movimiento, no la categoría.

@@ -154,9 +154,9 @@ class CuentaRepositoryTest {
       runTest {
         withRepository { driver, _, changeClock, repository ->
           val nequi =
-              repository.create(draft("Nequi", TipoCuenta.BANCO, color = CategoryTint.ROSE)).saved()
-          assertEquals(CategoryTint.ROSE, nequi.color)
-          assertEquals(CategoryTint.ROSE, repository.getById(nequi.id).cuenta().color)
+              repository.create(draft("Nequi", TipoCuenta.BANCO, color = CategoryTint.RED)).saved()
+          assertEquals(CategoryTint.RED, nequi.color)
+          assertEquals(CategoryTint.RED, repository.getById(nequi.id).cuenta().color)
 
           val recolored =
               repository

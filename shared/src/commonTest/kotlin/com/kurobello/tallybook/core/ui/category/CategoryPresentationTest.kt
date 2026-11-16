@@ -2,6 +2,7 @@ package com.kurobello.tallybook.core.ui.category
 
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.ui.theme.DarkTallybookColors
 import com.kurobello.tallybook.core.ui.theme.LightTallybookColors
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -77,17 +78,26 @@ class CategoryPresentationTest {
             CategoryTint.EMERALD to LightTallybookColors.chart[0],
             CategoryTint.BLUE to LightTallybookColors.chart[1],
             CategoryTint.AMBER to LightTallybookColors.chart[2],
-            CategoryTint.ROSE to LightTallybookColors.chart[3],
+            CategoryTint.RED to LightTallybookColors.chart[3],
             CategoryTint.PURPLE to LightTallybookColors.chart[4],
-            CategoryTint.SUCCESS to LightTallybookColors.status.success.base,
-            CategoryTint.DANGER to LightTallybookColors.status.danger.base,
-            CategoryTint.INFO to LightTallybookColors.status.info,
+            CategoryTint.TEAL to LightTallybookColors.chart[5],
+            CategoryTint.INDIGO to LightTallybookColors.chart[6],
+            CategoryTint.ORANGE to LightTallybookColors.chart[7],
+            CategoryTint.PINK to LightTallybookColors.chart[8],
             CategoryTint.NEUTRAL to null,
         )
 
     assertEquals(CategoryTint.entries.toSet(), expected.keys)
     expected.forEach { (tint, color) ->
       assertEquals(color, tint.accentColor(LightTallybookColors))
+    }
+  }
+
+  @Test
+  fun everyCategoryTintHasItsOwnAccentInBothThemes() {
+    listOf(LightTallybookColors, DarkTallybookColors).forEach { colors ->
+      val accents = CategoryTint.entries.mapNotNull { it.accentColor(colors) }
+      assertEquals(CategoryTint.entries.size - 1, accents.toSet().size)
     }
   }
 }

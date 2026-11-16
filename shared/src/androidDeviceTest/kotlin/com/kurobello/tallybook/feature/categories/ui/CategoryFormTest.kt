@@ -80,13 +80,13 @@ class CategoryFormTest {
   fun fullShowsTintAndDescriptionWithTheSelectedTint() {
     composeRule.setContent {
       StatefulForm(
-          CategoryDraftState(nombre = "Gym", color = CategoryTint.ROSE),
+          CategoryDraftState(nombre = "Gym", color = CategoryTint.RED),
           CategoryFormMode.FULL,
       )
     }
 
     composeRule
-        .onNodeWithContentDescription(localizedString(CategoryTint.ROSE.labelResource()))
+        .onNodeWithContentDescription(localizedString(CategoryTint.RED.labelResource()))
         .performScrollTo()
         .assertIsSelected()
     composeRule
@@ -121,7 +121,7 @@ class CategoryFormTest {
   @Test
   fun duplicateOffersTheCallerActionButNeverForOtros() {
     val existing =
-        Categoria("cat_gimnasio", "Gimnasio", null, CategoryIcon.DUMBBELL, CategoryTint.ROSE)
+        Categoria("cat_gimnasio", "Gimnasio", null, CategoryIcon.DUMBBELL, CategoryTint.RED)
     val otros =
         Categoria(
             CATEGORIA_OTROS_ID,

@@ -15,7 +15,7 @@ class AddMovimientoUiStateTest {
 
   @Test
   fun summaryStaysAvailableWhenTheCatalogHasNoOtrosFallback() {
-    val cine = Categoria("cat_cine", "Cine", "cat_ocio", CategoryIcon.FILM, CategoryTint.INFO)
+    val cine = Categoria("cat_cine", "Cine", "cat_ocio", CategoryIcon.FILM, CategoryTint.INDIGO)
     val state =
         AddMovimientoUiState(
             tipo = TipoMovimiento.GASTO,

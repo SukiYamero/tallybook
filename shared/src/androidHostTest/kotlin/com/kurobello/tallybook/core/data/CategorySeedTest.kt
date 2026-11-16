@@ -73,7 +73,7 @@ class CategorySeedTest {
           nombre = "Manual name",
           padre_id = null,
           icono = CategoryIcon.COFFEE.storageKey,
-          color = CategoryTint.INFO.storageKey,
+          color = CategoryTint.INDIGO.storageKey,
           updated_at = ChangeStamp.SEED.value,
       )
 
@@ -85,7 +85,7 @@ class CategorySeedTest {
           }
       assertEquals("Manual name", comida.nombre)
       assertEquals(CategoryIcon.COFFEE.storageKey, comida.icono)
-      assertEquals(CategoryTint.INFO.storageKey, comida.color)
+      assertEquals(CategoryTint.INDIGO.storageKey, comida.color)
     }
   }
 

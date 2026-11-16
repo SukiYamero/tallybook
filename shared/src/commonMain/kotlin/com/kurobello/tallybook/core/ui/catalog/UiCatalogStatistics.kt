@@ -178,8 +178,8 @@ private val CatalogTints =
         "comida" to CategoryTint.AMBER,
         "super" to CategoryTint.AMBER,
         "hogar" to CategoryTint.BLUE,
-        "transporte" to CategoryTint.INFO,
-        "ocio" to CategoryTint.ROSE,
+        "transporte" to CategoryTint.INDIGO,
+        "ocio" to CategoryTint.RED,
         "salud" to CategoryTint.EMERALD,
         "compras" to CategoryTint.PURPLE,
     )

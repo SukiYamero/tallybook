@@ -187,7 +187,7 @@ internal fun rememberMovimientoEntrySamples(): MovimientoEntrySamples {
   val gifts = stringResource(Res.string.category_regalo)
   return remember(cinema, food, transport, other, health, home, gifts) {
     MovimientoEntrySamples(
-        cinema = Categoria("cat_cine", cinema, null, CategoryIcon.FILM, CategoryTint.INFO),
+        cinema = Categoria("cat_cine", cinema, null, CategoryIcon.FILM, CategoryTint.INDIGO),
         food = Categoria("cat_comida", food, null, CategoryIcon.UTENSILS, CategoryTint.AMBER),
         transport =
             Categoria("cat_transporte", transport, null, CategoryIcon.CAR, CategoryTint.BLUE),
@@ -199,7 +199,7 @@ internal fun rememberMovimientoEntrySamples(): MovimientoEntrySamples {
                 CategoryIcon.CIRCLE_DASHED,
                 CategoryTint.NEUTRAL,
             ),
-        health = Categoria("cat_salud", health, null, CategoryIcon.HEART_PULSE, CategoryTint.ROSE),
+        health = Categoria("cat_salud", health, null, CategoryIcon.HEART_PULSE, CategoryTint.RED),
         home = Categoria("cat_hogar", home, null, CategoryIcon.HOUSE, CategoryTint.EMERALD),
         gifts = Categoria("cat_regalo", gifts, null, CategoryIcon.GIFT, CategoryTint.PURPLE),
     )

@@ -172,14 +172,14 @@ class CategoriaRepositoryTest {
       val renamed =
           repository.update(
               gym.id,
-              CategoriaDraft("GYM", CategoryIcon.HEART_PULSE, CategoryTint.ROSE, " Mornings "),
+              CategoriaDraft("GYM", CategoryIcon.HEART_PULSE, CategoryTint.RED, " Mornings "),
           )
 
       val expected =
           gym.copy(
               nombre = "GYM",
               icono = CategoryIcon.HEART_PULSE,
-              color = CategoryTint.ROSE,
+              color = CategoryTint.RED,
               descripcion = "Mornings",
               oculta = true,
           )

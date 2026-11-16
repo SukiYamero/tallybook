@@ -487,11 +487,12 @@
     <string name="category_tint_emerald">Esmeralda</string>
     <string name="category_tint_blue">Azul</string>
     <string name="category_tint_amber">Ámbar</string>
-    <string name="category_tint_rose">Rosa</string>
+    <string name="category_tint_red">Rojo</string>
     <string name="category_tint_purple">Morado</string>
-    <string name="category_tint_success">Verde</string>
-    <string name="category_tint_danger">Rojo</string>
-    <string name="category_tint_info">Azul oscuro</string>
+    <string name="category_tint_teal">Turquesa</string>
+    <string name="category_tint_orange">Naranja</string>
+    <string name="category_tint_indigo">Índigo</string>
+    <string name="category_tint_pink">Rosa</string>
     <string name="category_tint_neutral">Gris</string>
     <string name="ui_catalog_category_form">Formulario de categoría</string>
     <string name="ui_catalog_state_compact">Compacto</string>

@@ -497,7 +497,7 @@ class MovimientoFormTest {
             nombre = "Salud",
             padreId = null,
             icono = CategoryIcon.HEART_PULSE,
-            color = CategoryTint.ROSE,
+            color = CategoryTint.RED,
         )
     val otros =
         Categoria(

@@ -157,7 +157,7 @@ class AccountDraftStateTest {
     assertFalse(baseline.onTipo(TipoCuenta.EFECTIVO).sameContentAs(baseline))
     assertFalse(baseline.onMoneda(Moneda.USD).sameContentAs(baseline))
     assertTrue(baseline.onColor(CategoryTint.BLUE).sameContentAs(baseline))
-    assertFalse(baseline.onColor(CategoryTint.ROSE).sameContentAs(baseline))
+    assertFalse(baseline.onColor(CategoryTint.RED).sameContentAs(baseline))
   }
 
   @Test
@@ -168,8 +168,8 @@ class AccountDraftStateTest {
     assertEquals(CategoryTint.PURPLE, draft.onTipo(TipoCuenta.CREDITO).toDraft()?.color)
     assertEquals(CategoryTint.EMERALD, draft.onTipo(TipoCuenta.EFECTIVO).toDraft()?.color)
 
-    val picked = draft.onColor(CategoryTint.ROSE)
-    assertEquals(CategoryTint.ROSE, picked.onTipo(TipoCuenta.CREDITO).toDraft()?.color)
+    val picked = draft.onColor(CategoryTint.RED)
+    assertEquals(CategoryTint.RED, picked.onTipo(TipoCuenta.CREDITO).toDraft()?.color)
   }
 
   @Test

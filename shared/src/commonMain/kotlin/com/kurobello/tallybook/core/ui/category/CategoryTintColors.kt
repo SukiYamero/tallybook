@@ -10,11 +10,21 @@ import com.kurobello.tallybook.core.ui.theme.TallybookColors
 
 private const val CATEGORY_CONTAINER_ALPHA = 0.15f
 private const val CATEGORY_BORDER_ALPHA = 0.4f
-private const val EMERALD_CHART_INDEX = 0
-private const val BLUE_CHART_INDEX = 1
-private const val AMBER_CHART_INDEX = 2
-private const val ROSE_CHART_INDEX = 3
-private const val PURPLE_CHART_INDEX = 4
+
+// The tints in the order of TallybookColors.chart. Every accent is a distinct chart hue: the status
+// colors sit too close to emerald, red and blue to tell apart in a picker.
+private val chartOrder: List<CategoryTint> =
+    listOf(
+        CategoryTint.EMERALD,
+        CategoryTint.BLUE,
+        CategoryTint.AMBER,
+        CategoryTint.RED,
+        CategoryTint.PURPLE,
+        CategoryTint.TEAL,
+        CategoryTint.INDIGO,
+        CategoryTint.ORANGE,
+        CategoryTint.PINK,
+    )
 
 @Immutable
 internal data class CategoryTintColors(
@@ -25,17 +35,7 @@ internal data class CategoryTintColors(
 
 // NEUTRAL has no chart accent; tintColors() resolves it through the Material neutral roles.
 internal fun CategoryTint.accentColor(colors: TallybookColors): Color? =
-    when (this) {
-      CategoryTint.EMERALD -> colors.chart[EMERALD_CHART_INDEX]
-      CategoryTint.BLUE -> colors.chart[BLUE_CHART_INDEX]
-      CategoryTint.AMBER -> colors.chart[AMBER_CHART_INDEX]
-      CategoryTint.ROSE -> colors.chart[ROSE_CHART_INDEX]
-      CategoryTint.PURPLE -> colors.chart[PURPLE_CHART_INDEX]
-      CategoryTint.SUCCESS -> colors.status.success.base
-      CategoryTint.DANGER -> colors.status.danger.base
-      CategoryTint.INFO -> colors.status.info
-      CategoryTint.NEUTRAL -> null
-    }
+    chartOrder.indexOf(this).takeIf { it >= 0 }?.let(colors.chart::get)
 
 @Composable
 internal fun CategoryTint.tintColors(): CategoryTintColors {
