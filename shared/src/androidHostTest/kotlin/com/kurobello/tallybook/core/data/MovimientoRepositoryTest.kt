@@ -1299,6 +1299,27 @@ class MovimientoRepositoryTest {
       }
 
   @Test
+  fun `defaultSelection with a medio ranks its newest cuenta ahead of the primary cash account`() =
+      runTest {
+        withSelectionFixture { repository, database, _ ->
+          database.insertCuentaRow(
+              selectionCuenta(BILLETERA, TipoCuenta.EFECTIVO, "2026-01-06T00:00:00Z"),
+              ChangeStamp.SEED,
+          )
+          database.insertLegacy(selectionRow("wallet", BILLETERA, MedioPago.EFECTIVO, at = 1))
+
+          assertEquals(
+              DataOutcome.Success(CuentaSelection(BILLETERA, MedioPago.EFECTIVO, Moneda.COP)),
+              repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO, MedioPago.EFECTIVO),
+          )
+          assertEquals(
+              DataOutcome.Success(CuentaSelection(COP_CASH, MedioPago.EFECTIVO, Moneda.COP)),
+              repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO),
+          )
+        }
+      }
+
+  @Test
   fun `defaultSelection without a primary cash account falls back by currency then creation`() =
       runTest {
         withSelectionFixture { repository, _, driver ->
