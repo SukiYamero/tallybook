@@ -132,6 +132,7 @@ private fun previewCuenta(nombre: String, tipo: TipoCuenta, moneda: Moneda) =
         null,
         false,
         Instant.parse("2026-01-01T00:00:00Z"),
+        color = tipo.defaultColor,
     )
 
 @Composable

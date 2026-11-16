@@ -1594,6 +1594,7 @@ class MovimientoRepositoryTest {
           diaCorte = null,
           archivada = false,
           createdAt = Instant.parse(createdAt),
+          color = tipo.defaultColor,
       )
 
   private fun selectionRow(id: String, cuentaId: String, medio: MedioPago, at: Int) =

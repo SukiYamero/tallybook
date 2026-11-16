@@ -74,7 +74,16 @@ private val PREVIEW_TODAY = LocalDate(2026, 10, 16)
 private val PREVIEW_CREATED_AT = Instant.parse("2026-01-01T00:00:00Z")
 
 private fun previewCuenta(id: String, nombre: String, tipo: TipoCuenta, moneda: Moneda) =
-    Cuenta(id, nombre, tipo, Money(0, moneda), null, archivada = false, PREVIEW_CREATED_AT)
+    Cuenta(
+        id,
+        nombre,
+        tipo,
+        Money(0, moneda),
+        null,
+        archivada = false,
+        PREVIEW_CREATED_AT,
+        color = tipo.defaultColor,
+    )
 
 private val NEQUI = previewCuenta("nequi", "Nequi", TipoCuenta.BANCO, Moneda.COP)
 private val NU = previewCuenta("nu", "NU", TipoCuenta.CREDITO, Moneda.COP)

@@ -673,7 +673,17 @@ private fun cuenta(
     tipo: TipoCuenta,
     saldoInicial: Money,
     diaCorte: Int? = null,
-) = Cuenta(id, nombre, tipo, saldoInicial, diaCorte, archivada = false, createdAt = CREATED_AT)
+) =
+    Cuenta(
+        id,
+        nombre,
+        tipo,
+        saldoInicial,
+        diaCorte,
+        archivada = false,
+        createdAt = CREATED_AT,
+        color = tipo.defaultColor,
+    )
 
 private val EFECTIVO =
     cuenta(Cuenta.defaultCashId(Moneda.COP), "Efectivo", TipoCuenta.EFECTIVO, Money(0, Moneda.COP))

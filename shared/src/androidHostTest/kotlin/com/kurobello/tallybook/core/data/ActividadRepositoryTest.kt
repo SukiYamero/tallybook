@@ -564,7 +564,16 @@ class ActividadRepositoryTest {
   }
 
   private fun cuenta(id: String, tipo: TipoCuenta, moneda: Moneda) =
-      Cuenta(id, id, tipo, Money(0, moneda), null, false, Instant.parse("2026-01-02T00:00:00Z"))
+      Cuenta(
+          id,
+          id,
+          tipo,
+          Money(0, moneda),
+          null,
+          false,
+          Instant.parse("2026-01-02T00:00:00Z"),
+          color = tipo.defaultColor,
+      )
 
   @Suppress("LongParameterList")
   private fun movimiento(

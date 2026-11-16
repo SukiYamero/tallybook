@@ -166,6 +166,7 @@ internal class MovimientoEntrySamples(
             null,
             false,
             Instant.parse("2026-01-01T00:00:00Z"),
+            color = tipo.defaultColor,
         )
 
     val today = LocalDate(2026, 9, 15)

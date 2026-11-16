@@ -437,6 +437,7 @@ private fun cuenta(
         diaCorte = null,
         archivada = false,
         createdAt = Instant.fromEpochSeconds(0),
+        color = tipo.defaultColor,
     )
 
 private fun transferencia(

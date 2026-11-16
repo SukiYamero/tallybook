@@ -71,6 +71,7 @@ internal class CuentaRepositoryImpl(
                   diaCorte = clean.diaCorte,
                   archivada = false,
                   createdAt = clock.now(),
+                  color = clean.color,
               )
           database.insertCuentaRow(cuenta, changeClock.next())
           CuentaWrite.Saved(cuenta)
@@ -96,6 +97,7 @@ internal class CuentaRepositoryImpl(
                     tipo = clean.tipo,
                     saldoInicial = clean.saldoInicial,
                     diaCorte = clean.diaCorte,
+                    color = clean.color,
                 )
             val duplicate = queries.findDuplicate(clean, excludingId = id)
             val referenced by lazy { id in queries.selectReferencedCuentaIds().executeAsList() }
@@ -117,6 +119,7 @@ internal class CuentaRepositoryImpl(
                                 moneda = updated.moneda.name,
                                 saldo_inicial_minor = updated.saldoInicial.minorUnits,
                                 dia_corte = updated.diaCorte?.toLong(),
+                                color = updated.color.storageKey,
                                 updated_at = changeClock.next().value,
                                 id = id,
                             )

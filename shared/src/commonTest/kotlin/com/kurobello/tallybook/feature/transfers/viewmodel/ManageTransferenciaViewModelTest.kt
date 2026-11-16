@@ -348,7 +348,16 @@ private val CREATED_AT = Instant.parse("2026-01-01T00:00:00Z")
 private val DEBT = Money(350_000, Moneda.COP)
 
 private fun cuenta(id: String, tipo: TipoCuenta, moneda: Moneda) =
-    Cuenta(id, id, tipo, Money(0, moneda), null, archivada = false, createdAt = CREATED_AT)
+    Cuenta(
+        id,
+        id,
+        tipo,
+        Money(0, moneda),
+        null,
+        archivada = false,
+        createdAt = CREATED_AT,
+        color = tipo.defaultColor,
+    )
 
 private val EFECTIVO = cuenta(Cuenta.defaultCashId(Moneda.COP), TipoCuenta.EFECTIVO, Moneda.COP)
 private val NEQUI = cuenta("nequi", TipoCuenta.BANCO, Moneda.COP)

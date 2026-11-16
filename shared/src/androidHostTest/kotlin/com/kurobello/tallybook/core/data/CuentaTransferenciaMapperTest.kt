@@ -30,6 +30,7 @@ class CuentaTransferenciaMapperTest {
               diaCorte = 15,
               archivada = true,
               createdAt = Instant.parse("2026-01-01T08:00:00Z"),
+              color = TipoCuenta.CREDITO.defaultColor,
           )
       val wallet =
           Cuenta(
@@ -40,6 +41,7 @@ class CuentaTransferenciaMapperTest {
               diaCorte = null,
               archivada = false,
               createdAt = Instant.parse("2026-01-02T08:00:00Z"),
+              color = TipoCuenta.BANCO.defaultColor,
           )
       val transferencia =
           Transferencia(

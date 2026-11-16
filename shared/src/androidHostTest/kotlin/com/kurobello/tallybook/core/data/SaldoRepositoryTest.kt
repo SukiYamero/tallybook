@@ -317,6 +317,7 @@ private fun cuenta(
         diaCorte = diaCorte,
         archivada = archivada,
         createdAt = Instant.parse("2026-01-01T08:0$minute:00Z"),
+        color = tipo.defaultColor,
     )
 
 private fun movimiento(

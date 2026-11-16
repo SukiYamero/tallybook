@@ -206,6 +206,67 @@ class DatabaseSchemaTest {
       }
 
   @Test
+  fun `migration from schema 9 colors every cuenta by its type and keeps its other fields`() =
+      withSnapshot(version = 9) { driver ->
+        val seed = ChangeStamp.SEED.value
+        val stamp = "1772352000000-0003-0123456789abcdef"
+        driver.execute(
+            null,
+            "INSERT INTO cuenta(id, nombre, tipo, moneda, saldo_inicial_minor, dia_corte, " +
+                "archivada, created_at, updated_at, deleted_at) VALUES " +
+                "('cash', 'Efectivo', 'EFECTIVO', 'COP', 0, NULL, 0, " +
+                "'2026-01-01T00:00:00Z', '$seed', NULL), " +
+                "('nequi', 'Nequi', 'BANCO', 'COP', 150000, NULL, 1, " +
+                "'2026-01-02T00:00:00Z', '$stamp', NULL), " +
+                "('nu', 'NU', 'CREDITO', 'COP', -50000, 15, 0, " +
+                "'2026-01-03T00:00:00Z', '$stamp', NULL), " +
+                "('gone', 'Chase', 'BANCO', 'USD', 0, NULL, 0, " +
+                "'2026-01-04T00:00:00Z', '$stamp', '$stamp')",
+            0,
+        )
+        driver.execute(
+            null,
+            "INSERT INTO movimiento(id, tipo, monto_minor, fecha, created_at, categoria_id, " +
+                "cuenta_id, medio_pago, updated_at) VALUES ('mov', 'GASTO', 1000, " +
+                "'2026-02-01', '2026-02-01T00:00:00Z', 'cat_comida', 'nu', 'CREDITO', '$seed')",
+            0,
+        )
+        driver.execute(
+            null,
+            "INSERT INTO transferencia(id, cuenta_origen_id, cuenta_destino_id, " +
+                "monto_origen_minor, monto_destino_minor, fecha, created_at, updated_at) " +
+                "VALUES ('tr', 'nequi', 'cash', 500, 500, '2026-02-02', " +
+                "'2026-02-02T00:00:00Z', '$seed')",
+            0,
+        )
+        val fieldsBefore = driver.cuentaFields()
+
+        TallybookDatabase.Schema.migrate(
+            driver,
+            oldVersion = 9,
+            newVersion = TallybookDatabase.Schema.version,
+        )
+
+        assertEquals(fieldsBefore, driver.cuentaFields())
+        assertEquals(
+            listOf("cash emerald", "gone blue", "nequi blue", "nu purple"),
+            driver.queryStrings("SELECT id || ' ' || color FROM cuenta ORDER BY id"),
+        )
+        assertEquals(
+            listOf("mov COP"),
+            driver.queryStrings("SELECT id || ' ' || monto_moneda FROM movimiento_con_etiquetas"),
+        )
+        assertEquals(
+            listOf("tr COP COP"),
+            driver.queryStrings(
+                "SELECT id || ' ' || moneda_origen || ' ' || moneda_destino " +
+                    "FROM transferencia_con_monedas"
+            ),
+        )
+        assertEquals(freshSchema(), driver.schemaObjects())
+      }
+
+  @Test
   fun `fresh schema rejects invalid cuenta and transferencia rows`() {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       TallybookDatabase.Schema.create(driver)
@@ -213,9 +274,9 @@ class DatabaseSchemaTest {
       fun insertCuenta(id: String, tipo: String, diaCorte: String) =
           driver.execute(
               null,
-              "INSERT INTO cuenta(id, nombre, tipo, moneda, dia_corte, created_at, updated_at) " +
-                  "VALUES ('$id', '$id', '$tipo', 'COP', $diaCorte, '2026-01-01T00:00:00Z', " +
-                  "'$seed')",
+              "INSERT INTO cuenta(id, nombre, tipo, moneda, dia_corte, color, created_at, " +
+                  "updated_at) VALUES ('$id', '$id', '$tipo', 'COP', $diaCorte, 'blue', " +
+                  "'2026-01-01T00:00:00Z', '$seed')",
               0,
           )
       fun insertTransferencia(id: String, destino: String, origenMinor: Long, destinoMinor: Long) =
@@ -236,6 +297,14 @@ class DatabaseSchemaTest {
       assertFailsWith<SQLException> { insertCuenta("unknown_tipo", "AHORRO", "NULL") }
       assertFailsWith<SQLException> { insertCuenta("dia_zero", "CREDITO", "0") }
       assertFailsWith<SQLException> { insertCuenta("dia_32", "CREDITO", "32") }
+      assertFailsWith<SQLException> {
+        driver.execute(
+            null,
+            "INSERT INTO cuenta(id, nombre, tipo, moneda, created_at, updated_at) VALUES " +
+                "('no_color', 'no_color', 'BANCO', 'COP', '2026-01-01T00:00:00Z', '$seed')",
+            0,
+        )
+      }
       assertFailsWith<SQLException> {
         insertTransferencia("zero_origen", destino = "nu", origenMinor = 0, destinoMinor = 100)
       }
@@ -769,6 +838,14 @@ class DatabaseSchemaTest {
 
   private fun SqlDriver.stampsOf(table: String): List<String> =
       queryStrings("SELECT id || ' ' || updated_at FROM $table ORDER BY id")
+
+  private fun SqlDriver.cuentaFields(): List<String> =
+      queryStrings(
+          "SELECT id || ' ' || nombre || ' ' || tipo || ' ' || moneda || ' ' || " +
+              "saldo_inicial_minor || ' ' || COALESCE(dia_corte, '-') || ' ' || archivada || ' ' || " +
+              "created_at || ' ' || updated_at || ' ' || COALESCE(deleted_at, '-') FROM cuenta " +
+              "ORDER BY id"
+      )
 
   private fun SqlDriver.movimientoStamps(): List<String> =
       queryStrings(

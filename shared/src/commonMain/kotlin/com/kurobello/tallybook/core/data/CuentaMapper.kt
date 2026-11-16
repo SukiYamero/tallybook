@@ -2,6 +2,7 @@ package com.kurobello.tallybook.core.data
 
 import com.kurobello.tallybook.core.database.Cuenta as DatabaseCuenta
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Moneda
@@ -18,6 +19,7 @@ internal fun DatabaseCuenta.toDomain(): Cuenta =
         diaCorte = dia_corte?.toInt(),
         archivada = archivada == 1L,
         createdAt = Instant.parse(created_at),
+        color = CategoryTint.entries.first { it.storageKey == color },
     )
 
 /** Strict like every insert: an existing id, live or tombstoned, fails the write. */
@@ -31,6 +33,7 @@ internal fun TallybookDatabase.insertCuentaRow(cuenta: Cuenta, stamp: ChangeStam
               moneda = cuenta.moneda.name,
               saldo_inicial_minor = cuenta.saldoInicial.minorUnits,
               dia_corte = cuenta.diaCorte?.toLong(),
+              color = cuenta.color.storageKey,
               archivada = if (cuenta.archivada) 1L else 0L,
               created_at = cuenta.createdAt.toString(),
               updated_at = stamp.value,

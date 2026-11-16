@@ -39,6 +39,7 @@ internal val searchTestCuenta =
         null,
         archivada = false,
         Instant.parse("2026-01-01T00:00:00Z"),
+        color = TipoCuenta.EFECTIVO.defaultColor,
     )
 internal val searchTestMovement =
     Movimiento(

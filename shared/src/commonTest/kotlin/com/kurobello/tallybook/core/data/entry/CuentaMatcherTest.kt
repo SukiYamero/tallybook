@@ -111,4 +111,14 @@ internal fun cuenta(
     tipo: TipoCuenta = TipoCuenta.BANCO,
     moneda: Moneda = Moneda.USD,
     archivada: Boolean = false,
-) = Cuenta(id, nombre, tipo, Money(0, moneda), null, archivada, CREATED_AT)
+) =
+    Cuenta(
+        id,
+        nombre,
+        tipo,
+        Money(0, moneda),
+        null,
+        archivada,
+        CREATED_AT,
+        color = tipo.defaultColor,
+    )

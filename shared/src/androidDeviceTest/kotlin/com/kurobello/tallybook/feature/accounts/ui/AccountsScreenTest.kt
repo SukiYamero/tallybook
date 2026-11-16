@@ -370,7 +370,16 @@ class AccountsScreenTest {
     val CREATED_AT: Instant = Instant.parse("2026-01-01T00:00:00Z")
 
     fun cuenta(id: String, nombre: String, tipo: TipoCuenta, diaCorte: Int? = null) =
-        Cuenta(id, nombre, tipo, Money(0, Moneda.COP), diaCorte, archivada = false, CREATED_AT)
+        Cuenta(
+            id,
+            nombre,
+            tipo,
+            Money(0, Moneda.COP),
+            diaCorte,
+            archivada = false,
+            CREATED_AT,
+            color = tipo.defaultColor,
+        )
 
     val NEQUI = cuenta("nequi", "Nequi", TipoCuenta.BANCO)
     val AHORROS = cuenta("ahorros", "Ahorros", TipoCuenta.BANCO)

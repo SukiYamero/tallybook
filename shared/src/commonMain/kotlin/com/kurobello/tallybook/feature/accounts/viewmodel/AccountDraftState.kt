@@ -1,5 +1,6 @@
 package com.kurobello.tallybook.feature.accounts.viewmodel
 
+import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.CuentaDraft
 import com.kurobello.tallybook.core.model.CuentaNombreError
@@ -29,7 +30,7 @@ internal enum class AccountSaldoError {
  * the opening balance, or for [TipoCuenta.CREDITO] the opening debt. [toDraft] is the only place
  * that debt becomes the negative [CuentaDraft.saldoInicial] the repository stores, and [forEdit]
  * the only place it turns back. [diaCorte] is kept while the type changes but only a credit card
- * writes it.
+ * writes it. A null [color] follows the type's default until the user picks one.
  */
 internal data class AccountDraftState(
     val nombre: String = "",
@@ -37,6 +38,7 @@ internal data class AccountDraftState(
     val moneda: Moneda = Moneda.COP,
     val saldo: String = "",
     val diaCorte: String = "",
+    val color: CategoryTint? = null,
     val nombreEdited: Boolean = false,
 ) {
   val nombreError: CuentaNombreError?
@@ -55,6 +57,9 @@ internal data class AccountDraftState(
       return CuentaRules.validate(nombre, tipo, diaCorte.toIntOrNull() ?: 0).diaCorte
     }
 
+  val resolvedColor: CategoryTint
+    get() = color ?: tipo.defaultColor
+
   val isValid: Boolean
     get() = nombreError == null && saldoError == null && diaCorteError == null
 
@@ -65,6 +70,7 @@ internal data class AccountDraftState(
         tipo = tipo,
         saldoInicial = if (tipo == TipoCuenta.CREDITO) -amount else amount,
         diaCorte = writtenDiaCorte,
+        color = resolvedColor,
     )
   }
 
@@ -85,6 +91,7 @@ internal data class AccountDraftState(
             moneda,
             (parsedSaldo as? SaldoInput.Valid)?.money ?: saldo.trim(),
             writtenDiaCorte,
+            resolvedColor,
         )
 
   companion object {
@@ -104,6 +111,7 @@ internal data class AccountDraftState(
           moneda = cuenta.moneda,
           saldo = if (unsigned.minorUnits == 0L) "" else unsigned.toAmountInput(),
           diaCorte = cuenta.diaCorte?.toString().orEmpty(),
+          color = cuenta.color,
       )
     }
   }
@@ -126,6 +134,8 @@ internal fun AccountDraftState.onMoneda(value: Moneda): AccountDraftState =
                 saldo.replace(moneda.decimalSeparator, value.decimalSeparator)
             else saldo,
     )
+
+internal fun AccountDraftState.onColor(value: CategoryTint): AccountDraftState = copy(color = value)
 
 internal fun AccountDraftState.onSaldo(value: String): AccountDraftState = copy(saldo = value)
 

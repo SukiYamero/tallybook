@@ -179,7 +179,16 @@ private val TODAY = LocalDate(2026, 10, 5)
 private val CREATED_AT = Instant.parse("2026-01-01T00:00:00Z")
 
 private fun cuenta(id: String, nombre: String, tipo: TipoCuenta, moneda: Moneda) =
-    Cuenta(id, nombre, tipo, Money(0, moneda), null, archivada = false, CREATED_AT)
+    Cuenta(
+        id,
+        nombre,
+        tipo,
+        Money(0, moneda),
+        null,
+        archivada = false,
+        CREATED_AT,
+        color = tipo.defaultColor,
+    )
 
 private val CASH =
     cuenta(Cuenta.defaultCashId(Moneda.COP), "Efectivo", TipoCuenta.EFECTIVO, Moneda.COP)

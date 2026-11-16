@@ -421,6 +421,7 @@ class TransferenciaRepositoryTest {
           diaCorte = null,
           archivada = false,
           createdAt = CREATED + order.seconds,
+          color = tipo.defaultColor,
       )
 
   private fun transferencia(

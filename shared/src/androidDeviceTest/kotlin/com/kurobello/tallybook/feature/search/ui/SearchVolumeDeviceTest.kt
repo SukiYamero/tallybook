@@ -470,7 +470,16 @@ class SearchVolumeDeviceTest {
         )
 
     fun fixtureCuenta(id: String, tipo: TipoCuenta, moneda: Moneda) =
-        Cuenta(id, id, tipo, Money(0, moneda), null, false, Instant.parse("2026-01-01T00:00:00Z"))
+        Cuenta(
+            id,
+            id,
+            tipo,
+            Money(0, moneda),
+            null,
+            false,
+            Instant.parse("2026-01-01T00:00:00Z"),
+            color = tipo.defaultColor,
+        )
 
     // Half in each year, all between the COP accounts, so every one belongs to the COP results.
     fun fixtureTransfer(index: Int): Transferencia =
