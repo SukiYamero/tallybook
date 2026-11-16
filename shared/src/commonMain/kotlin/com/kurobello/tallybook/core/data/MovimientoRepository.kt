@@ -45,9 +45,10 @@ interface MovimientoRepository {
   suspend fun restoreDeleted(movimiento: Movimiento): DataOutcome<RestoreResult>
 
   /**
-   * The medio and live, active cuenta a new [tipo] movimiento starts with: the last used pair, then
-   * the [primary] cash cuenta, then any cuenta in [primary], then any cuenta, restricted to [medio]
-   * when given. Null only when no such cuenta is compatible with [medio]; a [medio] [tipo] does not
+   * The medio and live, active cuenta a new [tipo] movimiento starts with: the cuenta of the newest
+   * movimiento paid with [medio] when one is given, then the [primary] cash cuenta, then any cash
+   * cuenta in [primary], then any cuenta in [primary], then any cuenta, restricted to [medio] when
+   * given. Null only when no such cuenta is compatible with [medio]; a [medio] [tipo] does not
    * allow is invalid input.
    */
   suspend fun defaultSelection(

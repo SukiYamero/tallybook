@@ -435,8 +435,8 @@ private fun Movimiento.changes(): MovimientoChanges =
         medio,
     )
 
-// A requested medio is kept; otherwise the cuenta's type implies one. Either way the pair must be
-// compatible, e.g. a requested DEBITO never lands on a cash account.
+// The SQL ranks every cuenta regardless of medio, so a requested medio rules out the incompatible
+// ones here, e.g. DEBITO skips a cash account.
 private fun SelectSelectionCandidates.toSelection(
     tipo: TipoMovimiento,
     requested: MedioPago?,
