@@ -716,10 +716,11 @@ one currency at a time. Presentation lives in
 Every persisted root entity is ready for the future Drive backup and sync engine without another data
 migration.
 
-- `movimiento`, `categoria`, `etiqueta`, `cuenta` and `transferencia` have `updated_at` (non-null)
-  and `deleted_at` (null while live). Both hold a `ChangeStamp`: a hybrid logical clock value encoded
-  as sortable text, `<13-digit epoch millis>-<4 hex counter>-<16 hex node>`, whose text order equals
-  stamp order. A stamp is never read back as a wall-clock time for business logic.
+- `movimiento`, `categoria`, `etiqueta`, `cuenta`, `transferencia` and `recurrencia` have
+  `updated_at` (non-null) and `deleted_at` (null while live). Both hold a `ChangeStamp`: a hybrid
+  logical clock value encoded as sortable text,
+  `<13-digit epoch millis>-<4 hex counter>-<16 hex node>`, whose text order equals stamp order. A
+  stamp is never read back as a wall-clock time for business logic.
 - One `ChangeClock` per process issues stamps: `next = max(wallClock, last.millis)`, with the counter
   incremented on ties or when the wall clock moves backward. Bootstrap prepares it from the maximum
   stored stamp of every stamped table before the first mutation, so stamps never go backward across
@@ -728,7 +729,8 @@ migration.
   financial preferences, excluded from Android auto backup/device transfer and from iOS backups. It
   appears in data only inside stamps.
 - An aggregate is a root row plus the child rows it owns (`movimiento_etiqueta` belongs to its
-  movimiento). A change to a child bumps the root's `updated_at`; child rows carry no stamps.
+  movimiento, `recurrencia_etiqueta` to its recurrencia). A change to a child bumps the root's
+  `updated_at`; child rows carry no stamps.
 - Every successful insert, update, hide/show, rename, delete and restore issues one stamp per
   transaction, shared by every row it writes. A normalized no-op writes nothing. Renaming seeded
   categories for the active language is presentation and issues no stamp. Seeded rows (predefined
