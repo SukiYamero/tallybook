@@ -2,6 +2,7 @@ package com.kurobello.tallybook.core.ui.resources
 
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.ui.category.labelResource
 import com.kurobello.tallybook.feature.categories.ui.labelResource
 import java.io.File
 import java.util.Locale

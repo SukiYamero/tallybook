@@ -1,20 +1,11 @@
 package com.kurobello.tallybook.feature.categories.ui
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
@@ -23,28 +14,25 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.unit.Dp
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.CategoriaRules
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.ui.category.CategoryAvatar
+import com.kurobello.tallybook.core.ui.category.CategoryOptionIcon
+import com.kurobello.tallybook.core.ui.category.CategoryOptionTarget
 import com.kurobello.tallybook.core.ui.category.CategoryTintColors
+import com.kurobello.tallybook.core.ui.category.CategoryTintPicker
 import com.kurobello.tallybook.core.ui.category.tintColors
 import com.kurobello.tallybook.core.ui.category.toImageVector
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
@@ -52,8 +40,6 @@ import com.kurobello.tallybook.core.ui.component.TallybookInputLabel
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
 import com.kurobello.tallybook.core.ui.component.TallybookTextField
-import com.kurobello.tallybook.core.ui.component.rememberTallybookTapFeedback
-import com.kurobello.tallybook.core.ui.component.resolveTallybookSurfaceContainerColor
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.categories.viewmodel.CategoryDraftState
 import com.kurobello.tallybook.feature.categories.viewmodel.CategoryNombreError
@@ -131,7 +117,13 @@ internal fun CategoryForm(
         TallybookText(stringResource(Res.string.category_form_more_options))
       }
     } else {
-      CategoryTintPicker(state.color, state.icono, actions::onColorSelected, enabled)
+      CategoryTintPicker(
+          label = stringResource(Res.string.category_form_color_label),
+          selected = state.color,
+          imageVector = state.icono.toImageVector(),
+          onSelect = actions::onColorSelected,
+          enabled = enabled,
+      )
       CategoryDescripcionField(
           state.descripcion,
           actions::onDescripcionChanged,
@@ -274,133 +266,6 @@ private fun CategoryIconOption(
         size = TallybookTheme.dimensions.iconMedium,
     )
   }
-}
-
-@Composable
-private fun CategoryTintPicker(
-    selected: CategoryTint,
-    icono: CategoryIcon,
-    onSelect: (CategoryTint) -> Unit,
-    enabled: Boolean,
-) {
-  val imageVector = icono.toImageVector()
-  Column(verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8)) {
-    TallybookInputLabel(stringResource(Res.string.category_form_color_label))
-    FlowRow(
-        modifier = Modifier.fillMaxWidth().selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4),
-        verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4),
-    ) {
-      CategoryTint.entries.forEach { tint ->
-        key(tint) {
-          CategoryTintOption(
-              tint = tint,
-              imageVector = imageVector,
-              selected = tint == selected,
-              enabled = enabled,
-              onClick = { onSelect(tint) },
-          )
-        }
-      }
-    }
-  }
-}
-
-/** Previews [imageVector] as the avatar it would become in [tint]. */
-@Composable
-private fun CategoryTintOption(
-    tint: CategoryTint,
-    imageVector: ImageVector,
-    selected: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-  val colors = tint.tintColors()
-  val disabled = TallybookTheme.colors.foreground.disabled
-  CategoryOptionTarget(
-      label = stringResource(tint.labelResource()),
-      selected = selected,
-      enabled = enabled,
-      onClick = onClick,
-      visualSize = TallybookTheme.dimensions.categoryIconOptionVisualSize,
-      containerColor = colors.container,
-      borderColor = if (selected) colors.content else Color.Transparent,
-  ) {
-    CategoryOptionIcon(
-        imageVector = imageVector,
-        color = if (enabled) colors.content else disabled,
-        size = TallybookTheme.dimensions.iconMedium,
-    )
-  }
-}
-
-/** A circular choice drawn at [visualSize] inside a minimum touch target, announced by [label]. */
-@Composable
-@Suppress("LongParameterList")
-private fun CategoryOptionTarget(
-    label: String,
-    selected: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    visualSize: Dp,
-    containerColor: Color,
-    borderColor: Color,
-    content: @Composable () -> Unit,
-) {
-  val interactionSource = remember { MutableInteractionSource() }
-  val isPressed by interactionSource.collectIsPressedAsState()
-  val tapFeedback = rememberTallybookTapFeedback()
-  Box(
-      modifier =
-          Modifier.size(TallybookTheme.dimensions.minimumTouchTarget)
-              .selectable(
-                  selected = selected,
-                  interactionSource = interactionSource,
-                  indication = null,
-                  enabled = enabled,
-                  role = Role.RadioButton,
-                  onClick = {
-                    tapFeedback.trigger()
-                    onClick()
-                  },
-              )
-              .semantics { contentDescription = label },
-      contentAlignment = Alignment.Center,
-  ) {
-    Box(
-        modifier =
-            Modifier.size(visualSize)
-                .clip(CircleShape)
-                .background(
-                    resolveTallybookSurfaceContainerColor(
-                        containerColor = containerColor,
-                        pressedOverlay = TallybookTheme.colors.interaction.pressedOverlay,
-                        isPressed = isPressed,
-                        hasTapFeedback = tapFeedback.isActive,
-                    )
-                )
-                .border(
-                    width =
-                        if (selected) TallybookTheme.dimensions.categoryOptionSelectedBorderWidth
-                        else TallybookTheme.dimensions.borderThin,
-                    color = borderColor,
-                    shape = CircleShape,
-                ),
-        contentAlignment = Alignment.Center,
-    ) {
-      content()
-    }
-  }
-}
-
-@Composable
-private fun CategoryOptionIcon(imageVector: ImageVector, color: Color, size: Dp) {
-  Image(
-      imageVector = imageVector,
-      contentDescription = null,
-      modifier = Modifier.size(size),
-      colorFilter = ColorFilter.tint(color),
-  )
 }
 
 @Composable

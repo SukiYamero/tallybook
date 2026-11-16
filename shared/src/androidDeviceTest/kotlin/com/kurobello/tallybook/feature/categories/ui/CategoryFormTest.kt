@@ -22,6 +22,7 @@ import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.ui.category.labelResource
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.categories.viewmodel.CategoryDraftState
 import com.kurobello.tallybook.feature.categories.viewmodel.onColor
