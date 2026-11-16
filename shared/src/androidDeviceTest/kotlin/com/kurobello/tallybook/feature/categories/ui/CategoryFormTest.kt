@@ -22,6 +22,7 @@ import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
+import com.kurobello.tallybook.core.ui.category.labelResource
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.categories.viewmodel.CategoryDraftState
 import com.kurobello.tallybook.feature.categories.viewmodel.onColor
@@ -79,13 +80,13 @@ class CategoryFormTest {
   fun fullShowsTintAndDescriptionWithTheSelectedTint() {
     composeRule.setContent {
       StatefulForm(
-          CategoryDraftState(nombre = "Gym", color = CategoryTint.ROSE),
+          CategoryDraftState(nombre = "Gym", color = CategoryTint.RED),
           CategoryFormMode.FULL,
       )
     }
 
     composeRule
-        .onNodeWithContentDescription(localizedString(CategoryTint.ROSE.labelResource()))
+        .onNodeWithContentDescription(localizedString(CategoryTint.RED.labelResource()))
         .performScrollTo()
         .assertIsSelected()
     composeRule
@@ -120,7 +121,7 @@ class CategoryFormTest {
   @Test
   fun duplicateOffersTheCallerActionButNeverForOtros() {
     val existing =
-        Categoria("cat_gimnasio", "Gimnasio", null, CategoryIcon.DUMBBELL, CategoryTint.ROSE)
+        Categoria("cat_gimnasio", "Gimnasio", null, CategoryIcon.DUMBBELL, CategoryTint.RED)
     val otros =
         Categoria(
             CATEGORIA_OTROS_ID,

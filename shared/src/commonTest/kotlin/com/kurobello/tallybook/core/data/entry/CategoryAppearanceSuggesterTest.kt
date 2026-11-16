@@ -91,12 +91,12 @@ class CategoryAppearanceSuggesterTest {
             CategoryKeywordDictionary(listOf(weak("snack", "cat_a"), strong("snack", "cat_b"))),
             listOf(
                 seed("cat_a", CategoryIcon.COFFEE, CategoryTint.AMBER),
-                seed("cat_b", CategoryIcon.UTENSILS, CategoryTint.ROSE),
+                seed("cat_b", CategoryIcon.UTENSILS, CategoryTint.RED),
             ),
         )
 
     assertEquals(
-        CategoryAppearance(CategoryIcon.UTENSILS, CategoryTint.ROSE),
+        CategoryAppearance(CategoryIcon.UTENSILS, CategoryTint.RED),
         suggester.suggest("snack"),
     )
   }
@@ -117,12 +117,12 @@ class CategoryAppearanceSuggesterTest {
             dictionary,
             listOf(
                 seed("cat_weak", CategoryIcon.COFFEE, CategoryTint.AMBER),
-                seed("cat_strong", CategoryIcon.UTENSILS, CategoryTint.ROSE),
+                seed("cat_strong", CategoryIcon.UTENSILS, CategoryTint.RED),
             ),
         )
 
     assertEquals(
-        CategoryAppearance(CategoryIcon.UTENSILS, CategoryTint.ROSE),
+        CategoryAppearance(CategoryIcon.UTENSILS, CategoryTint.RED),
         suggester.suggest(name),
     )
   }
@@ -131,7 +131,7 @@ class CategoryAppearanceSuggesterTest {
   fun fullTieGoesToTheEarliestSeedInCatalogOrder() {
     val dictionary =
         CategoryKeywordDictionary(listOf(weak("snack", "cat_a"), weak("snack", "cat_b")))
-    val first = seed("cat_b", CategoryIcon.UTENSILS, CategoryTint.ROSE)
+    val first = seed("cat_b", CategoryIcon.UTENSILS, CategoryTint.RED)
     val second = seed("cat_a", CategoryIcon.COFFEE, CategoryTint.AMBER)
 
     assertEquals(

@@ -24,5 +24,6 @@ class CuentaSeedProvider(
           diaCorte = null,
           archivada = false,
           createdAt = clock.now(),
+          color = TipoCuenta.EFECTIVO.defaultColor,
       )
 }

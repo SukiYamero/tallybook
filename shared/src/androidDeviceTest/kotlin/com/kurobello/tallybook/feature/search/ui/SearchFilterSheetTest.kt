@@ -99,6 +99,7 @@ class SearchFilterSheetTest {
             null,
             true,
             Instant.parse("2026-01-01T00:00:00Z"),
+            color = TipoCuenta.BANCO.defaultColor,
         )
     val savings =
         Cuenta(
@@ -109,6 +110,7 @@ class SearchFilterSheetTest {
             null,
             false,
             Instant.parse("2026-01-01T00:00:00Z"),
+            color = TipoCuenta.BANCO.defaultColor,
         )
     val actions = SearchTestActions()
     composeRule.setContent {

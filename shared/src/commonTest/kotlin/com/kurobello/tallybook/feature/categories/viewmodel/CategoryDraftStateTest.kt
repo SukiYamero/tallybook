@@ -83,14 +83,14 @@ class CategoryDraftStateTest {
             nombre = "Lectura",
             padreId = null,
             icono = CategoryIcon.BOOK,
-            color = CategoryTint.ROSE,
+            color = CategoryTint.RED,
             descripcion = "Libros y revistas",
             origen = CategoriaOrigen.USUARIO,
         )
 
     val draft = CategoryDraftState.forEdit(stored).onNombre("GYM", suggester)
 
-    assertEquals(CategoryAppearance(CategoryIcon.BOOK, CategoryTint.ROSE), draft.appearance)
+    assertEquals(CategoryAppearance(CategoryIcon.BOOK, CategoryTint.RED), draft.appearance)
     assertEquals("Libros y revistas", draft.descripcion)
   }
 
@@ -147,7 +147,7 @@ class CategoryDraftStateTest {
             nombre = nombre,
             padreId = null,
             icono = CategoryIcon.BOOK,
-            color = CategoryTint.ROSE,
+            color = CategoryTint.RED,
             origen = CategoriaOrigen.USUARIO,
         )
 
@@ -161,7 +161,7 @@ class CategoryDraftStateTest {
   @Test
   fun editingTheNameClearsTheDuplicateThatBlockedSaving() {
     val existing =
-        Categoria("cat_gimnasio", "Gimnasio", "cat_salud", CategoryIcon.DUMBBELL, CategoryTint.ROSE)
+        Categoria("cat_gimnasio", "Gimnasio", "cat_salud", CategoryIcon.DUMBBELL, CategoryTint.RED)
     val duplicated = CategoryDraftState.forNew("Gimnasio", suggester).copy(duplicate = existing)
 
     val edited = duplicated.onNombre("Gimnasio casa", suggester)

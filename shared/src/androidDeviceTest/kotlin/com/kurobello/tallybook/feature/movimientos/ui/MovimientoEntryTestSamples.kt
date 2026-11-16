@@ -7,7 +7,7 @@ import com.kurobello.tallybook.core.model.CategoryTint
 
 internal fun testEntrySamples() =
     MovimientoEntrySamples(
-        cinema = Categoria("cat_cine", "Cinema", null, CategoryIcon.FILM, CategoryTint.INFO),
+        cinema = Categoria("cat_cine", "Cinema", null, CategoryIcon.FILM, CategoryTint.INDIGO),
         food = Categoria("cat_comida", "Food", null, CategoryIcon.UTENSILS, CategoryTint.AMBER),
         transport =
             Categoria("cat_transporte", "Transport", null, CategoryIcon.CAR, CategoryTint.BLUE),
@@ -19,8 +19,7 @@ internal fun testEntrySamples() =
                 CategoryIcon.CIRCLE_DASHED,
                 CategoryTint.NEUTRAL,
             ),
-        health =
-            Categoria("cat_salud", "Health", null, CategoryIcon.HEART_PULSE, CategoryTint.ROSE),
+        health = Categoria("cat_salud", "Health", null, CategoryIcon.HEART_PULSE, CategoryTint.RED),
         home = Categoria("cat_hogar", "Home", null, CategoryIcon.HOUSE, CategoryTint.EMERALD),
         gifts = Categoria("cat_regalo", "Gifts", null, CategoryIcon.GIFT, CategoryTint.PURPLE),
     )

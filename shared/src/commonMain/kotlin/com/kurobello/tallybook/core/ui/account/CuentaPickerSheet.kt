@@ -25,6 +25,7 @@ import com.composables.icons.lucide.Lucide
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.text.normalizeSearchText
+import com.kurobello.tallybook.core.ui.category.tintColors
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
 import com.kurobello.tallybook.core.ui.component.PickerSearchState
 import com.kurobello.tallybook.core.ui.component.TallybookModalBottomSheet
@@ -161,7 +162,7 @@ private fun CuentaPickerRow(cuenta: Cuenta, name: String, selected: Boolean, onC
     CuentaTypeIcon(
         tipo = cuenta.tipo,
         modifier = Modifier.size(TallybookTheme.dimensions.iconMedium),
-        tint = if (selected) colors.brand.secondary else colors.foreground.tertiary,
+        tint = cuenta.color.tintColors().content,
     )
     TallybookText(
         text = name,

@@ -504,7 +504,16 @@ class HistoryVolumeDeviceTest {
         )
 
     fun volumeCuenta(id: String, tipo: TipoCuenta, moneda: Moneda) =
-        Cuenta(id, id, tipo, Money(0, moneda), null, false, Instant.parse("2026-01-01T00:00:00Z"))
+        Cuenta(
+            id,
+            id,
+            tipo,
+            Money(0, moneda),
+            null,
+            false,
+            Instant.parse("2026-01-01T00:00:00Z"),
+            color = tipo.defaultColor,
+        )
 
     fun memoryPssKb(): Int = Debug.MemoryInfo().also(Debug::getMemoryInfo).totalPss
   }

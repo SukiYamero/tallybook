@@ -275,7 +275,7 @@ class CategoriesScreenTest {
             "Gym",
             null,
             CategoryIcon.DUMBBELL,
-            CategoryTint.ROSE,
+            CategoryTint.RED,
             origen = CategoriaOrigen.USUARIO,
         )
   }

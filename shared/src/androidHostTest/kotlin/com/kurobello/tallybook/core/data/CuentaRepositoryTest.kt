@@ -3,6 +3,7 @@ package com.kurobello.tallybook.core.data
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.kurobello.tallybook.core.database.TallybookDatabase
+import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.CuentaArchive
@@ -22,6 +23,7 @@ import com.kurobello.tallybook.core.model.Transferencia
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -48,6 +50,7 @@ class CuentaRepositoryTest {
               diaCorte = 15,
               archivada = false,
               createdAt = NOW,
+              color = TipoCuenta.CREDITO.defaultColor,
           )
       assertEquals(expected, card)
       assertEquals(DataOutcome.Success(expected), repository.getById(card.id))
@@ -147,6 +150,29 @@ class CuentaRepositoryTest {
   }
 
   @Test
+  fun `a picked color round-trips through create and a color change is one stamped update`() =
+      runTest {
+        withRepository { driver, _, changeClock, repository ->
+          val nequi =
+              repository.create(draft("Nequi", TipoCuenta.BANCO, color = CategoryTint.RED)).saved()
+          assertEquals(CategoryTint.RED, nequi.color)
+          assertEquals(CategoryTint.RED, repository.getById(nequi.id).cuenta().color)
+
+          val recolored =
+              repository
+                  .update(nequi.id, draft("Nequi", TipoCuenta.BANCO, color = CategoryTint.AMBER))
+                  .saved()
+          assertEquals(nequi.copy(color = CategoryTint.AMBER), recolored)
+          assertEquals(recolored, repository.getById(nequi.id).cuenta())
+          assertEquals(2, changeClock.issuedStamps.size)
+          assertEquals(
+              changeClock.issuedStamps.last().value to null,
+              driver.storedStamps("cuenta", nequi.id),
+          )
+        }
+      }
+
+  @Test
   fun `the currency is locked only while live movimientos or transfers reference the cuenta`() =
       runTest {
         withRepository { driver, database, changeClock, repository ->
@@ -188,7 +214,7 @@ class CuentaRepositoryTest {
       runTest {
         withRepository { driver, database, changeClock, repository ->
           val nequi = repository.create(draft("Nequi", TipoCuenta.BANCO)).saved()
-          val asCash = draft("Nequi", TipoCuenta.EFECTIVO)
+          val asCash = draft("Nequi", TipoCuenta.EFECTIVO, color = nequi.color)
           database.insertLegacy(movimiento("mov", nequi.id))
           database.insertTransferenciaRow(transferencia("out", nequi.id, COP_CASH.id), SEED)
           val stamps = changeClock.issuedStamps.size
@@ -372,7 +398,8 @@ class CuentaRepositoryTest {
       saldoInicial: Long = 0,
       diaCorte: Int? = null,
       moneda: Moneda = Moneda.COP,
-  ) = CuentaDraft(nombre, tipo, Money(saldoInicial, moneda), diaCorte)
+      color: CategoryTint = tipo.defaultColor,
+  ) = CuentaDraft(nombre, tipo, Money(saldoInicial, moneda), diaCorte, color)
 
   private fun movimiento(id: String, cuentaId: String) =
       Movimiento(
@@ -402,6 +429,9 @@ class CuentaRepositoryTest {
 
   private fun DataOutcome<CuentaWrite>.saved(): Cuenta =
       assertIs<CuentaWrite.Saved>(assertIs<DataOutcome.Success<CuentaWrite>>(this).data).cuenta
+
+  private fun DataOutcome<Cuenta?>.cuenta(): Cuenta =
+      assertNotNull(assertIs<DataOutcome.Success<Cuenta?>>(this).data)
 
   private fun assertInvalid(outcome: DataOutcome<*>) {
     assertIs<DataError.InvalidInput>(assertIs<DataOutcome.Failure>(outcome).error)

@@ -62,7 +62,16 @@ private object PreviewAccountsActions : AccountsActions {
 private val previewCreatedAt = Instant.parse("2026-01-01T00:00:00Z")
 
 private fun previewCuenta(id: String, nombre: String, tipo: TipoCuenta, saldoInicial: Money) =
-    Cuenta(id, nombre, tipo, saldoInicial, diaCorte = null, archivada = false, previewCreatedAt)
+    Cuenta(
+        id,
+        nombre,
+        tipo,
+        saldoInicial,
+        diaCorte = null,
+        archivada = false,
+        previewCreatedAt,
+        color = tipo.defaultColor,
+    )
 
 @Suppress("MagicNumber")
 private val previewState =

@@ -252,9 +252,9 @@ private fun rememberCatalogCategories(): List<Categoria> {
         ),
         Categoria(ID_TRANSPORT, transport, null, CategoryIcon.CAR, CategoryTint.BLUE),
         Categoria(ID_CINEMA, cinema, null, CategoryIcon.FILM, CategoryTint.PURPLE),
-        Categoria(ID_HEALTH, health, null, CategoryIcon.HEART_PULSE, CategoryTint.ROSE),
+        Categoria(ID_HEALTH, health, null, CategoryIcon.HEART_PULSE, CategoryTint.RED),
         Categoria("cat_hogar", home, null, CategoryIcon.HOUSE, CategoryTint.EMERALD),
-        Categoria("cat_mascotas", pets, null, CategoryIcon.PAW, CategoryTint.INFO),
+        Categoria("cat_mascotas", pets, null, CategoryIcon.PAW, CategoryTint.INDIGO),
     )
   }
 }

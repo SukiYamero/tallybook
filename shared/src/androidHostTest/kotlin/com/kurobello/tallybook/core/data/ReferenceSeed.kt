@@ -106,4 +106,5 @@ internal fun cashCuenta(
         diaCorte = null,
         archivada = false,
         createdAt = createdAt,
+        color = TipoCuenta.EFECTIVO.defaultColor,
     )

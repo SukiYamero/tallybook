@@ -1,0 +1,74 @@
+-- cuenta gains color, a CategoryTint storage key, backfilled with each tipo's default. The table is
+-- rebuilt so the migrated DDL matches a fresh install exactly: color has no DEFAULT there, so ALTER
+-- TABLE ADD COLUMN could not add it as NOT NULL. The views go first because renaming a table
+-- rewrites the views that reference it; they come back verbatim. The stamps stay: the backfill is
+-- the value each row always implied, not a user change.
+DROP VIEW movimiento_con_etiquetas;
+
+DROP VIEW transferencia_con_monedas;
+
+ALTER TABLE cuenta RENAME TO cuenta_legacy;
+
+CREATE TABLE cuenta (
+    id TEXT NOT NULL PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    tipo TEXT NOT NULL CHECK (tipo IN ('EFECTIVO', 'BANCO', 'CREDITO')),
+    moneda TEXT NOT NULL,
+    saldo_inicial_minor INTEGER NOT NULL DEFAULT 0,
+    dia_corte INTEGER CHECK (dia_corte BETWEEN 1 AND 31),
+    color TEXT NOT NULL,
+    archivada INTEGER NOT NULL DEFAULT 0 CHECK (archivada IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT
+);
+
+INSERT INTO cuenta(id, nombre, tipo, moneda, saldo_inicial_minor, dia_corte, color, archivada, created_at, updated_at, deleted_at)
+SELECT
+    id,
+    nombre,
+    tipo,
+    moneda,
+    saldo_inicial_minor,
+    dia_corte,
+    CASE tipo WHEN 'EFECTIVO' THEN 'emerald' WHEN 'BANCO' THEN 'blue' ELSE 'purple' END,
+    archivada,
+    created_at,
+    updated_at,
+    deleted_at
+FROM cuenta_legacy;
+
+DROP TABLE cuenta_legacy;
+
+CREATE VIEW movimiento_con_etiquetas AS
+SELECT
+    movimiento.*,
+    cuenta.moneda AS monto_moneda,
+    COALESCE(
+        (
+            SELECT group_concat(movimiento_etiqueta.posicion || char(31) || movimiento_etiqueta.etiqueta_id, char(30))
+            FROM movimiento_etiqueta
+            WHERE movimiento_etiqueta.movimiento_id = movimiento.id
+        ),
+        ''
+    ) AS etiqueta_ids
+FROM movimiento
+JOIN cuenta ON cuenta.id = movimiento.cuenta_id
+WHERE movimiento.deleted_at IS NULL;
+
+CREATE VIEW transferencia_con_monedas AS
+SELECT
+    transferencia.id,
+    transferencia.cuenta_origen_id,
+    transferencia.cuenta_destino_id,
+    transferencia.monto_origen_minor,
+    origen.moneda AS moneda_origen,
+    transferencia.monto_destino_minor,
+    destino.moneda AS moneda_destino,
+    transferencia.fecha,
+    transferencia.descripcion,
+    transferencia.created_at
+FROM transferencia
+JOIN cuenta AS origen ON origen.id = transferencia.cuenta_origen_id
+JOIN cuenta AS destino ON destino.id = transferencia.cuenta_destino_id
+WHERE transferencia.deleted_at IS NULL;

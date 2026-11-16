@@ -129,6 +129,7 @@ class LocalDataBootstrapperTest {
               diaCorte = null,
               archivada = false,
               createdAt = NOW,
+              color = TipoCuenta.EFECTIVO.defaultColor,
           ),
           database.cuentaQueries
               .selectCuentaById(Cuenta.defaultCashId(Moneda.USD))

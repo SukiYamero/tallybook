@@ -181,7 +181,16 @@ private fun searchPreviewState(): SearchUiState {
 }
 
 private fun previewCuenta(id: String, nombre: String, tipo: TipoCuenta, moneda: Moneda) =
-    Cuenta(id, nombre, tipo, Money(0, moneda), null, false, Instant.parse("2026-01-01T00:00:00Z"))
+    Cuenta(
+        id,
+        nombre,
+        tipo,
+        Money(0, moneda),
+        null,
+        false,
+        Instant.parse("2026-01-01T00:00:00Z"),
+        color = tipo.defaultColor,
+    )
 
 @Suppress("TooManyFunctions")
 private object SearchPreviewActions : SearchActions {

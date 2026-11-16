@@ -1,5 +1,6 @@
 package com.kurobello.tallybook.feature.accounts.viewmodel
 
+import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.CuentaDraft
 import com.kurobello.tallybook.core.model.CuentaNombreError
@@ -24,7 +25,13 @@ class AccountDraftStateTest {
     assertEquals("Nequi", draft.nombre)
     assertNull(draft.visibleNombreError)
     assertEquals(
-        CuentaDraft("Nequi", TipoCuenta.BANCO, Money(0, Moneda.COP), diaCorte = null),
+        CuentaDraft(
+            "Nequi",
+            TipoCuenta.BANCO,
+            Money(0, Moneda.COP),
+            diaCorte = null,
+            color = CategoryTint.BLUE,
+        ),
         draft.toDraft(),
     )
   }
@@ -94,6 +101,7 @@ class AccountDraftStateTest {
             diaCorte = 15,
             archivada = false,
             createdAt = CREATED_AT,
+            color = TipoCuenta.CREDITO.defaultColor,
         )
     val reopened = AccountDraftState.forEdit(stored)
     assertEquals("300000,00", reopened.saldo)
@@ -136,6 +144,7 @@ class AccountDraftStateTest {
                 diaCorte = null,
                 archivada = false,
                 createdAt = CREATED_AT,
+                color = TipoCuenta.BANCO.defaultColor,
             )
         )
 
@@ -147,6 +156,39 @@ class AccountDraftStateTest {
     assertFalse(baseline.onSaldo("15x").sameContentAs(baseline))
     assertFalse(baseline.onTipo(TipoCuenta.EFECTIVO).sameContentAs(baseline))
     assertFalse(baseline.onMoneda(Moneda.USD).sameContentAs(baseline))
+    assertTrue(baseline.onColor(CategoryTint.BLUE).sameContentAs(baseline))
+    assertFalse(baseline.onColor(CategoryTint.RED).sameContentAs(baseline))
+  }
+
+  @Test
+  fun aNewDraftsColorFollowsItsTypeUntilTheUserPicksOne() {
+    val draft = AccountDraftState.forNew("NU", TipoCuenta.BANCO, Moneda.COP)
+
+    assertEquals(CategoryTint.BLUE, draft.toDraft()?.color)
+    assertEquals(CategoryTint.PURPLE, draft.onTipo(TipoCuenta.CREDITO).toDraft()?.color)
+    assertEquals(CategoryTint.EMERALD, draft.onTipo(TipoCuenta.EFECTIVO).toDraft()?.color)
+
+    val picked = draft.onColor(CategoryTint.RED)
+    assertEquals(CategoryTint.RED, picked.onTipo(TipoCuenta.CREDITO).toDraft()?.color)
+  }
+
+  @Test
+  fun anEditedAccountKeepsItsStoredColorWhenItsTypeChanges() {
+    val stored =
+        Cuenta(
+            id = "nequi",
+            nombre = "Nequi",
+            tipo = TipoCuenta.BANCO,
+            saldoInicial = Money(0, Moneda.COP),
+            diaCorte = null,
+            archivada = false,
+            createdAt = CREATED_AT,
+            color = CategoryTint.AMBER,
+        )
+
+    val reopened = AccountDraftState.forEdit(stored)
+    assertEquals(CategoryTint.AMBER, reopened.toDraft()?.color)
+    assertEquals(CategoryTint.AMBER, reopened.onTipo(TipoCuenta.EFECTIVO).toDraft()?.color)
   }
 
   @Test
@@ -160,6 +202,7 @@ class AccountDraftStateTest {
             diaCorte = null,
             archivada = false,
             createdAt = CREATED_AT,
+            color = TipoCuenta.EFECTIVO.defaultColor,
         )
 
     assertEquals("", AccountDraftState.forEdit(stored).saldo)

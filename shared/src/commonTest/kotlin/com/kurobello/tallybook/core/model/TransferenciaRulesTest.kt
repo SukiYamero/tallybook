@@ -181,5 +181,6 @@ class TransferenciaRulesTest {
           diaCorte = null,
           archivada = false,
           createdAt = Instant.parse("2026-06-15T12:00:00Z"),
+          color = tipo.defaultColor,
       )
 }

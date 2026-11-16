@@ -373,6 +373,7 @@ class StatisticsRepositoryTest {
                   null,
                   false,
                   Instant.parse("2026-01-02T00:00:00Z"),
+                  color = TipoCuenta.BANCO.defaultColor,
               ),
               ChangeStamp.SEED,
           )

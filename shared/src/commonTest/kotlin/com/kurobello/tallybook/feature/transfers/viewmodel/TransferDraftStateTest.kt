@@ -272,6 +272,7 @@ private fun cuenta(id: String, tipo: TipoCuenta, moneda: Moneda, archivada: Bool
         null,
         archivada,
         CREATED_AT,
+        color = tipo.defaultColor,
     )
 
 private val EFECTIVO = cuenta("efectivo", TipoCuenta.EFECTIVO, Moneda.COP)

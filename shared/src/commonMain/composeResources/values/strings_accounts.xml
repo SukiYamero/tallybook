@@ -40,6 +40,7 @@
     <string name="account_duplicate">Ya tienes la cuenta “%1$s” en %2$s</string>
     <string name="account_use_existing">Usar %1$s</string>
     <string name="account_type_label">Tipo</string>
+    <string name="account_color_label">Color</string>
     <string name="account_type_locked">Para que tus movimientos sigan cuadrando, el tipo no cambia mientras la cuenta los tenga.</string>
     <string name="account_currency_label">Moneda</string>
     <string name="account_currency_locked">Para que tus saldos sigan cuadrando, la moneda no cambia mientras la cuenta tenga movimientos o sea tu efectivo inicial.</string>

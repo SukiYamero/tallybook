@@ -47,6 +47,7 @@ internal class FakeCuentaRepository(
                     diaCorte = clean.diaCorte,
                     archivada = false,
                     createdAt = createdAt,
+                    color = clean.tipo.defaultColor,
                 )
                 .also { cuentas.value += it }
                 .let { CuentaWrite.Saved(it) }

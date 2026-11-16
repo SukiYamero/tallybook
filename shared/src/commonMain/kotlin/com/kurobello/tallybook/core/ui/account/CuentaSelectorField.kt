@@ -18,6 +18,7 @@ import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoCuenta
+import com.kurobello.tallybook.core.ui.category.tintColors
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessageContent
 import com.kurobello.tallybook.core.ui.component.TallybookSelectionField
@@ -59,7 +60,7 @@ internal fun CuentaSelectorField(
       CuentaTypeIcon(
           tipo = it.tipo,
           modifier = Modifier.size(TallybookTheme.dimensions.fieldIconSize),
-          tint = TallybookTheme.colors.foreground.tertiary,
+          tint = it.color.tintColors().content,
       )
     }
   }
@@ -132,6 +133,7 @@ private fun previewCuenta(nombre: String, tipo: TipoCuenta, moneda: Moneda) =
         null,
         false,
         Instant.parse("2026-01-01T00:00:00Z"),
+        color = tipo.defaultColor,
     )
 
 @Composable

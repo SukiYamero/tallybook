@@ -6,6 +6,7 @@ data class CuentaDraft(
     val tipo: TipoCuenta,
     val saldoInicial: Money,
     val diaCorte: Int?,
+    val color: CategoryTint,
 ) {
   val moneda: Moneda
     get() = saldoInicial.moneda

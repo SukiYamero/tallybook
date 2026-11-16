@@ -215,8 +215,15 @@ Presentation, feedback windows and lifecycle ownership live in
 A **cuenta** is where the money of a movimiento came from or went to. Balances are derived, never
 stored (see [Balances and credit-card estimate](#balances-and-credit-card-estimate)).
 
-- Fields: `id`, `nombre`, `tipo`, `moneda`, `saldoInicial`, optional `diaCorte`, `archivada`,
-  `createdAt` and change stamps.
+- Fields: `id`, `nombre`, `tipo`, `moneda`, `saldoInicial`, optional `diaCorte`, `color`,
+  `archivada`, `createdAt` and change stamps.
+- `color` is a `CategoryTint` storage key, the same theme-token palette as categories, so it reads in
+  light and dark. A new account starts with its type's color (`EFECTIVO` emerald, `BANCO` blue,
+  `CREDITO` purple) until the user picks another; in-place creation from entry keeps that default.
+  Changing it is a normal account update; upgrading existing data gave each account its type's color
+  without a new stamp. Accounts rows and the account sheet show the account's icon
+  in its color, and the entry selector and picker tint the type icon with it; movimiento rows do not
+  show the account.
 - Types: `EFECTIVO`, `BANCO` (bank or wallet: Nequi, Daviplata, Mercado Pago, debit cards) and
   `CREDITO` (credit card). An account has only a name: no card numbers or other sensitive data.
 - `nombre` is trimmed, up to 30 characters and unique per currency among live accounts, archived
@@ -289,12 +296,13 @@ How a movimiento was paid or received (`MedioPago`):
 - Preselection without sentence evidence has one producer,
   `MovimientoRepository.defaultSelection(primary, tipo, medio?)`: one SQL read, no stored preference,
   returning a `CuentaSelection` (account, medio and the account's currency). The fallback order,
-  restricted to `medio` when given: the account and medio of the newest live movimiento (its medio
-  adapted to the tipo) if the account is live, active and compatible → the primary cash account →
-  the first active compatible account in the primary currency → the first active compatible account.
-  An account found by type gets `TipoCuenta.defaultMedio(tipo)`. The result is null only when no
-  active account fits the given medio. The editor passes the stored currency as `primary` and drops a
-  default in another currency.
+  restricted to accounts compatible with `medio` when given: with a medio only, the account of the
+  newest live movimiento with that medio if it is live and active → the primary cash account → the
+  first active cash-type account in the primary currency → the first active account in the primary
+  currency → the first active account. Without a medio the newest movimiento is not used, so entry
+  defaults to cash. The given medio is kept; otherwise the account gets
+  `TipoCuenta.defaultMedio(tipo)`. The result is null only when no active account fits the given
+  medio. The editor passes the stored currency as `primary` and drops a default in another currency.
 - Ownership follows the tags model with three owners: `DEFAULT` follows the repository's selection,
   `SENTENCE` is replaced by every interpretation and `USER` survives both. Clearing the sentence or
   discarding returns to `DEFAULT`. Choosing a medio keeps a compatible account or takes that medio's
@@ -394,8 +402,10 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
 - 12 categorías padre, 58 en total (cada padre con 3–6 hijas). Estructura por entrada: `{id, nombre,
   padreId?, icono, color}`.
 - `icono` es un nombre de Lucide — compatible directo con `icons-lucide`, ya elegido.
-- `color` es un tinte con nombre (amber, blue, purple, rose, success...), no un hex — se resuelve contra
-  los tokens de tema (`docs/stack.md`), no es un color fijo grabado por categoría.
+- `color` es un tinte con nombre (`CategoryTint`: esmeralda, turquesa, azul, índigo, morado, rosa,
+  rojo, naranja, ámbar, gris), no un hex — se resuelve contra los tonos de gráfico del tema
+  (`docs/stack.md`), así cada tinte se distingue de los demás en claro y oscuro. La clave guardada no
+  cambia si el tinte se renombra.
 - Los ingresos son una categoría padre más (`cat_ingresos`, con `cat_sueldo`/`cat_freelance`/
   `cat_ventas`/`cat_regalo`/`cat_reembolso` como hijas) — no hay un campo `tipo` en la categoría, el
   tipo (gasto/ingreso) lo determina el movimiento, no la categoría.

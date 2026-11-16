@@ -11,7 +11,7 @@ private val previewDraft =
     CategoryDraftState(
         nombre = "Gimnasio",
         icono = CategoryIcon.DUMBBELL,
-        color = CategoryTint.ROSE,
+        color = CategoryTint.RED,
         descripcion = "Mensualidad y clases",
     )
 

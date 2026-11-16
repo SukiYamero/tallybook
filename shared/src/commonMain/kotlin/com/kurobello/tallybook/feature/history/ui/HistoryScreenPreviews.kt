@@ -165,6 +165,7 @@ private val previewTransferRow: HistoryTransferenciaRowUi =
                   null,
                   false,
                   created,
+                  color = TipoCuenta.EFECTIVO.defaultColor,
               ),
               Cuenta(
                   "nequi",
@@ -174,6 +175,7 @@ private val previewTransferRow: HistoryTransferenciaRowUi =
                   null,
                   false,
                   created,
+                  color = TipoCuenta.BANCO.defaultColor,
               ),
           )
         }

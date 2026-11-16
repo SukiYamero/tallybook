@@ -298,6 +298,7 @@ private val CAJA =
         diaCorte = null,
         archivada = false,
         createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+        color = TipoCuenta.EFECTIVO.defaultColor,
     )
 private val NEQUI = CAJA.copy(id = "nequi", nombre = "Nequi", tipo = TipoCuenta.BANCO)
 
