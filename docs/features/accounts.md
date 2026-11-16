@@ -17,8 +17,12 @@ in [wording](../wording.md#7-glosario-cuentas-medios-de-pago-y-transferencias).
   `transferencia` and rebuilds `movimiento` with `cuenta_id` and `medio_pago` and without its own
   currency; `movimiento_con_etiquetas` exposes `cuenta.moneda AS monto_moneda`, so the account is the
   only owner of the currency. **Schema 9 (`8.sqm`)** adds the `transferencia_con_monedas` view (live
-  transfers with both sides' currencies) and changes no table. Every migration's DDL matches a fresh
-  install.
+  transfers with both sides' currencies) and changes no table. **Schema 10 (`9.sqm`)** rebuilds
+  `cuenta` with `color` (a `CategoryTint` storage key) backfilled by type, without new stamps. Every
+  migration's DDL matches a fresh install.
+- The tint picker (`core.ui.category.CategoryTintPicker`) is shared by the category and account forms;
+  `CuentaAvatar` shows the account color on Accounts rows and the sheet, and the entry selector tints
+  the type icon.
 - `HybridChangeClock` stamps every repository mutation; the installation node lives in its own
   DataStore file excluded by the Android data extraction rules and from iOS backups
   (`IosBackupExclusion`).
@@ -54,6 +58,12 @@ On the Xiaomi M2012K11AG, over the existing mock dataset: the in-place upgrades 
 and Undo reviving the same row with a new stamp, creation into the cash account, Accounts with a
 USD → COP transfer, the History currency selector and its movement/transfer count, the Search medio
 filter, View movements, and locked type and currency shown read-only in the account sheet.
+
+Account color and the cash default (`9306119`) passed 1,262 host tests, Detekt, ktfmtCheck, the
+migration verification, Native compilation, device-test compilation and the debug APK after one final
+independent review. On the Xiaomi: the 9 → 10 upgrade colored existing accounts by type, a color edit
+saved, entry preselected Efectivo, Débito proposed the last debit account and "… with Nu" selected Nu.
+The instrumented suite was not rerun for this change.
 
 Device tests: the full instrumented suite passes on the Xiaomi (1228/1228).
 
