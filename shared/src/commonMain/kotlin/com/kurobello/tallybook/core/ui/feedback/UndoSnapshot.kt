@@ -10,6 +10,5 @@ internal sealed interface UndoSnapshot {
 
   data class OfTransferencia(val transferencia: Transferencia) : UndoSnapshot
 
-  /** A recurrencia occurrence confirmed or skipped. */
   data class OfOccurrence(val undo: OccurrenceUndo) : UndoSnapshot
 }

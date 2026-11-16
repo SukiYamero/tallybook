@@ -63,6 +63,7 @@ confirming late never moves the movimiento into another month.
 - **Contrato de integración**: host tests that confirm and skip through the real repository and
   database (stamp, movimiento insert, `proximaFecha`, Undo and its conflict), and the pending
   computation over month ends and leap years.
-- **Runtime por target**: on the confirmed Xiaomi, create a monthly rent with a back-dated anchor so
-  an occurrence is due, confirm it with a different amount, skip another, Undo, and check that balance
+- **Runtime por target**: on the confirmed Xiaomi, create a monthly rent (a back-dated fecha leaves
+  nothing pending, per the creation rule), then move its next date to a past day in its sheet so
+  occurrences are due, confirm one with a different amount, skip another, Undo, and check that balance
   and Statistics move only after Pagado. iOS physical runtime stays under the backlog's iOS item.

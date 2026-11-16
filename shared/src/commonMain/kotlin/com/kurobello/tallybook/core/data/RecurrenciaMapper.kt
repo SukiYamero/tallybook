@@ -30,7 +30,6 @@ internal fun DatabaseRecurrencia.toDomain(): Recurrencia =
         createdAt = Instant.parse(created_at),
     )
 
-/** The movimiento an occurrence of this template creates. */
 internal fun Recurrencia.movimiento(
     id: String,
     monto: Money,
