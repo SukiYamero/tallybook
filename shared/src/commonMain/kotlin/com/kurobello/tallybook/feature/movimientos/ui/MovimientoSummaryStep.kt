@@ -71,11 +71,13 @@ internal fun rememberReviewMinimumHeight(): Dp {
  * make the sheet tall.
  */
 @Composable
+@Suppress("LongParameterList")
 internal fun MovimientoSummaryStep(
     summary: MovimientoSummaryUi,
     callbacks: MovimientoSummaryCallbacks,
     today: LocalDate,
     modifier: Modifier = Modifier,
+    supportingContent: @Composable () -> Unit = {},
     messageContent: @Composable () -> Unit = {},
 ) {
   val scrollState = rememberScrollState()
@@ -100,6 +102,7 @@ internal fun MovimientoSummaryStep(
         }
       }
       SummarySelection(summary, callbacks)
+      supportingContent()
       messageContent()
       Spacer(Modifier.height(TallybookTheme.spacing.space32))
     }

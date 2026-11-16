@@ -5,6 +5,7 @@ import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.model.Frecuencia
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -62,6 +63,8 @@ internal data class AddMovimientoUiState(
     // While false the sentence owns the amount, so another cuenta's currency re-derives it.
     val amountEdited: Boolean = false,
     val cuentaRejected: Boolean = false,
+    /** Saving also creates a recurrencia with this frecuencia; null saves a one-off movimiento. */
+    val frecuencia: Frecuencia? = null,
 ) : MovimientoFormState {
   /** The tipo medio options follow: the sentence's while it is being typed, the draft's after. */
   val selectionTipo: TipoMovimiento

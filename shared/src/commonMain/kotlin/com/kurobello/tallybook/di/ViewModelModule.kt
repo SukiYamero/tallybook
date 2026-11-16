@@ -66,6 +66,7 @@ internal val viewModelModule = module {
                 movimientos = get(),
                 etiquetas = get(),
                 cuentas = get(),
+                recurrencias = get(),
             ),
         idGenerator = get(),
         clock = get(),

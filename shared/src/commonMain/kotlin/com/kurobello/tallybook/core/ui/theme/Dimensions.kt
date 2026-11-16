@@ -59,6 +59,10 @@ internal object TallybookDimensions {
   val categoryDetailsActionSpacing = TallybookSpacing.space32
   val yearMenuMaximumWidth = 128.dp
   val segmentedControlMinimumHeight = minimumTouchTarget
+  val switchTrackWidth = 44.dp
+  val switchTrackHeight = TallybookSpacing.space24
+  val switchThumbSize = TallybookSpacing.space20
+  val switchThumbInset = TallybookSpacing.space2
   val movementSummaryIcon = iconSmall
   val chartDonutSize = 176.dp
   val chartDonutThickness = TallybookSpacing.space24

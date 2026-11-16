@@ -26,6 +26,7 @@ import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryTint
 import com.kurobello.tallybook.core.model.Etiqueta
+import com.kurobello.tallybook.core.model.Frecuencia
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -602,6 +603,10 @@ class MovimientoFormTest {
     override fun onSuggestionSelected(id: String) = Unit
 
     override fun onStepBack() = Unit
+
+    override fun onRepetirChanged(enabled: Boolean) = Unit
+
+    override fun onFrecuenciaChanged(frecuencia: Frecuencia) = Unit
 
     override fun onRetryLoad() {
       retryCount += 1

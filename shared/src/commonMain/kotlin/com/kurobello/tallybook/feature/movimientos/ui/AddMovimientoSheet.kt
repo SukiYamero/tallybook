@@ -236,6 +236,7 @@ private fun MovimientoReviewSheet(
         MovimientoForm(
             uiState = shown,
             actions = actions,
+            supportingContent = { EntryRepetirField(shown, actions) },
             categoryCreation = categoryCreation,
             onDeselectCategoria = actions::onCategoriaCleared,
             onCreateCuenta = pickers.onCreateCuenta,
@@ -295,6 +296,7 @@ private fun SummaryStepContent(
           Modifier.heightIn(min = rememberReviewMinimumHeight())
               .padding(horizontal = TallybookTheme.dimensions.screenHorizontal)
               .padding(bottom = TallybookTheme.spacing.space8),
+      supportingContent = { EntryRepetirField(uiState, actions) },
       messageContent = {
         MovimientoFormErrorMessage(
             error = uiState.error,
