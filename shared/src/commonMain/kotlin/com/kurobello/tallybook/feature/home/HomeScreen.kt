@@ -39,6 +39,7 @@ internal fun HomeRoute(
     onOpenMovimiento: ((String) -> Unit)? = null,
     onOpenAccounts: (() -> Unit)? = null,
     onOpenStatistics: (() -> Unit)? = null,
+    onOpenRecurrentes: (() -> Unit)? = null,
 ) {
   val state = rememberHomeRouteState(viewModel)
   HomeScreen(
@@ -52,6 +53,7 @@ internal fun HomeRoute(
       onOpenMovimiento = onOpenMovimiento,
       onOpenAccounts = onOpenAccounts,
       onOpenStatistics = onOpenStatistics,
+      onOpenRecurrentes = onOpenRecurrentes,
   )
 }
 
@@ -68,6 +70,7 @@ internal fun HomeScreen(
     onOpenMovimiento: ((String) -> Unit)? = null,
     onOpenAccounts: (() -> Unit)? = null,
     onOpenStatistics: (() -> Unit)? = null,
+    onOpenRecurrentes: (() -> Unit)? = null,
 ) {
   val presentation by rememberHomePresentation(uiState)
   val renderedState = presentation.state
@@ -100,10 +103,12 @@ internal fun HomeScreen(
         !renderedState.hasSnapshot -> homeLoading(presentation.showLoading)
         renderedState.isEmpty -> {
           homeBalance(renderedState, onOpenAccounts)
+          homeRecurrentes(renderedState, onOpenRecurrentes)
           item { HomeEmpty(onAddMovimiento) }
         }
         else -> {
           homeBalance(renderedState, onOpenAccounts)
+          homeRecurrentes(renderedState, onOpenRecurrentes)
           homeStatistics(renderedState, onOpenStatistics)
           homePopulated(renderedState, onOpenMovimiento)
         }

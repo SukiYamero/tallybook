@@ -30,10 +30,12 @@ import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
+import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.FakeSaldoRepository
 import com.kurobello.tallybook.core.data.FakeTransferenciaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.RecurrenciaRepository
 import com.kurobello.tallybook.core.data.SaldoRepository
 import com.kurobello.tallybook.core.data.StatisticsRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
@@ -149,6 +151,7 @@ internal class PrimaryDeviceShell(monedaPrincipal: Moneda = Moneda.USD) {
           single<EtiquetaRepository> { FakeEtiquetaRepository() }
           single<CuentaRepository> { cuentas }
           single<SaldoRepository> { saldos }
+          single<RecurrenciaRepository> { FakeRecurrenciaRepository() }
           single<StatisticsRepository> { movimientos }
           single<TransferenciaRepository> { FakeTransferenciaRepository(cuentas) }
           single<IdGenerator> { IdGenerator { "new-${ids.incrementAndGet()}" } }

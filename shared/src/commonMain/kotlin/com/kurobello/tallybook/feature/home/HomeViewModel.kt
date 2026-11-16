@@ -6,6 +6,7 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CivilToday
 import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.RecurrenciaRepository
 import com.kurobello.tallybook.core.data.SaldoRepository
 import com.kurobello.tallybook.core.data.StatisticsRepository
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -46,6 +47,7 @@ internal data class HomeRepositories(
     val categorias: CategoriaRepository,
     val saldos: SaldoRepository,
     val statistics: StatisticsRepository,
+    val recurrencias: RecurrenciaRepository,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -127,15 +129,20 @@ internal class HomeViewModel(
     val date = today.date()
     val month = MovimientoPeriodRanges.calendarMonth(date.yearMonth)
     val statistics = statisticsRequest(StatisticsScope.Month, date, moneda, date)
+    val extras =
+        combine(
+            repositories.statistics.observe(statistics).toLoadState(),
+            repositories.recurrencias.observePendingCount(date).toLoadState(),
+            ::HomeExtras,
+        )
     return combine(
         repositories.movimientos.observeSummary(moneda, month).toLoadState(),
         repositories.movimientos.observeRecent(moneda, HOME_RECENT_LIMIT).toLoadState(),
         repositories.categorias.observeAll().toLoadState(),
         repositories.saldos.observeTotales().toLoadState(),
-        repositories.statistics.observe(statistics).toLoadState(),
-    ) { summary, recent, categorias, totales, snapshot ->
-      HomeSnapshot.from(summary, recent, categorias, totales, snapshot, moneda, date)
-          .toUiState(moneda)
+        extras,
+    ) { summary, recent, categorias, totales, extra ->
+      HomeSnapshot.from(summary, recent, categorias, totales, extra, moneda, date).toUiState(moneda)
     }
   }
 }
@@ -151,12 +158,19 @@ private fun <T> Flow<DataOutcome<T>>.toLoadState(): Flow<LoadState<T>> =
 
 private fun HomeUiState.asFlow(): Flow<HomeUiState> = kotlinx.coroutines.flow.flowOf(this)
 
+/** Reads whose failure only hides their own part of Home. */
+private class HomeExtras(
+    val statistics: LoadState<StatisticsSnapshot>,
+    val pendingRecurrentes: LoadState<Int>,
+)
+
 private data class HomeSnapshot(
     val summary: MovimientoSummary?,
     val recent: List<Movimiento>?,
     val categoriasById: Map<String, Categoria>?,
     val totalBalance: Money?,
     val statistics: HomeStatistics?,
+    val pendingRecurrentes: Int,
     val error: DataError?,
     val isLoading: Boolean,
 ) {
@@ -172,19 +186,20 @@ private data class HomeSnapshot(
                     categoriasById = requireNotNull(categoriasById),
                     totalBalance = requireNotNull(totalBalance),
                     statistics = statistics,
+                    pendingRecurrentes = pendingRecurrentes,
                 )
             )
       }
 
   companion object {
-    /** A failed [statistics] read only hides the card, so it is never a Home error. */
+    /** A failed [HomeExtras] read only hides its card or row, so it is never a Home error. */
     @Suppress("LongParameterList")
     fun from(
         summary: LoadState<MovimientoSummary>,
         recent: LoadState<List<Movimiento>>,
         categorias: LoadState<List<Categoria>>,
         totales: LoadState<Map<Moneda, Money>>,
-        statistics: LoadState<StatisticsSnapshot>,
+        extras: HomeExtras,
         moneda: Moneda,
         today: LocalDate,
     ): HomeSnapshot =
@@ -193,7 +208,8 @@ private data class HomeSnapshot(
             recent = recent.successOrNull(),
             categoriasById = categorias.successOrNull()?.associateBy { it.id },
             totalBalance = totales.successOrNull()?.let { it[moneda] ?: Money(0, moneda) },
-            statistics = statistics.successOrNull()?.homeStatisticsOrNull(today),
+            statistics = extras.statistics.successOrNull()?.homeStatisticsOrNull(today),
+            pendingRecurrentes = extras.pendingRecurrentes.successOrNull() ?: 0,
             error =
                 summary.errorOrNull()
                     ?: recent.errorOrNull()
@@ -204,7 +220,8 @@ private data class HomeSnapshot(
                     recent is LoadState.Loading ||
                     categorias is LoadState.Loading ||
                     totales is LoadState.Loading ||
-                    statistics is LoadState.Loading,
+                    extras.statistics is LoadState.Loading ||
+                    extras.pendingRecurrentes is LoadState.Loading,
         )
   }
 }

@@ -31,6 +31,9 @@ internal data class HomeUiState(
   val statistics: HomeStatistics?
     get() = content.cachedValue?.statistics
 
+  val pendingRecurrentes: Int
+    get() = content.cachedValue?.pendingRecurrentes ?: 0
+
   val error: DataError?
     get() = content.failure
 

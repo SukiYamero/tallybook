@@ -144,6 +144,7 @@ class FirstMovimientoIntegrationTest {
                           categorias,
                           SaldoRepositoryImpl(database, dispatcher),
                           StatisticsRepositoryImpl(database, dispatcher),
+                          FakeRecurrenciaRepository(),
                       ),
                   today = CivilToday(FixedClock(FIXED_INSTANT), TimeZoneProvider { TimeZone.UTC }),
                   scope = scopes.newScope(dispatcher),

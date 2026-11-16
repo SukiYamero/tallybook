@@ -153,6 +153,7 @@ private fun PrimaryRoute(
             onOpenMovimiento = openers.movimiento,
             onOpenAccounts = { navigator.openSecondary(Accounts) },
             onOpenStatistics = { navigator.select(Statistics) },
+            onOpenRecurrentes = { navigator.openSecondary(Recurrentes) },
         )
     History ->
         HistoryRoute(
