@@ -25,7 +25,9 @@ import com.kurobello.tallybook.core.model.CuentaRules
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.ui.account.CuentaTypeIcon
+import com.kurobello.tallybook.core.ui.account.icon
 import com.kurobello.tallybook.core.ui.account.labelResource
+import com.kurobello.tallybook.core.ui.category.CategoryTintPicker
 import com.kurobello.tallybook.core.ui.component.TallybookChoicePill
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessageContent
@@ -35,6 +37,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookTextField
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.accounts.viewmodel.AccountDraftState
 import com.kurobello.tallybook.feature.accounts.viewmodel.AccountSaldoError
+import com.kurobello.tallybook.feature.accounts.viewmodel.onColor
 import com.kurobello.tallybook.feature.accounts.viewmodel.onDiaCorte
 import com.kurobello.tallybook.feature.accounts.viewmodel.onMoneda
 import com.kurobello.tallybook.feature.accounts.viewmodel.onNombre
@@ -47,6 +50,7 @@ import tallybook.shared.generated.resources.account_amount_malformed
 import tallybook.shared.generated.resources.account_amount_no_decimals
 import tallybook.shared.generated.resources.account_amount_overflow
 import tallybook.shared.generated.resources.account_amount_signed
+import tallybook.shared.generated.resources.account_color_label
 import tallybook.shared.generated.resources.account_currency_label
 import tallybook.shared.generated.resources.account_currency_locked
 import tallybook.shared.generated.resources.account_duplicate
@@ -64,7 +68,7 @@ import tallybook.shared.generated.resources.account_type_locked
 
 /**
  * [QUICK] is the in-place creation of a movimiento's selector: the medio presets the type, shown
- * read-only, and the optional statement day is left for the Accounts screen.
+ * read-only, and the color and optional statement day are left for the Accounts screen.
  */
 internal enum class AccountFormMode {
   FULL,
@@ -122,6 +126,15 @@ internal fun AccountForm(
           AccountTypeChoices(state.tipo, errors.typeLocked, enabled) { tipo ->
             onDraftChanged { onTipo(tipo) }
           }
+    }
+    if (mode == AccountFormMode.FULL) {
+      CategoryTintPicker(
+          label = stringResource(Res.string.account_color_label),
+          selected = state.resolvedColor,
+          imageVector = state.tipo.icon,
+          onSelect = { color -> onDraftChanged { onColor(color) } },
+          enabled = enabled,
+      )
     }
     if (locks.currency) {
       ReadOnlyChoice(

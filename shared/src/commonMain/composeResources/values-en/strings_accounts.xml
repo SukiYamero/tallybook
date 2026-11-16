@@ -40,6 +40,7 @@
     <string name="account_duplicate">You already have “%1$s” in %2$s</string>
     <string name="account_use_existing">Use %1$s</string>
     <string name="account_type_label">Type</string>
+    <string name="account_color_label">Color</string>
     <string name="account_type_locked">To keep your movements consistent, the type can’t change while the account has any.</string>
     <string name="account_currency_label">Currency</string>
     <string name="account_currency_locked">To keep your balances consistent, the currency can’t change while the account has movements or is your starting cash account.</string>

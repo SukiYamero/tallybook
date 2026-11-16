@@ -23,8 +23,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.kurobello.tallybook.core.model.CreditEstimate
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Money
-import com.kurobello.tallybook.core.ui.category.CategoryAvatar
-import com.kurobello.tallybook.core.ui.category.neutralCategoryTintColors
 import com.kurobello.tallybook.core.ui.component.TallybookSurface
 import com.kurobello.tallybook.core.ui.component.TallybookSurfaceDefaults
 import com.kurobello.tallybook.core.ui.component.TallybookTapFeedback
@@ -92,7 +90,7 @@ internal fun CuentaBalanceRow(
         horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-      CategoryAvatar(balance.cuenta.tipo.icon, neutralCategoryTintColors())
+      CuentaAvatar(balance.cuenta.tipo, balance.cuenta.color)
       Column(
           modifier = Modifier.weight(1f),
           verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space2),

@@ -25,6 +25,7 @@ import com.composables.icons.lucide.ListFilter
 import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Trash2
 import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.ui.account.CuentaAvatar
 import com.kurobello.tallybook.core.ui.component.LastWhileVisible
 import com.kurobello.tallybook.core.ui.component.LocalTallybookContentColor
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
@@ -157,6 +158,7 @@ private fun AccountSheetHeader(
         horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+      CuentaAvatar(sheet.draft.tipo, sheet.draft.resolvedColor)
       TallybookSheetTitle(title, modifier = Modifier.weight(1f))
       if (cuenta != null) AccountHeaderActions(cuenta, enabled, actions)
     }
