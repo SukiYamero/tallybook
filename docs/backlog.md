@@ -7,16 +7,15 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 
 1. Prueba completa en iPhone físico → *iOS physical end-to-end*.
-2. Tarjeta de crédito completa (cupo, vencimiento, recordatorio) → *Accounts follow-ups*.
-3. Presupuestos (sobre las consultas de Estadísticas) → *Accounts follow-ups*.
-4. Movimientos recurrentes → *Producto*.
-5. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
+2. Presupuestos (sobre las consultas de Estadísticas) → *Accounts follow-ups*.
+3. Movimientos recurrentes → *Producto*.
+4. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
    and Statistics accessibility*, *Profile polish*.
-6. Google login + backup en Drive, cuando 2, 3 y 4 estén cerrados → [plan](tasks/google-drive-persistence.md).
-7. Dictado por voz → *Smart entry polish*.
-8. Pulido chico → *Sentence amount above the cap*, *`ioDispatcher` en iOS*, *Unified Custom date-range picker*.
-9. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
-10. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
+5. Google login + backup en Drive, cuando 2 y 3 estén cerrados → [plan](tasks/google-drive-persistence.md).
+6. Dictado por voz → *Smart entry polish*.
+7. Pulido chico → *Sentence amount above the cap*, *`ioDispatcher` en iOS*, *Unified Custom date-range picker*.
+8. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
+9. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
 
 ## Producto
 
@@ -102,7 +101,6 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
   [range-picker analysis](features/search.md#custom-range-picker-feasibility).
 
 - **Accounts follow-ups** — Not in the delivered scope, still wanted:
-  - Credit cards: limit, due date and payment reminders.
   - Exchange rates and FX conversion between currencies.
   - Transfers between own accounts from the sentence dialog.
   - Budgets, built on the Statistics queries (`StatisticsRepository`) and their account and medio
