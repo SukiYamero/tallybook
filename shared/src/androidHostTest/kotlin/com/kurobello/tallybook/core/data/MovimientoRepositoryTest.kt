@@ -1224,60 +1224,79 @@ class MovimientoRepositoryTest {
   }
 
   @Test
-  fun `defaultSelection keeps the last used medio and cuenta adapting the medio to the tipo`() =
+  fun `defaultSelection without a medio ignores the newest movimiento and picks primary cash`() =
       runTest {
         withSelectionFixture { repository, database, _ ->
-          database.insertLegacy(selectionRow("older", NU, MedioPago.CREDITO, at = 1))
           database.insertLegacy(selectionRow("newest", NEQUI, MedioPago.DEBITO, at = 2))
+          val cash = DataOutcome.Success(CuentaSelection(COP_CASH, MedioPago.EFECTIVO, Moneda.COP))
 
-          assertEquals(
-              DataOutcome.Success(CuentaSelection(NEQUI, MedioPago.DEBITO, Moneda.COP)),
-              repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO),
-          )
-          assertEquals(
-              DataOutcome.Success(CuentaSelection(NEQUI, MedioPago.TRANSFERENCIA, Moneda.COP)),
-              repository.defaultSelection(Moneda.COP, TipoMovimiento.INGRESO),
-          )
+          assertEquals(cash, repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO))
+          assertEquals(cash, repository.defaultSelection(Moneda.COP, TipoMovimiento.INGRESO))
         }
       }
 
   @Test
-  fun `defaultSelection skips a last used cuenta that is archived tombstoned or incompatible`() =
+  fun `defaultSelection with a medio skips a last used cuenta archived tombstoned or incompatible`() =
       runTest {
         withSelectionFixture { repository, database, driver ->
-          database.insertLegacy(selectionRow("last", NEQUI, MedioPago.DEBITO, at = 2))
-          val expected =
-              DataOutcome.Success(CuentaSelection(COP_CASH, MedioPago.EFECTIVO, Moneda.COP))
+          database.insertLegacy(selectionRow("last", BANCOLOMBIA, MedioPago.DEBITO, at = 2))
+          suspend fun select() =
+              repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO, MedioPago.DEBITO)
+          val nequi = DataOutcome.Success(CuentaSelection(NEQUI, MedioPago.DEBITO, Moneda.COP))
+          assertEquals(
+              DataOutcome.Success(CuentaSelection(BANCOLOMBIA, MedioPago.DEBITO, Moneda.COP)),
+              select(),
+          )
 
-          driver.execute(null, "UPDATE cuenta SET archivada = 1 WHERE id = '$NEQUI'", 0)
-          assertEquals(expected, repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO))
+          driver.execute(null, "UPDATE cuenta SET archivada = 1 WHERE id = '$BANCOLOMBIA'", 0)
+          assertEquals(nequi, select())
 
-          driver.execute(null, "UPDATE cuenta SET archivada = 0 WHERE id = '$NEQUI'", 0)
-          driver.tombstone("cuenta", NEQUI)
-          assertEquals(expected, repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO))
+          driver.execute(null, "UPDATE cuenta SET archivada = 0 WHERE id = '$BANCOLOMBIA'", 0)
+          driver.tombstone("cuenta", BANCOLOMBIA)
+          assertEquals(nequi, select())
 
           driver.execute(
               null,
-              "UPDATE cuenta SET deleted_at = NULL, tipo = 'CREDITO' WHERE id = '$NEQUI'",
+              "UPDATE cuenta SET deleted_at = NULL, tipo = 'CREDITO' WHERE id = '$BANCOLOMBIA'",
               0,
           )
-          assertEquals(expected, repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO))
+          assertEquals(nequi, select())
         }
       }
 
   @Test
-  fun `defaultSelection ignores a tombstoned last movimiento`() = runTest {
+  fun `defaultSelection with a medio ignores a tombstoned last movimiento`() = runTest {
     withSelectionFixture { repository, database, driver ->
-      database.insertLegacy(selectionRow("kept", NU, MedioPago.CREDITO, at = 1))
+      database.insertLegacy(selectionRow("kept", BANCOLOMBIA, MedioPago.DEBITO, at = 1))
       database.insertLegacy(selectionRow("deleted", NEQUI, MedioPago.DEBITO, at = 2))
       driver.tombstone("movimiento", "deleted")
 
       assertEquals(
-          DataOutcome.Success(CuentaSelection(NU, MedioPago.CREDITO, Moneda.COP)),
-          repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO),
+          DataOutcome.Success(CuentaSelection(BANCOLOMBIA, MedioPago.DEBITO, Moneda.COP)),
+          repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO, MedioPago.DEBITO),
       )
     }
   }
+
+  @Test
+  fun `defaultSelection falls back to another cash account when the primary one is unavailable`() =
+      runTest {
+        withSelectionFixture { repository, database, driver ->
+          database.insertCuentaRow(
+              selectionCuenta(BILLETERA, TipoCuenta.EFECTIVO, "2026-01-06T00:00:00Z"),
+              ChangeStamp.SEED,
+          )
+          val billetera =
+              DataOutcome.Success(CuentaSelection(BILLETERA, MedioPago.EFECTIVO, Moneda.COP))
+
+          driver.execute(null, "UPDATE cuenta SET archivada = 1 WHERE id = '$COP_CASH'", 0)
+          assertEquals(billetera, repository.defaultSelection(Moneda.COP, TipoMovimiento.GASTO))
+
+          driver.execute(null, "UPDATE cuenta SET archivada = 0 WHERE id = '$COP_CASH'", 0)
+          driver.tombstone("cuenta", COP_CASH)
+          assertEquals(billetera, repository.defaultSelection(Moneda.COP, TipoMovimiento.INGRESO))
+        }
+      }
 
   @Test
   fun `defaultSelection without a primary cash account falls back by currency then creation`() =
@@ -1559,7 +1578,10 @@ class MovimientoRepositoryTest {
     }
   }
 
-  /** Cash in COP and USD, the Nequi bank and the NU card in COP, created in that order. */
+  /**
+   * Cash in COP and USD, the Nequi bank, the NU card and the Bancolombia bank in COP, created in
+   * that order.
+   */
   private suspend fun TestScope.withSelectionFixture(
       block: suspend (MovimientoRepository, TallybookDatabase, SqlDriver) -> Unit
   ) {
@@ -1571,6 +1593,7 @@ class MovimientoRepositoryTest {
               cashCuenta(Moneda.USD, Instant.parse("2026-01-02T00:00:00Z")),
               selectionCuenta(NEQUI, TipoCuenta.BANCO, "2026-01-03T00:00:00Z"),
               selectionCuenta(NU, TipoCuenta.CREDITO, "2026-01-04T00:00:00Z"),
+              selectionCuenta(BANCOLOMBIA, TipoCuenta.BANCO, "2026-01-05T00:00:00Z"),
           )
           .forEach { database.insertCuentaRow(it, ChangeStamp.SEED) }
       block(
@@ -1751,6 +1774,8 @@ class MovimientoRepositoryTest {
 private const val CATEGORY_HISTORY_BOUND = 1_000
 private const val NEQUI = "nequi"
 private const val NU = "nu"
+private const val BANCOLOMBIA = "bancolombia"
+private const val BILLETERA = "billetera"
 private val COP_CASH = Cuenta.defaultCashId(Moneda.COP)
 private val USD_CASH = Cuenta.defaultCashId(Moneda.USD)
 private val LATER = Instant.parse("2026-09-05T13:00:00Z")

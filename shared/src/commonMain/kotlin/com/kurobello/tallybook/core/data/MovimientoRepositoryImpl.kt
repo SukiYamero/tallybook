@@ -435,18 +435,14 @@ private fun Movimiento.changes(): MovimientoChanges =
         medio,
     )
 
-// A last used medio follows the tipo the way a draft does; any other candidate gets the medio its
-// cuenta type implies. Either way the pair must still be compatible, e.g. after a cuenta changed
-// type.
+// A requested medio is kept; otherwise the cuenta's type implies one. Either way the pair must be
+// compatible, e.g. a requested DEBITO never lands on a cash account.
 private fun SelectSelectionCandidates.toSelection(
     tipo: TipoMovimiento,
     requested: MedioPago?,
 ): CuentaSelection? {
   val tipoCuenta = TipoCuenta.valueOf(this.tipo)
-  val medio =
-      requested
-          ?: medio_pago?.let { MedioPago.valueOf(it).forTipo(tipo) }
-          ?: tipoCuenta.defaultMedio(tipo)
+  val medio = requested ?: tipoCuenta.defaultMedio(tipo)
   return if (tipoCuenta in medio.compatibleTipos) {
     CuentaSelection(cuentaId = id, medio = medio, moneda = Moneda.valueOf(moneda))
   } else null

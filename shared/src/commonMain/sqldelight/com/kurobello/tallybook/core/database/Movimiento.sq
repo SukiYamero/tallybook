@@ -349,24 +349,28 @@ SELECT EXISTS (
     WHERE cuenta.moneda = :moneda AND movimiento.deleted_at IS NULL
 );
 
--- defaultSelection's fallback order as ranked candidates: 0 the newest live movimiento (with
--- :medio when given), 1 the primary cash account, 2 the primary currency, 3 any other cuenta. The
--- repository takes the first one compatible with the medio, so compatibility keeps MedioPago as its
--- only owner. The first arm types medio_pago as nullable for the cuenta-only ranks.
+-- defaultSelection's fallback order as ranked candidates: 0 the cuenta of the newest live movimiento
+-- with :medio, only when one is given; 1 the primary cash account; 2 any cash-type cuenta in the
+-- primary currency; 3 the primary currency; 4 any other cuenta. The repository takes the first one
+-- compatible with the medio, so compatibility keeps MedioPago as its only owner.
 selectSelectionCandidates:
-SELECT candidate.rank, candidate.medio_pago, cuenta.id, cuenta.tipo, cuenta.moneda
+SELECT candidate.rank, cuenta.id, cuenta.tipo, cuenta.moneda
 FROM (
     SELECT
-        CASE WHEN cuenta.id = :cash_id THEN 1 WHEN cuenta.moneda = :primary THEN 2 ELSE 3 END AS rank,
-        cuenta.id AS cuenta_id,
-        CAST(NULL AS TEXT) AS medio_pago
+        CASE
+            WHEN cuenta.id = :cash_id THEN 1
+            WHEN cuenta.moneda = :primary AND cuenta.tipo = 'EFECTIVO' THEN 2
+            WHEN cuenta.moneda = :primary THEN 3
+            ELSE 4
+        END AS rank,
+        cuenta.id AS cuenta_id
     FROM cuenta
     UNION ALL
-    SELECT 0, latest.cuenta_id, latest.medio_pago
+    SELECT 0, latest.cuenta_id
     FROM (
-        SELECT movimiento.cuenta_id, movimiento.medio_pago
+        SELECT movimiento.cuenta_id
         FROM movimiento
-        WHERE movimiento.deleted_at IS NULL AND (:medio IS NULL OR movimiento.medio_pago = :medio)
+        WHERE :medio IS NOT NULL AND movimiento.deleted_at IS NULL AND movimiento.medio_pago = :medio
         ORDER BY movimiento.created_at DESC, movimiento.id DESC
         LIMIT 1
     ) AS latest
