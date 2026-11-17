@@ -21,6 +21,8 @@ import com.kurobello.tallybook.core.data.TransferenciaRepository
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.core.data.export.MovimientoExportSource
+import com.kurobello.tallybook.core.data.voice.UnavailableVoiceDictation
+import com.kurobello.tallybook.core.data.voice.VoiceDictation
 import com.kurobello.tallybook.core.database.DatabaseDriverFactory
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackViewModel
@@ -50,6 +52,8 @@ class RepositoryModulesTest {
         RepositoryTestPreferencesPathProvider(directory.toString())
       }
       single<DeviceLocaleProvider> { RepositoryTestDeviceLocaleProvider() }
+      // The Android recognizer needs an Android context this JVM test does not start Koin with.
+      single<VoiceDictation> { UnavailableVoiceDictation }
       single { CategorySeedProvider { "Category" } }
       // AppStartupViewModel bootstraps in the background; a resource-backed seed name would throw
       // there and leak into whichever coroutine test runs next.

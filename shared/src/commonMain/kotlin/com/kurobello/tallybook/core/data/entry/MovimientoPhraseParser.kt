@@ -10,10 +10,10 @@ import kotlinx.datetime.LocalDate
 private val whitespaceRuns = Regex("\\s+")
 
 /**
- * Derives tipo, monto, fecha, medio and subject from one sentence. Pure and deterministic: the
- * vocabulary is the union of every supported language and [AppLocale] only decides numeric date
- * order. The medio is the words' own reading; the final tipo and a named account may still change
- * it, see [resolveSentenceMedio].
+ * Derives tipo, monto, fecha, medio, frecuencia and subject from one sentence. Pure and
+ * deterministic: the vocabulary is the union of every supported language and [AppLocale] only
+ * decides numeric date order. The medio is the words' own reading; the final tipo and a named
+ * account may still change it, see [resolveSentenceMedio].
  */
 class MovimientoPhraseParser {
 
@@ -36,6 +36,9 @@ class MovimientoPhraseParser {
     // first would leave the "en" of "en efectivo" behind in the subject.
     val medio = consumePhraseMedio(cursor)
     consumeReserved(cursor, reservedSpans)
+    // Before the date and the amount: "cada lunes" is not a date and the 30 of "cada 30 días" is
+    // not the amount.
+    val recurrence = consumePhraseRecurrence(cursor, today)
     val date =
         findPhraseDate(cursor, today, locale)?.also { cursor.consume(it.start, it.endExclusive) }
     val amount =
@@ -44,15 +47,19 @@ class MovimientoPhraseParser {
     return ParsedMovimientoPhrase(
         tipo = tipo,
         monto = amount?.money,
-        fecha = date?.date?.takeUnless { isFuture },
+        fecha = if (date != null) date.date.takeUnless { isFuture } else recurrence?.anchor,
         subject = remainingText(text, tokens, consumed),
         reviewFlags =
             setOfNotNull(
                 PhraseReviewFlag.AMBIGUOUS_AMOUNT.takeIf { amount?.isAmbiguous == true },
                 PhraseReviewFlag.FUTURE_DATE_IGNORED.takeIf { isFuture },
+                PhraseReviewFlag.UNSUPPORTED_RECURRENCE.takeIf {
+                  recurrence != null && recurrence.frecuencia == null
+                },
             ),
         medio = medio.medio,
         medioCandidates = medio.candidates,
+        frecuencia = recurrence?.frecuencia,
     )
   }
 

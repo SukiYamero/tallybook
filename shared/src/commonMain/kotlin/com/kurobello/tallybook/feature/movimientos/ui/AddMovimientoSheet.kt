@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
@@ -32,6 +33,8 @@ import com.kurobello.tallybook.core.ui.component.TallybookConfirmationDialogCopy
 import com.kurobello.tallybook.core.ui.component.TallybookModalBottomSheet
 import com.kurobello.tallybook.core.ui.component.TallybookModalDialog
 import com.kurobello.tallybook.core.ui.component.rememberDismissGuard
+import com.kurobello.tallybook.core.ui.permission.DictationPermissionLauncher
+import com.kurobello.tallybook.core.ui.permission.rememberDictationPermissionLauncher
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.accounts.viewmodel.QuickCuentaViewModel
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
@@ -180,7 +183,20 @@ private fun MovimientoSentenceDialog(
           onSuggestion = { actions.onSuggestionSelected(it.id) },
           etiquetas = actions.etiquetasCallbacks(onAdd = pickers.onAddEtiqueta),
           cuenta = actions.cuentaCallbacks(pickers.onChooseCuenta, pickers.onCreateCuenta),
+          voice =
+              VoiceDictationCallbacks(
+                  onStart = {
+                    focusManager.clearFocus(force = true)
+                    actions.onVoiceStart()
+                  },
+                  onStop = actions::onVoiceStop,
+                  onOpenSettings = actions::onVoiceOpenSettings,
+              ),
       )
+  // The microphone belongs to the visible dialog: closing it, leaving the app or recreating the
+  // screen (rotation) ends the session and keeps the words already heard.
+  LaunchedEffect(visible) { if (!visible) actions.onVoiceCancel() }
+  LifecycleEventEffect(Lifecycle.Event.ON_STOP) { actions.onVoiceCancel() }
   TallybookModalDialog(
       visible = visible,
       paneTitle = stringResource(Res.string.add_movimiento_pane_title),
@@ -322,7 +338,12 @@ internal fun AddMovimientoSheetRoute(
   val uiState by viewModel.uiState.collectAsStateWithLifecycle()
   val quickCategoryState by quickCategoryViewModel.uiState.collectAsStateWithLifecycle()
   val quickCuentaState by quickCuentaViewModel.uiState.collectAsStateWithLifecycle()
-  AddMovimientoSavedEffect(effects = viewModel.effects, onSaved = onDismiss)
+  val dictationPermission = rememberDictationPermissionLauncher(viewModel::onVoicePermissionResult)
+  AddMovimientoEffects(
+      effects = viewModel.effects,
+      onSaved = onDismiss,
+      dictationPermission = dictationPermission,
+  )
   QuickCategorySelectionEffect(
       effects = quickCategoryViewModel.effects,
       selection =
@@ -350,14 +371,21 @@ internal fun AddMovimientoSheetRoute(
 }
 
 @Composable
-internal fun AddMovimientoSavedEffect(effects: Flow<AddMovimientoEffect>, onSaved: () -> Unit) {
+internal fun AddMovimientoEffects(
+    effects: Flow<AddMovimientoEffect>,
+    onSaved: () -> Unit,
+    dictationPermission: DictationPermissionLauncher,
+) {
   val lifecycle = LocalLifecycleOwner.current.lifecycle
   val currentOnSaved by rememberUpdatedState(onSaved)
+  val currentPermission by rememberUpdatedState(dictationPermission)
   LaunchedEffect(effects, lifecycle) {
     lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
       effects.collect { effect ->
         when (effect) {
           AddMovimientoEffect.Saved -> currentOnSaved()
+          AddMovimientoEffect.RequestDictationPermission -> currentPermission.request()
+          AddMovimientoEffect.OpenDictationSettings -> currentPermission.openSettings()
         }
       }
     }

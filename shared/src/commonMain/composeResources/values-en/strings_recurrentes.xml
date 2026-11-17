@@ -1,6 +1,7 @@
 <resources>
     <string name="recurrencia_repeat_label">Repeat</string>
     <string name="recurrencia_repeat_body">We’ll have it ready to confirm on each date, so you won’t enter it again.</string>
+    <string name="recurrencia_unsupported_interval">Repeat works weekly, monthly or yearly. Turn on the closest one, or leave it off.</string>
     <string name="recurrencia_frequency_label">Frequency</string>
     <string name="frecuencia_semanal">Weekly</string>
     <string name="frecuencia_mensual">Monthly</string>

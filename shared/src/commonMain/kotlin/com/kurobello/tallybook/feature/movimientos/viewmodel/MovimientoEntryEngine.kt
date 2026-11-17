@@ -15,6 +15,7 @@ import com.kurobello.tallybook.core.data.entry.incomeCategoryIds
 import com.kurobello.tallybook.core.data.entry.resolveSentenceCuenta
 import com.kurobello.tallybook.core.data.entry.resolveSentenceMedio
 import com.kurobello.tallybook.core.data.resolveDeviceLocale
+import com.kurobello.tallybook.core.data.voice.dictationLanguageTag
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Etiqueta
@@ -85,6 +86,9 @@ internal class MovimientoEntryEngine(
 
   fun resolveLocale(preferred: AppLocale?): AppLocale =
       preferred ?: resolveDeviceLocale(localeProvider.currentLanguageTag()).appLocale
+
+  fun dictationLanguageFor(preferred: AppLocale?): String =
+      dictationLanguageTag(resolveLocale(preferred))
 
   fun dictionaryIndex(now: Instant): CategorySuggestionIndex = suggester.index(emptyList(), now)
 

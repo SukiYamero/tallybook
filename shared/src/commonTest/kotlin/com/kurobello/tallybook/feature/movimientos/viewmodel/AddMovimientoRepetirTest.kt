@@ -14,6 +14,7 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
@@ -91,6 +92,67 @@ class AddMovimientoRepetirTest {
   }
 
   @Test
+  fun aDictatedCadenceTurnsRepetirOnAndSavesTheRecurrencia() = runTest {
+    val f = fixture()
+    f.viewModel.onPhraseChanged("arriendo 500000 cada 30 días con efectivo")
+    advanceTimeBy(PREVIEW_SETTLE_MILLIS)
+    assertEquals(Frecuencia.MENSUAL, f.viewModel.uiState.value.detected.frecuencia)
+
+    f.viewModel.onPhraseContinue()
+    val state = f.viewModel.uiState.value
+    assertEquals(Frecuencia.MENSUAL, state.frecuencia)
+    assertEquals("cat_arriendo", state.effectiveCategoriaId)
+    assertFalse(state.recurrenceUnsupported)
+
+    f.viewModel.onSubmit()
+    runCurrent()
+    val (movimiento, frecuencia) = f.recurrencias.created.single()
+    assertEquals(Frecuencia.MENSUAL, frecuencia)
+    assertEquals(Money(50_000_000, Moneda.COP), movimiento.monto)
+  }
+
+  @Test
+  fun aRecurrenceAdjectiveKeepsTheCategoryKeywordItBelongsTo() = runTest {
+    val f = fixture()
+    f.viewModel.onPhraseChanged("compra semanal 80000")
+    f.viewModel.onPhraseContinue()
+
+    val state = f.viewModel.uiState.value
+    assertEquals(Frecuencia.SEMANAL, state.frecuencia)
+    assertEquals("cat_supermercado", state.effectiveCategoriaId)
+  }
+
+  @Test
+  fun repetirChosenByHandOutlivesTheSentence() = runTest {
+    val f = fixture()
+    f.viewModel.onPhraseChanged("gym cada semana 50000")
+    f.viewModel.onPhraseContinue()
+    assertEquals(Frecuencia.SEMANAL, f.viewModel.uiState.value.frecuencia)
+
+    f.viewModel.onRepetirChanged(false)
+    f.viewModel.onStepBack()
+    f.viewModel.onPhraseChanged("gym todos los meses 50000")
+    f.viewModel.onPhraseContinue()
+
+    assertNull(f.viewModel.uiState.value.frecuencia)
+  }
+
+  @Test
+  fun anUnsupportedCadenceLeavesRepetirOffWithANoteUntilTheUserChooses() = runTest {
+    val f = fixture()
+    f.viewModel.onPhraseChanged("gym cada 15 días 30000")
+    f.viewModel.onPhraseContinue()
+
+    val state = f.viewModel.uiState.value
+    assertNull(state.frecuencia)
+    assertTrue(state.recurrenceUnsupported)
+    assertEquals(Money(3_000_000, Moneda.COP), state.summary.monto)
+
+    f.viewModel.onRepetirChanged(true)
+    assertFalse(f.viewModel.uiState.value.recurrenceUnsupported)
+  }
+
+  @Test
   fun turningRepetirOffSavesAOneOffMovimientoAndIgnoresAFrecuenciaWhileOff() = runTest {
     val f = fixture()
     f.viewModel.onFillManually()
@@ -156,5 +218,9 @@ class AddMovimientoRepetirTest {
         )
     runCurrent()
     return Fixture(viewModel, movimientos, recurrencias)
+  }
+
+  private companion object {
+    const val PREVIEW_SETTLE_MILLIS = 300L
   }
 }

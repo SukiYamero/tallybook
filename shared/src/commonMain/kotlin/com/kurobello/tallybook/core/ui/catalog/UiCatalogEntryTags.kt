@@ -32,8 +32,10 @@ import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.ui.CategoryPickerSheet
 import com.kurobello.tallybook.feature.movimientos.ui.MovimientoDateBadge
 import com.kurobello.tallybook.feature.movimientos.ui.MovimientoEntrySamples
-import com.kurobello.tallybook.feature.movimientos.ui.VoiceDictationPlaceholder
+import com.kurobello.tallybook.feature.movimientos.ui.VoiceDictationButton
+import com.kurobello.tallybook.feature.movimientos.ui.VoiceDictationCallbacks
 import com.kurobello.tallybook.feature.movimientos.ui.rememberMovimientoEntrySamples
+import com.kurobello.tallybook.feature.movimientos.viewmodel.VoiceInputUi
 import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
@@ -60,7 +62,7 @@ import tallybook.shared.generated.resources.ui_catalog_state_removable
 import tallybook.shared.generated.resources.ui_catalog_state_selected
 import tallybook.shared.generated.resources.ui_catalog_state_suggested
 import tallybook.shared.generated.resources.ui_catalog_state_with_suggestions
-import tallybook.shared.generated.resources.ui_catalog_voice_placeholder
+import tallybook.shared.generated.resources.ui_catalog_voice_dictation
 
 private const val BADGE_SAMPLE_MONTH = 1
 private const val BADGE_SAMPLE_DAY = 3
@@ -86,10 +88,16 @@ internal fun LazyListScope.catalogTagComponents() {
     CatalogModalDialogSample()
   }
   catalogControlSection(
-      "voice-placeholder",
-      { stringResource(Res.string.ui_catalog_voice_placeholder) },
+      "voice-dictation",
+      { stringResource(Res.string.ui_catalog_voice_dictation) },
   ) {
-    CatalogSurface { VoiceDictationPlaceholder() }
+    CatalogSurface {
+      VoiceDictationButton(
+          voice = VoiceInputUi(isAvailable = true),
+          enabled = true,
+          callbacks = VoiceDictationCallbacks.Inert,
+      )
+    }
   }
 }
 

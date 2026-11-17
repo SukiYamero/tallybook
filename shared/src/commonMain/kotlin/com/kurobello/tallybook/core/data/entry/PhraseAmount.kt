@@ -49,7 +49,7 @@ private class PhraseAmountScanner(private val cursor: PhraseCursor, private val 
   private fun numeric(index: Int): AmountCandidate? {
     val token = cursor.tokenAt(index)?.takeIf { it.kind == PhraseTokenKind.NUMBER }
     val factor = multiplierAfter(index)
-    val money = token?.let { splitDecimal(it.text) }?.toMoney(factor ?: 1L, moneda)
+    val money = token?.let { splitDecimal(it.norm) }?.toMoney(factor ?: 1L, moneda)
     return money?.let { AmountCandidate(it, index, index + 1 + (if (factor != null) 1 else 0)) }
   }
 

@@ -38,6 +38,7 @@ import com.kurobello.tallybook.core.model.Frecuencia
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.ui.permission.DictationPermissionLauncher
 import com.kurobello.tallybook.core.ui.testing.closeSoftKeyboard
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddMovimientoActions
@@ -550,9 +551,11 @@ class AddMovimientoSheetTest {
     var useLatestCallback by mutableStateOf(false)
 
     composeRule.setContent {
-      AddMovimientoSavedEffect(effects) {
-        if (useLatestCallback) latestDismisses += 1 else firstDismisses += 1
-      }
+      AddMovimientoEffects(
+          effects = effects,
+          onSaved = { if (useLatestCallback) latestDismisses += 1 else firstDismisses += 1 },
+          dictationPermission = InertDictationPermission,
+      )
     }
     composeRule.runOnIdle { useLatestCallback = true }
     composeRule.runOnIdle { effects.tryEmit(AddMovimientoEffect.Saved) }
@@ -697,6 +700,16 @@ class AddMovimientoSheetTest {
 
     override fun onFrecuenciaChanged(frecuencia: Frecuencia) = Unit
 
+    override fun onVoiceStart() = Unit
+
+    override fun onVoiceStop() = Unit
+
+    override fun onVoiceCancel() = Unit
+
+    override fun onVoicePermissionResult(granted: Boolean) = Unit
+
+    override fun onVoiceOpenSettings() = Unit
+
     override fun onRetryLoad() = Unit
 
     override fun onSubmit() {
@@ -708,4 +721,10 @@ class AddMovimientoSheetTest {
 
     override fun onCuentaSelected(id: String) = Unit
   }
+}
+
+private object InertDictationPermission : DictationPermissionLauncher {
+  override fun request() = Unit
+
+  override fun openSettings() = Unit
 }

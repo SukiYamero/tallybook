@@ -21,8 +21,8 @@ Creation moves through three steps; business rules for each live in
   it was not detected, the Medio and Account sections, the Category section and the optional Tags section. Detection runs after a 250 ms debounce and clears immediately when
   the input is emptied, which also resets what an earlier Continue derived. Continue is pinned in a
   footer outside the scrolling body, so it stays on screen with the keyboard open and suggestions
-  showing. The body scrolls the input, the Detected card, the "or" divider with the voice placeholder
-  and "Fill manually", which opens the empty form, discarding anything an earlier Continue derived but
+  showing. The body scrolls the input, the Detected card, the "or" divider with the microphone (see
+  Voice dictation in `business-logic.md`) and "Fill manually", which opens the empty form, discarding anything an earlier Continue derived but
   keeping the category and tags picked by hand. Continue and Fill manually wait for the initial data to load; a load
   failure shows the existing retry message. The dialog opens vertically centered and that top edge is kept: the
   Detected card and the suggestions grow it downward with an animated size change, so it never jumps.

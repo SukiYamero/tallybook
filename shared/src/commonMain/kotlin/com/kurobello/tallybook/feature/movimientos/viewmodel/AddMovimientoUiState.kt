@@ -65,6 +65,11 @@ internal data class AddMovimientoUiState(
     val cuentaRejected: Boolean = false,
     /** Saving also creates a recurrencia with this frecuencia; null saves a one-off movimiento. */
     val frecuencia: Frecuencia? = null,
+    // While false the sentence owns Repetir: "cada mes" turns it on when the sentence continues.
+    val frecuenciaEdited: Boolean = false,
+    /** The sentence named a cadence Repetir cannot express, such as "cada 15 días". */
+    val recurrenceUnsupported: Boolean = false,
+    val voice: VoiceInputUi = VoiceInputUi(),
 ) : MovimientoFormState {
   /** The tipo medio options follow: the sentence's while it is being typed, the draft's after. */
   val selectionTipo: TipoMovimiento
@@ -155,6 +160,7 @@ internal data class AddMovimientoUiState(
             cuenta = cuentaField,
             isEnabled = !isSubmitting,
             actionsEnabled = !isLoading && loadError == null,
+            voice = voice,
         )
 
   // Without the Otros fallback in the catalog the category is empty, and the review still shows

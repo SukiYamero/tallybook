@@ -8,7 +8,10 @@ internal enum class PhraseTokenKind {
   PUNCT,
 }
 
-/** [norm] is search-normalized for words and the raw text otherwise. */
+/**
+ * [norm] is search-normalized for words, the raw text for symbols and punctuation, and for numbers
+ * the digits without their space groups, so "50 000" reads as "50000".
+ */
 internal data class PhraseToken(
     val kind: PhraseTokenKind,
     val start: Int,

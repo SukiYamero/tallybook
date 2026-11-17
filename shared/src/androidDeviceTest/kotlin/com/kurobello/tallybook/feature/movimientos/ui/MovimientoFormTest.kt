@@ -608,6 +608,16 @@ class MovimientoFormTest {
 
     override fun onFrecuenciaChanged(frecuencia: Frecuencia) = Unit
 
+    override fun onVoiceStart() = Unit
+
+    override fun onVoiceStop() = Unit
+
+    override fun onVoiceCancel() = Unit
+
+    override fun onVoicePermissionResult(granted: Boolean) = Unit
+
+    override fun onVoiceOpenSettings() = Unit
+
     override fun onRetryLoad() {
       retryCount += 1
     }

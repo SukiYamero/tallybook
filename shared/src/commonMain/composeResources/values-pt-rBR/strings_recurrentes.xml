@@ -1,6 +1,7 @@
 <resources>
     <string name="recurrencia_repeat_label">Repetir</string>
     <string name="recurrencia_repeat_body">Para você não precisar registrar de novo, deixamos pronto para confirmar em cada data.</string>
+    <string name="recurrencia_unsupported_interval">Repetir funciona semanal, mensal ou anual. Ative a mais próxima ou deixe sem repetir.</string>
     <string name="recurrencia_frequency_label">Frequência</string>
     <string name="frecuencia_semanal">Semanal</string>
     <string name="frecuencia_mensual">Mensal</string>

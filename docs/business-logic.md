@@ -55,9 +55,39 @@ app derives the draft from it and the user confirms or refines it; the manual fo
   and account have their own owners (see [Selection in entry and editing](#selection-in-entry-and-editing)).
 - The Continue action is pinned in a footer under the scrolling content, so it stays visible with
   the keyboard open. Inside the scrolling area, below the Detected card, an "or" divider introduces
-  voice dictation (a non-functional placeholder marked as coming soon), followed by a secondary
-  "fill manually" action that opens the empty form. Fill manually drops everything the sentence
-  derived but keeps the category and tags the user picked by hand in the dialog.
+  voice dictation, followed by a secondary "fill manually" action that opens the empty form. Fill
+  manually drops everything the sentence derived but keeps the category and tags the user picked by
+  hand in the dialog.
+- **Voice dictation** fills the same sentence, so everything below applies to dictated text too.
+  - Recognition runs only on the device (Android's on-device `SpeechRecognizer`, iOS
+    `SFSpeechRecognizer` with on-device recognition required): the sentence describes the user's
+    money and never reaches a speech server. Without an on-device recognizer the microphone shows as
+    not available on this device.
+  - Language models ship separately (a phone set to English may only have en-US). On Android 13+
+    the app checks them before listening: another installed region of the same language is used
+    as is; a missing one is requested from the system, which asks the user to confirm the download,
+    and the app says to try again once it finishes. A language the device cannot recognize offline
+    says so.
+  - The recognizer's language follows the app language with one fixed variant each: Spanish (es and
+    es-AR) dictates es-ES, English en-US and Portuguese pt-BR, the variants most offline recognizers
+    can install. An installed model of another region of that language is used instead when present.
+  - The microphone is held to talk: pressing it starts listening and letting go ends it, keeping what
+    was heard. Sliding the finger off it does not end it, nor does the dialog scroll under it; 25
+    seconds does. The app asks the recognizer to wait through pauses, but a long pause may still
+    end listening on some devices. Listening goes on 0.7 seconds after the finger lifts,
+    because people let go while saying the last word. The disc turns green, and the caption asks to
+    speak, only once the microphone is open; until then it says to wait. Screen readers, which
+    cannot hold a press, toggle listening with their activation instead.
+  - The first press asks for permission (on iOS, speech recognition and then the microphone) and
+    does not listen; after granting it, the next press does. A refusal explains why it is needed; a
+    second refusal, or a denial iOS already remembers, offers the app settings instead.
+  - Dictated words extend whatever was already typed and appear in the sentence while the user
+    speaks. The Detected card keeps the visibility it had when the press began, so the microphone
+    never slides from under the finger; it updates once the final result arrives. Hearing nothing,
+    as after a quick tap, asks to hold the microphone while speaking; a failure keeps the text and
+    says it can be retried.
+  - Typing, Continue, Fill manually, Discard, closing the dialog or leaving the app stops listening at
+    once.
 - Line breaks typed or pasted into the sentence become single spaces. Clearing the sentence also
   clears what it derived (tipo, amount, fecha, título, descripción, the sentence-owned category and
   tags, and a sentence-owned medio and account, which return to the default selection), so the dialog
@@ -71,7 +101,8 @@ app derives the draft from it and the user confirms or refines it; the manual fo
 - **Tipo**: expense and income verbs in every supported language decide it (`gasté`, `pagué`,
   `me cobraron` → gasto; `recibí`, `me pagaron`, `cobré`, `vendí` → ingreso). Without a verb, an
   income category suggestion selects ingreso; otherwise gasto.
-- **Monto**: digits with the draft currency's group/decimal separators, a currency symbol,
+- **Monto**: digits with the draft currency's group/decimal separators (a space, as dictation writes
+  "50 000", groups only before exactly three digits), a currency symbol,
   multipliers (`k`, `mil`, `millón`/`millones`, regional slang such as `lucas` or `palos`) and basic
   number words. A separator followed by exactly three digits groups; any other separator is decimal.
   The draft currency is the selected account's: the sentence is read again in another currency when
@@ -85,6 +116,21 @@ app derives the draft from it and the user confirms or refines it; the manual fo
 - **Fecha**: today, yesterday, the day before yesterday, a weekday (its most recent occurrence, today
   included) and explicit day/month dates (day-first except in English). A day without month resolves
   to its most recent past occurrence. Future expressions are ignored and the date stays today.
+- **Frecuencia**: a stated cadence turns Repetir on with the matching frecuencia when the sentence
+  continues, unless the user already switched Repetir or picked a frecuencia, which then stays theirs.
+  - 7 days, a week or a weekday ("todos los lunes", "every monday", "toda segunda") → Semanal;
+    28–31 days, 4 weeks or a month ("cada 30 días", "todos los meses", "al mes", "per month",
+    "todo mês") → Mensual; 365–366 days, 52 weeks, 12 months or a year → Anual. Adjectives
+    ("mensual", "weekly", "anual") count too, but the first stated interval wins over them
+    ("compra semanal cada mes" is Mensual). A bare number before "every month" is the amount;
+    only a marked day ("el 5 de cada mes", "the 1st of every month") is the day of the month.
+  - A weekday or a day of every month ("el 5 de cada mes") also sets the fecha to its most recent
+    occurrence when the sentence names no date.
+  - Any other cadence ("cada 15 días", "quincenal", "trimestral") leaves Repetir off and the summary
+    says that Repetir only works weekly, monthly or yearly.
+  - Interval phrases leave the subject, so their numbers are never the amount or a date; a lone
+    adjective stays in it because category keywords use it ("compra semanal").
+  - A price per day ("200000 por día") and a duration ("curso de 12 meses") are not recurrences.
 - **Título**: the sentence as typed, trimmed and with repeated whitespace collapsed, like every
   optional text. Parsing never rewrites what the user wrote. The
   description starts empty; it is optional extra context the user adds in the form.
@@ -118,8 +164,8 @@ app derives the draft from it and the user confirms or refines it; the manual fo
     except that a transfer word with a bank account selects Transferencia. A contradicting method word
     is dropped. Every result is adapted to the final tipo.
   - Words are consumed in a fixed order: tipo verbs, method phrases (before account names, so "en
-    efectivo" is not split by the seeded "Efectivo" account), account names, fecha, monto; the rest is
-    the subject.
+    efectivo" is not split by the seeded "Efectivo" account), account names, recurrence, fecha, monto;
+    the rest is the subject.
 - The summary is a tall bottom sheet titled as a review-and-confirm step. It only reviews: labeled
   sections show tipo and fecha (prominent), the amount and the title, and the only choices it offers
   are medio and account, the category with its suggestions and the optional tags. It has no text
@@ -395,9 +441,10 @@ Home total, History, Search, Statistics or CSV export until it becomes a movimie
   [Change stamps and tombstones](#change-stamps-and-tombstones)); `recurrencia_etiqueta` is its child
   table. `movimiento.recurrencia_id` (nullable) links a confirmed movimiento to its recurrencia.
 - **Creating.** The creation form and the sentence summary offer Repetir (Mensual by default,
-  Semanal, Anual). Saving with it on creates the movimiento as usual plus its recurrencia in one
-  write: `fechaAncla` is the movimiento's fecha and `proximaFecha` the first occurrence strictly after
-  both that fecha and today. The editor of an existing movimiento never offers it.
+  Semanal, Anual); a sentence that states a cadence turns it on (see
+  [Natural-language entry](#natural-language-entry)). Saving with it on creates the movimiento as
+  usual plus its recurrencia in one write: `fechaAncla` is the movimiento's fecha and
+  `proximaFecha` the first occurrence strictly after both that fecha and today. The editor of an existing movimiento never offers it.
 - **Occurrences.** Occurrence n is `fechaAncla + n` periods, always counted from the anchor so it
   never drifts; a monthly or annual day past the month's end falls on its last day, like `diaCorte`
   (31 → 30 April → 31 May; 29 February → 28 February in non-leap years). Pending means every

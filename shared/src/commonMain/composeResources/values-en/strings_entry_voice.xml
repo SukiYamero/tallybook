@@ -1,0 +1,15 @@
+<resources>
+    <string name="movimiento_voice_hint">Hold the mic and speak</string>
+    <string name="movimiento_voice_listening">Listening… let go to finish</string>
+    <string name="movimiento_voice_preparing">One moment… speak when it turns green</string>
+    <string name="movimiento_voice_start">Start dictating</string>
+    <string name="movimiento_voice_stop">Stop dictating</string>
+    <string name="movimiento_voice_unavailable">Not available on this device</string>
+    <string name="movimiento_voice_not_heard">Didn’t catch that. Hold the mic while you speak.</string>
+    <string name="movimiento_voice_permission_denied">To dictate your movements, allow microphone access.</string>
+    <string name="movimiento_voice_permission_blocked">To dictate your movements, turn on the microphone in the app’s settings.</string>
+    <string name="movimiento_voice_open_settings">Open settings</string>
+    <string name="movimiento_voice_language_unavailable">To dictate in this language, download its voice pack in your phone’s speech settings.</string>
+    <string name="movimiento_voice_language_downloading">To dictate offline, your phone needs this language. Accept the download and try again in a few minutes.</string>
+    <string name="movimiento_voice_failed">Dictation stopped. Your text is still here; hold the mic to try again.</string>
+</resources>
