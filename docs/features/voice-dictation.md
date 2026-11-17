@@ -20,7 +20,7 @@ Monto and Frecuencia) and [Recurrentes](../business-logic.md#recurrentes).
   - iOS: `IosVoiceDictation` drives `SFSpeechRecognizer` with on-device recognition required and an
     `AVAudioEngine` tap, in Kotlin/Native. `Info.plist` carries the microphone and speech usage
     strings (English only).
-- `feature.movimientos`: `MovimientoDictation` adds the 25 s cap, the 0.7 s release tail and a grace
+- `feature.movimientos`: `MovimientoDictation` adds the 30 s cap, the 0.7 s release tail and a grace
   period for a recognizer that never answers; `AddMovimientoVoice` owns the permission flow and the
   single session; `VoiceDictationButton` is the hold-to-talk disc (a screen reader toggles instead).
   The permission request and app settings run through `AddMovimientoEffect` and the

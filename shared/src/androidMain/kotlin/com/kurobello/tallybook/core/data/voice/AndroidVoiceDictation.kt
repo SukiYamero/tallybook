@@ -36,7 +36,9 @@ private val recognizerErrors: Map<Int, DictationError> =
         SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE to DictationError.LANGUAGE_UNAVAILABLE,
     )
 
-private const val HELD_PAUSE_MILLIS = 10_000L
+// An Int on purpose: the on-device recognizer reads these extras with getIntExtra, so a Long is
+// silently replaced by its default.
+internal const val HELD_PAUSE_MILLIS = 10_000
 
 internal fun dictationErrorOf(code: Int): DictationError =
     recognizerErrors[code] ?: DictationError.UNKNOWN
@@ -191,27 +193,27 @@ internal class AndroidVoiceDictation(
     trySend(DictationEvent.Failed(error))
     close()
   }
-
-  private fun recognizerIntent(languageTag: String): Intent =
-      Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-          .putExtra(
-              RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-              RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
-          )
-          .putExtra(RecognizerIntent.EXTRA_LANGUAGE, languageTag)
-          .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-          .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-          // The release ends the sentence, so a pause while the mic is held should not; the
-          // recognizer may still apply its own shorter limit.
-          .putExtra(
-              RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,
-              HELD_PAUSE_MILLIS,
-          )
-          .putExtra(
-              RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
-              HELD_PAUSE_MILLIS,
-          )
 }
+
+internal fun recognizerIntent(languageTag: String): Intent =
+    Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+        .putExtra(
+            RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+            RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
+        )
+        .putExtra(RecognizerIntent.EXTRA_LANGUAGE, languageTag)
+        .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        // The release ends the sentence, so a pause while the mic is held should not; the
+        // recognizer may still apply its own shorter limit.
+        .putExtra(
+            RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,
+            HELD_PAUSE_MILLIS,
+        )
+        .putExtra(
+            RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
+            HELD_PAUSE_MILLIS,
+        )
 
 private fun Bundle.bestTranscript(): String? =
     getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.takeIf {
