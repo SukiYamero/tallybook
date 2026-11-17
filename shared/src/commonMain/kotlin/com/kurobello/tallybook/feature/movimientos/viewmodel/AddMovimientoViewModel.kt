@@ -303,8 +303,12 @@ internal class AddMovimientoViewModel(
     }
   }
 
+  // The review's shared values are no movimiento of their own to edit.
   override fun onEditMovimiento() {
-    updateFields { copy(step = AddMovimientoStep.FORM, formOpenedFromSummary = true) }
+    updateFields {
+      if (step == AddMovimientoStep.REVIEW) this
+      else copy(step = AddMovimientoStep.FORM, formOpenedFromSummary = true)
+    }
   }
 
   override fun onSuggestionSelected(id: String) {
@@ -338,18 +342,10 @@ internal class AddMovimientoViewModel(
     }
   }
 
+  // Picks made in the review since the last preview change what the Detected card shows.
   override fun onStepBack() {
-    uiState.update { current ->
-      val target = current.stepBackTarget
-      if (target == null || current.isSubmitting) {
-        current
-      } else {
-        current.copy(
-            step = target,
-            submitAttempted = current.submitAttempted && current.step != AddMovimientoStep.FORM,
-        )
-      }
-    }
+    uiState.update { it.steppedBack() }
+    refreshPreview(debounce = false)
   }
 
   override fun onRepetirChanged(enabled: Boolean) {
@@ -535,6 +531,7 @@ internal class AddMovimientoViewModel(
           recurrenceUnsupported = false,
           parts = emptyList(),
           editingPart = null,
+          splitStash = null,
       )
 
   // A category, tags, medio or cuenta picked in the sentence dialog do not guard it: only a typed

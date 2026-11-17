@@ -290,6 +290,108 @@ class AddMovimientoPartsTest {
     assertTrue(state.parts.isEmpty())
   }
 
+  @Test
+  fun aSingleHandPickSurvivesAJoinAndBack() = runTest {
+    val viewModel = partsViewModel()
+    viewModel.onCategoriaSelected("cat_cine")
+    type(viewModel, CONTEXT_SENTENCE)
+    viewModel.onPhraseContinue()
+    viewModel.onJoinParts()
+    assertNull(viewModel.uiState.value.categoriaId)
+
+    back(viewModel)
+    type(viewModel, "Gasté 20 mil en el almuerzo")
+    viewModel.onPhraseContinue()
+
+    assertEquals(AddMovimientoStep.SUMMARY, viewModel.uiState.value.step)
+    assertEquals("cat_cine", viewModel.uiState.value.categoriaId)
+  }
+
+  @Test
+  fun aSingleHandPickSurvivesRemovingDownToOnePartAndBack() = runTest {
+    val viewModel = partsViewModel()
+    viewModel.onCategoriaSelected("cat_cine")
+    type(viewModel, CONTEXT_SENTENCE)
+    viewModel.onPhraseContinue()
+    viewModel.onPartRemoved(0)
+    assertEquals("cat_supermercado", viewModel.uiState.value.categoriaId)
+
+    back(viewModel)
+    type(viewModel, "Gasté 20 mil en el almuerzo")
+    viewModel.onPhraseContinue()
+
+    assertEquals("cat_cine", viewModel.uiState.value.categoriaId)
+  }
+
+  @Test
+  fun aCategoryPickedInTheJoinedSummaryIsKeptOnBack() = runTest {
+    val viewModel = partsViewModel()
+    viewModel.onCategoriaSelected("cat_cine")
+    type(viewModel, CONTEXT_SENTENCE)
+    viewModel.onPhraseContinue()
+    viewModel.onJoinParts()
+    viewModel.onCategoriaSelected("cat_transporte")
+
+    back(viewModel)
+    type(viewModel, "Gasté 20 mil en el almuerzo")
+    viewModel.onPhraseContinue()
+
+    assertEquals("cat_transporte", viewModel.uiState.value.categoriaId)
+  }
+
+  @Test
+  fun partHandPicksSurviveAJoinAndBack() = runTest {
+    val viewModel = partsViewModel()
+    type(viewModel, CONTEXT_SENTENCE)
+    viewModel.onPhraseContinue()
+    viewModel.onPartCategoriaSelected(1, "cat_transporte")
+    viewModel.onJoinParts()
+
+    back(viewModel)
+    viewModel.onPhraseContinue()
+
+    assertEquals(
+        listOf("cat_restaurante", "cat_transporte"),
+        viewModel.uiState.value.parts.map { it.categoriaId },
+    )
+  }
+
+  @Test
+  fun backShowsThePartCategoriesContinueWillGive() = runTest {
+    val viewModel = partsViewModel()
+    type(viewModel, CONTEXT_SENTENCE)
+    viewModel.onPhraseContinue()
+    viewModel.onPartCategoriaSelected(0, "cat_cine")
+
+    back(viewModel)
+
+    assertEquals(
+        listOf("cat_cine", "cat_supermercado"),
+        viewModel.uiState.value.detected.parts.map { it.categoria?.id },
+    )
+  }
+
+  @Test
+  fun submitAndEditDoNothingInTheReview() = runTest {
+    val movimientos = partsMovimientos()
+    val viewModel = partsViewModel(movimientos = movimientos)
+    type(viewModel, CONTEXT_SENTENCE)
+    viewModel.onPhraseContinue()
+    val review = viewModel.uiState.value
+
+    viewModel.onEditMovimiento()
+    viewModel.onSubmit()
+    runCurrent()
+
+    assertEquals(review, viewModel.uiState.value)
+    assertTrue(movimientos.inserted.isEmpty())
+  }
+
+  private fun TestScope.back(viewModel: AddMovimientoViewModel) {
+    viewModel.onStepBack()
+    runCurrent()
+  }
+
   private fun AddMovimientoUiState.partMontos(): List<Money?> = parts.map { part ->
     (parseAmountInput(part.amountInput, moneda) as? AmountInputResult.Valid)?.money
   }
@@ -298,14 +400,17 @@ class AddMovimientoPartsTest {
 
   private fun partsCuentas(): List<Cuenta> = listOf(COP_CASH, NEQUI, NU, USD_CASH)
 
+  private fun partsMovimientos() =
+      AddFakeMovimientos().apply {
+        medioSelections[MedioPago.CREDITO] = NU.selection(MedioPago.CREDITO)
+      }
+
   private fun TestScope.partsViewModel(
-      cuentas: List<Cuenta> = partsCuentas()
+      cuentas: List<Cuenta> = partsCuentas(),
+      movimientos: AddFakeMovimientos = partsMovimientos(),
   ): AddMovimientoViewModel =
       createAddViewModel(
-              movimientoRepository =
-                  AddFakeMovimientos().apply {
-                    medioSelections[MedioPago.CREDITO] = NU.selection(MedioPago.CREDITO)
-                  },
+              movimientoRepository = movimientos,
               categoriaRepository = AddFakeCategorias(DataOutcome.Success(addSeedCategorias())),
               preferencesRepository = addPreferences(Moneda.COP),
               cuentaRepository = FakeCuentaRepository(cuentas),

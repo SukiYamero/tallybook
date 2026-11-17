@@ -52,14 +52,16 @@ internal fun AddMovimientoUiState.withPartCategoria(index: Int, id: String?): Ad
 
 internal fun AddMovimientoUiState.withoutPart(index: Int): AddMovimientoUiState {
   val remaining = parts.filterIndexed { i, _ -> i != index }
-  return remaining.singleOrNull()?.let { summaryOf(it) } ?: copy(parts = remaining)
+  return remaining.singleOrNull()?.let { leavingReview(summaryOf(it)) } ?: copy(parts = remaining)
 }
 
 /**
  * The whole sentence reads as its largest amount, never as the sum, so the joined amount is marked
  * edited: another cuenta's currency then reformats it instead of re-deriving it from the sentence.
  */
-internal fun AddMovimientoUiState.joined(): AddMovimientoUiState {
+internal fun AddMovimientoUiState.joined(): AddMovimientoUiState = leavingReview(joinedSummary())
+
+private fun AddMovimientoUiState.joinedSummary(): AddMovimientoUiState {
   val categoria = parts.map(EntryPart::categoriaId).distinct().singleOrNull()
   // The Detected card keeps every part the sentence was split into; fewer here means a removal.
   val titulo =
@@ -83,6 +85,18 @@ internal fun AddMovimientoUiState.joined(): AddMovimientoUiState {
       categoriasEdited = categoria != null && parts.any(EntryPart::categoriasEdited),
   )
 }
+
+private fun AddMovimientoUiState.leavingReview(summary: AddMovimientoUiState) =
+    summary.copy(
+        splitStash =
+            SplitStash(
+                categoriaId = categoriaId,
+                categoriasEdited = categoriasEdited,
+                parts = parts,
+                summaryCategoriaId = summary.categoriaId,
+                summaryCategoriasEdited = summary.categoriasEdited,
+            )
+    )
 
 /** Like [joined], the sentence no longer reads as this part's amount, so it counts as edited. */
 private fun AddMovimientoUiState.summaryOf(part: EntryPart): AddMovimientoUiState {

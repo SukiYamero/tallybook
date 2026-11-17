@@ -81,6 +81,7 @@ internal data class AddMovimientoUiState(
     val parts: List<EntryPart> = emptyList(),
     /** The part whose values the single-draft fields hold while its form is open. */
     val editingPart: Int? = null,
+    val splitStash: SplitStash? = null,
 ) : MovimientoFormState {
   /** The tipo medio options follow: the sentence's while it is being typed, the draft's after. */
   val selectionTipo: TipoMovimiento

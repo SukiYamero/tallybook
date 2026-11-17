@@ -21,6 +21,20 @@ internal data class EntryPart(
     val overrides: PartOverrides = PartOverrides(),
 )
 
+/**
+ * What Join or removing down to one part replaced in the draft, given back when Back returns to the
+ * sentence: the single sentence's category and the parts whose hand picks a new Continue keeps.
+ * [summaryCategoriaId] and [summaryCategoriasEdited] are what the summary started with, so a
+ * category the user then picks there is not undone.
+ */
+internal data class SplitStash(
+    val categoriaId: String?,
+    val categoriasEdited: Boolean,
+    val parts: List<EntryPart>,
+    val summaryCategoriaId: String?,
+    val summaryCategoriasEdited: Boolean,
+)
+
 /** Values a part's form changed away from the shared ones; null keeps following them. */
 internal data class PartOverrides(
     val tipo: TipoMovimiento? = null,
