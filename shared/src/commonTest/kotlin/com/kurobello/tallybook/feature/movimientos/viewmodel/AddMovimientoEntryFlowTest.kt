@@ -89,7 +89,7 @@ class AddMovimientoEntryFlowTest {
   fun anAmbiguousAmountIsFlaggedUntilItIsEdited() = runTest {
     val viewModel = entryViewModel()
 
-    viewModel.onPhraseChanged("Cena con 2 amigos 50000")
+    viewModel.onPhraseChanged("Cena 20000 50000")
     viewModel.onPhraseContinue()
 
     assertTrue(viewModel.uiState.value.summary.amountNeedsReview)
