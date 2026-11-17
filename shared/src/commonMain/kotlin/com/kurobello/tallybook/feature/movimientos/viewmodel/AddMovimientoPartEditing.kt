@@ -39,7 +39,13 @@ internal data class SharedDraft(
     val suggestionQuery: SuggestionQuery?,
     val dismissedSuggestionIds: Set<String>,
     val submitAttempted: Boolean,
-)
+) {
+  /** New catalog data reaches a stashed default cuenta as it reaches the draft's. */
+  fun withDefaults(defaults: CuentaDefaults?): SharedDraft =
+      if (cuentaChoice.owner == SelectionOwner.DEFAULT)
+          copy(cuentaChoice = baseSelection(defaults, tipo))
+      else this
+}
 
 internal sealed interface PartsSave {
   data class Ready(val movimientos: List<Movimiento>) : PartsSave
@@ -182,7 +188,7 @@ private fun AddMovimientoUiState.editedPart(part: EntryPart, shared: SharedDraft
             PartOverrides(
                 tipo = tipo.takeIf { it != shared.tipo },
                 fecha = fecha.takeIf { it != shared.fecha },
-                cuentaChoice = cuentaChoice.takeIf { it != shared.cuentaChoice },
+                cuentaChoice = cuentaChoice.takeIf { it != shared.cuentaChoice.forTipo(tipo) },
                 etiquetaIds = etiquetaIds.takeIf { it != shared.etiquetaIds },
             ),
     )

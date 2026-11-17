@@ -13,12 +13,13 @@ import com.kurobello.tallybook.core.text.toAmountInput
 private const val JOINED_TITULO_SEPARATOR = ", "
 private const val JOINED_DESCRIPCION_SEPARATOR = "\n"
 
-/** The parts of a new interpretation; a category picked by hand stays with a part of its título. */
+/** The parts of a new interpretation; a category picked by hand stays with a part of its text. */
 internal fun List<EntryPart>.rebuiltFrom(interpreted: List<PartInterpretation>): List<EntryPart> {
-  val picks = filter(EntryPart::categoriasEdited).associate { it.titulo to it.categoriaId }
+  val picks = filter(EntryPart::categoriasEdited).associate { it.segment to it.categoriaId }
   return interpreted.map { part ->
     val picked = part.titulo in picks
     EntryPart(
+        segment = part.titulo,
         titulo = part.titulo,
         amountInput = part.monto?.toAmountInput().orEmpty(),
         amountNeedsReview = part.monto != null && part.amountIsAmbiguous,
@@ -122,7 +123,7 @@ private fun AddMovimientoUiState.summaryOf(part: EntryPart): AddMovimientoUiStat
 }
 
 /**
- * The shared cuenta moved from [from] to [to]: a part the sentence still owns reads its own título
+ * The shared cuenta moved from [from] to [to]: a part the sentence still owns reads its segment
  * again, an edited one is reformatted, and one with its own cuenta keeps its currency.
  */
 internal fun List<EntryPart>.withRederivedAmounts(
@@ -134,7 +135,7 @@ internal fun List<EntryPart>.withRederivedAmounts(
     from == to || part.overrides.cuentaChoice != null -> part
     part.amountEdited -> part.copy(amountInput = part.amountInput.reformatAmountInput(from, to))
     else -> {
-      val parsed = parse(part.titulo)
+      val parsed = parse(part.segment)
       part.copy(
           amountInput = parsed.monto?.toAmountInput().orEmpty(),
           amountNeedsReview =

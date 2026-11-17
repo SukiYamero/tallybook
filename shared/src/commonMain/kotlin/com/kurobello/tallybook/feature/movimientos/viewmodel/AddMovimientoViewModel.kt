@@ -417,12 +417,12 @@ internal class AddMovimientoViewModel(
 
   private fun AddMovimientoUiState.withRederivedAmount(previous: Moneda): AddMovimientoUiState {
     val reparse = { text: String -> entryEngine.parse(text, phraseContext(today), moneda, cuentas) }
-    // A part's form changes that part's cuenta alone, so only its own título is read again.
+    // A part's form changes that part's cuenta alone, so only its own segment is read again.
     val editing = editingPart?.let(parts::getOrNull)
     val rederived =
         if (editing != null) this
         else copy(parts = parts.withRederivedAmounts(previous, moneda, reparse))
-    val text = editing?.titulo ?: phrase.trim()
+    val text = editing?.segment ?: phrase.trim()
     val ownsAmount = step != AddMovimientoStep.PHRASE && !amountEdited
     if (moneda == previous || !ownsAmount || text.isEmpty())
         return rederived.copy(amountInput = amountInput.reformatAmountInput(previous, moneda))
@@ -442,6 +442,7 @@ internal class AddMovimientoViewModel(
             primaryMoneda = snapshot.moneda ?: primaryMoneda,
             cuentas = catalog?.cuentas ?: cuentas,
             cuentaDefaults = catalog?.defaults ?: cuentaDefaults,
+            reviewShared = reviewShared?.withDefaults(catalog?.defaults ?: cuentaDefaults),
         )
     return if (cuentaChoice.owner == SelectionOwner.DEFAULT)
         updated.copy(cuentaChoice = baseSelection(updated.cuentaDefaults, updated.selectionTipo))

@@ -661,6 +661,85 @@ class AddMovimientoPartsTest {
     assertEquals(AddMovimientoStep.REVIEW, viewModel.uiState.value.step)
   }
 
+  @Test
+  fun aPartTituloEditNeverChangesWhereItsAmountIsReadFrom() = runTest {
+    val viewModel = partsViewModel(cuentas = partsCuentas() + clpCard)
+    type(viewModel, CONTEXT_SENTENCE)
+    viewModel.onPhraseContinue()
+    viewModel.onPartEdit(1)
+    viewModel.onTituloChanged("3 gaseosas")
+    viewModel.onPartDone()
+
+    viewModel.onCuentaSelected(clpCard.id)
+
+    val shared = viewModel.uiState.value
+    assertEquals("3 gaseosas", shared.parts[1].titulo)
+    assertEquals(
+        listOf(Money(20_000, Moneda.CLP), Money(30_000, Moneda.CLP)),
+        shared.partMontos(),
+    )
+
+    viewModel.onPartEdit(1)
+    viewModel.onCuentaSelected(NU.id)
+
+    assertEquals(cop(3_000_000).toAmountInput(), viewModel.uiState.value.amountInput)
+  }
+
+  @Test
+  fun changingOnlyAPartTipoKeepsFollowingTheSharedCuenta() = runTest {
+    val viewModel = partsViewModel()
+    type(viewModel, THREE_PARTS)
+    viewModel.onPhraseContinue()
+    viewModel.onMedioSelected(MedioPago.DEBITO)
+    viewModel.onCuentaSelected(NEQUI.id)
+    assertEquals(
+        MedioPago.DEBITO,
+        viewModel.uiState.value.review.cuenta.effectiveMedio(TipoMovimiento.GASTO),
+    )
+
+    viewModel.onPartEdit(1)
+    viewModel.onTipoChanged(TipoMovimiento.INGRESO)
+    viewModel.onPartDone()
+
+    val diverged = viewModel.uiState.value
+    assertEquals(PartOverrides(tipo = TipoMovimiento.INGRESO), diverged.parts[1].overrides)
+    assertEquals(MedioPago.TRANSFERENCIA, diverged.review.parts[1].medio)
+    assertNull(diverged.review.parts[1].cuenta)
+
+    viewModel.onCuentaSelected(COP_CASH.id)
+    viewModel.onPartEdit(1)
+
+    assertEquals(COP_CASH, viewModel.uiState.value.cuentaField.selected)
+  }
+
+  @Test
+  fun aCatalogUpdateWhileAPartFormIsOpenReachesTheSharedCuenta() = runTest {
+    val movimientos = partsMovimientos()
+    val cuentaRepository = FakeCuentaRepository(partsCuentas())
+    val viewModel = partsViewModel(movimientos = movimientos, cuentaRepository = cuentaRepository)
+    type(viewModel, THREE_PARTS)
+    viewModel.onPhraseContinue()
+    assertEquals(COP_CASH, viewModel.uiState.value.review.cuenta.selected)
+
+    viewModel.onPartEdit(0)
+    movimientos.selection = DataOutcome.Success(NEQUI.selection(MedioPago.TRANSFERENCIA))
+    cuentaRepository.cuentas.value = partsCuentas() + clpCard
+    runCurrent()
+    back(viewModel)
+
+    assertEquals(NEQUI, viewModel.uiState.value.review.cuenta.selected)
+
+    viewModel.onPartEdit(0)
+    movimientos.selection = DataOutcome.Success(COP_CASH.selection(MedioPago.EFECTIVO))
+    cuentaRepository.cuentas.value = partsCuentas()
+    runCurrent()
+    viewModel.onPartDone()
+
+    val done = viewModel.uiState.value
+    assertEquals(PartOverrides(), done.parts[0].overrides)
+    assertEquals(COP_CASH, done.review.cuenta.selected)
+  }
+
   private fun TestScope.back(viewModel: AddMovimientoViewModel) {
     viewModel.onStepBack()
     runCurrent()
@@ -684,12 +763,13 @@ class AddMovimientoPartsTest {
       movimientos: AddFakeMovimientos = partsMovimientos(),
       recurrencias: FakeRecurrenciaRepository = FakeRecurrenciaRepository(),
       idGenerator: IdGenerator = IdGenerator { "movement-id" },
+      cuentaRepository: FakeCuentaRepository = FakeCuentaRepository(cuentas),
   ): AddMovimientoViewModel =
       createAddViewModel(
               movimientoRepository = movimientos,
               categoriaRepository = AddFakeCategorias(DataOutcome.Success(addSeedCategorias())),
               preferencesRepository = addPreferences(Moneda.COP),
-              cuentaRepository = FakeCuentaRepository(cuentas),
+              cuentaRepository = cuentaRepository,
               recurrenciaRepository = recurrencias,
               idGenerator = idGenerator,
               scope = backgroundScope,

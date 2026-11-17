@@ -6,9 +6,11 @@ import kotlinx.datetime.LocalDate
 
 /**
  * One movimiento of a split sentence. Like the single draft, [amountEdited] and [categoriasEdited]
- * tell a value the user changed apart from one the sentence still owns.
+ * tell a value the user changed apart from one the sentence still owns. [segment] is the part's
+ * text in the sentence: its amount is always read from there, so editing [titulo] never moves it.
  */
 internal data class EntryPart(
+    val segment: String,
     val titulo: String,
     val amountInput: String,
     val amountEdited: Boolean = false,

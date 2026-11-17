@@ -232,8 +232,15 @@ internal data class AddMovimientoUiState(
 
   private fun reviewPart(index: Int, part: EntryPart): ReviewPartUi {
     val partTipo = part.overrides.tipo ?: tipo
+    // A part with only another tipo follows the shared cuenta, through a medio that tipo allows.
     val partCuenta =
-        part.overrides.cuentaChoice?.let { movimientoCuentaUi(it, cuentas, partTipo, false, false) }
+        movimientoCuentaUi(
+            (part.overrides.cuentaChoice ?: cuentaChoice).forTipo(partTipo),
+            cuentas,
+            partTipo,
+            false,
+            false,
+        )
     val partCategoriaId = effectiveCategoriaIdOf(part.categoriaId)
     return ReviewPartUi(
         index = index,
@@ -245,9 +252,9 @@ internal data class AddMovimientoUiState(
         categoriaIsPending = partCategoriaId == CATEGORIA_OTROS_ID,
         suggestions = part.suggestions,
         fecha = part.overrides.fecha?.takeIf { it != fecha },
-        cuenta = partCuenta?.selected?.takeIf { it != cuentaField.selected },
+        cuenta = partCuenta.selected?.takeIf { it != cuentaField.selected },
         medio =
-            partCuenta?.effectiveMedio(partTipo)?.takeIf { it != cuentaField.effectiveMedio(tipo) },
+            partCuenta.effectiveMedio(partTipo)?.takeIf { it != cuentaField.effectiveMedio(tipo) },
     )
   }
 
