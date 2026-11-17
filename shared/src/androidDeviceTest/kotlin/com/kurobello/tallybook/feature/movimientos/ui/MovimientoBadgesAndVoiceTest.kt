@@ -52,6 +52,7 @@ import tallybook.shared.generated.resources.movimiento_voice_listening
 import tallybook.shared.generated.resources.movimiento_voice_open_settings
 import tallybook.shared.generated.resources.movimiento_voice_permission_blocked
 import tallybook.shared.generated.resources.movimiento_voice_preparing
+import tallybook.shared.generated.resources.movimiento_voice_slide_to_cancel
 import tallybook.shared.generated.resources.movimiento_voice_start
 import tallybook.shared.generated.resources.movimiento_voice_stop
 import tallybook.shared.generated.resources.movimiento_voice_unavailable
@@ -136,18 +137,22 @@ class MovimientoBadgesAndVoiceTest {
       }
     }
 
+    val slideGuide = string(Res.string.movimiento_voice_slide_to_cancel)
     composeRule.onNodeWithText(string(Res.string.movimiento_voice_hint)).assertExists()
+    composeRule.onNodeWithText(slideGuide).assertDoesNotExist()
     composeRule.onNodeWithTag(VOICE_DICTATION_BUTTON_TAG).performTouchInput { down(center) }
     composeRule.runOnIdle {
       assertEquals(1, starts)
       assertEquals(0, stops)
     }
     composeRule.onNodeWithText(string(Res.string.movimiento_voice_preparing)).assertExists()
+    composeRule.onNodeWithText(slideGuide).assertExists()
     composeRule.runOnIdle { voice = voice.copy(isMicReady = true) }
     composeRule.onNodeWithText(string(Res.string.movimiento_voice_listening)).assertExists()
 
     composeRule.onNodeWithTag(VOICE_DICTATION_BUTTON_TAG).performTouchInput { up() }
     composeRule.runOnIdle { assertEquals(1, stops) }
+    composeRule.onNodeWithText(slideGuide).assertDoesNotExist()
   }
 
   @Test
