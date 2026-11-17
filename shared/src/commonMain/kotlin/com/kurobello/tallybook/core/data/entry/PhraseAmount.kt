@@ -19,11 +19,21 @@ internal data class PhraseAmountCandidate(val money: Money, val start: Int, val 
  */
 internal fun scanPhraseAmounts(cursor: PhraseCursor, moneda: Moneda): List<PhraseAmountCandidate> {
   val candidates = PhraseAmountScanner(cursor, moneda).scan()
-  val (quantities, amounts) = candidates.partition { isQuantityShaped(cursor, it) }
-  return if (amounts.isEmpty()) quantities else amounts
+  return statedAmounts(cursor, candidates).ifEmpty { candidates }
 }
 
+/** [scanPhraseAmounts] without the lone-quantity fallback: a sentence of quantities yields none. */
+internal fun scanStatedAmounts(cursor: PhraseCursor, moneda: Moneda): List<PhraseAmountCandidate> =
+    statedAmounts(cursor, PhraseAmountScanner(cursor, moneda).scan())
+
+private fun statedAmounts(
+    cursor: PhraseCursor,
+    candidates: List<PhraseAmountCandidate>,
+): List<PhraseAmountCandidate> = candidates.filterNot { isQuantityShaped(cursor, it) }
+
 // A bare 1-2 digit number covers exactly one token: a factor, symbol or currency would widen it.
+// A part connector after it ("propina 20 y almuerzo 18") closes a movimiento rather than naming a
+// thing, and reading it as a quantity would let that part re-parse to a different amount.
 private fun isQuantityShaped(cursor: PhraseCursor, candidate: PhraseAmountCandidate): Boolean {
   val token = cursor.tokenAt(candidate.start)
   val next = cursor.wordAt(candidate.endExclusive)
@@ -34,6 +44,7 @@ private fun isQuantityShaped(cursor: PhraseCursor, candidate: PhraseAmountCandid
       token.text.all(Char::isDigit) &&
       next != null &&
       next !in suggestionStopWords &&
+      next !in partConnectors &&
       next !in digitMultipliers &&
       next !in adjacentMultipliers &&
       next !in currencyWords

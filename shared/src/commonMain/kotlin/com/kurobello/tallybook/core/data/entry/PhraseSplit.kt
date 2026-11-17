@@ -7,13 +7,13 @@ internal const val MAX_PHRASE_PARTS = 10
 private val partEdgeCharacters: Set<Char> = setOf(',', ';', '.', '+')
 
 /**
- * Cuts [text] at the connector before each amount after the first, and drops a trailing shared tail
- * (a connector followed by medio, account, date or cadence words). Null unless that yields 2 to
- * [MAX_PHRASE_PARTS] parts.
+ * Cuts [text] at a connector run before each amount after the first, and drops the shared tail
+ * after the last amount. Null unless the sentence has 2 to [MAX_PHRASE_PARTS] amounts that are not
+ * quantities, with a connector between each pair.
  */
 internal fun splitPhraseParts(text: String, reading: PhraseReading, moneda: Moneda): List<String>? {
-  val amounts = scanPhraseAmounts(reading.cursor, moneda)
-  val cuts = amounts.zipWithNext { a, b -> reading.cursor.cutBetween(a.endExclusive, b.start) }
+  val amounts = scanStatedAmounts(reading.cursor, moneda)
+  val cuts = amounts.zipWithNext { a, b -> reading.cutBetween(a.endExclusive, b.start) }
   return if (amounts.size in 2..MAX_PHRASE_PARTS && null !in cuts) {
     partTexts(text, reading, cuts.filterNotNull(), amounts.last().endExclusive)
   } else {
@@ -21,46 +21,60 @@ internal fun splitPhraseParts(text: String, reading: PhraseReading, moneda: Mone
   }
 }
 
-/** [cuts] are connector token indices; the text between consecutive cuts is one part. */
+/** [cuts] are connector runs; the text between consecutive runs is one part. */
 private fun partTexts(
     text: String,
     reading: PhraseReading,
-    cuts: List<Int>,
+    cuts: List<IntRange>,
     lastAmountEnd: Int,
 ): List<String> {
   val tokens = reading.cursor.tokens
   val tailStart = sharedTailStart(reading, lastAmountEnd)
-  val starts = listOf(0) + cuts.map { tokens[it].end }
-  val ends = cuts.map { tokens[it].start } + (tailStart?.let { tokens[it].start } ?: text.length)
+  val starts = listOf(0) + cuts.map { tokens[it.last].end }
+  val ends =
+      cuts.map { tokens[it.first].start } + (tailStart?.let { tokens[it].start } ?: text.length)
   return starts.zip(ends) { start, end -> cleanPartText(text.substring(start, end)) }
 }
 
 /**
- * The connector right before the next amount when only consumed or stop words follow it ("cine y
- * palomitas y 40 mil"), otherwise the first one ("20 mil y comida y bebida 40 mil").
+ * The run right before the next amount when only stop words or tipo verbs follow it ("cine y
+ * palomitas y 40 mil", "y pagué 40 mil"), otherwise the first run ("20 mil y comida y bebida 40
+ * mil").
  */
-private fun PhraseCursor.cutBetween(from: Int, to: Int): Int? {
-  val connectors = (from until to).filter(::isPartConnector)
-  return connectors.lastOrNull { connector ->
-    (connector + 1 until to).all { !isFree(it) || wordAt(it) in suggestionStopWords }
-  } ?: connectors.firstOrNull()
+private fun PhraseReading.cutBetween(from: Int, to: Int): IntRange? {
+  val runs = cursor.connectorRuns(from, to)
+  return runs.lastOrNull { run -> (run.last + 1 until to).all(::isCutFiller) } ?: runs.firstOrNull()
+}
+
+private fun PhraseReading.isCutFiller(index: Int): Boolean {
+  val token = cursor.tokens[index]
+  return tipo.verbTokens[index] ||
+      (token.kind == PhraseTokenKind.WORD && token.norm in suggestionStopWords)
 }
 
 /**
- * The first connector whose own chunk, up to the next connector, holds a shared value: "y bebida"
- * stays in the last part even when "y lo pagué con débito" follows it.
+ * After the last amount, each connector run opens a chunk that ends at the next run. The tail
+ * starts at the first run whose own chunk holds a shared value, so "y bebida" stays in the last
+ * part even when "y lo pagué con débito" follows it.
  */
 private fun sharedTailStart(reading: PhraseReading, from: Int): Int? {
   val size = reading.cursor.tokens.size
-  val connectors = (from until size).filter(reading.cursor::isPartConnector)
-  val chunkEnds = connectors.drop(1) + size
-  return connectors
+  val runs = reading.cursor.connectorRuns(from, size)
+  val chunkEnds = runs.drop(1).map { it.first } + size
+  return runs
       .zip(chunkEnds)
-      .firstOrNull { (connector, end) ->
-        (connector + 1 until end).any { reading.sharedConsumed[it] }
-      }
-      ?.first
+      .firstOrNull { (run, end) -> (run.last + 1 until end).any { reading.sharedConsumed[it] } }
+      ?.let { (run, _) -> run.first }
 }
+
+/** Adjacent connectors ("y también", ", y") act as one, so none is left at a part's edge. */
+private fun PhraseCursor.connectorRuns(from: Int, to: Int): List<IntRange> =
+    (from until to).filter(::isPartConnector).fold(mutableListOf()) { runs, index ->
+      val last = runs.lastOrNull()
+      if (last != null && last.last == index - 1) runs[runs.lastIndex] = last.first..index
+      else runs += index..index
+      runs
+    }
 
 private fun PhraseCursor.isPartConnector(index: Int): Boolean {
   val token = tokenAt(index) ?: return false

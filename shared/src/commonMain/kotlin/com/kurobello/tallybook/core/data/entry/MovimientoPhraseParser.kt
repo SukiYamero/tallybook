@@ -9,14 +9,17 @@ import kotlinx.datetime.LocalDate
 
 internal val whitespaceRuns = Regex("\\s+")
 
+/** The tipo the first verb decides, and every token of every tipo verb. */
+internal class PhraseTipo(val value: TipoMovimiento?, val verbTokens: BooleanArray)
+
 /**
  * Everything read from a sentence before its amount. [sharedConsumed] marks the tokens of medio,
  * reserved spans, recurrence and date: the attributes every part of a split sentence shares.
  */
 internal class PhraseReading(
     val cursor: PhraseCursor,
+    val tipo: PhraseTipo,
     val sharedConsumed: BooleanArray,
-    val tipo: TipoMovimiento?,
     val medio: PhraseMedio,
     val recurrence: PhraseRecurrence?,
     val date: PhraseDate?,
@@ -49,7 +52,7 @@ class MovimientoPhraseParser {
         findPhraseAmount(cursor, moneda)?.also { cursor.consume(it.start, it.endExclusive) }
     val isFuture = date != null && date.date > today
     return ParsedMovimientoPhrase(
-        tipo = reading.tipo,
+        tipo = reading.tipo.value,
         monto = amount?.money,
         fecha = if (date != null) date.date.takeUnless { isFuture } else recurrence?.anchor,
         subject = remainingText(text, cursor),
@@ -89,7 +92,6 @@ class MovimientoPhraseParser {
     val consumed = BooleanArray(tokens.size)
     val cursor = PhraseCursor(tokens, consumed)
     val tipo = consumeTipoVerbs(cursor)
-    val consumedByTipo = consumed.copyOf()
     // Before the reserved spans: the seeded cash account is named "Efectivo", and reserving it
     // first would leave the "en" of "en efectivo" behind in the subject.
     val medio = consumePhraseMedio(cursor)
@@ -99,23 +101,25 @@ class MovimientoPhraseParser {
     val recurrence = consumePhraseRecurrence(cursor, today)
     val date =
         findPhraseDate(cursor, today, locale)?.also { cursor.consume(it.start, it.endExclusive) }
-    val sharedConsumed = BooleanArray(tokens.size) { consumed[it] && !consumedByTipo[it] }
-    return PhraseReading(cursor, sharedConsumed, tipo, medio, recurrence, date)
+    val sharedConsumed = BooleanArray(tokens.size) { consumed[it] && !tipo.verbTokens[it] }
+    return PhraseReading(cursor, tipo, sharedConsumed, medio, recurrence, date)
   }
 
   /** The first verb decides the tipo; every verb leaves the subject. */
-  private fun consumeTipoVerbs(cursor: PhraseCursor): TipoMovimiento? {
+  private fun consumeTipoVerbs(cursor: PhraseCursor): PhraseTipo {
     var tipo: TipoMovimiento? = null
+    val verbTokens = BooleanArray(cursor.tokens.size)
     var index = 0
     while (index < cursor.tokens.size) {
       val hit = tipoVerbs.matchAt(cursor, index)
       if (hit != null) {
         tipo = tipo ?: hit.value
         cursor.consume(index, index + hit.length)
+        verbTokens.fill(true, index, index + hit.length)
       }
       index += hit?.length ?: 1
     }
-    return tipo
+    return PhraseTipo(tipo, verbTokens)
   }
 
   private fun consumeReserved(cursor: PhraseCursor, spans: List<IntRange>) {
