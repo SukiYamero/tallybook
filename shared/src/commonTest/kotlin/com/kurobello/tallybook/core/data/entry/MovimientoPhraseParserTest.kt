@@ -47,6 +47,21 @@ class MovimientoPhraseParserTest {
   }
 
   @Test
+  fun quantitiesBeforeAThingAreNotAmounts() {
+    assertEquals(2_000_000L, minor("compré 2 hamburguesas por 20 mil"))
+    assertEquals(emptySet(), parse("compré 2 hamburguesas por 20 mil").reviewFlags)
+    assertEquals("2 hamburguesas por", parse("compré 2 hamburguesas por 20 mil").subject)
+    assertEquals(5_000_000L, minor("2 hamburguesas y 3 gaseosas por 50 mil"))
+    assertEquals(800_000L, minor("2 cafés 8000"))
+    assertEquals(500L, minor("5 cafés"), "a lone quantity-shaped number stays the amount")
+    assertEquals(2_000L, minor("spent 20 on lunch", Moneda.USD))
+    assertEquals(
+        setOf(PhraseReviewFlag.AMBIGUOUS_AMOUNT),
+        parse("cine 20 mil y 30 mil").reviewFlags,
+    )
+  }
+
+  @Test
   fun keepsSpaceSeparatedNumbersApartWhenTheyAreNotThousandGroups() {
     assertEquals(1_200L, minor("cine 2 12"), "a second group needs exactly three digits")
     assertEquals(300_000L, minor("3000 2 cafés"))
@@ -355,7 +370,7 @@ class MovimientoPhraseParserTest {
     val result = parse("Cena con 2 amigos 50000")
 
     assertEquals(5_000_000, result.monto?.minorUnits)
-    assertEquals(setOf(PhraseReviewFlag.AMBIGUOUS_AMOUNT), result.reviewFlags)
+    assertEquals(emptySet(), result.reviewFlags, "2 amigos is a quantity, not a competing amount")
     assertEquals("Cena con 2 amigos", result.subject)
     assertEquals(
         setOf(PhraseReviewFlag.AMBIGUOUS_AMOUNT),
