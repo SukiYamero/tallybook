@@ -68,7 +68,7 @@ class MovimientoEntryEnginePartsTest {
     )
     assertEquals(listOf(false, false), sentence.parts.map { it.amountIsAmbiguous })
     assertEquals(
-        listOf<String?>("cat_restaurante", null),
+        listOf("cat_restaurante", "cat_supermercado"),
         sentence.parts.map { it.preselectedCategoriaId },
     )
   }

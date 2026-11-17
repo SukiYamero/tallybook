@@ -23,7 +23,8 @@ internal val foodKeywords: List<CategoryKeywordEntry> =
                 jumbo, olimpica, justo y bueno, surtimax, carrefour, coto, vea,
                 changomas, lider, unimarc, santa isabel, tottus, plaza vea, wong, vivanda,
                 la sirena, supermercados bravo, pali, ara tiendas, merqueo, jokr,
-                oxxo, seven eleven, minimarket, mini market, tienda de barrio
+                oxxo, seven eleven, minimarket, mini market, tienda de barrio, gaseosa,
+                refresco, soda, refrigerante
                 """,
             weak =
                 """
