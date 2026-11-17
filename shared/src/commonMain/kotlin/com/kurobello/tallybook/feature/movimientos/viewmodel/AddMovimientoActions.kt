@@ -40,6 +40,12 @@ internal interface MovimientoPartActions {
 
   /** Turns the parts into one movimiento: their amounts added, the shared values kept. */
   fun onJoinParts()
+
+  /** Opens the part's form; Back from it discards its edits. */
+  fun onPartEdit(index: Int)
+
+  /** Validates the open part like Save and returns to the review; nothing is saved yet. */
+  fun onPartDone()
 }
 
 @Stable

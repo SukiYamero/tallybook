@@ -708,6 +708,10 @@ class AddMovimientoSheetTest {
 
     override fun onJoinParts() = Unit
 
+    override fun onPartEdit(index: Int) = Unit
+
+    override fun onPartDone() = Unit
+
     override fun onVoiceStart() = Unit
 
     override fun onVoiceStop() = Unit

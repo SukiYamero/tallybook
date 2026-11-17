@@ -68,6 +68,7 @@ internal fun createAddViewModel(
     timeZone: TimeZone = TimeZone.UTC,
     computationDispatcher: CoroutineDispatcher = UnconfinedTestDispatcher(),
     voice: VoiceDictation = FakeVoiceDictation(available = false),
+    idGenerator: IdGenerator = IdGenerator { "movement-id" },
     scope: CoroutineScope,
 ): AddMovimientoViewModel =
     AddMovimientoViewModel(
@@ -81,7 +82,7 @@ internal fun createAddViewModel(
                 recurrencias = recurrenciaRepository,
                 voice = voice,
             ),
-        idGenerator = IdGenerator { "movement-id" },
+        idGenerator = idGenerator,
         clock = clock,
         timeZoneProvider = TimeZoneProvider { timeZone },
         entryEngine =

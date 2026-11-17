@@ -1,12 +1,17 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.data.FakeCuentaRepository
+import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
+import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.model.Cuenta
+import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.Frecuencia
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoCuenta
+import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.text.AmountInputResult
 import com.kurobello.tallybook.core.text.parseAmountInput
 import com.kurobello.tallybook.core.text.reformatAmountInput
@@ -14,12 +19,17 @@ import com.kurobello.tallybook.core.text.toAmountInput
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.datetime.LocalDate
 
 private const val CONTEXT_SENTENCE =
     "Compré 2 hamburguesas por 20mil y 3 gaseosas fueron 30mil, más lo cargué con la tarjeta de " +
@@ -372,19 +382,283 @@ class AddMovimientoPartsTest {
   }
 
   @Test
-  fun submitAndEditDoNothingInTheReview() = runTest {
-    val movimientos = partsMovimientos()
-    val viewModel = partsViewModel(movimientos = movimientos)
+  fun editDoesNothingInTheReview() = runTest {
+    val viewModel = partsViewModel()
     type(viewModel, CONTEXT_SENTENCE)
     viewModel.onPhraseContinue()
     val review = viewModel.uiState.value
 
     viewModel.onEditMovimiento()
+
+    assertEquals(review, viewModel.uiState.value)
+  }
+
+  @Test
+  fun editingAPartAndDoneReturnsToTheReviewWithItsChanges() = runTest {
+    val viewModel = partsViewModel()
+    type(viewModel, CONTEXT_SENTENCE)
+    viewModel.onPhraseContinue()
+    val review = viewModel.uiState.value
+
+    viewModel.onPartEdit(1)
+
+    val form = viewModel.uiState.value
+    assertEquals(AddMovimientoStep.FORM, form.step)
+    assertEquals(1, form.editingPart)
+    assertEquals(AddMovimientoStep.REVIEW, form.stepBackTarget)
+    assertEquals(review.parts[1].amountInput, form.amountInput)
+    assertEquals("3 gaseosas fueron 30mil", form.titulo)
+    assertEquals("cat_supermercado", form.categoriaId)
+    assertEquals(review.frecuencia, form.frecuencia)
+
+    viewModel.onAmountChanged(cop(3_500_000).toAmountInput())
+    viewModel.onTituloChanged("3 gaseosas")
+    viewModel.onDescripcionChanged("para la fiesta")
+    viewModel.onCategoriaSelected("cat_restaurante")
+    viewModel.onPartDone()
+
+    val done = viewModel.uiState.value
+    assertEquals(AddMovimientoStep.REVIEW, done.step)
+    assertNull(done.editingPart)
+    assertEquals(review.parts[0], done.parts[0])
+    val part = done.parts[1]
+    assertEquals(cop(3_500_000).toAmountInput(), part.amountInput)
+    assertTrue(part.amountEdited)
+    assertEquals("3 gaseosas", part.titulo)
+    assertEquals("para la fiesta", part.descripcion)
+    assertEquals("cat_restaurante", part.categoriaId)
+    assertTrue(part.categoriasEdited)
+    assertEquals(PartOverrides(), part.overrides)
+    assertEquals(review.amountInput, done.amountInput)
+    assertEquals(review.titulo, done.titulo)
+    assertEquals(review.descripcion, done.descripcion)
+    assertEquals(review.categoriaId, done.categoriaId)
+    assertEquals(review.suggestionQuery, done.suggestionQuery)
+    assertEquals(review.suggestions, done.suggestions)
+    assertEquals(cop(-5_500_000), done.review.total)
+  }
+
+  @Test
+  fun backFromAPartFormDiscardsItsEdits() = runTest {
+    val viewModel = partsViewModel()
+    type(viewModel, CONTEXT_SENTENCE)
+    viewModel.onPhraseContinue()
+    val review = viewModel.uiState.value
+
+    viewModel.onPartEdit(0)
+    viewModel.onAmountChanged(cop(9_000_000).toAmountInput())
+    viewModel.onFechaChanged(YESTERDAY)
+    viewModel.onCategoriaCleared()
+    viewModel.onEtiquetasChanged(emptyList())
+    back(viewModel)
+
+    assertEquals(review, viewModel.uiState.value)
+  }
+
+  @Test
+  fun aPartWithAnotherFechaShowsItAndIgnoresLaterSharedChanges() = runTest {
+    val viewModel = partsViewModel()
+    type(viewModel, CONTEXT_SENTENCE)
+    viewModel.onPhraseContinue()
+
+    viewModel.onPartEdit(0)
+    viewModel.onFechaChanged(YESTERDAY)
+    viewModel.onPartDone()
+
+    val diverged = viewModel.uiState.value
+    assertEquals(TODAY, diverged.fecha)
+    assertEquals(PartOverrides(fecha = YESTERDAY), diverged.parts[0].overrides)
+    assertEquals(listOf(YESTERDAY, null), diverged.review.parts.map { it.fecha })
+
+    viewModel.onFechaChanged(TWO_DAYS_AGO)
+
+    val shared = viewModel.uiState.value
+    assertEquals(TWO_DAYS_AGO, shared.review.fecha)
+    assertEquals(listOf(YESTERDAY, null), shared.review.parts.map { it.fecha })
+
+    viewModel.onPartEdit(0)
+    assertEquals(YESTERDAY, viewModel.uiState.value.fecha)
+    back(viewModel)
+    viewModel.onPartEdit(1)
+    assertEquals(TWO_DAYS_AGO, viewModel.uiState.value.fecha)
+  }
+
+  @Test
+  fun aPartInAnotherCurrencyRederivesOnlyItsOwnAmount() = runTest {
+    val viewModel = partsViewModel(cuentas = partsCuentas() + clpCard)
+    type(viewModel, CONTEXT_SENTENCE)
+    viewModel.onPhraseContinue()
+    val review = viewModel.uiState.value
+
+    viewModel.onPartEdit(0)
+    viewModel.onCuentaSelected(clpCard.id)
+
+    val form = viewModel.uiState.value
+    assertEquals(Money(20_000, Moneda.CLP).toAmountInput(), form.amountInput)
+    assertEquals(review.parts.map { it.amountInput }, form.parts.map { it.amountInput })
+
+    viewModel.onPartDone()
+
+    val done = viewModel.uiState.value
+    assertEquals(review.parts[1], done.parts[1])
+    assertEquals(clpCard.id, done.parts[0].overrides.cuentaChoice?.cuentaId)
+    assertEquals(Money(-20_000, Moneda.CLP), done.review.parts[0].monto)
+    assertEquals(clpCard, done.review.parts[0].cuenta)
+    assertEquals(cop(-3_000_000), done.review.total)
+    assertEquals(1, done.review.excludedFromTotal)
+    assertEquals(NU, done.review.cuenta.selected)
+  }
+
+  @Test
+  fun submitInAPartFormReturnsToTheReviewWithoutSaving() = runTest {
+    val movimientos = partsMovimientos()
+    val viewModel = partsViewModel(movimientos = movimientos)
+    type(viewModel, CONTEXT_SENTENCE)
+    viewModel.onPhraseContinue()
+
+    viewModel.onPartEdit(0)
+    viewModel.onTituloChanged("hamburguesas")
     viewModel.onSubmit()
     runCurrent()
 
-    assertEquals(review, viewModel.uiState.value)
+    val state = viewModel.uiState.value
+    assertEquals(AddMovimientoStep.REVIEW, state.step)
+    assertEquals("hamburguesas", state.parts[0].titulo)
     assertTrue(movimientos.inserted.isEmpty())
+  }
+
+  @Test
+  fun saveAllInsertsEveryPartWithSharedValues() = runTest {
+    val movimientos = partsMovimientos()
+    val recurrencias = FakeRecurrenciaRepository()
+    var nextId = 0
+    val viewModel =
+        partsViewModel(
+            movimientos = movimientos,
+            recurrencias = recurrencias,
+            idGenerator = IdGenerator { "movement-${nextId++}" },
+        )
+    type(viewModel, CONTEXT_SENTENCE)
+    viewModel.onPhraseContinue()
+
+    viewModel.onSubmit()
+    runCurrent()
+
+    assertEquals(AddMovimientoEffect.Saved, viewModel.effects.first())
+    val saved = movimientos.inserted
+    assertEquals(listOf(cop(2_000_000), cop(3_000_000)), saved.map { it.monto })
+    assertEquals(
+        listOf("Compré 2 hamburguesas por 20mil", "3 gaseosas fueron 30mil"),
+        saved.map { it.titulo },
+    )
+    assertEquals(listOf("cat_restaurante", "cat_supermercado"), saved.map { it.categoriaId })
+    assertEquals(listOf(MedioPago.CREDITO, MedioPago.CREDITO), saved.map { it.medio })
+    assertEquals(listOf(NU.id, NU.id), saved.map { it.cuentaId })
+    assertEquals(listOf(TipoMovimiento.GASTO, TipoMovimiento.GASTO), saved.map { it.tipo })
+    assertEquals(listOf(TODAY, TODAY), saved.map { it.fecha })
+    assertEquals(2, saved.map { it.id }.distinct().size)
+    // History lists the newest first, so the first part is the newest to keep the sentence order.
+    assertEquals(listOf(ADD_TEST_NOW, ADD_TEST_NOW - 1.milliseconds), saved.map { it.createdAt })
+    assertTrue(recurrencias.created.isEmpty())
+  }
+
+  @Test
+  fun saveAllWithRepetirCreatesOneRecurrenciaPerPart() = runTest {
+    val movimientos = partsMovimientos()
+    val recurrencias = FakeRecurrenciaRepository()
+    val viewModel = partsViewModel(movimientos = movimientos, recurrencias = recurrencias)
+    type(viewModel, "netflix 20 mil y spotify 10 mil cada mes")
+    viewModel.onPhraseContinue()
+    assertEquals(AddMovimientoStep.REVIEW, viewModel.uiState.value.step)
+    assertEquals(Frecuencia.MENSUAL, viewModel.uiState.value.review.frecuencia)
+
+    viewModel.onSubmit()
+    runCurrent()
+
+    assertEquals(AddMovimientoEffect.Saved, viewModel.effects.first())
+    assertEquals(
+        listOf(cop(2_000_000) to Frecuencia.MENSUAL, cop(1_000_000) to Frecuencia.MENSUAL),
+        recurrencias.created.map { (movimiento, frecuencia) -> movimiento.monto to frecuencia },
+    )
+    assertTrue(movimientos.inserted.isEmpty())
+  }
+
+  @Test
+  fun anInvalidPartOpensItsFormOnSave() = runTest {
+    val movimientos = partsMovimientos()
+    val viewModel = partsViewModel(cuentas = partsCuentas() + clpCard, movimientos = movimientos)
+    type(viewModel, CONTEXT_SENTENCE)
+    viewModel.onPhraseContinue()
+    // Valid in pesos chilenos, which have no cents, but above the limit once the shared cuenta
+    // is in pesos colombianos again.
+    viewModel.onCuentaSelected(clpCard.id)
+    viewModel.onPartEdit(1)
+    viewModel.onAmountChanged(Money(Money.MAX_MINOR_UNITS / 10, Moneda.CLP).toAmountInput())
+    viewModel.onPartDone()
+    viewModel.onCuentaSelected(NU.id)
+    assertEquals(AddMovimientoStep.REVIEW, viewModel.uiState.value.step)
+    assertNull(viewModel.uiState.value.review.parts[1].monto)
+
+    viewModel.onSubmit()
+    runCurrent()
+
+    val state = viewModel.uiState.value
+    assertEquals(AddMovimientoStep.FORM, state.step)
+    assertEquals(1, state.editingPart)
+    assertTrue(state.submitAttempted)
+    assertNotNull(state.amountError)
+    assertEquals(state.parts[1].suggestions, state.suggestions)
+    assertFalse(state.isSubmitting)
+    assertTrue(movimientos.inserted.isEmpty())
+
+    viewModel.onPartDone()
+
+    assertEquals(AddMovimientoStep.FORM, viewModel.uiState.value.step)
+    assertEquals(1, viewModel.uiState.value.editingPart)
+  }
+
+  @Test
+  fun saveFailureKeepsTheReviewAndPersistsNothing() = runTest {
+    val movimientos = partsMovimientos()
+    movimientos.insertResult = DataOutcome.Failure(DataError.Local(IllegalStateException()))
+    val viewModel = partsViewModel(movimientos = movimientos)
+    type(viewModel, CONTEXT_SENTENCE)
+    viewModel.onPhraseContinue()
+    val review = viewModel.uiState.value
+
+    viewModel.onSubmit()
+    runCurrent()
+
+    val state = viewModel.uiState.value
+    assertEquals(AddMovimientoStep.REVIEW, state.step)
+    assertEquals(MovimientoFormError.SAVE_FAILED, state.error)
+    assertFalse(state.isSubmitting)
+    assertEquals(review.parts, state.parts)
+    assertTrue(movimientos.inserted.isEmpty())
+    assertNull(withTimeoutOrNull(1) { viewModel.effects.first() })
+  }
+
+  @Test
+  fun joinIsDisabledWhenAPartHasAnotherTipo() = runTest {
+    val viewModel = partsViewModel()
+    type(viewModel, CONTEXT_SENTENCE)
+    viewModel.onPhraseContinue()
+    assertTrue(viewModel.uiState.value.review.canJoin)
+
+    viewModel.onPartEdit(1)
+    viewModel.onTipoChanged(TipoMovimiento.INGRESO)
+    viewModel.onPartDone()
+
+    val state = viewModel.uiState.value
+    assertEquals(AddMovimientoStep.REVIEW, state.step)
+    assertEquals(TipoMovimiento.GASTO, state.tipo)
+    assertEquals(TipoMovimiento.INGRESO, state.parts[1].overrides.tipo)
+    assertEquals(TipoMovimiento.INGRESO, state.review.parts[1].tipo)
+    assertFalse(state.review.canJoin)
+
+    viewModel.onJoinParts()
+
+    assertEquals(AddMovimientoStep.REVIEW, viewModel.uiState.value.step)
   }
 
   private fun TestScope.back(viewModel: AddMovimientoViewModel) {
@@ -408,12 +682,16 @@ class AddMovimientoPartsTest {
   private fun TestScope.partsViewModel(
       cuentas: List<Cuenta> = partsCuentas(),
       movimientos: AddFakeMovimientos = partsMovimientos(),
+      recurrencias: FakeRecurrenciaRepository = FakeRecurrenciaRepository(),
+      idGenerator: IdGenerator = IdGenerator { "movement-id" },
   ): AddMovimientoViewModel =
       createAddViewModel(
               movimientoRepository = movimientos,
               categoriaRepository = AddFakeCategorias(DataOutcome.Success(addSeedCategorias())),
               preferencesRepository = addPreferences(Moneda.COP),
               cuentaRepository = FakeCuentaRepository(cuentas),
+              recurrenciaRepository = recurrencias,
+              idGenerator = idGenerator,
               scope = backgroundScope,
           )
           .also { runCurrent() }
@@ -426,5 +704,8 @@ class AddMovimientoPartsTest {
 
   private companion object {
     const val THREE_PARTS = "Gasté 20 mil en cine y 40 mil en comida y 10 mil en taxi"
+    val TODAY = LocalDate(2026, 9, 15)
+    val YESTERDAY = LocalDate(2026, 9, 14)
+    val TWO_DAYS_AGO = LocalDate(2026, 9, 13)
   }
 }

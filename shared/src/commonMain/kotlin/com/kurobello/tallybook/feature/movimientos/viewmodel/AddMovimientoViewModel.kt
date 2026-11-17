@@ -18,21 +18,15 @@ import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.Cuenta
-import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
-import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Frecuencia
 import com.kurobello.tallybook.core.model.MOVIMIENTO_DESCRIPTION_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
-import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.PhraseReviewFlag
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.model.map
-import com.kurobello.tallybook.core.text.AmountInputResult
-import com.kurobello.tallybook.core.text.normalizeOptionalText
-import com.kurobello.tallybook.core.text.parseAmountInput
 import com.kurobello.tallybook.core.text.reformatAmountInput
 import com.kurobello.tallybook.core.text.toAmountInput
 import kotlin.time.Clock
@@ -56,7 +50,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.todayIn
 
 private const val HISTORY_LIMIT = 1_000
@@ -118,6 +111,8 @@ internal class AddMovimientoViewModel(
 
   private val effectChannel = Channel<AddMovimientoEffect>(Channel.BUFFERED)
   val effects: Flow<AddMovimientoEffect> = effectChannel.receiveAsFlow()
+  private val submission =
+      AddMovimientoSubmission(uiState, repositories, idGenerator, coroutineScope, effectChannel)
 
   init {
     coroutineScope.launch {
@@ -335,6 +330,14 @@ internal class AddMovimientoViewModel(
     updateFields { if (step == AddMovimientoStep.REVIEW && review.canJoin) joined() else this }
   }
 
+  override fun onPartEdit(index: Int) {
+    updatePart(index) { withPartForm(index) }
+  }
+
+  override fun onPartDone() {
+    updateFields { withPartDone(captureToday()) }
+  }
+
   private fun updatePart(index: Int, transform: AddMovimientoUiState.() -> AddMovimientoUiState) {
     updateFields {
       val editable = step == AddMovimientoStep.REVIEW && !isSubmitting && index in parts.indices
@@ -344,7 +347,7 @@ internal class AddMovimientoViewModel(
 
   // Picks made in the review since the last preview change what the Detected card shows.
   override fun onStepBack() {
-    uiState.update { it.steppedBack() }
+    uiState.update { it.steppedBack().withSuggestions() }
     refreshPreview(debounce = false)
   }
 
@@ -385,72 +388,19 @@ internal class AddMovimientoViewModel(
     retryLoadRequests.update { it + 1 }
   }
 
+  // A part's form only returns to the review: the parts are saved together or not at all.
   override fun onSubmit() {
-    // The review saves its parts together, never the shared draft on its own.
-    if (uiState.value.isSubmitting || uiState.value.step == AddMovimientoStep.REVIEW) return
-
-    uiState.update {
-      it.copy(
-          submitAttempted = true,
-          error = it.error?.takeUnless { error -> error == MovimientoFormError.SAVE_FAILED },
-      )
-    }
+    val current = uiState.value
     val timeZone = timeZoneProvider.current()
-    val createdAt = clock.now()
-    val movement = uiState.value.toMovimientoOrNull(idGenerator, createdAt, timeZone)
-    if (movement == null) {
-      uiState.update { current ->
-        if (current.step == AddMovimientoStep.SUMMARY) {
-          current.copy(step = AddMovimientoStep.FORM, formOpenedFromSummary = true)
-        } else {
-          current
-        }
-      }
-      return
-    }
-    uiState.update { it.copy(isSubmitting = true) }
-    val frecuencia = uiState.value.frecuencia
-    val today = createdAt.toLocalDateTime(timeZone).date
-    coroutineScope.launch {
-      var saved = false
-      try {
-        val written =
-            if (frecuencia == null) repositories.movimientos.insert(movement)
-            else repositories.recurrencias.create(movement, frecuencia, today).map {}
-        when (val outcome = written) {
-          is DataOutcome.Success -> {
-            effectChannel.send(AddMovimientoEffect.Saved)
-            saved = true
-          }
-          is DataOutcome.Failure -> {
-            // Every refusal is invalid input; re-reading the cuenta tells a refused one apart.
-            val rejected =
-                outcome.error is DataError.InvalidInput &&
-                    (repositories.cuentas.getById(movement.cuentaId) as? DataOutcome.Success)
-                        ?.data
-                        ?.accepts(movement.medio, movement.monto.moneda) != true
-            uiState.update { current ->
-              if (rejected) current.withRejectedCuenta()
-              else current.copy(error = MovimientoFormError.SAVE_FAILED)
-            }
-          }
-        }
-      } finally {
-        if (!saved) {
-          uiState.update { it.copy(isSubmitting = false) }
-        }
-      }
+    when {
+      current.isSubmitting -> Unit
+      current.editingPart != null -> onPartDone()
+      current.step == AddMovimientoStep.REVIEW -> submission.submitParts(clock.now(), timeZone)
+      else -> submission.submitDraft(clock.now(), timeZone)
     }
   }
 
   private fun captureToday(): LocalDate = clock.todayIn(timeZoneProvider.current())
-
-  private fun AddMovimientoUiState.withRejectedCuenta(): AddMovimientoUiState =
-      copy(
-          cuentaRejected = true,
-          step = if (step == AddMovimientoStep.SUMMARY) AddMovimientoStep.FORM else step,
-          formOpenedFromSummary = formOpenedFromSummary || step == AddMovimientoStep.SUMMARY,
-      )
 
   /** The choice as the user sees it, with the only compatible cuenta standing for an empty one. */
   private val AddMovimientoUiState.shownChoice: CuentaSelectionState
@@ -467,8 +417,12 @@ internal class AddMovimientoViewModel(
 
   private fun AddMovimientoUiState.withRederivedAmount(previous: Moneda): AddMovimientoUiState {
     val reparse = { text: String -> entryEngine.parse(text, phraseContext(today), moneda, cuentas) }
-    val rederived = copy(parts = parts.withRederivedAmounts(previous, moneda, reparse))
-    val text = phrase.trim()
+    // A part's form changes that part's cuenta alone, so only its own título is read again.
+    val editing = editingPart?.let(parts::getOrNull)
+    val rederived =
+        if (editing != null) this
+        else copy(parts = parts.withRederivedAmounts(previous, moneda, reparse))
+    val text = editing?.titulo ?: phrase.trim()
     val ownsAmount = step != AddMovimientoStep.PHRASE && !amountEdited
     if (moneda == previous || !ownsAmount || text.isEmpty())
         return rederived.copy(amountInput = amountInput.reformatAmountInput(previous, moneda))
@@ -531,6 +485,7 @@ internal class AddMovimientoViewModel(
           recurrenceUnsupported = false,
           parts = emptyList(),
           editingPart = null,
+          reviewShared = null,
           splitStash = null,
       )
 
@@ -766,34 +721,6 @@ internal data class AddMovimientoRepositories(
     val recurrencias: RecurrenciaRepository,
     val voice: VoiceDictation,
 )
-
-private fun AddMovimientoUiState.toMovimientoOrNull(
-    idGenerator: IdGenerator,
-    createdAt: kotlin.time.Instant,
-    timeZone: kotlinx.datetime.TimeZone,
-): Movimiento? {
-  val amount = (parseAmountInput(amountInput, moneda) as? AmountInputResult.Valid)?.money
-  val categoriaId = effectiveCategoriaId
-  val cuenta = cuentaField.selected
-  val medio = cuentaField.effectiveMedio(tipo)
-  val isValid = fecha <= createdAt.toLocalDateTime(timeZone).date && !isLoading && error == null
-  if (amount == null || categoriaId == null || !isValid) return null
-  return if (cuenta == null || medio == null) null
-  else
-      Movimiento(
-          id = idGenerator.next(),
-          tipo = tipo,
-          monto = amount,
-          fecha = fecha,
-          categoriaId = categoriaId,
-          titulo = titulo.normalizeOptionalText(),
-          descripcion = descripcion.normalizeOptionalText(),
-          createdAt = createdAt,
-          cuentaId = cuenta.id,
-          medio = medio,
-          etiquetaIds = selectedEtiquetas.map(Etiqueta::id),
-      )
-}
 
 private sealed interface LoadState<out T> {
   data object Loading : LoadState<Nothing>

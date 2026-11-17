@@ -81,6 +81,8 @@ internal data class AddMovimientoUiState(
     val parts: List<EntryPart> = emptyList(),
     /** The part whose values the single-draft fields hold while its form is open. */
     val editingPart: Int? = null,
+    /** The review's own values while [editingPart]'s form holds the single-draft fields. */
+    val reviewShared: SharedDraft? = null,
     val splitStash: SplitStash? = null,
 ) : MovimientoFormState {
   /** The tipo medio options follow: the sentence's while it is being typed, the draft's after. */
@@ -148,7 +150,8 @@ internal data class AddMovimientoUiState(
 
   val stepBackTarget: AddMovimientoStep?
     get() =
-        STEP_BACK_TARGETS[step]
+        AddMovimientoStep.REVIEW.takeIf { editingPart != null }
+            ?: STEP_BACK_TARGETS[step]
             ?: AddMovimientoStep.SUMMARY.takeIf {
               step == AddMovimientoStep.FORM && formOpenedFromSummary
             }

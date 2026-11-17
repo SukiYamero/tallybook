@@ -36,14 +36,22 @@ private fun AddMovimientoUiState.sentenceChoice(
 ): CuentaSelectionState =
     cuentaChoice.withSentence(sentence, cuentas, cuentaDefaults, tipo).forTipo(tipo)
 
-/** Back to the sentence after Join or a removal gives it back what [SplitStash] kept. */
+/**
+ * Back from a part's form drops its edits. Back to the sentence after Join or a removal gives it
+ * back what [SplitStash] kept.
+ */
 internal fun AddMovimientoUiState.steppedBack(): AddMovimientoUiState {
   val target = stepBackTarget
-  if (target == null || isSubmitting) return this
-  val moved =
-      copy(step = target, submitAttempted = submitAttempted && step != AddMovimientoStep.FORM)
   val stash = splitStash
-  return if (target != AddMovimientoStep.PHRASE || stash == null) moved else moved.restoring(stash)
+  return when {
+    target == null || isSubmitting -> this
+    editingPart != null -> withoutPartEdits()
+    else -> {
+      val moved =
+          copy(step = target, submitAttempted = submitAttempted && step != AddMovimientoStep.FORM)
+      if (target != AddMovimientoStep.PHRASE || stash == null) moved else moved.restoring(stash)
+    }
+  }
 }
 
 private fun AddMovimientoUiState.restoring(stash: SplitStash): AddMovimientoUiState {
