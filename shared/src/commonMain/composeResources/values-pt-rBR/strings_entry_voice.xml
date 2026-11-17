@@ -1,9 +1,10 @@
 <resources>
     <string name="movimiento_voice_hint">Segure o microfone e fale</string>
-    <string name="movimiento_voice_listening">Ouvindo… solte para terminar</string>
+    <string name="movimiento_voice_listening">← Deslize para cancelar · solte para terminar</string>
     <string name="movimiento_voice_preparing">Um momento… fale quando ficar verde</string>
     <string name="movimiento_voice_start">Começar a ditar</string>
     <string name="movimiento_voice_stop">Parar de ditar</string>
+    <string name="movimiento_voice_discard">Cancelar ditado</string>
     <string name="movimiento_voice_unavailable">Indisponível neste dispositivo</string>
     <string name="movimiento_voice_not_heard">Não deu para ouvir. Segure o microfone enquanto fala.</string>
     <string name="movimiento_voice_permission_denied">Para ditar seus movimentos, permita o acesso ao microfone.</string>

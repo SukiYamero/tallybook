@@ -706,6 +706,8 @@ class AddMovimientoSheetTest {
 
     override fun onVoiceCancel() = Unit
 
+    override fun onVoiceDiscard() = Unit
+
     override fun onVoicePermissionResult(granted: Boolean) = Unit
 
     override fun onVoiceOpenSettings() = Unit

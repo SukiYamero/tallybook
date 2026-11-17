@@ -78,6 +78,12 @@ app derives the draft from it and the user confirms or refines it; the manual fo
     because people let go while saying the last word. The disc turns green, and the caption asks to
     speak, only once the microphone is open; until then it says to wait. Screen readers, which
     cannot hold a press, toggle listening with their activation instead.
+  - Sliding the held microphone 96 dp to the left cancels at once, as in messaging apps: the disc
+    follows the finger and fades, the phone vibrates, listening stops and the sentence returns to
+    what was typed before the press, without a notice; lifting the finger afterwards does nothing.
+    A shorter or sideways drift keeps listening. Screen readers get a "Cancel dictation" action
+    while listening, and the slide caption is hidden from them. Once the finger has lifted, what
+    was said is the user's text: neither the release tail nor an ended dictation can be cancelled.
   - The first press asks for permission (on iOS, speech recognition and then the microphone) and
     does not listen; after granting it, the next press does. A refusal explains why it is needed; a
     second refusal, or a denial iOS already remembers, offers the app settings instead.

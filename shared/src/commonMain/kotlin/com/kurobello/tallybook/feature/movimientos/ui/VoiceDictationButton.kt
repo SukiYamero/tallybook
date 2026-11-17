@@ -2,8 +2,6 @@ package com.kurobello.tallybook.feature.movimientos.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,21 +11,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
@@ -48,6 +44,7 @@ import com.kurobello.tallybook.feature.movimientos.viewmodel.VoiceNotice
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.movimiento_voice_discard
 import tallybook.shared.generated.resources.movimiento_voice_failed
 import tallybook.shared.generated.resources.movimiento_voice_hint
 import tallybook.shared.generated.resources.movimiento_voice_language_downloading
@@ -66,6 +63,9 @@ import tallybook.shared.generated.resources.movimiento_voice_unavailable
 
 internal const val VOICE_DICTATION_BUTTON_TAG = "movimiento_voice_button"
 
+// The fade warns that letting the slide go on will cancel, before it does.
+private const val SLIDE_FADE = 0.5f
+
 private val noticeMessages: Map<VoiceNotice, StringResource> =
     mapOf(
         VoiceNotice.NOT_HEARD to Res.string.movimiento_voice_not_heard,
@@ -79,10 +79,12 @@ private val noticeMessages: Map<VoiceNotice, StringResource> =
 internal data class VoiceDictationCallbacks(
     val onStart: () -> Unit,
     val onStop: () -> Unit,
+    val onDiscard: () -> Unit,
     val onOpenSettings: () -> Unit,
 ) {
   companion object {
-    val Inert = VoiceDictationCallbacks(onStart = {}, onStop = {}, onOpenSettings = {})
+    val Inert =
+        VoiceDictationCallbacks(onStart = {}, onStop = {}, onDiscard = {}, onOpenSettings = {})
   }
 }
 
@@ -111,16 +113,21 @@ internal fun VoiceDictationButton(
       MicrophoneDisc(
           voice = voice,
           enabled = enabled && voice.isAvailable,
-          onPress = callbacks.onStart,
-          onRelease = callbacks.onStop,
+          callbacks = callbacks,
       )
       TallybookText(
           text = stringResource(captionOf(voice)),
           // Announcing "listening" would let the microphone transcribe the screen reader itself.
+          // The
+          // listening caption describes touch gestures; screen readers get the disc's actions.
           modifier =
-              if (voice.notice != null && !voice.isListening)
-                  Modifier.semantics { liveRegion = LiveRegionMode.Polite }
-              else Modifier,
+              when {
+                voice.notice != null && !voice.isListening ->
+                    Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                voice.isListening && voice.isMicReady ->
+                    Modifier.semantics { hideFromAccessibility() }
+                else -> Modifier
+              },
           color = TallybookTheme.colors.foreground.tertiary,
           style = TallybookTheme.typography.caption.copy(textAlign = TextAlign.Center),
       )
@@ -142,20 +149,18 @@ private fun captionOf(voice: VoiceInputUi): StringResource =
     }
 
 /**
- * Press and hold to talk; releasing (or a cancelled touch) finishes and keeps what was heard.
- * Screen readers cannot hold a press, so their activation toggles listening instead.
+ * Press and hold to talk; releasing (or a cancelled touch) finishes and keeps what was heard, while
+ * sliding left past the slide-to-cancel distance discards it, as in messaging apps.
  */
 @Composable
 private fun MicrophoneDisc(
     voice: VoiceInputUi,
     enabled: Boolean,
-    onPress: () -> Unit,
-    onRelease: () -> Unit,
+    callbacks: VoiceDictationCallbacks,
 ) {
-  var isHeld by remember { mutableStateOf(false) }
   val tapFeedback = rememberTallybookTapFeedback()
-  val currentOnPress by rememberUpdatedState(onPress)
-  val currentOnRelease by rememberUpdatedState(onRelease)
+  val hold = rememberMicrophoneHold(voice, callbacks, tapFeedback)
+  val slideToCancel = TallybookTheme.dimensions.voiceSlideToCancel
   val colors = TallybookTheme.colors
   // The disc turns green only once the microphone is open, which is when speaking starts to count.
   val (container, content) =
@@ -169,24 +174,19 @@ private fun MicrophoneDisc(
           if (voice.isListening) Res.string.movimiento_voice_stop
           else Res.string.movimiento_voice_start
       )
+  val discardLabel = stringResource(Res.string.movimiento_voice_discard)
   TallybookSurface(
       modifier =
           Modifier.size(TallybookTheme.dimensions.voiceDictationButton)
               .testTag(VOICE_DICTATION_BUTTON_TAG)
-              .holdToTalk(
-                  enabled = enabled,
-                  label = label,
-                  onHeld = { held ->
-                    isHeld = held
-                    if (held) {
-                      tapFeedback.trigger()
-                      currentOnPress()
-                    } else {
-                      currentOnRelease()
-                    }
-                  },
-                  onToggle = { if (voice.isListening) onRelease() else onPress() },
-              ),
+              .holdToTalk(enabled = enabled, cancelDistance = slideToCancel, gesture = hold)
+              .dictationSemantics(enabled, voice, label, discardLabel, callbacks)
+              // Drawn after the pointer input, so the disc follows the finger while touches are
+              // still measured from where it rests.
+              .graphicsLayer {
+                translationX = hold.slide
+                alpha = 1f - SLIDE_FADE * (hold.slide / -slideToCancel.toPx())
+              },
       style =
           TallybookSurfaceStyle(
               color = container,
@@ -194,7 +194,7 @@ private fun MicrophoneDisc(
               shape = CircleShape,
               border = null,
           ),
-      isPressed = isHeld,
+      isPressed = hold.isHeld,
       hasTapFeedback = tapFeedback.isActive,
   ) {
     Image(
@@ -207,45 +207,34 @@ private fun MicrophoneDisc(
   }
 }
 
-/**
- * [onHeld] runs with true on the first touch and false only when every finger lifts or the gesture
- * is cancelled; a screen reader's activation runs [onToggle] instead. A finger drifting off the
- * disc keeps holding, and its movement is consumed so the scrolling dialog does not take it over.
- */
-private fun Modifier.holdToTalk(
+/** A screen reader cannot hold, so activation toggles listening and a custom action discards. */
+private fun Modifier.dictationSemantics(
     enabled: Boolean,
+    voice: VoiceInputUi,
     label: String,
-    onHeld: (Boolean) -> Unit,
-    onToggle: () -> Unit,
-): Modifier =
-    pointerInput(enabled) {
-          if (enabled) {
-            awaitEachGesture {
-              awaitFirstDown().consume()
-              onHeld(true)
-              try {
-                do {
-                  val event = awaitPointerEvent()
-                  event.changes.forEach { it.consume() }
-                } while (event.changes.any { it.pressed })
-              } finally {
-                onHeld(false)
-              }
-            }
-          }
-        }
-        .semantics {
-          role = Role.Button
-          contentDescription = label
-          if (enabled) {
-            onClick(label) {
-              onToggle()
+    discardLabel: String,
+    callbacks: VoiceDictationCallbacks,
+): Modifier = semantics {
+  role = Role.Button
+  contentDescription = label
+  if (!enabled) {
+    disabled()
+    return@semantics
+  }
+  onClick(label) {
+    if (voice.isListening) callbacks.onStop() else callbacks.onStart()
+    true
+  }
+  if (voice.canDiscard) {
+    customActions =
+        listOf(
+            CustomAccessibilityAction(discardLabel) {
+              callbacks.onDiscard()
               true
             }
-          } else {
-            disabled()
-          }
-        }
+        )
+  }
+}
 
 @Composable
 private fun OrDivider() {

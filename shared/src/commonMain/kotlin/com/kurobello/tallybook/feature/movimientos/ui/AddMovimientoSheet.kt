@@ -190,6 +190,7 @@ private fun MovimientoSentenceDialog(
                     actions.onVoiceStart()
                   },
                   onStop = actions::onVoiceStop,
+                  onDiscard = actions::onVoiceDiscard,
                   onOpenSettings = actions::onVoiceOpenSettings,
               ),
       )

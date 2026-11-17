@@ -10,6 +10,7 @@ import com.kurobello.tallybook.core.model.Money
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -213,6 +214,70 @@ class AddMovimientoVoiceTest {
     f.viewModel.onVoiceStart()
     runCurrent()
     assertEquals(0, f.voice.activeSessions, "dictation only runs on the sentence step")
+  }
+
+  @Test
+  fun slidingToCancelDropsTheDictationAndRestoresTheTypedSentence() = runTest {
+    val f = fixture()
+    f.viewModel.onPhraseChanged("almuerzo ")
+    f.viewModel.onVoiceStart()
+    runCurrent()
+    f.voice.events.send(DictationEvent.Partial("20000 con tarjeta"))
+    advanceTimeBy(PREVIEW_SETTLE_MILLIS)
+    runCurrent()
+    assertEquals("almuerzo 20000 con tarjeta", f.state.phrase)
+    assertNotNull(f.state.detected.monto)
+
+    f.viewModel.onVoiceDiscard()
+    runCurrent()
+    assertEquals("almuerzo ", f.state.phrase)
+    assertNull(f.state.detected.monto, "the cancelled amount must not linger in Detected")
+    assertFalse(f.state.voice.isListening)
+    assertNull(f.state.voice.notice)
+    assertEquals(0, f.voice.activeSessions)
+
+    // The finger lifts after the slide already cancelled.
+    f.viewModel.onVoiceStop()
+    advanceTimeBy(RELEASE_TAIL_MILLIS + FINISH_GRACE_UPPER_BOUND_MILLIS)
+    runCurrent()
+    assertEquals("almuerzo ", f.state.phrase)
+    assertFalse(f.state.voice.isListening)
+  }
+
+  @Test
+  fun wordsAlreadyReleasedSurviveASlideWhileTheRecognizerFinishes() = runTest {
+    val f = fixture()
+    f.viewModel.onVoiceStart()
+    runCurrent()
+    f.voice.events.send(DictationEvent.Partial("almuerzo 20000"))
+    runCurrent()
+
+    f.viewModel.onVoiceStop()
+    runCurrent()
+    assertTrue(f.state.voice.isListening, "the release tail still listens")
+    f.viewModel.onVoiceDiscard()
+    runCurrent()
+
+    assertEquals("almuerzo 20000", f.state.phrase)
+    assertEquals(1, f.voice.activeSessions)
+    f.voice.events.send(DictationEvent.Final("almuerzo 20000 pesos"))
+    runCurrent()
+    assertEquals("almuerzo 20000 pesos", f.state.phrase)
+    assertFalse(f.state.voice.isFinishing)
+  }
+
+  @Test
+  fun slidingToCancelWithoutAnActiveSessionKeepsTheSentence() = runTest {
+    val f = fixture()
+    f.viewModel.onVoiceStart()
+    runCurrent()
+    f.voice.events.send(DictationEvent.Final("arriendo 500000"))
+    runCurrent()
+
+    f.viewModel.onVoiceDiscard()
+    runCurrent()
+
+    assertEquals("arriendo 500000", f.state.phrase, "a finished dictation is the user's text")
   }
 
   @Test
