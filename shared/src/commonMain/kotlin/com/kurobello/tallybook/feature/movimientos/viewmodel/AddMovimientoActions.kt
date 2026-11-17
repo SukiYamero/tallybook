@@ -38,6 +38,9 @@ internal interface VoiceDictationActions {
   /** Drops the session without waiting for the recognizer, as when the dialog closes. */
   fun onVoiceCancel()
 
+  /** Sliding away from the held microphone: stops and restores the sentence typed before it. */
+  fun onVoiceDiscard()
+
   fun onVoicePermissionResult(granted: Boolean)
 
   fun onVoiceOpenSettings()

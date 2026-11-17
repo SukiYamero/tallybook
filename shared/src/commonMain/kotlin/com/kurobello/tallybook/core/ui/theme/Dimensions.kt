@@ -57,6 +57,8 @@ internal object TallybookDimensions {
   // Held while speaking, so a larger disc keeps a drifting thumb on target.
   val voiceDictationButton = 72.dp
   val voiceDictationIcon = 32.dp
+  // Beyond the disc's own width, so only a deliberate slide cancels and a drifting thumb does not.
+  val voiceSlideToCancel = 96.dp
   val pickerResultsHeight = 420.dp
   val editorSheetFormMinimumHeight = pickerResultsHeight
   val categoryDetailsMinimumHeight = 180.dp

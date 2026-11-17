@@ -1,9 +1,10 @@
 <resources>
     <string name="movimiento_voice_hint">Mantén presionado el micrófono y habla</string>
-    <string name="movimiento_voice_listening">Te escucho… suelta para terminar</string>
+    <string name="movimiento_voice_listening">← Desliza para cancelar · suelta para terminar</string>
     <string name="movimiento_voice_preparing">Un momento… habla cuando se ponga verde</string>
     <string name="movimiento_voice_start">Empezar a dictar</string>
     <string name="movimiento_voice_stop">Terminar de dictar</string>
+    <string name="movimiento_voice_discard">Cancelar dictado</string>
     <string name="movimiento_voice_unavailable">No disponible en tu dispositivo</string>
     <string name="movimiento_voice_not_heard">No alcancé a escucharte. Mantén presionado el micrófono mientras hablas.</string>
     <string name="movimiento_voice_permission_denied">Para dictar tus movimientos, permite el acceso al micrófono.</string>

@@ -20,6 +20,9 @@ internal interface AddMovimientoVoiceHost {
   /** Replaces the sentence without stopping dictation, unlike a keystroke. */
   fun applyDictatedPhrase(value: String)
 
+  /** Puts back a sentence and its Detected card at once, so cancelled words never linger there. */
+  fun restorePhrase(value: String)
+
   fun send(effect: AddMovimientoEffect)
 }
 
@@ -31,6 +34,7 @@ internal class AddMovimientoVoice(
 ) {
   private var session: Job? = null
   private var stops = Channel<Unit>(Channel.CONFLATED)
+  private var phraseBeforeSession = ""
   private var permissionDenials = 0
   // Android answers a second request made while the dialog is up with an instant refusal, which
   // would count as a denial the user never gave.
@@ -55,14 +59,24 @@ internal class AddMovimientoVoice(
 
   fun finish() {
     stops.trySend(Unit)
+    if (host.state.voice.isListening) host.updateVoice { copy(isFinishing = true) }
   }
 
   fun cancel() {
     session?.cancel()
     session = null
     if (host.state.voice.isListening) {
-      host.updateVoice { copy(isListening = false, isMicReady = false) }
+      host.updateVoice { copy(isListening = false, isMicReady = false, isFinishing = false) }
     }
+  }
+
+  /**
+   * Cancels a held session and drops everything it dictated, restoring the sentence it extended.
+   */
+  fun discard() {
+    if (!host.state.voice.canDiscard) return
+    cancel()
+    host.restorePhrase(phraseBeforeSession)
   }
 
   // A second refusal in a session is how a permanent denial looks: the system stops asking.
@@ -86,12 +100,14 @@ internal class AddMovimientoVoice(
     val state = host.state
     if (state.step != AddMovimientoStep.PHRASE || state.voice.isListening) return
     val sessionStops = Channel<Unit>(Channel.CONFLATED).also { stops = it }
+    phraseBeforeSession = state.phrase
     val typed = state.phrase.trim()
     val prefix = if (typed.isEmpty()) "" else "$typed "
     host.updateVoice {
       copy(
           isListening = true,
           isMicReady = false,
+          isFinishing = false,
           detectedShownAtStart = typed.isNotEmpty(),
           notice = null,
       )
@@ -110,6 +126,7 @@ internal class AddMovimientoVoice(
                 copy(
                     isListening = false,
                     isMicReady = false,
+                    isFinishing = false,
                     notice = VoiceNotice.NOT_HEARD.takeUnless { heard },
                 )
               }
@@ -131,6 +148,7 @@ private fun VoiceInputUi.afterFailure(error: DictationError, heard: Boolean): Vo
   return copy(
       isListening = false,
       isMicReady = false,
+      isFinishing = false,
       isAvailable = isAvailable && error != DictationError.UNAVAILABLE,
       notice = notice.takeUnless { heard && it == VoiceNotice.NOT_HEARD },
   )

@@ -225,10 +225,10 @@ internal class AddMovimientoViewModel(
     applyPhrase(value)
   }
 
-  private fun applyPhrase(value: String) {
+  private fun applyPhrase(value: String, debounce: Boolean = true) {
     val phrase = value.replace(LINE_BREAKS, " ").take(MOVIMIENTO_TITLE_MAX_LENGTH)
     updateFields { if (phrase.isBlank()) withoutInterpretation(phrase) else copy(phrase = phrase) }
-    refreshPreview(debounce = true)
+    refreshPreview(debounce)
   }
 
   override fun onVoiceStart() = voice.start()
@@ -236,6 +236,8 @@ internal class AddMovimientoViewModel(
   override fun onVoiceStop() = voice.finish()
 
   override fun onVoiceCancel() = voice.cancel()
+
+  override fun onVoiceDiscard() = voice.discard()
 
   override fun onVoicePermissionResult(granted: Boolean) = voice.onPermissionResult(granted)
 
@@ -675,6 +677,8 @@ internal class AddMovimientoViewModel(
         this@AddMovimientoViewModel.updateVoice(transform)
 
     override fun applyDictatedPhrase(value: String) = applyPhrase(value)
+
+    override fun restorePhrase(value: String) = applyPhrase(value, debounce = false)
 
     override fun send(effect: AddMovimientoEffect) {
       effectChannel.trySend(effect)

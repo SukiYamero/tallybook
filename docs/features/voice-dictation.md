@@ -1,7 +1,8 @@
 # Voice dictation and dictated recurrence
 
 The sentence step of [Add movimiento](add-movimiento.md) can be dictated: the user holds the
-microphone, speaks, and the words fill the same sentence the parser already reads. The sentence can
+microphone, speaks, and the words fill the same sentence the parser already reads; sliding left
+while holding cancels and restores what was typed. The sentence can
 also state a cadence ("cada 30 días", "every month") that turns Repetir on. Rules live in business
 logic: [Natural-language entry](../business-logic.md#natural-language-entry) (Voice dictation,
 Monto and Frecuencia) and [Recurrentes](../business-logic.md#recurrentes).

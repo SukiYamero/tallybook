@@ -9,8 +9,13 @@ internal data class VoiceInputUi(
     val isMicReady: Boolean = false,
     /** Whether the sentence already had text, and so a Detected card, when listening began. */
     val detectedShownAtStart: Boolean = false,
+    /** The finger lifted and the recognizer is finalizing what it heard, which is kept. */
+    val isFinishing: Boolean = false,
     val notice: VoiceNotice? = null,
-)
+) {
+  val canDiscard: Boolean
+    get() = isListening && !isFinishing
+}
 
 internal enum class VoiceNotice {
   NOT_HEARD,
