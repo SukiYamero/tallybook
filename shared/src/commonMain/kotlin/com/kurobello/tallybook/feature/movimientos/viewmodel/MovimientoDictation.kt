@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.launch
 
-internal val DICTATION_MAX_DURATION: Duration = 25.seconds
+internal val DICTATION_MAX_DURATION: Duration = 30.seconds
 
 // People lift the finger while saying the last word, and the recognizer finalizes only what it has
 // already decoded: listening a moment longer keeps that word instead of an empty or cut result.

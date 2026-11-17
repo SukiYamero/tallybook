@@ -1,9 +1,15 @@
 package com.kurobello.tallybook.core.data.voice
 
+import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [33])
 class AndroidVoiceDictationTest {
   @Test
   fun `recognizer errors map to what the user can act on`() {
@@ -22,5 +28,16 @@ class AndroidVoiceDictationTest {
         )
 
     cases.forEach { (code, expected) -> assertEquals(expected, dictationErrorOf(code), "$code") }
+  }
+
+  @Test
+  fun `the pause limits reach a recognizer that reads them as ints`() {
+    val intent = recognizerIntent("es-ES")
+
+    listOf(
+            RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,
+            RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
+        )
+        .forEach { extra -> assertEquals(HELD_PAUSE_MILLIS, intent.getIntExtra(extra, 0), extra) }
   }
 }

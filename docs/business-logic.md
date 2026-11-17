@@ -72,9 +72,9 @@ app derives the draft from it and the user confirms or refines it; the manual fo
     es-AR) dictates es-ES, English en-US and Portuguese pt-BR, the variants most offline recognizers
     can install. An installed model of another region of that language is used instead when present.
   - The microphone is held to talk: pressing it starts listening and letting go ends it, keeping what
-    was heard. Sliding the finger off it does not end it, nor does the dialog scroll under it; 25
-    seconds does. The app asks the recognizer to wait through pauses, but a long pause may still
-    end listening on some devices. Listening goes on 0.7 seconds after the finger lifts,
+    was heard. Sliding the finger off it does not end it, nor does the dialog scroll under it; 30
+    seconds does. The app asks the recognizer to wait through pauses of up to 10 seconds, but some
+    devices may still end listening sooner. Listening goes on 0.7 seconds after the finger lifts,
     because people let go while saying the last word. The disc turns green, and the caption asks to
     speak, only once the microphone is open; until then it says to wait. Screen readers, which
     cannot hold a press, toggle listening with their activation instead.

@@ -371,7 +371,7 @@ class AddMovimientoVoiceTest {
     const val LONG_PAUSE_MILLIS = 10_000L
     val RELEASE_TAIL_MILLIS = DICTATION_RELEASE_TAIL.inWholeMilliseconds
     const val KEEP_TALKING_INTERVAL_MILLIS = 3_000L
-    const val KEEP_TALKING_STEPS = 9
+    const val KEEP_TALKING_STEPS = 11
     val MAX_MILLIS = DICTATION_MAX_DURATION.inWholeMilliseconds
   }
 }
