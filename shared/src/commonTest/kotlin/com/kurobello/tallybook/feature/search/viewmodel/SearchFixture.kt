@@ -220,6 +220,8 @@ internal class SearchMovimientos : MovimientoRepository, ActividadRepository {
 
   override suspend fun insert(movimiento: Movimiento) = DataOutcome.Success(Unit)
 
+  override suspend fun insertAll(movimientos: List<Movimiento>) = DataOutcome.Success(Unit)
+
   override suspend fun getAll() = DataOutcome.Success(emptyList<Movimiento>())
 
   override suspend fun getById(id: String): DataOutcome<Movimiento?> =

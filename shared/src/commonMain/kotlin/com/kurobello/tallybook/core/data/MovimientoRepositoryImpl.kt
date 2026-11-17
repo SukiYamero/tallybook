@@ -107,17 +107,20 @@ internal class MovimientoRepositoryImpl(
         .asLocalDataOutcome()
   }
 
-  override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> {
-    validateMovimiento(movimiento)?.let {
+  override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> =
+      insertAll(listOf(movimiento))
+
+  override suspend fun insertAll(movimientos: List<Movimiento>): DataOutcome<Unit> {
+    movimientos.firstNotNullOfOrNull(::validateMovimiento)?.let {
       return DataOutcome.Failure(it)
     }
     return runLocalDataOperation(dispatcher) {
           database.transactionWithResult {
-            val missing = writes.rejection(movimiento.changes())
+            val missing = movimientos.firstNotNullOfOrNull { writes.rejection(it.changes()) }
             if (missing != null) {
               DataOutcome.Failure(missing)
             } else {
-              writes.insertRow(movimiento, changeClock.next())
+              movimientos.forEach { writes.insertRow(it, changeClock.next()) }
               DataOutcome.Success(Unit)
             }
           }

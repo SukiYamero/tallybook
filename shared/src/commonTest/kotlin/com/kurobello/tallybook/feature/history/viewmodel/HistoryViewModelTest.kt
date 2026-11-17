@@ -678,6 +678,8 @@ private class HistoryMovimientos(private var rows: List<Movimiento>) :
     }
   }
 
+  override suspend fun insertAll(movimientos: List<Movimiento>): DataOutcome<Unit> = error("unused")
+
   override suspend fun getById(id: String): DataOutcome<Movimiento?> =
       DataOutcome.Success(rows.firstOrNull { it.id == id })
 

@@ -30,6 +30,9 @@ interface MovimientoRepository {
 
   suspend fun insert(movimiento: Movimiento): DataOutcome<Unit>
 
+  /** Inserts every movimiento or none: one rejected item fails the whole batch. */
+  suspend fun insertAll(movimientos: List<Movimiento>): DataOutcome<Unit>
+
   suspend fun getAll(): DataOutcome<List<Movimiento>>
 
   suspend fun getById(id: String): DataOutcome<Movimiento?>

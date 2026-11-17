@@ -179,6 +179,9 @@ internal class ManagementRepository : MovimientoRepository {
   override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> =
       error("Management cannot insert")
 
+  override suspend fun insertAll(movimientos: List<Movimiento>): DataOutcome<Unit> =
+      error("Management cannot insert")
+
   override suspend fun getAll(): DataOutcome<List<Movimiento>> =
       DataOutcome.Success(listOfNotNull(current))
 }

@@ -908,6 +908,9 @@ class HomeViewModelTest {
       return DataOutcome.Success(Unit)
     }
 
+    override suspend fun insertAll(movimientos: List<Movimiento>): DataOutcome<Unit> =
+        error("unused")
+
     override suspend fun getAll(): DataOutcome<List<Movimiento>> = DataOutcome.Success(emptyList())
 
     override suspend fun getById(id: String): DataOutcome<Movimiento?> = DataOutcome.Success(null)

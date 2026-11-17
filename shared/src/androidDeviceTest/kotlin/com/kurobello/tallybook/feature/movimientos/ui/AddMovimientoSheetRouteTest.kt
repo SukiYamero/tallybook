@@ -244,6 +244,11 @@ class AddMovimientoSheetRouteTest {
       return DataOutcome.Success(Unit)
     }
 
+    override suspend fun insertAll(movimientos: List<Movimiento>): DataOutcome<Unit> {
+      inserted += movimientos
+      return DataOutcome.Success(Unit)
+    }
+
     override suspend fun getAll(): DataOutcome<List<Movimiento>> = DataOutcome.Success(inserted)
 
     override suspend fun getById(id: String): DataOutcome<Movimiento?> =

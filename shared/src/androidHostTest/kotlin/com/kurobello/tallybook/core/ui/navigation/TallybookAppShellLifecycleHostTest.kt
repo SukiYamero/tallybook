@@ -619,6 +619,11 @@ private class ShellMovimientos : MovimientoRepository, ActividadRepository {
     return DataOutcome.Success(Unit)
   }
 
+  override suspend fun insertAll(movimientos: List<Movimiento>): DataOutcome<Unit> {
+    rows.value += movimientos
+    return DataOutcome.Success(Unit)
+  }
+
   override suspend fun getById(id: String): DataOutcome<Movimiento?> =
       DataOutcome.Success(rows.value.firstOrNull { it.id == id })
 

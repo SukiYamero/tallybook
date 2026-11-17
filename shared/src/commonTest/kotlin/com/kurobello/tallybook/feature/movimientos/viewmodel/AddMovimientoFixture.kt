@@ -201,6 +201,11 @@ internal open class AddFakeMovimientos(
     return insertResult
   }
 
+  override suspend fun insertAll(movimientos: List<Movimiento>): DataOutcome<Unit> {
+    if (insertResult is DataOutcome.Success) inserted += movimientos
+    return insertResult
+  }
+
   override suspend fun getAll(): DataOutcome<List<Movimiento>> = DataOutcome.Success(inserted)
 
   override suspend fun getById(id: String): DataOutcome<Movimiento?> =
@@ -261,6 +266,12 @@ internal class AddSuspendedMovimientos : AddFakeMovimientos() {
     private set
 
   override suspend fun insert(movimiento: Movimiento): DataOutcome<Unit> {
+    insertCalls++
+    started.complete(Unit)
+    return result.await()
+  }
+
+  override suspend fun insertAll(movimientos: List<Movimiento>): DataOutcome<Unit> {
     insertCalls++
     started.complete(Unit)
     return result.await()
