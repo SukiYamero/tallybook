@@ -700,6 +700,14 @@ class AddMovimientoSheetTest {
 
     override fun onFrecuenciaChanged(frecuencia: Frecuencia) = Unit
 
+    override fun onPartCategoriaSelected(index: Int, id: String) = Unit
+
+    override fun onPartCategoriaCleared(index: Int) = Unit
+
+    override fun onPartRemoved(index: Int) = Unit
+
+    override fun onJoinParts() = Unit
+
     override fun onVoiceStart() = Unit
 
     override fun onVoiceStop() = Unit

@@ -8,6 +8,7 @@ import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.Frecuencia
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.text.AmountInputError
 import com.kurobello.tallybook.core.text.AmountInputResult
@@ -22,7 +23,10 @@ internal enum class MovimientoFormError {
 }
 
 private val STEP_BACK_TARGETS: Map<AddMovimientoStep, AddMovimientoStep> =
-    mapOf(AddMovimientoStep.SUMMARY to AddMovimientoStep.PHRASE)
+    mapOf(
+        AddMovimientoStep.SUMMARY to AddMovimientoStep.PHRASE,
+        AddMovimientoStep.REVIEW to AddMovimientoStep.PHRASE,
+    )
 
 internal data class AddMovimientoUiState(
     override val tipo: TipoMovimiento,
@@ -70,6 +74,13 @@ internal data class AddMovimientoUiState(
     /** The sentence named a cadence Repetir cannot express, such as "cada 15 días". */
     val recurrenceUnsupported: Boolean = false,
     val voice: VoiceInputUi = VoiceInputUi(),
+    /**
+     * The movimientos of a split sentence. In [AddMovimientoStep.REVIEW] the single-draft fields
+     * hold what they share; [categoriaId] keeps the single sentence's category apart from theirs.
+     */
+    val parts: List<EntryPart> = emptyList(),
+    /** The part whose values the single-draft fields hold while its form is open. */
+    val editingPart: Int? = null,
 ) : MovimientoFormState {
   /** The tipo medio options follow: the sentence's while it is being typed, the draft's after. */
   val selectionTipo: TipoMovimiento
@@ -106,7 +117,7 @@ internal data class AddMovimientoUiState(
 
   /** The loaded selection, or the pending fallback when nothing valid is selected. */
   val effectiveCategoriaId: String?
-    get() = categoriaId?.takeIf(::isLoaded) ?: CATEGORIA_OTROS_ID.takeIf(::isLoaded)
+    get() = effectiveCategoriaIdOf(categoriaId)
 
   override val displayedCategoriaId: String?
     get() = effectiveCategoriaId
@@ -181,6 +192,63 @@ internal data class AddMovimientoUiState(
             cuenta = cuentaField,
             isSubmitting = isSubmitting,
         )
+
+  val review: MovimientoReviewUi by lazy {
+    val rows = parts.mapIndexed(::reviewPart)
+    val counted = rows.filter { partMoneda(parts[it.index]) == moneda }
+    val montos = counted.map(ReviewPartUi::monto)
+    MovimientoReviewUi(
+        parts = rows,
+        total =
+            if (montos.any { it == null }) null
+            else montos.filterNotNull().fold(Money(0, moneda), Money::plus),
+        excludedFromTotal = rows.size - counted.size,
+        tipo = tipo,
+        fecha = fecha,
+        cuenta = cuentaField,
+        etiquetas = selectedEtiquetas,
+        etiquetasLoad = etiquetasLoad,
+        frecuencia = frecuencia,
+        // A sum across tipos or currencies would mean nothing.
+        canJoin =
+            parts.size > 1 &&
+                !isSubmitting &&
+                counted.size == rows.size &&
+                rows.all { it.tipo == tipo && it.monto != null },
+        isSubmitting = isSubmitting,
+    )
+  }
+
+  /** The currency a part is saved in: the shared one unless its form picked another cuenta. */
+  fun partMoneda(part: EntryPart): Moneda =
+      part.overrides.cuentaChoice?.let { monedaOf(it, part.overrides.tipo ?: tipo) } ?: moneda
+
+  fun partAmount(part: EntryPart): Money? =
+      (parseAmountInput(part.amountInput, partMoneda(part)) as? AmountInputResult.Valid)?.money
+
+  private fun reviewPart(index: Int, part: EntryPart): ReviewPartUi {
+    val partTipo = part.overrides.tipo ?: tipo
+    val partCuenta =
+        part.overrides.cuentaChoice?.let { movimientoCuentaUi(it, cuentas, partTipo, false, false) }
+    val partCategoriaId = effectiveCategoriaIdOf(part.categoriaId)
+    return ReviewPartUi(
+        index = index,
+        tipo = partTipo,
+        monto = partAmount(part)?.let { if (partTipo == TipoMovimiento.GASTO) -it else it },
+        amountNeedsReview = part.amountNeedsReview,
+        titulo = part.titulo,
+        categoria = categorias.firstOrNull { it.id == partCategoriaId },
+        categoriaIsPending = partCategoriaId == CATEGORIA_OTROS_ID,
+        suggestions = part.suggestions,
+        fecha = part.overrides.fecha?.takeIf { it != fecha },
+        cuenta = partCuenta?.selected?.takeIf { it != cuentaField.selected },
+        medio =
+            partCuenta?.effectiveMedio(partTipo)?.takeIf { it != cuentaField.effectiveMedio(tipo) },
+    )
+  }
+
+  private fun effectiveCategoriaIdOf(id: String?): String? =
+      id?.takeIf(::isLoaded) ?: CATEGORIA_OTROS_ID.takeIf(::isLoaded)
 
   private fun isLoaded(id: String): Boolean = categorias.any { it.id == id }
 }

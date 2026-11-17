@@ -58,6 +58,7 @@ import tallybook.shared.generated.resources.discard_changes_title
 private val SHEET_STEP_DETENTS: Map<AddMovimientoStep, String> =
     mapOf(
         AddMovimientoStep.SUMMARY to "add-movimiento-summary",
+        AddMovimientoStep.REVIEW to "add-movimiento-review",
         AddMovimientoStep.FORM to "add-movimiento-form",
     )
 

@@ -261,7 +261,11 @@ internal class AddMovimientoViewModel(
       base
           .withDetection(interpretation, today)
           .copy(
-              step = AddMovimientoStep.SUMMARY,
+              step =
+                  if (interpretation.parts.isEmpty()) AddMovimientoStep.SUMMARY
+                  else AddMovimientoStep.REVIEW,
+              parts = parts.rebuiltFrom(interpretation.parts),
+              editingPart = null,
               tipo = interpretation.tipo,
               amountInput = parsed.monto?.toAmountInput().orEmpty(),
               amountEdited = false,
@@ -305,6 +309,33 @@ internal class AddMovimientoViewModel(
 
   override fun onSuggestionSelected(id: String) {
     updateFields { if (suggestions.none { it.id == id }) this else withCategoria(id) }
+  }
+
+  override fun onPartCategoriaSelected(index: Int, id: String) {
+    updatePart(index) {
+      if (isSelectableCategoria(id, categorias)) withPartCategoria(index, id) else this
+    }
+  }
+
+  override fun onPartCategoriaCleared(index: Int) {
+    updatePart(index) {
+      if (parts[index].categoriaId == null) this else withPartCategoria(index, null)
+    }
+  }
+
+  override fun onPartRemoved(index: Int) {
+    updatePart(index) { withoutPart(index) }
+  }
+
+  override fun onJoinParts() {
+    updateFields { if (step == AddMovimientoStep.REVIEW && review.canJoin) joined() else this }
+  }
+
+  private fun updatePart(index: Int, transform: AddMovimientoUiState.() -> AddMovimientoUiState) {
+    updateFields {
+      val editable = step == AddMovimientoStep.REVIEW && !isSubmitting && index in parts.indices
+      if (editable) transform() else this
+    }
   }
 
   override fun onStepBack() {
@@ -359,7 +390,8 @@ internal class AddMovimientoViewModel(
   }
 
   override fun onSubmit() {
-    if (uiState.value.isSubmitting) return
+    // The review saves its parts together, never the shared draft on its own.
+    if (uiState.value.isSubmitting || uiState.value.step == AddMovimientoStep.REVIEW) return
 
     uiState.update {
       it.copy(
@@ -438,12 +470,14 @@ internal class AddMovimientoViewModel(
   }
 
   private fun AddMovimientoUiState.withRederivedAmount(previous: Moneda): AddMovimientoUiState {
+    val reparse = { text: String -> entryEngine.parse(text, phraseContext(today), moneda, cuentas) }
+    val rederived = copy(parts = parts.withRederivedAmounts(previous, moneda, reparse))
     val text = phrase.trim()
     val ownsAmount = step != AddMovimientoStep.PHRASE && !amountEdited
     if (moneda == previous || !ownsAmount || text.isEmpty())
-        return copy(amountInput = amountInput.reformatAmountInput(previous, moneda))
-    val parsed = entryEngine.parse(text, phraseContext(today), moneda, cuentas)
-    return copy(
+        return rederived.copy(amountInput = amountInput.reformatAmountInput(previous, moneda))
+    val parsed = reparse(text)
+    return rederived.copy(
         amountInput = parsed.monto?.toAmountInput().orEmpty(),
         amountNeedsReview =
             parsed.monto != null && PhraseReviewFlag.AMBIGUOUS_AMOUNT in parsed.reviewFlags,
@@ -499,6 +533,8 @@ internal class AddMovimientoViewModel(
           frecuencia = null,
           frecuenciaEdited = false,
           recurrenceUnsupported = false,
+          parts = emptyList(),
+          editingPart = null,
       )
 
   // A category, tags, medio or cuenta picked in the sentence dialog do not guard it: only a typed
@@ -519,19 +555,29 @@ internal class AddMovimientoViewModel(
     )
   }
 
+  // Parts left behind the sentence dialog only remember hand picks; Continue ranks them again.
   private fun AddMovimientoUiState.withSuggestions(): AddMovimientoUiState =
       copy(
-          suggestions =
-              rankSuggestions()
-                  .filterNot { it.categoriaId == categoriaId }
-                  .mapNotNull { suggestion ->
-                    categorias.firstOrNull { it.id == suggestion.categoriaId }
-                  }
-                  .take(MAX_SUGGESTION_CHIPS)
+          suggestions = suggestionsFor(suggestionQuery, categoriaId),
+          parts =
+              if (step == AddMovimientoStep.PHRASE) parts
+              else
+                  parts.map { part ->
+                    part.copy(suggestions = suggestionsFor(part.suggestionQuery, part.categoriaId))
+                  },
       )
 
-  private fun AddMovimientoUiState.rankSuggestions() =
-      suggestionQuery?.let { entryEngine.rank(suggestionIndex, it, candidates()) }.orEmpty()
+  private fun AddMovimientoUiState.suggestionsFor(
+      query: SuggestionQuery?,
+      selectedId: String?,
+  ): List<Categoria> =
+      rankSuggestions(query)
+          .filterNot { it.categoriaId == selectedId }
+          .mapNotNull { suggestion -> categorias.firstOrNull { it.id == suggestion.categoriaId } }
+          .take(MAX_SUGGESTION_CHIPS)
+
+  private fun AddMovimientoUiState.rankSuggestions(query: SuggestionQuery? = suggestionQuery) =
+      query?.let { entryEngine.rank(suggestionIndex, it, candidates()) }.orEmpty()
 
   // A removed category that the sentence suggested stays dismissed for the same subject.
   private fun AddMovimientoUiState.withCategoria(
@@ -575,37 +621,6 @@ internal class AddMovimientoViewModel(
 
   private val AddMovimientoUiState.manualEtiquetaIds: List<String>
     get() = if (etiquetasEdited) etiquetaIds else initialDraft.etiquetaIds
-
-  private fun AddMovimientoUiState.withDetection(
-      interpretation: PhraseInterpretation,
-      today: LocalDate,
-  ): AddMovimientoUiState =
-      copy(
-          preview =
-              PhrasePreviewUi(
-                  tipo = interpretation.tipo,
-                  monto = interpretation.parsed.monto,
-                  fecha = interpretation.parsed.fecha ?: today,
-                  frecuencia = interpretation.parsed.frecuencia,
-              ),
-          suggestionQuery = interpretation.query,
-          categoriaId =
-              if (categoriasEdited) categoriaId else interpretation.preselectedCategoriaId,
-          etiquetaIds = if (etiquetasEdited) etiquetaIds else interpretation.etiquetaIds,
-          sentenceSelection = interpretation.sentence,
-          cuentaChoice = sentenceChoice(interpretation.sentence, interpretation.tipo),
-      )
-
-  private fun AddMovimientoUiState.sentenceChoice(
-      sentence: SentenceSelection,
-      tipo: TipoMovimiento,
-  ): CuentaSelectionState =
-      cuentaChoice.withSentence(sentence, cuentas, cuentaDefaults, tipo).forTipo(tipo)
-
-  private fun AddMovimientoUiState.sentenceCuentas() =
-      SentenceCuentas(cuentas, primaryMoneda ?: moneda) { sentence, tipo ->
-        monedaOf(sentenceChoice(sentence, tipo), tipo)
-      }
 
   // Dismissals belong to the subject they were made for; a different sentence starts clean.
   private fun AddMovimientoUiState.interpreting(

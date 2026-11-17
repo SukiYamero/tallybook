@@ -4,7 +4,8 @@ import androidx.compose.runtime.Stable
 import com.kurobello.tallybook.core.model.Frecuencia
 
 @Stable
-internal interface AddMovimientoActions : MovimientoFormActions, VoiceDictationActions {
+internal interface AddMovimientoActions :
+    MovimientoFormActions, VoiceDictationActions, MovimientoPartActions {
   fun onDiscardChanges()
 
   fun onPhraseChanged(value: String)
@@ -25,6 +26,20 @@ internal interface AddMovimientoActions : MovimientoFormActions, VoiceDictationA
   fun onRepetirChanged(enabled: Boolean)
 
   fun onFrecuenciaChanged(frecuencia: Frecuencia)
+}
+
+/** The review of a sentence split into several movimientos, one part per index. */
+@Stable
+internal interface MovimientoPartActions {
+  fun onPartCategoriaSelected(index: Int, id: String)
+
+  fun onPartCategoriaCleared(index: Int)
+
+  /** Removing down to one part leaves the summary of that part. */
+  fun onPartRemoved(index: Int)
+
+  /** Turns the parts into one movimiento: their amounts added, the shared values kept. */
+  fun onJoinParts()
 }
 
 @Stable
