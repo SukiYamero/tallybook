@@ -54,13 +54,12 @@ private class PhraseDateScanner(
     val feiraLength = cursor.feiraLengthAfter(index)
     val needsContext =
         word in ambiguousWeekdays && feiraLength == 0 && cursor.wordAt(index - 1) != "na"
-    val daysBack = (today.dayOfWeek.ordinal - dayOfWeek.ordinal).mod(DAYS_IN_WEEK)
     val length = 1 + feiraLength
     return if (needsContext) {
       null
     } else {
       explicitDateAfter(index, length)
-          ?: DateMatch(today.plus(-daysBack, DateTimeUnit.DAY), length, takesPrefix = true)
+          ?: DateMatch(mostRecentWeekday(today, dayOfWeek), length, takesPrefix = true)
     }
   }
 
@@ -133,19 +132,19 @@ private class PhraseDateScanner(
 }
 
 // Portuguese "segunda-feira" tokenizes as segunda, "-", feira.
-private fun PhraseCursor.feiraLengthAfter(index: Int): Int {
+internal fun PhraseCursor.feiraLengthAfter(index: Int): Int {
   val hyphen = if (tokenAt(index + 1)?.text == "-") 1 else 0
-  return if (wordAt(index + 1 + hyphen) == "feira") hyphen + 1 else 0
+  return if (wordAt(index + 1 + hyphen) in feiraWords) hyphen + 1 else 0
 }
 
-private fun PhraseCursor.dayNumberAt(index: Int): Int? =
+internal fun PhraseCursor.dayNumberAt(index: Int): Int? =
     tokenAt(index)
         ?.takeIf { it.kind == PhraseTokenKind.NUMBER && it.text.length <= 2 }
         ?.text
         ?.toIntOrNull()
         ?.takeIf { it in 1..MAX_DAY_OF_MONTH }
 
-private fun PhraseCursor.ordinalLengthAfter(index: Int): Int {
+internal fun PhraseCursor.ordinalLengthAfter(index: Int): Int {
   val suffix = tokenAt(index + 1)
   val isOrdinal =
       suffix != null && suffix.isAdjacentAfter(tokens[index]) && suffix.norm in ordinalSuffixes
@@ -153,7 +152,7 @@ private fun PhraseCursor.ordinalLengthAfter(index: Int): Int {
 }
 
 // "octubre 12 mil" and "el 5 pesos" read as amounts, not as days.
-private fun PhraseCursor.isAmountSuffixAfter(lastIndex: Int): Boolean {
+internal fun PhraseCursor.isAmountSuffixAfter(lastIndex: Int): Boolean {
   val word = wordAt(lastIndex + 1)
   return word != null &&
       (word in digitMultipliers ||
@@ -168,8 +167,14 @@ private fun expandYear(digits: String): Int? =
       else -> null
     }
 
+/** The latest [dayOfWeek] not after [today], today included. */
+internal fun mostRecentWeekday(today: LocalDate, dayOfWeek: DayOfWeek): LocalDate {
+  val daysBack = (today.dayOfWeek.ordinal - dayOfWeek.ordinal).mod(DAYS_IN_WEEK)
+  return today.plus(-daysBack, DateTimeUnit.DAY)
+}
+
 /** The latest date not after [today] with this day and optional month; null if none exists. */
-private fun mostRecentOccurrence(today: LocalDate, day: Int, month: Int?): LocalDate? =
+internal fun mostRecentOccurrence(today: LocalDate, day: Int, month: Int?): LocalDate? =
     (0..MAX_LOOKBACK_PERIODS)
         .asSequence()
         .mapNotNull { back ->

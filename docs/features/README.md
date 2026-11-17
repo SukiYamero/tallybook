@@ -18,6 +18,7 @@ accepted scope, integration details and verification boundaries.
 | Accounts, payment method and transfers | DONE | [Accounts, payment method and transfers](accounts.md) |
 | Statistics | DONE | [Statistics](statistics.md) |
 | Recurring movimientos | DONE | [Recurring movimientos](recurrentes.md) |
+| Voice dictation and dictated recurrence | DONE | [Voice dictation](voice-dictation.md) |
 
 ## Status rules
 

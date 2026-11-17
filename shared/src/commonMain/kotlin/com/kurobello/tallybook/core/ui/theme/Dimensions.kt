@@ -54,7 +54,9 @@ internal object TallybookDimensions {
   val categoryTagRemoveTargetWidth = 44.dp
   val categoryIconOptionVisualSize = TallybookSpacing.space40
   val categoryOptionSelectedBorderWidth = 2.dp
-  val voiceDictationButton = 56.dp
+  // Held while speaking, so a larger disc keeps a drifting thumb on target.
+  val voiceDictationButton = 72.dp
+  val voiceDictationIcon = 32.dp
   val pickerResultsHeight = 420.dp
   val editorSheetFormMinimumHeight = pickerResultsHeight
   val categoryDetailsMinimumHeight = 180.dp

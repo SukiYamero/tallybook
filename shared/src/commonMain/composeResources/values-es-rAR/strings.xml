@@ -344,7 +344,6 @@
     <string name="category_tag_remove">Quitar %1$s</string>
     <string name="movimiento_voice_or">o</string>
     <string name="movimiento_voice_title">Dictar por voz</string>
-    <string name="movimiento_voice_coming_soon">Próximamente</string>
     <string name="ui_catalog_category_tags">Etiquetas de categoría</string>
     <string name="ui_catalog_category_field">Campo de categoría</string>
     <string name="ui_catalog_category_picker">Selector de categoría</string>
@@ -354,7 +353,7 @@
     <string name="ui_catalog_tag_picker">Selector de tags</string>
     <string name="ui_catalog_movimiento_badges">Insignias de movimiento</string>
     <string name="ui_catalog_modal_dialog">Diálogo modal</string>
-    <string name="ui_catalog_voice_placeholder">Dictado por voz</string>
+    <string name="ui_catalog_voice_dictation">Dictado por voz</string>
     <string name="ui_catalog_state_removable">Con opción de quitar</string>
     <string name="ui_catalog_state_at_limit">En el límite</string>
     <string name="ui_catalog_state_with_suggestions">Con sugerencias</string>

@@ -20,6 +20,8 @@ import com.kurobello.tallybook.core.data.entry.CategorySuggester
 import com.kurobello.tallybook.core.data.entry.CuentaMatcher
 import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
+import com.kurobello.tallybook.core.data.voice.FakeVoiceDictation
+import com.kurobello.tallybook.core.data.voice.VoiceDictation
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -65,6 +67,7 @@ internal fun createAddViewModel(
     clock: Clock = AddFixedClock(ADD_TEST_NOW),
     timeZone: TimeZone = TimeZone.UTC,
     computationDispatcher: CoroutineDispatcher = UnconfinedTestDispatcher(),
+    voice: VoiceDictation = FakeVoiceDictation(available = false),
     scope: CoroutineScope,
 ): AddMovimientoViewModel =
     AddMovimientoViewModel(
@@ -76,6 +79,7 @@ internal fun createAddViewModel(
                 etiquetas = etiquetaRepository,
                 cuentas = cuentaRepository,
                 recurrencias = recurrenciaRepository,
+                voice = voice,
             ),
         idGenerator = IdGenerator { "movement-id" },
         clock = clock,

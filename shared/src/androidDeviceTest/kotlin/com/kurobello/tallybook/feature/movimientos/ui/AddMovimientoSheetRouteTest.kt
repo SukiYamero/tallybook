@@ -24,6 +24,7 @@ import com.kurobello.tallybook.core.data.entry.CategorySuggester
 import com.kurobello.tallybook.core.data.entry.CuentaMatcher
 import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
+import com.kurobello.tallybook.core.data.voice.UnavailableVoiceDictation
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -152,6 +153,7 @@ class AddMovimientoSheetRouteTest {
                   etiquetas = FakeEtiquetaRepository(),
                   cuentas = FakeCuentaRepository(listOf(COP_CASH)),
                   recurrencias = FakeRecurrenciaRepository(),
+                  voice = UnavailableVoiceDictation,
               ),
           idGenerator = IdGenerator { "movement-id" },
           clock = FixedClock,

@@ -4,5 +4,9 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>To dictate your movements, Tallybook listens only while you hold the microphone.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>To turn what you say into a movement, Tallybook transcribes it on this iPhone.</string>
 </dict>
 </plist>

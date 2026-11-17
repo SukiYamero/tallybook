@@ -9,7 +9,7 @@ import kotlinx.datetime.DayOfWeek
 // Every table is keyed by search-normalized text (lowercase, accents folded except ñ), and the
 // vocabulary is the union of es, es-AR, en and pt-BR because users mix languages.
 
-private fun <V> phrases(value: V, vararg entries: String): Map<List<String>, V> =
+internal fun <V> phrases(value: V, vararg entries: String): Map<List<String>, V> =
     entries.associate {
       it.split(' ') to value
     }
@@ -255,6 +255,8 @@ internal val weekdays: Map<String, DayOfWeek> =
         "sunday" to DayOfWeek.SUNDAY,
     )
 
+internal val feiraWords: Set<String> = setOf("feira", "feiras")
+
 // "segunda" alone is also "second" or "second-hand" in Spanish, so it needs "feira" or "na".
 internal val ambiguousWeekdays: Set<String> = setOf("segunda")
 
@@ -347,6 +349,7 @@ internal val medioWords: PhraseTable<MedioWord> =
             "no dinheiro",
             "dinheiro vivo",
             "em especie",
+            "con efectivo",
         ) +
             phrases(
                 MedioWord.Explicit(MedioPago.DEBITO),

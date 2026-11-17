@@ -1,0 +1,15 @@
+<resources>
+    <string name="movimiento_voice_hint">Mantén presionado el micrófono y habla</string>
+    <string name="movimiento_voice_listening">Te escucho… suelta para terminar</string>
+    <string name="movimiento_voice_preparing">Un momento… habla cuando se ponga verde</string>
+    <string name="movimiento_voice_start">Empezar a dictar</string>
+    <string name="movimiento_voice_stop">Terminar de dictar</string>
+    <string name="movimiento_voice_unavailable">No disponible en tu dispositivo</string>
+    <string name="movimiento_voice_not_heard">No alcancé a escucharte. Mantén presionado el micrófono mientras hablas.</string>
+    <string name="movimiento_voice_permission_denied">Para dictar tus movimientos, permite el acceso al micrófono.</string>
+    <string name="movimiento_voice_permission_blocked">Para dictar tus movimientos, activa el micrófono en los ajustes de la app.</string>
+    <string name="movimiento_voice_open_settings">Abrir ajustes</string>
+    <string name="movimiento_voice_language_unavailable">Para dictar en este idioma, descarga su paquete de voz en los ajustes de voz del teléfono.</string>
+    <string name="movimiento_voice_language_downloading">Para dictar sin internet, tu teléfono necesita este idioma. Acepta la descarga y vuelve a intentarlo en unos minutos.</string>
+    <string name="movimiento_voice_failed">No se pudo dictar. Tu texto sigue aquí; mantén presionado el micrófono para intentarlo de nuevo.</string>
+</resources>

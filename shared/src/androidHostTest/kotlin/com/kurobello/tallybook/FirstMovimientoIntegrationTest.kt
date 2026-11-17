@@ -29,6 +29,7 @@ import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
 import com.kurobello.tallybook.core.data.insertCuentaRow
 import com.kurobello.tallybook.core.data.maxStoredChangeStamp
 import com.kurobello.tallybook.core.data.seedDefaultCuenta
+import com.kurobello.tallybook.core.data.voice.UnavailableVoiceDictation
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -166,6 +167,7 @@ class FirstMovimientoIntegrationTest {
                           etiquetas,
                           cuentas,
                           FakeRecurrenciaRepository(),
+                          UnavailableVoiceDictation,
                       ),
                   id = "expense",
                   scope = scopes.newScope(dispatcher),
@@ -196,6 +198,7 @@ class FirstMovimientoIntegrationTest {
                           etiquetas,
                           cuentas,
                           FakeRecurrenciaRepository(),
+                          UnavailableVoiceDictation,
                       ),
                   id = "income",
                   scope = scopes.newScope(dispatcher),
@@ -347,6 +350,7 @@ class FirstMovimientoIntegrationTest {
                   etiquetas,
                   cuentas,
                   FakeRecurrenciaRepository(),
+                  UnavailableVoiceDictation,
               )
           val first =
               createMovimientoViewModel(

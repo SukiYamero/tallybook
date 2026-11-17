@@ -7,18 +7,26 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 
 1. Prueba completa en iPhone físico → *iOS physical end-to-end*.
-2. Presupuestos (sobre las consultas de Estadísticas) → *Accounts follow-ups*.
-3. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
+2. Varios movimientos en una frase → *Producto*.
+3. Presupuestos (sobre las consultas de Estadísticas) → *Accounts follow-ups*.
+4. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
    and Statistics accessibility*, *Profile polish*.
-4. Google login + backup en Drive, cuando 2 esté cerrado → [plan](tasks/google-drive-persistence.md).
-5. Avisos de recurrentes por confirmar → *Producto*.
-6. Dictado por voz → *Smart entry polish*.
+5. Google login + backup en Drive, cuando 3 esté cerrado → [plan](tasks/google-drive-persistence.md).
+6. Avisos de recurrentes por confirmar → *Producto*.
 7. Pulido chico → *Sentence amount above the cap*, *`ioDispatcher` en iOS*, *Unified Custom
    date-range picker*, *Recurrentes copy*.
 8. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
 9. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
 
 ## Producto
+
+- **Varios movimientos en una frase** — "Gasté 20 mil en cine y 40 mil en comida" hoy crea un solo
+  movimiento: gana el monto mayor y el resumen pide revisarlo. Debería ofrecer dos movimientos
+  (20.000 Cine y 40.000 Comida), cada uno con su categoría, y dejar sumarlos en uno si eso quería el
+  usuario. Abierto: cómo se parte la frase (conectores "y", comas, "más"), qué hereda cada parte
+  (fecha, medio, cuenta, recurrencia), cómo se revisan y guardan varios borradores a la vez, y el
+  caso con un solo monto ("cine y comida 60 mil"). Ver
+  [Natural-language entry](business-logic.md#natural-language-entry).
 
 - **Avisos de recurrentes por confirmar** — Notificaciones locales programadas para la próxima fecha
   de cada recurrencia (sin trabajo en segundo plano), que abren Recurrentes. Hoy los pendientes solo
@@ -47,7 +55,8 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
   creation, sentence medio/account detection, History/Search currency selector and transfer rows, the
   Search medio/account/type filters, VoiceOver announcement of a row's medio, and the installation
   node's exclusion from iOS backups. Statistics too: tab, Home card, scopes, dimensions, category sheet
-  with View movements, and the Vico charts' animation and column taps.
+  with View movements, and the Vico charts' animation and column taps. Voice dictation too, with its
+  own plan in [tasks/voice-dictation.md](tasks/voice-dictation.md).
   Precise management evidence lives in [Manage movimientos](features/manage-movimientos.md#verification-boundaries).
   Compilation does not establish runtime behavior; follow the physical-device policy in `AGENTS.md`.
 
@@ -89,7 +98,8 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
   query changes; like the first-entry focus bug, it can wait forever if the list was never measured
   (a restored Search showing a changed query). Switch it to `requestScrollToItem(0)`.
 
-- **Smart entry polish** — Voice dictation is a placeholder (UI only). The sentence step's root is
+- **Smart entry polish** — The iOS microphone and speech-recognition prompts are English only: localizing
+  them needs an InfoPlist string catalog added to the target in Xcode. The sentence step's root is
   focusable to keep Android from auto-focusing the input, which adds an unlabeled focus stop;
   replace it during the TalkBack pass. A sheet session left open across midnight resets Fill manually
   and Discard to the session's opening date. Native-speaker review of es-AR and pt-BR entry copy is

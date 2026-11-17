@@ -12,6 +12,7 @@ import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.RecurrenciaRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.entry.SentenceSelection
+import com.kurobello.tallybook.core.data.voice.VoiceDictation
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
@@ -89,6 +90,12 @@ internal class AddMovimientoViewModel(
       )
   private var suggestionIndex = entryEngine.dictionaryIndex(clock.now())
   private var previewJob: Job? = null
+  private val voice =
+      AddMovimientoVoice(
+          MovimientoDictation(repositories.voice),
+          coroutineScope,
+          VoiceHost(),
+      )
 
   val uiState: StateFlow<AddMovimientoUiState>
     field =
@@ -105,6 +112,7 @@ internal class AddMovimientoViewModel(
                 isSubmitting = false,
                 submitAttempted = false,
                 error = null,
+                voice = VoiceInputUi(isAvailable = voice.isAvailable),
             )
         )
 
@@ -210,14 +218,38 @@ internal class AddMovimientoViewModel(
     updateFields { copy(descripcion = value.take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH)) }
   }
 
+  // Typing while listening takes the sentence back from the recognizer.
   override fun onPhraseChanged(value: String) {
+    voice.cancel()
+    updateVoice { copy(notice = null) }
+    applyPhrase(value)
+  }
+
+  private fun applyPhrase(value: String) {
     val phrase = value.replace(LINE_BREAKS, " ").take(MOVIMIENTO_TITLE_MAX_LENGTH)
     updateFields { if (phrase.isBlank()) withoutInterpretation(phrase) else copy(phrase = phrase) }
     refreshPreview(debounce = true)
   }
 
+  override fun onVoiceStart() = voice.start()
+
+  override fun onVoiceStop() = voice.finish()
+
+  override fun onVoiceCancel() = voice.cancel()
+
+  override fun onVoicePermissionResult(granted: Boolean) = voice.onPermissionResult(granted)
+
+  override fun onVoiceOpenSettings() {
+    effectChannel.trySend(AddMovimientoEffect.OpenDictationSettings)
+  }
+
+  private fun updateVoice(transform: VoiceInputUi.() -> VoiceInputUi) {
+    uiState.update { it.copy(voice = it.voice.transform()) }
+  }
+
   override fun onPhraseContinue() {
     if (!uiState.value.canContinuePhrase) return
+    voice.cancel()
     previewJob?.cancel()
     val today = captureToday()
     val text = uiState.value.phrase.trim()
@@ -235,6 +267,10 @@ internal class AddMovimientoViewModel(
               titulo = text,
               amountNeedsReview =
                   parsed.monto != null && PhraseReviewFlag.AMBIGUOUS_AMOUNT in parsed.reviewFlags,
+              frecuencia = if (frecuenciaEdited) frecuencia else parsed.frecuencia,
+              recurrenceUnsupported =
+                  !frecuenciaEdited &&
+                      PhraseReviewFlag.UNSUPPORTED_RECURRENCE in parsed.reviewFlags,
               today = today,
               submitAttempted = false,
               formOpenedFromSummary = false,
@@ -243,6 +279,7 @@ internal class AddMovimientoViewModel(
   }
 
   override fun onFillManually() {
+    voice.cancel()
     previewJob?.cancel()
     updateFields {
       withInitialEntry()
@@ -283,15 +320,25 @@ internal class AddMovimientoViewModel(
   }
 
   override fun onRepetirChanged(enabled: Boolean) {
-    updateFields { copy(frecuencia = if (enabled) frecuencia ?: Frecuencia.MENSUAL else null) }
+    updateFields {
+      copy(
+          frecuencia = if (enabled) frecuencia ?: Frecuencia.MENSUAL else null,
+          frecuenciaEdited = true,
+          recurrenceUnsupported = false,
+      )
+    }
   }
 
   override fun onFrecuenciaChanged(frecuencia: Frecuencia) {
-    updateFields { if (this.frecuencia == null) this else copy(frecuencia = frecuencia) }
+    updateFields {
+      if (this.frecuencia == null) this
+      else copy(frecuencia = frecuencia, frecuenciaEdited = true, recurrenceUnsupported = false)
+    }
   }
 
   override fun onDiscardChanges() {
     if (uiState.value.isSubmitting) return
+    voice.cancel()
     previewJob?.cancel()
     uiState.update { current ->
       current
@@ -448,6 +495,8 @@ internal class AddMovimientoViewModel(
           today = initialDraft.fecha,
           formOpenedFromSummary = false,
           frecuencia = null,
+          frecuenciaEdited = false,
+          recurrenceUnsupported = false,
       )
 
   // A category, tags, medio or cuenta picked in the sentence dialog do not guard it: only a typed
@@ -515,6 +564,8 @@ internal class AddMovimientoViewModel(
           etiquetaIds = manualEtiquetaIds,
           cuentaChoice = cuentaChoice.withoutSentence(cuentaDefaults, initialDraft.tipo),
           sentenceSelection = SentenceSelection.EMPTY,
+          frecuencia = if (frecuenciaEdited) frecuencia else null,
+          recurrenceUnsupported = false,
       )
 
   private val AddMovimientoUiState.manualCategoriaId: String?
@@ -533,6 +584,7 @@ internal class AddMovimientoViewModel(
                   tipo = interpretation.tipo,
                   monto = interpretation.parsed.monto,
                   fecha = interpretation.parsed.fecha ?: today,
+                  frecuencia = interpretation.parsed.frecuencia,
               ),
           suggestionQuery = interpretation.query,
           categoriaId =
@@ -612,6 +664,23 @@ internal class AddMovimientoViewModel(
     }
   }
 
+  private inner class VoiceHost : AddMovimientoVoiceHost {
+    override val state: AddMovimientoUiState
+      get() = uiState.value
+
+    override fun dictationLanguageTag(): String =
+        entryEngine.dictationLanguageFor(preferredLocale.value)
+
+    override fun updateVoice(transform: VoiceInputUi.() -> VoiceInputUi) =
+        this@AddMovimientoViewModel.updateVoice(transform)
+
+    override fun applyDictatedPhrase(value: String) = applyPhrase(value)
+
+    override fun send(effect: AddMovimientoEffect) {
+      effectChannel.trySend(effect)
+    }
+  }
+
   private suspend fun observeEtiquetas() {
     retryEtiquetaRequests
         .loadStates { repositories.etiquetas.observeAll() }
@@ -679,6 +748,7 @@ internal data class AddMovimientoRepositories(
     val etiquetas: EtiquetaRepository,
     val cuentas: CuentaRepository,
     val recurrencias: RecurrenciaRepository,
+    val voice: VoiceDictation,
 )
 
 private fun AddMovimientoUiState.toMovimientoOrNull(

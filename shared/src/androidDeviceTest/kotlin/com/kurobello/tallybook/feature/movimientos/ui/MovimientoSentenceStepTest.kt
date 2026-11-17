@@ -46,8 +46,8 @@ import tallybook.shared.generated.resources.movimiento_phrase_fill_manually
 import tallybook.shared.generated.resources.movimiento_phrase_label
 import tallybook.shared.generated.resources.movimiento_relative_today
 import tallybook.shared.generated.resources.movimiento_relative_yesterday
-import tallybook.shared.generated.resources.movimiento_voice_coming_soon
 import tallybook.shared.generated.resources.movimiento_voice_title
+import tallybook.shared.generated.resources.movimiento_voice_unavailable
 import tallybook.shared.generated.resources.retry
 import tallybook.shared.generated.resources.tag_add_description
 import tallybook.shared.generated.resources.tag_remove
@@ -219,11 +219,11 @@ class MovimientoSentenceStepTest {
   }
 
   @Test
-  fun voiceDictationIsAnAnnouncedPlaceholder() {
+  fun voiceDictationSaysWhenTheDeviceCannotDictate() {
     show(samples.emptySentence)
 
     composeRule.onNodeWithText(string(Res.string.movimiento_voice_title)).assertIsDisplayed()
-    composeRule.onNodeWithText(string(Res.string.movimiento_voice_coming_soon)).assertIsDisplayed()
+    composeRule.onNodeWithText(string(Res.string.movimiento_voice_unavailable)).assertIsDisplayed()
   }
 
   @Test

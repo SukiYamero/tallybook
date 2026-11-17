@@ -5,12 +5,15 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -19,11 +22,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Repeat
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.Frecuencia
 import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.TipoMovimiento
@@ -39,6 +46,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookTextButton
 import com.kurobello.tallybook.core.ui.component.TallybookTextField
 import com.kurobello.tallybook.core.ui.movimiento.MovimientoTypeBadge
 import com.kurobello.tallybook.core.ui.movimiento.signedMovimientoAmountText
+import com.kurobello.tallybook.core.ui.recurrencia.labelResource
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSentenceUi
 import org.jetbrains.compose.resources.stringResource
@@ -64,6 +72,7 @@ internal data class MovimientoSentenceCallbacks(
     val onSuggestion: (Categoria) -> Unit,
     val etiquetas: MovimientoEtiquetasCallbacks,
     val cuenta: MovimientoCuentaCallbacks = MovimientoCuentaCallbacks.Inert,
+    val voice: VoiceDictationCallbacks = VoiceDictationCallbacks.Inert,
 )
 
 /**
@@ -93,14 +102,18 @@ internal fun MovimientoSentenceStep(
       Column(modifier = Modifier.fillMaxWidth()) {
         SentenceInput(sentence, callbacks)
         AnimatedVisibility(
-            visible = sentence.text.isNotBlank(),
+            visible = sentence.showsDetected,
             enter = fadeIn(tween(TallybookTheme.motion.fadeMillis)),
             exit = fadeOut(tween(TallybookTheme.motion.fadeMillis)),
         ) {
           DetectedArea(sentence, callbacks, Modifier.padding(top = TallybookTheme.spacing.space16))
         }
       }
-      VoiceDictationPlaceholder()
+      VoiceDictationButton(
+          voice = sentence.voice,
+          enabled = sentence.isEnabled && sentence.actionsEnabled,
+          callbacks = callbacks.voice,
+      )
       TallybookTextButton(
           onClick = callbacks.onFillManually,
           modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -187,6 +200,7 @@ private fun DetectedArea(
         MovimientoDateBadge(detected.fecha, sentence.today)
         val monto = detected.monto
         if (monto == null) AmountNotDetected() else DetectedAmount(monto, detected.tipo)
+        detected.frecuencia?.let { DetectedRecurrence(it) }
       }
       MovimientoCuentaField(
           field = sentence.cuenta,
@@ -220,6 +234,26 @@ private fun AmountNotDetected() {
       color = TallybookTheme.colors.foreground.tertiary,
       style = TallybookTheme.typography.bodySmall,
   )
+}
+
+@Composable
+private fun DetectedRecurrence(frecuencia: Frecuencia) {
+  Row(
+      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space4),
+      verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Image(
+        imageVector = Lucide.Repeat,
+        contentDescription = null,
+        modifier = Modifier.size(TallybookTheme.dimensions.iconSmall),
+        colorFilter = ColorFilter.tint(TallybookTheme.colors.foreground.secondary),
+    )
+    TallybookText(
+        text = stringResource(frecuencia.labelResource),
+        color = TallybookTheme.colors.foreground.secondary,
+        style = TallybookTheme.typography.bodySmall,
+    )
+  }
 }
 
 @Composable

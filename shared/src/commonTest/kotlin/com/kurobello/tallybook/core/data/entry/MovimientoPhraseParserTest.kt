@@ -27,6 +27,37 @@ class MovimientoPhraseParserTest {
   private fun minor(text: String, moneda: Moneda = Moneda.COP): Long? =
       parse(text, moneda).monto?.minorUnits
 
+  // Speech recognizers write thousands with a space, a no-break space or a narrow no-break space.
+  @Test
+  fun readsThousandsGroupedWithSpacesAsDictationWritesThem() {
+    val cases =
+        mapOf(
+            "caste 50 000 en juegos de computadora" to 5_000_000L,
+            "arriendo 1 500 000 cada mes" to 150_000_000L,
+            "gasté 50 000 en cine" to 5_000_000L,
+            "gasté 50 000 en cine" to 5_000_000L,
+            "pagué 12 500,50 de luz" to 1_250_050L,
+        )
+
+    cases.forEach { (text, expected) -> assertEquals(expected, minor(text), text) }
+    assertEquals(
+        "en juegos de computadora",
+        parse("gasté 50 000 en juegos de computadora").subject,
+    )
+  }
+
+  @Test
+  fun keepsSpaceSeparatedNumbersApartWhenTheyAreNotThousandGroups() {
+    assertEquals(1_200L, minor("cine 2 12"), "a second group needs exactly three digits")
+    assertEquals(300_000L, minor("3000 2 cafés"))
+    assertEquals(50_000_000L, minor("matrícula 2025 500 mil"), "a 4-digit lead is not a group")
+    assertEquals(
+        150_000L,
+        minor("pagué 1.500 000 de luz"),
+        "a dot group is not continued by a space",
+    )
+  }
+
   @Test
   fun detectsExpenseAndIncomeVerbsInEveryLanguage() {
     val cases =

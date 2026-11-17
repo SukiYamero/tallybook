@@ -45,6 +45,8 @@ import com.kurobello.tallybook.core.data.cashCuenta
 import com.kurobello.tallybook.core.data.insertCuentaRow
 import com.kurobello.tallybook.core.data.insertLegacy
 import com.kurobello.tallybook.core.data.seedDefaultCuenta
+import com.kurobello.tallybook.core.data.voice.UnavailableVoiceDictation
+import com.kurobello.tallybook.core.data.voice.VoiceDictation
 import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
@@ -451,6 +453,7 @@ class HistoryIntegrationTest {
               single<MovimientoRepository> { movimientos }
               single<SaldoRepository> { SaldoRepositoryImpl(database, fixture.dispatcher) }
               single<RecurrenciaRepository> { FakeRecurrenciaRepository() }
+              single<VoiceDictation> { UnavailableVoiceDictation }
               single<StatisticsRepository> {
                 StatisticsRepositoryImpl(database, fixture.dispatcher)
               }

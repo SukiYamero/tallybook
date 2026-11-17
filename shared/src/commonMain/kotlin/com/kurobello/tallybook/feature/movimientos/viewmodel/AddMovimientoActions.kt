@@ -4,7 +4,7 @@ import androidx.compose.runtime.Stable
 import com.kurobello.tallybook.core.model.Frecuencia
 
 @Stable
-internal interface AddMovimientoActions : MovimientoFormActions {
+internal interface AddMovimientoActions : MovimientoFormActions, VoiceDictationActions {
   fun onDiscardChanges()
 
   fun onPhraseChanged(value: String)
@@ -25,4 +25,20 @@ internal interface AddMovimientoActions : MovimientoFormActions {
   fun onRepetirChanged(enabled: Boolean)
 
   fun onFrecuenciaChanged(frecuencia: Frecuencia)
+}
+
+@Stable
+internal interface VoiceDictationActions {
+  /** Pressing the microphone; dictated words extend the sentence already typed. */
+  fun onVoiceStart()
+
+  /** Releasing the microphone: stops listening and keeps what was heard. */
+  fun onVoiceStop()
+
+  /** Drops the session without waiting for the recognizer, as when the dialog closes. */
+  fun onVoiceCancel()
+
+  fun onVoicePermissionResult(granted: Boolean)
+
+  fun onVoiceOpenSettings()
 }
