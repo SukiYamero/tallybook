@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -23,7 +24,6 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.disabled
-import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
@@ -110,24 +110,23 @@ internal fun VoiceDictationButton(
           color = TallybookTheme.colors.foreground.secondary,
           style = TallybookTheme.typography.bodyEmphasis,
       )
-      MicrophoneDisc(
-          voice = voice,
-          enabled = enabled && voice.isAvailable,
-          callbacks = callbacks,
-      )
+      // Equal weights on both sides keep the disc centered while the guide fills its left.
+      Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        SlideToCancelGuide(visible = voice.canDiscard, modifier = Modifier.weight(1f))
+        MicrophoneDisc(
+            voice = voice,
+            enabled = enabled && voice.isAvailable,
+            callbacks = callbacks,
+        )
+        Spacer(Modifier.weight(1f))
+      }
       TallybookText(
           text = stringResource(captionOf(voice)),
           // Announcing "listening" would let the microphone transcribe the screen reader itself.
-          // The
-          // listening caption describes touch gestures; screen readers get the disc's actions.
           modifier =
-              when {
-                voice.notice != null && !voice.isListening ->
-                    Modifier.semantics { liveRegion = LiveRegionMode.Polite }
-                voice.isListening && voice.isMicReady ->
-                    Modifier.semantics { hideFromAccessibility() }
-                else -> Modifier
-              },
+              if (voice.notice != null && !voice.isListening)
+                  Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+              else Modifier,
           color = TallybookTheme.colors.foreground.tertiary,
           style = TallybookTheme.typography.caption.copy(textAlign = TextAlign.Center),
       )
