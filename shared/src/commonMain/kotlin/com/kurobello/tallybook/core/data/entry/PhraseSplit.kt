@@ -46,12 +46,20 @@ private fun PhraseCursor.cutBetween(from: Int, to: Int): Int? {
   } ?: connectors.firstOrNull()
 }
 
+/**
+ * The first connector whose own chunk, up to the next connector, holds a shared value: "y bebida"
+ * stays in the last part even when "y lo pagué con débito" follows it.
+ */
 private fun sharedTailStart(reading: PhraseReading, from: Int): Int? {
   val size = reading.cursor.tokens.size
-  return (from until size).firstOrNull { connector ->
-    reading.cursor.isPartConnector(connector) &&
-        (connector + 1 until size).any { reading.sharedConsumed[it] }
-  }
+  val connectors = (from until size).filter(reading.cursor::isPartConnector)
+  val chunkEnds = connectors.drop(1) + size
+  return connectors
+      .zip(chunkEnds)
+      .firstOrNull { (connector, end) ->
+        (connector + 1 until end).any { reading.sharedConsumed[it] }
+      }
+      ?.first
 }
 
 private fun PhraseCursor.isPartConnector(index: Int): Boolean {

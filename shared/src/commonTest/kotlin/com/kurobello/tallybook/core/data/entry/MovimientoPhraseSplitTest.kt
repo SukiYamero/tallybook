@@ -67,6 +67,10 @@ class MovimientoPhraseSplitTest {
         listOf("20 mil en cine", "40 mil en comida y bebida"),
         split("20 mil en cine y 40 mil en comida y bebida"),
     )
+    assertEquals(
+        listOf("20 mil en cine", "40 mil en comida y bebida"),
+        split("20 mil en cine y 40 mil en comida y bebida y lo pagué con débito"),
+    )
   }
 
   @Test
