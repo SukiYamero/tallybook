@@ -6,17 +6,18 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 
 Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 
-1. Prueba completa en iPhone físico → *iOS physical end-to-end*.
-2. Varios movimientos en una frase → *Producto*.
-3. Presupuestos (sobre las consultas de Estadísticas) → *Accounts follow-ups*.
-4. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
+1. Varios movimientos en una frase → *Producto*.
+2. Presupuestos (sobre las consultas de Estadísticas) → *Accounts follow-ups*.
+3. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
    and Statistics accessibility*, *Profile polish*.
-5. Google login + backup en Drive, cuando 3 esté cerrado → [plan](tasks/google-drive-persistence.md).
-6. Avisos de recurrentes por confirmar → *Producto*.
-7. Pulido chico → *Sentence amount above the cap*, *`ioDispatcher` en iOS*, *Unified Custom
+4. Google login + backup en Drive, cuando 2 esté cerrado → [plan](tasks/google-drive-persistence.md).
+5. Avisos de recurrentes por confirmar → *Producto*.
+6. Pulido chico → *Sentence amount above the cap*, *`ioDispatcher` en iOS*, *Unified Custom
    date-range picker*, *Recurrentes copy*.
-8. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
-9. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
+7. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
+8. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
+9. Prueba completa en iPhone físico, en una sola pasada cuando Android esté terminado (Android es el
+   objetivo primero; cada feature mantiene compilando iOS mientras tanto) → *iOS physical end-to-end*.
 
 ## Producto
 
@@ -36,12 +37,16 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
   date ("Vence el …" reads better), and the second pending row of a recurrence truncates its
   "confirm the earlier date first" note.
 
-## Alta
+## Al cierre de Android
 
 - **iOS physical end-to-end** — Shared production/test sources compile for Native, but physical
-  iPhone runtime validation remains pending and was explicitly deferred for History. Confirm the
-  authorized connected iPhone and developer services, then run the app from Xcode using the existing
-  shared `TEAM_ID`. Validate Home/History/Search, filters, creation (sentence dialog keyboard
+  iPhone runtime validation remains pending and was explicitly deferred for History. Before the first
+  build, install the iOS 26.5 platform in Xcode › Settings › Components (Xcode 26 ships without it
+  and refuses every iOS destination, including a physical iPhone; it bundles the simulator runtime,
+  about 8 GB). Check first that the static Kotlin framework links Speech and AVFAudio: a missing
+  link fails the whole app build, not only dictation (fix with `OTHER_LDFLAGS` in
+  `iosApp/Configuration/Config.xcconfig`). Confirm the authorized connected iPhone and developer
+  services, then run the app from Xcode using the existing shared `TEAM_ID`. Validate Home/History/Search, filters, creation (sentence dialog keyboard
   placement, review sheet, the Category section switch and single-select
   picker, the Tags section and tag picker with create), lifecycle and safe areas,
   including management scene teardown, edit/delete/Undo and VoiceOver action-window usability, and
