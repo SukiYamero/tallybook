@@ -119,6 +119,68 @@ class DictationTranscriptTest {
   }
 
   @Test
+  fun aSegmentReplacesWordsItRevisedAfterAPause() {
+    val text =
+        transcriptOf(
+            DictationEvent.Partial("caste 20"),
+            DictationEvent.Pause,
+            DictationEvent.Partial("gasté 20 mil"),
+            DictationEvent.Segment("gasté 20 mil"),
+            DictationEvent.Final(""),
+        )
+
+    assertEquals("gasté 20 mil", text)
+  }
+
+  @Test
+  fun aSegmentKeepsAnEarlierStretchItDoesNotCover() {
+    val text =
+        transcriptOf(
+            DictationEvent.Partial("gasté 20 mil en cine"),
+            DictationEvent.Pause,
+            DictationEvent.Partial("y 40 mil"),
+            DictationEvent.Segment("y 40 mil en comida"),
+            DictationEvent.Final(""),
+        )
+
+    assertEquals("gasté 20 mil en cine y 40 mil en comida", text)
+  }
+
+  @Test
+  fun aRecognizerThatResendsEverythingMayRewordAfterAPause() {
+    val reworded =
+        transcriptOf(
+            DictationEvent.Partial("gasté 20 mil"),
+            DictationEvent.Pause,
+            DictationEvent.Partial("gasté 20.000 en"),
+            DictationEvent.Final("gasté 20.000 en cine"),
+        )
+    val shortened =
+        transcriptOf(
+            DictationEvent.Partial("gasté 20 mil en"),
+            DictationEvent.Pause,
+            DictationEvent.Partial("gasté 20 mil"),
+            DictationEvent.Final("gasté 20 mil en cine"),
+        )
+
+    assertEquals("gasté 20.000 en cine", reworded)
+    assertEquals("gasté 20 mil en cine", shortened)
+  }
+
+  @Test
+  fun aRepeatedStretchIsRemovedOnlyAsWholeWords() {
+    val text =
+        transcriptOf(
+            DictationEvent.Partial("y"),
+            DictationEvent.Pause,
+            DictationEvent.Partial("yo pagué"),
+            DictationEvent.Final(""),
+        )
+
+    assertEquals("y yo pagué", text)
+  }
+
+  @Test
   fun aPauseWithoutNewWordsChangesNothing() {
     val text =
         transcriptOf(
