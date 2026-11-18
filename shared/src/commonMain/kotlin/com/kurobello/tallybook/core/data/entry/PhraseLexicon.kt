@@ -198,6 +198,11 @@ internal val partConnectors: Set<String> =
 // A comma inside "1.500,50" is part of the number token, so only a standalone comma gets here.
 internal val partConnectorPunctuation: Set<String> = setOf(",", "+")
 
+// Words about how the whole sentence was paid ("más lo cargué con la tarjeta"). They decide no
+// tipo,
+// so they are not tipo verbs; they only let a chunk after the last amount open the shared tail.
+internal val sharedTailWords: Set<String> = setOf("cargue", "carguei", "charged", "it", "them")
+
 internal val slangMultipliers: Map<String, Long> =
     mapOf(
         "lucas" to THOUSAND_FACTOR,

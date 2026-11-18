@@ -80,7 +80,8 @@ class MovimientoPhraseSplitTest {
           ),
       )
 
-  // Only stop words or a tipo verb may sit between the cut and the next amount; a medio may not.
+  // Stop words, tipo verbs and the shared words (medio, account, date) may sit between the cut and
+  // the next amount; a word naming a thing may not.
   private val fillerCases =
       listOf(
           case(
@@ -90,8 +91,13 @@ class MovimientoPhraseSplitTest {
           ),
           case(
               "20 mil en cine y palomitas y con débito 40 mil",
-              "20 mil en cine" to 2_000_000L,
-              "palomitas y con débito 40 mil" to 4_000_000L,
+              "20 mil en cine y palomitas" to 2_000_000L,
+              "con débito 40 mil" to 4_000_000L,
+          ),
+          case(
+              "20 mil en cine y palomitas y ayer 40 mil",
+              "20 mil en cine y palomitas" to 2_000_000L,
+              "ayer 40 mil" to 4_000_000L,
           ),
           case(
               "20 mil en cine y con débito y 40 mil en comida",
@@ -125,6 +131,77 @@ class MovimientoPhraseSplitTest {
           ),
       )
 
+  private val connectorWordCases =
+      listOf(
+          case(
+              "cine 20 mil + comida 40 mil",
+              "cine 20 mil" to 2_000_000L,
+              "comida 40 mil" to 4_000_000L,
+          ),
+          case(
+              "lunch 20 plus taxi 15",
+              "lunch 20" to 2_000L,
+              "taxi 15" to 1_500L,
+              moneda = Moneda.USD,
+          ),
+          case(
+              "almoço 20 mais uber 15",
+              "almoço 20" to 2_000L,
+              "uber 15" to 1_500L,
+              moneda = Moneda.BRL,
+          ),
+          case(
+              "almoço 20 também uber 15",
+              "almoço 20" to 2_000L,
+              "uber 15" to 1_500L,
+              moneda = Moneda.BRL,
+          ),
+          case(
+              "lunch 20 also taxi 15",
+              "lunch 20" to 2_000L,
+              "taxi 15" to 1_500L,
+              moneda = Moneda.USD,
+          ),
+      )
+
+  // A chunk after the last amount is the shared tail only when nothing but filler comes before
+  // its first shared word; otherwise it names more of the last movimiento.
+  private val tailCases =
+      listOf(
+          case(
+              "20 mil en cine y 40 mil en comida y bebida ayer",
+              "20 mil en cine" to 2_000_000L,
+              "40 mil en comida y bebida ayer" to 4_000_000L,
+          ),
+          case(
+              "20 mil en cine y 40 mil en comida y ayer",
+              "20 mil en cine" to 2_000_000L,
+              "40 mil en comida" to 4_000_000L,
+          ),
+          case(
+              "lunch 20 and taxi 15 and charged it on my credit card",
+              "lunch 20" to 2_000L,
+              "taxi 15" to 1_500L,
+              moneda = Moneda.USD,
+          ),
+          case(
+              "almoço 20 e uber 15 e carguei no cartão de crédito",
+              "almoço 20" to 2_000L,
+              "uber 15" to 1_500L,
+              moneda = Moneda.BRL,
+          ),
+          case(
+              "cine 20 mil y comida 30 mil y",
+              "cine 20 mil" to 2_000_000L,
+              "comida 30 mil" to 3_000_000L,
+          ),
+          case(
+              "cine 20 mil y comida 5 mil más",
+              "cine 20 mil" to 2_000_000L,
+              "comida 5 mil" to 500_000L,
+          ),
+      )
+
   private val quantityEdgeCase =
       case(
           "taxi 15, propina 20 y almuerzo 18",
@@ -149,7 +226,9 @@ class MovimientoPhraseSplitTest {
           languageCases +
           cutCases +
           fillerCases +
-          connectorRunCases
+          connectorRunCases +
+          connectorWordCases +
+          tailCases
 
   @Test fun theContextSentenceSplitsIntoTwoPartsAndASharedTail() = assertSplits(contextCase)
 
@@ -169,9 +248,13 @@ class MovimientoPhraseSplitTest {
 
   @Test fun cutsAtTheConnectorThatIntroducesTheNextAmount() = cutCases.forEach(::assertSplits)
 
-  @Test fun onlyStopWordsOrTipoVerbsMayFollowTheCut() = fillerCases.forEach(::assertSplits)
+  @Test fun onlyFillerMayFollowTheCut() = fillerCases.forEach(::assertSplits)
 
   @Test fun adjacentConnectorsCutAsOne() = connectorRunCases.forEach(::assertSplits)
+
+  @Test fun everyConnectorWordCuts() = connectorWordCases.forEach(::assertSplits)
+
+  @Test fun theSharedTailStartsOnlyWhereTheLastPartEnds() = tailCases.forEach(::assertSplits)
 
   @Test fun aNumberBeforeAConnectorIsAnAmountNotAQuantity() = assertSplits(quantityEdgeCase)
 
@@ -180,8 +263,12 @@ class MovimientoPhraseSplitTest {
   @Test fun aCadenceInsideThePartStaysInIt() = assertSplits(cadenceCase)
 
   @Test
-  fun moreThanTenPartsDoNotSplit() =
-      assertNull(split((1..11).joinToString(" y ") { "$it mil en algo" }))
+  fun tenPartsSplitAndElevenDoNot() {
+    fun sentence(parts: Int) = (1..parts).joinToString(" y ") { "$it mil en algo" }
+
+    assertEquals((1..10).map { "$it mil en algo" }, split(sentence(10)))
+    assertNull(split(sentence(11)))
+  }
 
   // Guards the contract the ViewModel relies on: parse(part).monto is the part's amount.
   @Test
