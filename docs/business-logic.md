@@ -199,6 +199,50 @@ app derives the draft from it and the user confirms or refines it; the manual fo
 - A non-empty sentence counts as an unsaved change for the existing dismissal guard. Editing an
   existing movimiento keeps opening the form directly.
 
+### Learning from corrections
+
+Every field the user sets by hand between Continue and Save of a sentence-created movimiento is
+recorded on the device, and a correction repeated for the same words becomes a personal rule.
+
+- A correction is a difference between what the sentence derived at the last Continue and what Save
+  persisted, for a single movimiento or each part of a split sentence. Compared fields: tipo, monto,
+  fecha, categoría, medio, cuenta, frecuencia, the título's words and, for split sentences, the
+  structure (parts joined or removed). Only fields the user set by hand count: a default (default
+  cuenta and medio, Otros) or a value another change overwrote as a side effect (a medio pick that
+  swaps the cuenta, a cuenta or tipo change that adapts the medio) is not a correction. A hand pick
+  counts even when it equals what the app proposed, because it confirms the value; picking a dimmed
+  category suggestion or a medio the sentence left undecided is a correction.
+- Only the add flow records. Editing a saved movimiento, confirming a recurrencia occurrence, Fill
+  manually and a form opened without a sentence record nothing. A título rewritten beyond recognition
+  (more than half of its words changed) records no título correction.
+- A record holds the sentence's subject words (normalized like category suggestions, never the
+  amount or the whole sentence), the field, the parser's own reading (`leido`), what the app proposed
+  after rules (`propuesto`), the saved value (`guardado`), whether the sentence was dictated or typed,
+  and the creation time. Values are stable identifiers (enum names, category and cuenta ids, minor
+  units with currency, ISO dates). Records are written after a successful save, in their own
+  transaction; a failed record write never affects the save. They are a stamped root entity, excluded
+  from CSV export and every user-facing count, and never pruned; rules ignore records older than 180
+  days.
+- Learned fields: tipo, categoría, medio, cuenta and frecuencia; the rest are only recorded. A rule is
+  (word, field, value) and exists when, among the live records of the last 180 days containing the
+  word for that field, at least 2 have `guardado` = value and the most recent one does too (a later
+  contradiction suspends the rule until two newer agreeing records). Words shorter than 3 characters
+  never form rules.
+- With one agreeing record the value is only offered: categoría as a dimmed suggestion chip and
+  cuenta among the suggested accounts. Tipo, medio and frecuencia have no offered state; they are
+  applied from the second consistent correction.
+- When words of one sentence have rules with different values for a field, none applies and their
+  values are offered (categoría, cuenta); the same value on several words still applies.
+- A rule fills a field the parser left undecided. It overrides an explicit reading only when its
+  agreeing records corrected that same reading, so "con débito" is never overridden by a habit.
+- Order: tipo first (it depends on no other learned value), then categoría, cuenta, medio and
+  frecuencia. A learned medio adapts to a learned or named cuenta when that cuenta's type accepts it;
+  otherwise the cuenta's implied medio stays. A cuenta rule whose cuenta is archived or deleted is
+  ignored, and rule values adapt to the final tipo like detected ones.
+- Applied values are sentence-owned: a hand pick wins, and changing it records a new correction,
+  which is how a rule is unlearned.
+- Rules are computed in memory from the records and refresh when records change.
+
 ### Several movimientos
 
 A sentence with several amounts offers one movimiento per amount, reviewed together and saved with
@@ -271,6 +315,8 @@ the training data, so correcting a suggestion teaches the next one.
 - Ambiguous words ("aceite", "oil", "óleo", "ticket", "gas") point at several categories and never
   produce a high-confidence result on their own; when unsure, the app offers up to three of them as
   suggestions instead of guessing.
+- Learned word rules (see [Learning from corrections](#learning-from-corrections)) rank after the
+  exact-subject history match and before the dictionary.
 - Each past movimiento is one full vote for its category. When a clear majority of the past
   movimientos with exactly the same subject share a category, that category is the high-confidence
   suggestion.
@@ -842,7 +888,8 @@ one currency at a time. Presentation lives in
 Every persisted root entity is ready for the future Drive backup and sync engine without another data
 migration.
 
-- `movimiento`, `categoria`, `etiqueta`, `cuenta`, `transferencia` and `recurrencia` have
+- `movimiento`, `categoria`, `etiqueta`, `cuenta`, `transferencia`, `recurrencia` and
+  `correccion_frase` have
   `updated_at` (non-null) and `deleted_at` (null while live). Both hold a `ChangeStamp`: a hybrid
   logical clock value encoded as sortable text,
   `<13-digit epoch millis>-<4 hex counter>-<16 hex node>`, whose text order equals stamp order. A

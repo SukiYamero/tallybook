@@ -88,6 +88,12 @@ Creation moves through three steps (a sentence with several amounts uses a revie
 - While no category was changed by hand, each detection result writes the high-confidence category
   into the draft; the first manual change takes the category over. Detected tags follow the same
   ownership until the user adds or removes one (`etiquetasEdited`).
+- Learning from corrections: Continue snapshots the derived values (`SentenceSnapshot`, per part for
+  split sentences, with the dictated flag from the voice helper); a successful Save diffs them
+  against the saved movimientos using the existing ownership flags and writes `correccion_frase`
+  records in their own transaction. `MovimientoEntryEngine` receives the learned `CorrectionRules`,
+  rebuilt when records change, and applies or offers them. Rules in
+  [Learning from corrections](../business-logic.md#learning-from-corrections).
 - Composition owns field focus, picker visibility and confirmation visibility.
   `AddMovimientoSheet` hosts both surfaces: `MovimientoSentenceStep` shows while the step is the
   sentence and `MovimientoSummaryStep` or the form show in the sheet otherwise. The steps are stateless.

@@ -77,8 +77,8 @@ picked; any record leaving the device.
   - the most recent one has `guardado` = value (a later contradiction suspends the rule until two
     newer agreeing corrections).
 - With exactly one agreeing record (and no newer contradiction) the value is only **offered**:
-  categoría as a dimmed suggestion chip, medio and cuenta among the offered alternatives the
-  sentence dialog already shows. Tipo and frecuencia have no offered state.
+  categoría as a dimmed suggestion chip and cuenta among the suggested accounts. Tipo, medio and
+  frecuencia have no offered state: they are applied from the second consistent correction.
 - Words shorter than 3 characters never form rules. When several words of one sentence have rules
   for the same field with different values, none applies and their values are offered.
 - Applying a rule:
@@ -122,8 +122,9 @@ picked; any record leaving the device.
 - **Wave 2** (depends on 1): engine integration — `MovimientoEntryEngine` takes the learned rules and
   applies/offers them per the rules above (single sentence and each part); tests.
 - **Wave 3** (depends on 2): capture — snapshot the derived values at Continue (single and parts),
-  dictated flag from the voice helper, diff at successful Save (single and Save all) into records in
-  the same transaction scope as the save (a failed save records nothing); tests including the split
+  dictated flag from the voice helper, diff at successful Save (single and Save all) into records after
+  a successful save, in their own transaction (a failed save records nothing; a failed record write
+  never affects the save); tests including the split
   flow and Fill manually.
 - **Wave 4**: docs (`business-logic.md`: "Category suggestions" and a "Learning from corrections"
   section; `stack`/`ui` untouched), final review, Xiaomi smoke.
