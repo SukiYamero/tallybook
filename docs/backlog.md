@@ -11,8 +11,8 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
    and Statistics accessibility*, *Profile polish*.
 3. Google login + backup en Drive, cuando 1 esté cerrado → [plan](tasks/google-drive-persistence.md).
 4. Avisos de recurrentes por confirmar → *Producto*.
-5. Pulido chico → *Sentence amount above the cap*, *`ioDispatcher` en iOS*, *Unified Custom
-   date-range picker*, *Recurrentes copy*.
+5. Pulido chico → *Several movimientos follow-ups*, *Sentence amount above the cap*,
+   *`ioDispatcher` en iOS*, *Unified Custom date-range picker*, *Recurrentes copy*.
 6. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
 7. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
 8. Prueba completa en iPhone físico, en una sola pasada cuando Android esté terminado (Android es el
@@ -23,6 +23,14 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 - **Avisos de recurrentes por confirmar** — Notificaciones locales programadas para la próxima fecha
   de cada recurrencia (sin trabajo en segundo plano), que abren Recurrentes. Hoy los pendientes solo
   se ven al abrir la app (fila de Inicio). Ver [Recurrentes](business-logic.md#recurrentes).
+
+- **Several movimientos follow-ups** — Save all maps a rejected cuenta to the generic save error
+  instead of opening the part on it, as the single save does. Every keystroke in the review or a
+  part form re-ranks every part's suggestions on the main thread. The shared tail recognizes only a
+  short list of charge words ("cargué", "charged"…), so phrasings like "lo pasé con débito" keep
+  their words in the last título. A cleared part category stays among that part's suggestions,
+  unlike the single sentence's dismissal. See
+  [Several movimientos](business-logic.md#natural-language-entry).
 
 - **Recurrentes copy** — A pending row reads "Pendiente desde el 15 de noviembre" for a single due
   date ("Vence el …" reads better), and the second pending row of a recurrence truncates its
