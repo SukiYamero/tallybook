@@ -6,28 +6,19 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 
 Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 
-1. Varios movimientos en una frase → *Producto*.
-2. Presupuestos (sobre las consultas de Estadísticas) → *Accounts follow-ups*.
-3. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
+1. Presupuestos (sobre las consultas de Estadísticas) → *Accounts follow-ups*.
+2. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
    and Statistics accessibility*, *Profile polish*.
-4. Google login + backup en Drive, cuando 2 esté cerrado → [plan](tasks/google-drive-persistence.md).
-5. Avisos de recurrentes por confirmar → *Producto*.
-6. Pulido chico → *Sentence amount above the cap*, *`ioDispatcher` en iOS*, *Unified Custom
+3. Google login + backup en Drive, cuando 1 esté cerrado → [plan](tasks/google-drive-persistence.md).
+4. Avisos de recurrentes por confirmar → *Producto*.
+5. Pulido chico → *Sentence amount above the cap*, *`ioDispatcher` en iOS*, *Unified Custom
    date-range picker*, *Recurrentes copy*.
-7. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
-8. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
-9. Prueba completa en iPhone físico, en una sola pasada cuando Android esté terminado (Android es el
+6. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
+7. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
+8. Prueba completa en iPhone físico, en una sola pasada cuando Android esté terminado (Android es el
    objetivo primero; cada feature mantiene compilando iOS mientras tanto) → *iOS physical end-to-end*.
 
 ## Producto
-
-- **Varios movimientos en una frase** — "Gasté 20 mil en cine y 40 mil en comida" hoy crea un solo
-  movimiento: gana el monto mayor y el resumen pide revisarlo. Debería ofrecer dos movimientos
-  (20.000 Cine y 40.000 Comida), cada uno con su categoría, y dejar sumarlos en uno si eso quería el
-  usuario. Abierto: cómo se parte la frase (conectores "y", comas, "más"), qué hereda cada parte
-  (fecha, medio, cuenta, recurrencia), cómo se revisan y guardan varios borradores a la vez, y el
-  caso con un solo monto ("cine y comida 60 mil"). Ver
-  [Natural-language entry](business-logic.md#natural-language-entry).
 
 - **Avisos de recurrentes por confirmar** — Notificaciones locales programadas para la próxima fecha
   de cada recurrencia (sin trabajo en segundo plano), que abren Recurrentes. Hoy los pendientes solo

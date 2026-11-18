@@ -7,7 +7,7 @@ bottom sheet, both built from Tallybook components. Domain rules remain defined 
 
 ## Interaction
 
-Creation moves through three steps; business rules for each live in
+Creation moves through three steps (a sentence with several amounts uses a review of its parts in place of the summary); business rules for each live in
 [Natural-language entry](../business-logic.md#natural-language-entry),
 [Category suggestions](../business-logic.md#category-suggestions) and
 [Category and tags](../business-logic.md#category-and-tags).
@@ -36,6 +36,13 @@ Creation moves through three steps; business rules for each live in
   draft; Save (right) persists; the actions sit at the bottom, at least `space32` below the content.
   The review has no text input: the description is edited in the form.
   A failed save shows the shared save error above the actions and keeps the draft.
+- **Parts review (sheet)**: for a sentence that splits (see
+  [Several movimientos](../business-logic.md#several-movimientos)), the same tall sheet shows the
+  parts under their total, the shared tipo and date, the Medio and Account sections, Tags and Repetir,
+  and one row per part (amount, título, category tag, ×). The category tag opens a small sheet with
+  that part's suggestions, clear and "Choose"; the row opens that part's form, whose action is Done.
+  Unir en uno (left) and Save N (right) sit at the bottom; the Detected card of the dialog switches to
+  a compact list of the same parts.
 - **Form**: the complete form in the same sheet: tipo, Medio, Account, Category, Tags, date, amount
   and the optional texts. Save
   without a real category persists Otros; the Category section shows the pending style and, beside
@@ -69,6 +76,9 @@ Creation moves through three steps; business rules for each live in
 
 ## Ownership and retained capability
 
+- The parts of a split sentence live in `AddMovimientoUiState` (`EntryPart`: amount, título,
+  category with its owner and per-part overrides); `MovimientoEntryEngine` interprets each part, and
+  `submitParts` saves them through one atomic repository batch. `MovimientoReviewStep` is stateless.
 - `AddMovimientoViewModel` owns the draft (one `categoriaId`, the ordered `etiquetaIds`, and the
   medio and account with their owner), the sentence, the step, validation, submission and the opening baseline. The detected values,
   suggestions, summary and unsaved flag derive from that state; composition never reads the clock.
