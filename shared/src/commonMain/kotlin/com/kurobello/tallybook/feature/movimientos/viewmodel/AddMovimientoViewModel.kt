@@ -525,19 +525,19 @@ internal class AddMovimientoViewModel(
       selectedId: String?,
   ): List<Categoria> =
       rankSuggestions(query)
-          .filterNot { it.categoriaId == selectedId }
-          .mapNotNull { suggestion -> categorias.firstOrNull { it.id == suggestion.categoriaId } }
+          .filterNot { it == selectedId }
+          .mapNotNull { id -> categorias.firstOrNull { it.id == id } }
           .take(MAX_SUGGESTION_CHIPS)
 
   private fun AddMovimientoUiState.rankSuggestions(query: SuggestionQuery? = suggestionQuery) =
-      query?.let { entryEngine.rank(suggestionIndex, it, candidates()) }.orEmpty()
+      query?.let { suggestionIndex.suggestedCategoriaIds(it, candidates()) }.orEmpty()
 
   // A removed category that the sentence suggested stays dismissed for the same subject.
   private fun AddMovimientoUiState.withCategoria(
       updated: String?,
       removed: String? = null,
   ): AddMovimientoUiState {
-    val dismissed = removed?.takeIf { id -> rankSuggestions().any { it.categoriaId == id } }
+    val dismissed = removed?.takeIf { id -> id in rankSuggestions() }
     return copy(
         categoriaId = updated,
         categoriasEdited = true,

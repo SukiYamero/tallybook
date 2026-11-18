@@ -6,6 +6,7 @@ import com.kurobello.tallybook.core.data.entry.CategoryHistoryEntry
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
 import com.kurobello.tallybook.core.data.entry.CategorySuggestion
 import com.kurobello.tallybook.core.data.entry.CategorySuggestionIndex
+import com.kurobello.tallybook.core.data.entry.CorrectionRules
 import com.kurobello.tallybook.core.data.entry.CuentaMatcher
 import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
@@ -13,18 +14,17 @@ import com.kurobello.tallybook.core.data.entry.SentenceSelection
 import com.kurobello.tallybook.core.data.entry.SuggestionConfidence
 import com.kurobello.tallybook.core.data.entry.incomeCategoryIds
 import com.kurobello.tallybook.core.data.entry.resolveSentenceCuenta
-import com.kurobello.tallybook.core.data.entry.resolveSentenceMedio
+import com.kurobello.tallybook.core.data.entry.suggestionTokens
 import com.kurobello.tallybook.core.data.resolveDeviceLocale
 import com.kurobello.tallybook.core.data.voice.dictationLanguageTag
 import com.kurobello.tallybook.core.model.AppLocale
+import com.kurobello.tallybook.core.model.CampoCorreccion
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
-import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.ParsedMovimientoPhrase
-import com.kurobello.tallybook.core.model.PhraseReviewFlag
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.time.Instant
 import kotlinx.coroutines.CoroutineDispatcher
@@ -33,14 +33,18 @@ import kotlinx.datetime.LocalDate
 
 internal const val MAX_SUGGESTION_CHIPS = 3
 
-// The selected category is filtered out of the ranking, so keep one more to still fill the chips.
-private const val RANKING_LIMIT = MAX_SUGGESTION_CHIPS + 1
-
 /** [moneda] reads the amount until the sentence's own cuenta decides another currency. */
 internal data class PhraseContext(val moneda: Moneda, val locale: AppLocale, val today: LocalDate)
 
-/** The user's own names a sentence may mention: tags and accounts. */
-internal class SentenceCatalogs(val etiquetas: List<Etiqueta>, val cuentas: SentenceCuentas)
+/**
+ * What the user's own data tells a sentence: the tags and accounts it may name, and the [rules]
+ * learned from their corrections.
+ */
+internal class SentenceCatalogs(
+    val etiquetas: List<Etiqueta>,
+    val cuentas: SentenceCuentas,
+    val rules: CorrectionRules = CorrectionRules.EMPTY,
+)
 
 /**
  * The live cuentas a sentence may name. [monedaFor] is the currency the draft ends up in once the
@@ -52,12 +56,20 @@ internal class SentenceCuentas(
     val monedaFor: (SentenceSelection, TipoMovimiento) -> Moneda,
 )
 
-internal data class SuggestionQuery(val subject: String, val tipo: TipoMovimiento)
+/** [offeredCategoriaIds] are learned categories shown ahead of the ranked suggestions. */
+internal data class SuggestionQuery(
+    val subject: String,
+    val tipo: TipoMovimiento,
+    val offeredCategoriaIds: List<String> = emptyList(),
+)
 
 internal data class SuggestionCandidates(
     val availableIds: Set<String>,
     val excludedIds: Set<String>,
-)
+) {
+  fun allows(categoriaId: String): Boolean =
+      categoriaId in availableIds && categoriaId !in excludedIds
+}
 
 /** One movimiento of a sentence that states several amounts; the rest is shared by the sentence. */
 internal data class PartInterpretation(
@@ -67,29 +79,31 @@ internal data class PartInterpretation(
     val query: SuggestionQuery,
     val ranking: List<CategorySuggestion>,
     val learnedCategoriaId: String?,
-) {
-  val preselectedCategoriaId: String?
-    get() = preselected(learnedCategoriaId, ranking)
-}
+    val preselectedCategoriaId: String?,
+    /** The sentence's shared readings with this part's own monto and categoría. */
+    val readings: FieldReadings,
+    /** Only this part's categorías; medio and cuenta offers belong to the sentence. */
+    val offered: OfferedValues,
+)
 
+/**
+ * [parsed] already carries a learned frecuencia; [readings] keep what the parser itself read.
+ * [learnedCategoriaId] is the exact-subject history match, which outranks any word rule.
+ */
 internal data class PhraseInterpretation(
     val parsed: ParsedMovimientoPhrase,
     val tipo: TipoMovimiento,
     val query: SuggestionQuery,
     val ranking: List<CategorySuggestion>,
     val learnedCategoriaId: String?,
+    val preselectedCategoriaId: String?,
     val etiquetaIds: List<String>,
     val sentence: SentenceSelection,
+    val readings: FieldReadings,
+    val offered: OfferedValues,
     /** Empty when the sentence is a single movimiento. */
     val parts: List<PartInterpretation> = emptyList(),
-) {
-  val preselectedCategoriaId: String?
-    get() = preselected(learnedCategoriaId, ranking)
-}
-
-private fun preselected(learned: String?, ranking: List<CategorySuggestion>): String? =
-    learned
-        ?: ranking.firstOrNull()?.takeIf { it.confidence == SuggestionConfidence.HIGH }?.categoriaId
+)
 
 /** Pure sentence interpretation; only the history indexing and live preview leave the caller. */
 internal class MovimientoEntryEngine(
@@ -140,7 +154,8 @@ internal class MovimientoEntryEngine(
 
   /**
    * Account names are matched before parsing so their words never become an amount or a date. The
-   * amount is read again when the layered selection lands in another currency than [context]'s.
+   * amount is read again when the layered selection lands in another currency than [context]'s. A
+   * learned tipo is decided first, since the ranking and the medio depend on it.
    */
   fun interpret(
       text: String,
@@ -150,57 +165,61 @@ internal class MovimientoEntryEngine(
       catalogs: SentenceCatalogs,
   ): PhraseInterpretation {
     val cuentas = catalogs.cuentas
+    val rules = catalogs.rules
     val matches = cuentaMatcher.match(text, cuentas.cuentas)
     val reserved = matches.map { it.start until it.endExclusive }
-    val sentenceCuenta = resolveSentenceCuenta(matches, cuentas.cuentas, cuentas.primary)
     val first = parser.parse(text, context.moneda, context.locale, context.today, reserved)
-    val tipo = first.tipo ?: impliedTipo(first.subject, index, candidates)
-    val sentence =
-        SentenceSelection(
-            sentenceCuenta,
-            resolveSentenceMedio(first, tipo, sentenceCuenta.cuenta?.tipo),
-        )
-    val moneda = cuentas.monedaFor(sentence, tipo)
-    val parsed =
+    val words = suggestionTokens(first.subject)
+    val tipo =
+        rules.outcome(words, CampoCorreccion.TIPO, first.tipo?.name).applied(TipoMovimiento.entries)
+            ?: first.tipo
+            ?: impliedTipo(first.subject, index, candidates)
+    val selection =
+        learnedSelection(
+            first,
+            tipo,
+            resolveSentenceCuenta(matches, cuentas.cuentas, cuentas.primary),
+            cuentas.cuentas,
+        ) { campo, leido ->
+          rules.outcome(words, campo, leido)
+        }
+    val moneda = cuentas.monedaFor(selection.learned, tipo)
+    val read =
         if (moneda == context.moneda) first
         else parser.parse(text, moneda, context.locale, context.today, reserved)
-    val query = SuggestionQuery(parsed.subject, tipo)
-    val learned =
-        index.learnedCategoria(query.subject, candidates.availableIds, candidates.excludedIds)
+    val parsed = read.withLearnedFrecuencia(rules, suggestionTokens(read.subject))
+    val category = index.categoryChoice(parsed.subject, tipo, candidates, rules)
+    val readings =
+        sentenceReadings(read, parsed, tipo, selection, context.today)
+            .with(CampoCorreccion.CATEGORIA, category.read, category.preselected)
     return PhraseInterpretation(
         parsed = parsed,
         tipo = tipo,
-        query = query,
-        ranking = rank(index, query, candidates),
-        learnedCategoriaId = learned,
+        query = category.query,
+        ranking = category.ranking,
+        learnedCategoriaId = category.history,
+        preselectedCategoriaId = category.preselected,
         etiquetaIds =
             etiquetaMatcher.match(text, catalogs.etiquetas).take(MAX_ETIQUETAS_POR_MOVIMIENTO),
-        sentence = sentence,
+        sentence = selection.learned,
+        readings = readings,
+        offered =
+            OfferedValues(
+                category.query.offeredCategoriaIds,
+                selection.offeredMedios,
+                selection.offeredCuentaIds,
+            ),
         parts =
             parser.split(text, moneda, context.locale, context.today, reserved).orEmpty().map {
                 partText ->
               val part = parse(partText, context, moneda, cuentas.cuentas)
-              interpretPart(partText, part, tipo, index, candidates)
+              partInterpretation(
+                  partText,
+                  part,
+                  readings,
+                  index.categoryChoice(part.subject, tipo, candidates, rules),
+              )
             },
-    )
-  }
-
-  private fun interpretPart(
-      text: String,
-      parsed: ParsedMovimientoPhrase,
-      tipo: TipoMovimiento,
-      index: CategorySuggestionIndex,
-      candidates: SuggestionCandidates,
-  ): PartInterpretation {
-    val query = SuggestionQuery(parsed.subject, tipo)
-    return PartInterpretation(
-        titulo = text.trim().take(MOVIMIENTO_TITLE_MAX_LENGTH),
-        monto = parsed.monto,
-        amountIsAmbiguous = PhraseReviewFlag.AMBIGUOUS_AMOUNT in parsed.reviewFlags,
-        query = query,
-        ranking = rank(index, query, candidates),
-        learnedCategoriaId =
-            index.learnedCategoria(query.subject, candidates.availableIds, candidates.excludedIds),
     )
   }
 
@@ -214,19 +233,6 @@ internal class MovimientoEntryEngine(
     val reserved = cuentaMatcher.match(text, cuentas).map { it.start until it.endExclusive }
     return parser.parse(text, moneda, context.locale, context.today, reserved)
   }
-
-  fun rank(
-      index: CategorySuggestionIndex,
-      query: SuggestionQuery,
-      candidates: SuggestionCandidates,
-  ): List<CategorySuggestion> =
-      index.suggest(
-          subject = query.subject,
-          tipo = query.tipo,
-          availableIds = candidates.availableIds,
-          excludedIds = candidates.excludedIds,
-          limit = RANKING_LIMIT,
-      )
 
   // Without a verb the sentence has no direction; a confident income category is the only hint.
   // Anything weaker must not imply it, because the income boost would then promote it to confident.
