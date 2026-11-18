@@ -114,6 +114,79 @@ class CorrectionRulesTest {
   }
 
   @Test
+  fun anOfferOfTheSameValueDoesNotSuspendARule() {
+    val rules =
+        rules(
+            record(listOf("netflix"), "Crédito"),
+            record(listOf("netflix"), "Crédito"),
+            record(listOf("spotify"), "Crédito"),
+        )
+
+    assertEquals(RuleOutcome.Applied("Crédito"), rules.medio(listOf("netflix", "spotify")))
+  }
+
+  @Test
+  fun anOfferOfAnotherValueTurnsARuleIntoAnOffer() {
+    val rules =
+        rules(
+            record(listOf("netflix"), "Crédito"),
+            record(listOf("netflix"), "Crédito"),
+            record(listOf("uber"), "Débito"),
+        )
+
+    assertEquals(
+        RuleOutcome.Offered(setOf("Crédito", "Débito")),
+        rules.medio(listOf("netflix", "uber")),
+    )
+  }
+
+  @Test
+  fun aRecordExactly180DaysOldCounts() {
+    val rules =
+        rules(
+            record(listOf("netflix"), "Crédito", daysAgo = 180),
+            record(listOf("netflix"), "Crédito", daysAgo = 180),
+        )
+
+    assertEquals(RuleOutcome.Applied("Crédito"), rules.medio(listOf("netflix")))
+  }
+
+  @Test
+  fun aNullLatestValueGivesNone() {
+    val rules =
+        rules(
+            record(listOf("netflix"), "Crédito", daysAgo = 3),
+            record(listOf("netflix"), "Crédito", daysAgo = 2),
+            record(listOf("netflix"), null, daysAgo = 1),
+        )
+
+    assertEquals(RuleOutcome.None, rules.medio(listOf("netflix")))
+  }
+
+  @Test
+  fun aDuplicatedWordIsNotCountedTwice() {
+    val rules = rules(record(listOf("netflix", "netflix"), "Crédito"))
+
+    assertEquals(RuleOutcome.Offered(setOf("Crédito")), rules.medio(listOf("netflix", "netflix")))
+  }
+
+  @Test
+  fun aGatedOutWordDoesNotBlockAnotherAppliedWord() {
+    val rules =
+        rules(
+            record(listOf("netflix"), "Crédito", read = "Débito"),
+            record(listOf("netflix"), "Crédito", read = "Débito"),
+            record(listOf("uber"), "Crédito", read = "Efectivo"),
+            record(listOf("uber"), "Crédito", read = "Efectivo"),
+        )
+
+    assertEquals(
+        RuleOutcome.Applied("Crédito"),
+        rules.medio(listOf("netflix", "uber"), read = "Efectivo"),
+    )
+  }
+
+  @Test
   fun unlearnedCamposNeverFormRules() {
     val rules =
         rules(

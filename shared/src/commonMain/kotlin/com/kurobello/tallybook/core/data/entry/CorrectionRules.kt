@@ -45,7 +45,7 @@ private constructor(private val newestFirstByWordField: Map<WordField, List<Corr
     val offered = perWord.filterIsInstance<RuleOutcome.Offered>().flatMap { it.values }.toSet()
     return when {
       applied.isEmpty() && offered.isEmpty() -> RuleOutcome.None
-      applied.size == 1 && offered.isEmpty() -> RuleOutcome.Applied(applied.single())
+      applied.size == 1 && (offered - applied).isEmpty() -> RuleOutcome.Applied(applied.single())
       else -> RuleOutcome.Offered(applied + offered)
     }
   }
