@@ -43,7 +43,9 @@ import org.junit.Test
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.category_picker_single_title
 import tallybook.shared.generated.resources.category_tag_remove
+import tallybook.shared.generated.resources.income
 import tallybook.shared.generated.resources.movimiento_category_section
+import tallybook.shared.generated.resources.movimiento_part_category
 import tallybook.shared.generated.resources.movimiento_part_done
 import tallybook.shared.generated.resources.movimiento_part_no_category
 import tallybook.shared.generated.resources.movimiento_parts_detected
@@ -53,6 +55,7 @@ import tallybook.shared.generated.resources.movimiento_parts_save
 import tallybook.shared.generated.resources.movimiento_parts_title
 import tallybook.shared.generated.resources.movimiento_parts_total
 import tallybook.shared.generated.resources.movimiento_parts_total_excluded
+import tallybook.shared.generated.resources.movimiento_summary_amount_review
 import tallybook.shared.generated.resources.movimiento_summary_edit
 import tallybook.shared.generated.resources.movimiento_tags_section
 import tallybook.shared.generated.resources.recurrencia_repeat_label
@@ -177,8 +180,45 @@ class MovimientoReviewStepTest {
         .onNodeWithText(plural(Res.plurals.movimiento_parts_total_excluded, 1))
         .assertIsDisplayed()
     composeRule
-        .onNode(hasText(samples.visa.nombre, substring = true), useUnmergedTree = true)
+        .onNode(
+            hasText(string(Res.string.income), substring = true) and
+                hasText(samples.visa.nombre, substring = true),
+            useUnmergedTree = true,
+        )
         .assertIsDisplayed()
+  }
+
+  @Test
+  fun aPartWhoseAmountNeedsReviewSaysSo() {
+    val review = samples.review
+    show(
+        review.copy(parts = listOf(review.parts[0].copy(amountNeedsReview = true), review.parts[1]))
+    )
+
+    composeRule
+        .onNodeWithText(string(Res.string.movimiento_summary_amount_review))
+        .assertIsDisplayed()
+  }
+
+  @Test
+  fun eachCategoryTagNamesItsPartForScreenReaders() {
+    show(samples.review)
+    val (first, second) = samples.review.parts
+
+    composeRule
+        .onNodeWithContentDescription(
+            string(Res.string.movimiento_part_category, first.titulo, samples.food.nombre)
+        )
+        .assertHasClickAction()
+    composeRule
+        .onNodeWithContentDescription(
+            string(
+                Res.string.movimiento_part_category,
+                second.titulo,
+                string(Res.string.movimiento_part_no_category),
+            )
+        )
+        .assertHasClickAction()
   }
 
   @Test
@@ -206,8 +246,15 @@ class MovimientoReviewStepTest {
     composeRule
         .onNode(hasText(plural(Res.plurals.movimiento_parts_detected, 2)), useUnmergedTree = true)
         .assertIsDisplayed()
-    composeRule.onNodeWithText(parts[0].titulo).assertIsDisplayed()
-    composeRule.onNodeWithText(parts[1].titulo).assertIsDisplayed()
+    composeRule
+        .onNodeWithText(parts[0].titulo)
+        .assertIsDisplayed()
+        .assert(hasText(samples.food.nombre))
+    composeRule
+        .onNodeWithText(parts[1].titulo)
+        .assertIsDisplayed()
+        .assert(hasText(string(Res.string.movimiento_part_no_category)))
+    composeRule.onNodeWithText(samples.other.nombre).assertDoesNotExist()
     composeRule.onNodeWithText(string(Res.string.movimiento_category_section)).assertDoesNotExist()
     composeRule.onNodeWithText(string(Res.string.movimiento_tags_section)).assertDoesNotExist()
   }

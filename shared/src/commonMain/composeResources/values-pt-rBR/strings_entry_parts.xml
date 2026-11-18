@@ -16,5 +16,6 @@
     <string name="movimiento_parts_save">Salvar %1$d</string>
     <string name="movimiento_parts_remove">Remover “%1$s”</string>
     <string name="movimiento_part_done">Pronto</string>
+    <string name="movimiento_part_category">Escolher a categoria de “%1$s”. Agora: %2$s</string>
     <string name="movimiento_part_no_category">Sem categoria</string>
 </resources>

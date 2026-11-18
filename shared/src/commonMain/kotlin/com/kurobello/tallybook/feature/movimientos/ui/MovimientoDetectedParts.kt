@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.category.CategoryAvatar
@@ -72,7 +73,8 @@ private fun DetectedPartRow(part: PartPreviewUi, tipo: TipoMovimiento) {
         )
       }
       Spacer(Modifier.weight(1f))
-      DetectedPartCategory(part.categoria)
+      // Otros is the fallback for no category, as the review rows read it.
+      DetectedPartCategory(part.categoria?.takeUnless { it.id == CATEGORIA_OTROS_ID })
     }
     TallybookText(
         text = part.titulo,

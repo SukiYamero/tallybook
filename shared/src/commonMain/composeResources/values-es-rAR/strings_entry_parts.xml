@@ -16,5 +16,6 @@
     <string name="movimiento_parts_save">Guardar %1$d</string>
     <string name="movimiento_parts_remove">Quitar “%1$s”</string>
     <string name="movimiento_part_done">Listo</string>
+    <string name="movimiento_part_category">Elegir la categoría de “%1$s”. Ahora: %2$s</string>
     <string name="movimiento_part_no_category">Sin categoría</string>
 </resources>

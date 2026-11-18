@@ -166,7 +166,7 @@ internal class MovimientoEntrySamples(
                   parts =
                       listOf(
                           PartPreviewUi(twentyThousand, SPLIT_PART_ONE, food),
-                          PartPreviewUi(thirtyThousand, SPLIT_PART_TWO, null),
+                          PartPreviewUi(thirtyThousand, SPLIT_PART_TWO, other),
                       ),
               ),
           categoria = other,
@@ -215,7 +215,8 @@ internal class MovimientoEntrySamples(
               listOf(
                   review.parts[0],
                   review.parts[1].copy(
-                      monto = Money(-3_000, Moneda.USD),
+                      tipo = TipoMovimiento.INGRESO,
+                      monto = Money(3_000, Moneda.USD),
                       fecha = yesterday,
                       cuenta = visa,
                   ),
