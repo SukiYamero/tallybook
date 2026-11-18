@@ -14,6 +14,7 @@ import com.kurobello.tallybook.core.data.entry.SentenceSelection
 import com.kurobello.tallybook.core.data.entry.SuggestionConfidence
 import com.kurobello.tallybook.core.data.entry.incomeCategoryIds
 import com.kurobello.tallybook.core.data.entry.resolveSentenceCuenta
+import com.kurobello.tallybook.core.data.entry.resolveSentenceMedio
 import com.kurobello.tallybook.core.data.entry.suggestionTokens
 import com.kurobello.tallybook.core.data.resolveDeviceLocale
 import com.kurobello.tallybook.core.data.voice.dictationLanguageTag
@@ -43,7 +44,7 @@ internal data class PhraseContext(val moneda: Moneda, val locale: AppLocale, val
 internal class SentenceCatalogs(
     val etiquetas: List<Etiqueta>,
     val cuentas: SentenceCuentas,
-    val rules: CorrectionRules = CorrectionRules.EMPTY,
+    val rules: CorrectionRules,
 )
 
 /**
@@ -80,15 +81,16 @@ internal data class PartInterpretation(
     val ranking: List<CategorySuggestion>,
     val learnedCategoriaId: String?,
     val preselectedCategoriaId: String?,
+    /** This part's own words, which its categoría rule was looked up with. */
+    val words: List<String>,
     /** The sentence's shared readings with this part's own monto and categoría. */
     val readings: FieldReadings,
-    /** Only this part's categorías; medio and cuenta offers belong to the sentence. */
-    val offered: OfferedValues,
 )
 
 /**
  * [parsed] already carries a learned frecuencia; [readings] keep what the parser itself read.
- * [learnedCategoriaId] is the exact-subject history match, which outranks any word rule.
+ * [learnedCategoriaId] is the exact-subject history match, which outranks any word rule. [words]
+ * are the ones every learned rule was looked up with, so corrections must record these.
  */
 internal data class PhraseInterpretation(
     val parsed: ParsedMovimientoPhrase,
@@ -99,6 +101,7 @@ internal data class PhraseInterpretation(
     val preselectedCategoriaId: String?,
     val etiquetaIds: List<String>,
     val sentence: SentenceSelection,
+    val words: List<String>,
     val readings: FieldReadings,
     val offered: OfferedValues,
     /** Empty when the sentence is a single movimiento. */
@@ -170,25 +173,26 @@ internal class MovimientoEntryEngine(
     val reserved = matches.map { it.start until it.endExclusive }
     val first = parser.parse(text, context.moneda, context.locale, context.today, reserved)
     val words = suggestionTokens(first.subject)
+    val readTipo = first.tipo ?: impliedTipo(first.subject, index, candidates)
     val tipo =
         rules.outcome(words, CampoCorreccion.TIPO, first.tipo?.name).applied(TipoMovimiento.entries)
-            ?: first.tipo
-            ?: impliedTipo(first.subject, index, candidates)
+            ?: readTipo
+    val readCuenta = resolveSentenceCuenta(matches, cuentas.cuentas, cuentas.primary)
+    val readSelection =
+        SentenceSelection(
+            readCuenta,
+            resolveSentenceMedio(first, readTipo, readCuenta.cuenta?.tipo),
+        )
     val selection =
-        learnedSelection(
-            first,
-            tipo,
-            resolveSentenceCuenta(matches, cuentas.cuentas, cuentas.primary),
-            cuentas.cuentas,
-        ) { campo, leido ->
+        learnedSelection(first, tipo, readSelection, cuentas.cuentas) { campo, leido ->
           rules.outcome(words, campo, leido)
         }
     val moneda = cuentas.monedaFor(selection.learned, tipo)
     val read =
         if (moneda == context.moneda) first
         else parser.parse(text, moneda, context.locale, context.today, reserved)
-    val parsed = read.withLearnedFrecuencia(rules, suggestionTokens(read.subject))
-    val category = index.categoryChoice(parsed.subject, tipo, candidates, rules)
+    val parsed = read.withLearnedFrecuencia(rules, words)
+    val category = index.categoryChoice(parsed.subject, tipo, candidates, rules, words)
     val readings =
         sentenceReadings(read, parsed, tipo, selection, context.today)
             .with(CampoCorreccion.CATEGORIA, category.read, category.preselected)
@@ -202,13 +206,9 @@ internal class MovimientoEntryEngine(
         etiquetaIds =
             etiquetaMatcher.match(text, catalogs.etiquetas).take(MAX_ETIQUETAS_POR_MOVIMIENTO),
         sentence = selection.learned,
+        words = words,
         readings = readings,
-        offered =
-            OfferedValues(
-                category.query.offeredCategoriaIds,
-                selection.offeredMedios,
-                selection.offeredCuentaIds,
-            ),
+        offered = selection.offered,
         parts =
             parser.split(text, moneda, context.locale, context.today, reserved).orEmpty().map {
                 partText ->

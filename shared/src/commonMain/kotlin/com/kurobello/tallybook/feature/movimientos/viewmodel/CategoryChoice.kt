@@ -11,13 +11,17 @@ import com.kurobello.tallybook.core.model.TipoMovimiento
 // The selected category is filtered out of the ranking, so keep one more to still fill the chips.
 private const val RANKING_LIMIT = MAX_SUGGESTION_CHIPS + 1
 
-/** [history] is the exact-subject match; [read] is what the app would preselect without rules. */
+/**
+ * [history] is the exact-subject match; [read] is what the app would preselect without rules;
+ * [words] are the ones the rule was looked up with.
+ */
 internal data class CategoryChoice(
     val query: SuggestionQuery,
     val ranking: List<CategorySuggestion>,
     val history: String?,
     val read: String?,
     val preselected: String?,
+    val words: List<String>,
 )
 
 internal fun CategorySuggestionIndex.ranked(
@@ -51,13 +55,14 @@ internal fun CategorySuggestionIndex.categoryChoice(
     tipo: TipoMovimiento,
     candidates: SuggestionCandidates,
     rules: CorrectionRules,
+    words: List<String> = suggestionTokens(subject),
 ): CategoryChoice {
   val ranking = ranked(SuggestionQuery(subject, tipo), candidates)
   val history = learnedCategoria(subject, candidates.availableIds, candidates.excludedIds)
   val confident =
       ranking.firstOrNull()?.takeIf { it.confidence == SuggestionConfidence.HIGH }?.categoriaId
   val read = history ?: confident
-  val outcome = rules.outcome(suggestionTokens(subject), CampoCorreccion.CATEGORIA, read)
+  val outcome = rules.outcome(words, CampoCorreccion.CATEGORIA, read)
   val applied = outcome.appliedValue()?.takeIf(candidates::allows)
   return CategoryChoice(
       query = SuggestionQuery(subject, tipo, outcome.offeredValues().filter(candidates::allows)),
@@ -65,5 +70,6 @@ internal fun CategorySuggestionIndex.categoryChoice(
       history = history,
       read = read,
       preselected = history ?: applied ?: confident,
+      words = words,
   )
 }

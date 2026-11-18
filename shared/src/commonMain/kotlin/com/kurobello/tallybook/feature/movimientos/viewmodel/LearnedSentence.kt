@@ -30,19 +30,17 @@ internal data class FieldReadings(
       FieldReadings(this.leido + (campo to leido), this.propuesto + (campo to propuesto))
 }
 
-/** Values a single agreeing correction (or disagreeing rules) offers without selecting them. */
-internal data class OfferedValues(
-    val categoriaIds: List<String>,
-    val medios: Set<MedioPago>,
-    val cuentaIds: List<String>,
-)
+/**
+ * The medios and cuentas a single agreeing correction (or disagreeing rules) offers without
+ * selecting them. Offered categorías travel in [SuggestionQuery.offeredCategoriaIds].
+ */
+internal data class OfferedValues(val medios: Set<MedioPago>, val cuentaIds: List<String>)
 
 /** The selection the parser read and the one learned rules turned it into. */
 internal data class LearnedSelection(
     val read: SentenceSelection,
     val learned: SentenceSelection,
-    val offeredMedios: Set<MedioPago>,
-    val offeredCuentaIds: List<String>,
+    val offered: OfferedValues,
 )
 
 internal fun RuleOutcome.appliedValue(): String? = (this as? RuleOutcome.Applied)?.value
@@ -56,18 +54,18 @@ internal fun <E : Enum<E>> RuleOutcome.applied(entries: EnumEntries<E>): E? =
 internal fun Money.encoded(): String = "$minorUnits ${moneda.name}"
 
 /**
- * The cuenta rule runs first because a cuenta's type implies the medio, which then outranks a medio
- * rule just like it outranks the sentence's own method words.
+ * [read] is what the parser resolved on its own, with its own tipo. The cuenta rule runs first
+ * because the final cuenta's type decides which medios fit: a learned medio its type cannot take
+ * falls back to the medio that cuenta implies.
  */
 internal fun learnedSelection(
     parsed: ParsedMovimientoPhrase,
     tipo: TipoMovimiento,
-    readCuenta: SentenceCuenta,
+    read: SentenceSelection,
     cuentas: List<Cuenta>,
     outcomeOf: (CampoCorreccion, String?) -> RuleOutcome,
 ): LearnedSelection {
-  val read =
-      SentenceSelection(readCuenta, resolveSentenceMedio(parsed, tipo, readCuenta.cuenta?.tipo))
+  val readCuenta = read.cuenta
   val live = cuentas.filterNot(Cuenta::archivada).associateBy(Cuenta::id)
   val cuentaOutcome = outcomeOf(CampoCorreccion.CUENTA, readCuenta.cuenta?.id)
   val cuenta = cuentaOutcome.appliedValue()?.let(live::get) ?: readCuenta.cuenta
@@ -81,7 +79,10 @@ internal fun learnedSelection(
       )
   val resolvedMedio = resolveSentenceMedio(parsed, tipo, cuenta?.tipo)
   val medioOutcome = outcomeOf(CampoCorreccion.MEDIO, read.medio.medio?.name)
-  val appliedMedio = medioOutcome.applied(MedioPago.entries)?.forTipo(tipo)
+  val appliedMedio =
+      medioOutcome.applied(MedioPago.entries)?.forTipo(tipo)?.takeIf { medio ->
+        cuenta == null || cuenta.tipo in medio.compatibleTipos
+      }
   val offeredMedios =
       medioOutcome
           .offeredValues()
@@ -89,16 +90,18 @@ internal fun learnedSelection(
           .toSet()
   val learnedMedio =
       when {
-        cuenta != null -> resolvedMedio
         appliedMedio != null -> SentenceMedio(appliedMedio, emptySet())
-        resolvedMedio.medio != null -> resolvedMedio
+        cuenta != null || resolvedMedio.medio != null -> resolvedMedio
         else -> SentenceMedio(null, resolvedMedio.candidates + offeredMedios)
       }
   return LearnedSelection(
       read = read,
       learned = SentenceSelection(learnedCuenta, learnedMedio),
-      offeredMedios = if (learnedMedio.medio == null) offeredMedios else emptySet(),
-      offeredCuentaIds = offeredCuentaIds,
+      offered =
+          OfferedValues(
+              medios = if (learnedMedio.medio == null) offeredMedios else emptySet(),
+              cuentaIds = offeredCuentaIds,
+          ),
   )
 }
 
@@ -159,10 +162,10 @@ internal fun partInterpretation(
       ranking = category.ranking,
       learnedCategoriaId = category.history,
       preselectedCategoriaId = category.preselected,
+      words = category.words,
       readings =
           shared
               .with(CampoCorreccion.MONTO, monto, monto)
               .with(CampoCorreccion.CATEGORIA, category.read, category.preselected),
-      offered = OfferedValues(category.query.offeredCategoriaIds, emptySet(), emptyList()),
   )
 }

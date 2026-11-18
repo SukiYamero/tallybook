@@ -18,6 +18,7 @@ import com.kurobello.tallybook.core.model.Frecuencia
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.OrigenFrase
+import com.kurobello.tallybook.core.model.PhraseReviewFlag
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -203,7 +204,7 @@ class MovimientoEntryEngineRulesTest {
     val sentence = interpret("zumbido 10 mil", rules)
 
     assertNull(sentence.preselectedCategoriaId)
-    assertEquals(listOf("cat_mascotas"), sentence.offered.categoriaIds)
+    assertEquals(listOf("cat_mascotas"), sentence.query.offeredCategoriaIds)
     assertEquals(
         "cat_mascotas",
         engine.dictionaryIndex(now).suggestedCategoriaIds(sentence.query, candidates).first(),
@@ -270,6 +271,73 @@ class MovimientoEntryEngineRulesTest {
 
     assertEquals(NU, sentence.sentence.cuenta.cuenta)
     assertEquals(MedioPago.CREDITO, sentence.sentence.medio.medio)
+  }
+
+  @Test
+  fun aLearnedMedioAdaptsToALearnedBankCuenta() {
+    val rules =
+        rulesOf(
+            twice(listOf("arriendo"), CampoCorreccion.CUENTA, NEQUI.id),
+            twice(listOf("arriendo"), CampoCorreccion.MEDIO, "TRANSFERENCIA"),
+        )
+
+    val sentence = interpret("arriendo 900 mil", rules)
+
+    assertEquals(NEQUI, sentence.sentence.cuenta.cuenta)
+    assertEquals(MedioPago.TRANSFERENCIA, sentence.sentence.medio.medio)
+  }
+
+  @Test
+  fun aLearnedMedioReplacesTheOneANamedBankCuentaImplied() {
+    val rules =
+        rulesOf(twice(listOf("arriendo"), CampoCorreccion.MEDIO, "TRANSFERENCIA", leido = "DEBITO"))
+
+    val sentence = interpret("arriendo 900 mil con Nequi", rules)
+
+    assertEquals(NEQUI, sentence.sentence.cuenta.cuenta)
+    assertEquals("DEBITO", sentence.readings.leido[CampoCorreccion.MEDIO])
+    assertEquals(MedioPago.TRANSFERENCIA, sentence.sentence.medio.medio)
+  }
+
+  @Test
+  fun theMedioReadingUsesTheParsersOwnTipo() {
+    val rules = rulesOf(twice(listOf("zumbido"), CampoCorreccion.TIPO, "INGRESO"))
+
+    val sentence = interpret("zumbido 10 mil con débito", rules)
+
+    assertEquals(TipoMovimiento.INGRESO, sentence.tipo)
+    assertEquals("DEBITO", sentence.readings.leido[CampoCorreccion.MEDIO])
+    assertEquals("TRANSFERENCIA", sentence.readings.propuesto[CampoCorreccion.MEDIO])
+  }
+
+  @Test
+  fun aTipoRuleOverridesTheVerbItCorrected() {
+    val rules = rulesOf(twice(listOf("zumbido"), CampoCorreccion.TIPO, "INGRESO", leido = "GASTO"))
+
+    val sentence = interpret("gasté 10 mil en zumbido", rules)
+
+    assertEquals(TipoMovimiento.INGRESO, sentence.tipo)
+    assertEquals("GASTO", sentence.readings.leido[CampoCorreccion.TIPO])
+  }
+
+  @Test
+  fun aLearnedMedioIsAdaptedToAnIncome() {
+    val rules = rulesOf(twice(listOf("zumbido"), CampoCorreccion.MEDIO, "DEBITO"))
+
+    val sentence = interpret("me pagaron 10 mil del zumbido", rules)
+
+    assertEquals(TipoMovimiento.INGRESO, sentence.tipo)
+    assertEquals(MedioPago.TRANSFERENCIA, sentence.sentence.medio.medio)
+  }
+
+  @Test
+  fun anUnsupportedRecurrenceIsNotFilledByAHabit() {
+    val rules = rulesOf(twice(listOf("zumbido"), CampoCorreccion.FRECUENCIA, "MENSUAL"))
+
+    val sentence = interpret("zumbido 10 mil cada 15 días", rules)
+
+    assertTrue(PhraseReviewFlag.UNSUPPORTED_RECURRENCE in sentence.parsed.reviewFlags)
+    assertNull(sentence.parsed.frecuencia)
   }
 
   @Test
@@ -369,6 +437,24 @@ class MovimientoEntryEngineRulesTest {
     assertEquals("cat_comida", parts[1].readings.propuesto[CampoCorreccion.CATEGORIA])
     assertEquals("3000000 COP", parts[1].readings.leido[CampoCorreccion.MONTO])
     assertEquals("CREDITO", parts[1].readings.propuesto[CampoCorreccion.MEDIO])
+    assertTrue("gaseosa" in parts[1].words && "hamburguesa" !in parts[1].words)
+  }
+
+  @Test
+  fun aPartOffersItsOwnCategory() {
+    val text = "Compré 2 hamburguesas por 20mil y 3 gaseosas fueron 30mil"
+    val rules = rulesOf(listOf(record(listOf("gaseosa"), CampoCorreccion.CATEGORIA, "cat_comida")))
+
+    val parts = interpret(text, rules).parts
+
+    assertEquals(
+        listOf(emptyList(), listOf("cat_comida")),
+        parts.map { it.query.offeredCategoriaIds },
+    )
+    assertEquals(
+        listOf("cat_restaurante", "cat_supermercado"),
+        parts.map { it.preselectedCategoriaId },
+    )
   }
 
   @Test

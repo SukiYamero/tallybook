@@ -11,6 +11,7 @@ import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.RecurrenciaRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.entry.CorrectionRules
 import com.kurobello.tallybook.core.data.entry.SentenceSelection
 import com.kurobello.tallybook.core.data.voice.VoiceDictation
 import com.kurobello.tallybook.core.model.AppLocale
@@ -605,7 +606,7 @@ internal class AddMovimientoViewModel(
           state.phraseContext(today),
           suggestionIndex,
           state.candidates(),
-          SentenceCatalogs(state.etiquetas, state.sentenceCuentas()),
+          SentenceCatalogs(state.etiquetas, state.sentenceCuentas(), CorrectionRules.EMPTY),
       )
 
   private fun refreshPreview(debounce: Boolean) {
@@ -621,7 +622,11 @@ internal class AddMovimientoViewModel(
               snapshot.phraseContext(snapshot.today),
               suggestionIndex,
               snapshot.candidates(),
-              SentenceCatalogs(snapshot.etiquetas, snapshot.sentenceCuentas()),
+              SentenceCatalogs(
+                  snapshot.etiquetas,
+                  snapshot.sentenceCuentas(),
+                  CorrectionRules.EMPTY,
+              ),
           )
       uiState.update { current ->
         if (current.step == AddMovimientoStep.PHRASE && current.phrase.trim() == text) {
