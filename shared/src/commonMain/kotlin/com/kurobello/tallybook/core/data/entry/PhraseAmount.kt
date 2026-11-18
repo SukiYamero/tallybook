@@ -13,23 +13,9 @@ internal data class PhraseAmount(
 
 internal data class PhraseAmountCandidate(val money: Money, val start: Int, val endExclusive: Int)
 
-/**
- * Every amount candidate, minus small counts before a thing ("2 hamburguesas") whenever a candidate
- * that is not count-shaped exists; a lone count-shaped number stays the amount.
- */
-internal fun scanPhraseAmounts(cursor: PhraseCursor, moneda: Moneda): List<PhraseAmountCandidate> {
-  val candidates = PhraseAmountScanner(cursor, moneda).scan()
-  return statedAmounts(cursor, candidates).ifEmpty { candidates }
-}
-
-/** [scanPhraseAmounts] without the lone-quantity fallback: a sentence of quantities yields none. */
+/** Every amount candidate except small counts before a thing ("2 hamburguesas"). */
 internal fun scanStatedAmounts(cursor: PhraseCursor, moneda: Moneda): List<PhraseAmountCandidate> =
-    statedAmounts(cursor, PhraseAmountScanner(cursor, moneda).scan())
-
-private fun statedAmounts(
-    cursor: PhraseCursor,
-    candidates: List<PhraseAmountCandidate>,
-): List<PhraseAmountCandidate> = candidates.filterNot { isQuantityShaped(cursor, it) }
+    PhraseAmountScanner(cursor, moneda).scan().filterNot { isQuantityShaped(cursor, it) }
 
 // A bare 1-2 digit number covers exactly one token: a factor, symbol or currency would widen it.
 // A part connector after it ("propina 20 y almuerzo 18") closes a movimiento rather than naming a
@@ -52,11 +38,20 @@ private fun isQuantityShaped(cursor: PhraseCursor, candidate: PhraseAmountCandid
 
 private const val MAX_QUANTITY_DIGITS = 2
 
+/**
+ * The largest stated amount, or the largest count when the sentence states none. A dropped count at
+ * least as large as the amount ("45 dinner, 5 dollars tip") may have been the amount, so it keeps
+ * the result ambiguous.
+ */
 internal fun findPhraseAmount(cursor: PhraseCursor, moneda: Moneda): PhraseAmount? {
-  val candidates = scanPhraseAmounts(cursor, moneda)
-  return candidates
-      .maxByOrNull { it.money.minorUnits }
-      ?.let { PhraseAmount(it.money, it.start, it.endExclusive, isAmbiguous = candidates.size > 1) }
+  val (quantities, stated) =
+      PhraseAmountScanner(cursor, moneda).scan().partition { isQuantityShaped(cursor, it) }
+  val kept = stated.ifEmpty { quantities }
+  val winner = kept.maxByOrNull { it.money.minorUnits } ?: return null
+  val isAmbiguous =
+      kept.size > 1 ||
+          (stated.isNotEmpty() && quantities.any { it.money.minorUnits >= winner.money.minorUnits })
+  return PhraseAmount(winner.money, winner.start, winner.endExclusive, isAmbiguous)
 }
 
 private class PhraseAmountScanner(private val cursor: PhraseCursor, private val moneda: Moneda) {

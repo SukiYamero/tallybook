@@ -62,6 +62,19 @@ class MovimientoPhraseParserTest {
   }
 
   @Test
+  fun aDroppedQuantityAtLeastAsLargeAsTheAmountFlagsIt() {
+    listOf("Paid 45 dinner, 5 dollars tip", "45 dinner and $5 tip", "5 cena y 5 dólares propina")
+        .forEach { text ->
+          val result = parse(text, Moneda.USD)
+          assertEquals(500L, result.monto?.minorUnits, text)
+          assertEquals(setOf(PhraseReviewFlag.AMBIGUOUS_AMOUNT), result.reviewFlags, text)
+        }
+    listOf("compré 2 hamburguesas por 20 mil", "Cena con 2 amigos 50000", "5 cafés").forEach {
+      assertEquals(emptySet(), parse(it).reviewFlags, it)
+    }
+  }
+
+  @Test
   fun keepsSpaceSeparatedNumbersApartWhenTheyAreNotThousandGroups() {
     assertEquals(1_200L, minor("cine 2 12"), "a second group needs exactly three digits")
     assertEquals(300_000L, minor("3000 2 cafés"))
