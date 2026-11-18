@@ -11,11 +11,12 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
    and Statistics accessibility*, *Profile polish*.
 3. Google login + backup en Drive, cuando 1 esté cerrado → [plan](tasks/google-drive-persistence.md).
 4. Avisos de recurrentes por confirmar → *Producto*.
-5. Pulido chico → *Several movimientos follow-ups*, *Sentence amount above the cap*,
+5. Vocabulario de la frase más rico en todos los idiomas → *Richer sentence vocabulary*.
+6. Pulido chico → *Several movimientos follow-ups*, *Sentence amount above the cap*,
    *`ioDispatcher` en iOS*, *Unified Custom date-range picker*, *Recurrentes copy*.
-6. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
-7. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
-8. Prueba completa en iPhone físico, en una sola pasada cuando Android esté terminado (Android es el
+7. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
+8. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
+9. Prueba completa en iPhone físico, en una sola pasada cuando Android esté terminado (Android es el
    objetivo primero; cada feature mantiene compilando iOS mientras tanto) → *iOS physical end-to-end*.
 
 ## Producto
@@ -23,6 +24,19 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 - **Avisos de recurrentes por confirmar** — Notificaciones locales programadas para la próxima fecha
   de cada recurrencia (sin trabajo en segundo plano), que abren Recurrentes. Hoy los pendientes solo
   se ven al abrir la app (fila de Inicio). Ver [Recurrentes](business-logic.md#recurrentes).
+
+- **Richer sentence vocabulary** — The dictionary and the sentence lexicon miss many everyday
+  words, so common sentences end without a category or keep words in the título. Grow them in
+  every supported language and regional variant (es, es-AR, other Spanish-speaking countries, en,
+  pt-BR):
+  - Category keywords: dishes, drinks, groceries, services, local brands and slang.
+  - Tipo verbs for expenses and income.
+  - Charge verbs that open the shared tail ("lo pasé", "lo puse", "debité"…).
+  - Medio phrases, amount slang and recurrence phrasings.
+  Each addition goes with corpus tests and keeps the dictionary rules: ambiguous words only as weak
+  hints, no repeated normalized keys. Real dictated sentences that the parser misses are the best
+  source. See [Category suggestions](business-logic.md#category-suggestions) and
+  [Natural-language entry](business-logic.md#natural-language-entry).
 
 - **Several movimientos follow-ups** — Save all maps a rejected cuenta to the generic save error
   instead of opening the part on it, as the single save does. Every keystroke in the review or a

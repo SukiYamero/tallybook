@@ -19,7 +19,7 @@ accepted scope, integration details and verification boundaries.
 | Statistics | DONE | [Statistics](statistics.md) |
 | Recurring movimientos | DONE | [Recurring movimientos](recurrentes.md) |
 | Voice dictation and dictated recurrence | DONE | [Voice dictation](voice-dictation.md) |
-| Several movimientos in one sentence | IN_PROGRESS | [Add movimiento](add-movimiento.md) |
+| Several movimientos in one sentence | DONE | [Add movimiento](add-movimiento.md) |
 
 ## Status rules
 
