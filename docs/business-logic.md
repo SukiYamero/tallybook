@@ -74,7 +74,11 @@ app derives the draft from it and the user confirms or refines it; the manual fo
   - The microphone is held to talk: pressing it starts listening and letting go ends it, keeping what
     was heard. Sliding the finger off it does not end it, nor does the dialog scroll under it; 30
     seconds does. The app asks the recognizer to wait through pauses of up to 10 seconds, but some
-    devices may still end listening sooner. Listening goes on 0.7 seconds after the finger lifts,
+    devices may still end listening sooner. Recognizers that restart their text after a pause
+    (Google's on-device one does, and on Android 13+ it is asked to report each stretch) still
+    produce one sentence: every stretch of the press is joined in order. When it is unclear whether
+    new words replace or follow the previous ones, the previous ones are kept, so a pause never
+    loses words. Listening goes on 0.7 seconds after the finger lifts,
     because people let go while saying the last word. The disc turns green, and the caption asks to
     speak, only once the microphone is open; until then it says to wait. Screen readers, which
     cannot hold a press, toggle listening with their activation instead.

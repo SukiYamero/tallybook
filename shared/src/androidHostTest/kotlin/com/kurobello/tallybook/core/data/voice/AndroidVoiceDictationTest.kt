@@ -4,6 +4,7 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -39,5 +40,21 @@ class AndroidVoiceDictationTest {
             RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
         )
         .forEach { extra -> assertEquals(HELD_PAUSE_MILLIS, intent.getIntExtra(extra, 0), extra) }
+  }
+
+  @Test
+  fun `a held press asks for a session split at pauses`() {
+    val intent = recognizerIntent("es-ES")
+
+    assertEquals(
+        RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,
+        intent.getStringExtra(RecognizerIntent.EXTRA_SEGMENTED_SESSION),
+    )
+  }
+
+  @Test
+  @Config(sdk = [31])
+  fun `android 12 has no segmented session to ask for`() {
+    assertNull(recognizerIntent("es-ES").getStringExtra(RecognizerIntent.EXTRA_SEGMENTED_SESSION))
   }
 }

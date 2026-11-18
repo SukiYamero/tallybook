@@ -38,6 +38,11 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
   source. See [Category suggestions](business-logic.md#category-suggestions) and
   [Natural-language entry](business-logic.md#natural-language-entry).
 
+- **Dictation on other Android brands** — Pauses while the microphone is held were verified only on
+  the Xiaomi (Google on-device recognizer, Android 13, segmented session). Dictate a sentence with
+  two pauses on 2–3 other brands (a Samsung first, which may ship its own recognizer) and on an
+  Android 12 device, which has no segmented session and relies on the pause guess.
+
 - **Several movimientos follow-ups** — Save all maps a rejected cuenta to the generic save error
   instead of opening the part on it, as the single save does. Every keystroke in the review or a
   part form re-ranks every part's suggestions on the main thread. The shared tail recognizes only a
@@ -74,7 +79,9 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
   Search medio/account/type filters, VoiceOver announcement of a row's medio, and the installation
   node's exclusion from iOS backups. Statistics too: tab, Home card, scopes, dimensions, category sheet
   with View movements, and the Vico charts' animation and column taps. Voice dictation too, with its
-  own plan in [tasks/voice-dictation.md](tasks/voice-dictation.md).
+  own plan in [tasks/voice-dictation.md](tasks/voice-dictation.md), including a sentence with a
+  3-second pause: `IosVoiceDictation` sends no `Pause` or `Segment` yet, so if the on-device
+  recognizer restarts its transcription after a pause, map its per-pause results to those events.
   Precise management evidence lives in [Manage movimientos](features/manage-movimientos.md#verification-boundaries).
   Compilation does not establish runtime behavior; follow the physical-device policy in `AGENTS.md`.
 

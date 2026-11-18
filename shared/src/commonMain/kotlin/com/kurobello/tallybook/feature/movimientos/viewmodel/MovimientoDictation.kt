@@ -3,6 +3,7 @@ package com.kurobello.tallybook.feature.movimientos.viewmodel
 import com.kurobello.tallybook.core.data.voice.DictationError
 import com.kurobello.tallybook.core.data.voice.DictationEvent
 import com.kurobello.tallybook.core.data.voice.DictationPermission
+import com.kurobello.tallybook.core.data.voice.DictationTranscript
 import com.kurobello.tallybook.core.data.voice.VoiceDictation
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -38,7 +39,8 @@ internal class MovimientoDictation(private val voice: VoiceDictation) {
 
   /**
    * Finishes [DICTATION_RELEASE_TAIL] after [stopRequests] emits or after [DICTATION_MAX_DURATION],
-   * and always ends with exactly one Final or Failed.
+   * and always ends with exactly one Final or Failed. Every Partial and the Final carry the whole
+   * sentence of the press, joined across the recognizer's pauses and segments.
    */
   fun listen(languageTag: String, stopRequests: Flow<Unit>): Flow<DictationEvent> =
       channelFlow {
@@ -48,6 +50,7 @@ internal class MovimientoDictation(private val voice: VoiceDictation) {
               finish.trySend(Unit)
               finishRequested.complete(Unit)
             }
+            val transcript = DictationTranscript()
             var lastText = ""
 
             launch {
@@ -64,8 +67,16 @@ internal class MovimientoDictation(private val voice: VoiceDictation) {
             }
             val recognizer = launch {
               voice.listen(languageTag, finish.receiveAsFlow()).collect { event ->
-                if (event is DictationEvent.Partial) lastText = event.text
-                send(event)
+                val text = transcript.accept(event)
+                if (text != null) lastText = text
+                when (event) {
+                  is DictationEvent.Partial,
+                  is DictationEvent.Segment -> text?.let { send(DictationEvent.Partial(it)) }
+                  is DictationEvent.Final -> send(DictationEvent.Final(lastText))
+                  DictationEvent.Pause -> Unit
+                  DictationEvent.Listening,
+                  is DictationEvent.Failed -> send(event)
+                }
               }
             }
             launch {

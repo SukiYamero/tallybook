@@ -86,6 +86,16 @@ internal class AndroidVoiceDictation(
                     close()
                   }
 
+                  override fun onSegmentResults(segmentResults: Bundle) {
+                    trySend(DictationEvent.Segment(segmentResults.bestTranscript().orEmpty()))
+                  }
+
+                  // A segmented session reports its words in segments and ends without onResults.
+                  override fun onEndOfSegmentedSession() {
+                    trySend(DictationEvent.Final(""))
+                    close()
+                  }
+
                   // Recovers a missing model the support check could not report.
                   override fun onError(error: Int) {
                     if (
@@ -105,7 +115,9 @@ internal class AndroidVoiceDictation(
 
                   override fun onBufferReceived(buffer: ByteArray?) = Unit
 
-                  override fun onEndOfSpeech() = Unit
+                  override fun onEndOfSpeech() {
+                    trySend(DictationEvent.Pause)
+                  }
 
                   override fun onEvent(eventType: Int, params: Bundle?) = Unit
                 }
@@ -214,6 +226,16 @@ internal fun recognizerIntent(languageTag: String): Intent =
             RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,
             HELD_PAUSE_MILLIS,
         )
+        .apply {
+          // Google's on-device recognizer restarts its text after every pause anyway; asking for
+          // segments makes it say where each one ends instead of leaving the join to guesswork.
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            putExtra(
+                RecognizerIntent.EXTRA_SEGMENTED_SESSION,
+                RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,
+            )
+          }
+        }
 
 private fun Bundle.bestTranscript(): String? =
     getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.takeIf {

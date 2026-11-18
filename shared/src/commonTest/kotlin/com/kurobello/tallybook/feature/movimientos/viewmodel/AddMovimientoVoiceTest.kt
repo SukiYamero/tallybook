@@ -86,6 +86,49 @@ class AddMovimientoVoiceTest {
   }
 
   @Test
+  fun wordsSaidBeforeAPauseSurviveARecognizerThatRestartsAfterIt() = runTest {
+    val f = fixture()
+    f.viewModel.onVoiceStart()
+    runCurrent()
+    listOf(
+            DictationEvent.Partial("gasté 20 mil en cine"),
+            DictationEvent.Pause,
+            DictationEvent.Partial("y 40 mil"),
+            DictationEvent.Segment("y 40 mil en comida"),
+        )
+        .forEach { f.voice.events.send(it) }
+    runCurrent()
+    assertEquals("gasté 20 mil en cine y 40 mil en comida", f.state.phrase)
+
+    f.voice.events.send(DictationEvent.Final(""))
+    runCurrent()
+
+    assertEquals("gasté 20 mil en cine y 40 mil en comida", f.state.phrase)
+    assertNull(f.state.voice.notice)
+  }
+
+  @Test
+  fun aRecognizerThatNeverAnswersTheReleaseStillKeepsEveryStretch() = runTest {
+    val f = fixture()
+    f.viewModel.onVoiceStart()
+    runCurrent()
+    listOf(
+            DictationEvent.Partial("netflix 20 mil"),
+            DictationEvent.Pause,
+            DictationEvent.Partial("y spotify"),
+        )
+        .forEach { f.voice.events.send(it) }
+    runCurrent()
+
+    f.viewModel.onVoiceStop()
+    advanceTimeBy(RELEASE_TAIL_MILLIS + FINISH_GRACE_UPPER_BOUND_MILLIS)
+    runCurrent()
+
+    assertFalse(f.state.voice.isListening)
+    assertEquals("netflix 20 mil y spotify", f.state.phrase)
+  }
+
+  @Test
   fun pausingWhileHeldKeepsListeningAndReleasingKeepsWhatWasHeard() = runTest {
     val f = fixture()
     f.viewModel.onVoiceStart()
