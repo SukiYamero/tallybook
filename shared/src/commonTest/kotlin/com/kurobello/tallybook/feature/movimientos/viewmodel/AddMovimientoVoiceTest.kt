@@ -86,6 +86,28 @@ class AddMovimientoVoiceTest {
   }
 
   @Test
+  fun wordsSaidBeforeAPauseSurviveARecognizerThatRestartsAfterIt() = runTest {
+    val f = fixture()
+    f.viewModel.onVoiceStart()
+    runCurrent()
+    listOf(
+            DictationEvent.Partial("gasté 20 mil en cine"),
+            DictationEvent.Pause,
+            DictationEvent.Partial("y 40 mil"),
+            DictationEvent.Segment("y 40 mil en comida"),
+        )
+        .forEach { f.voice.events.send(it) }
+    runCurrent()
+    assertEquals("gasté 20 mil en cine y 40 mil en comida", f.state.phrase)
+
+    f.voice.events.send(DictationEvent.Final(""))
+    runCurrent()
+
+    assertEquals("gasté 20 mil en cine y 40 mil en comida", f.state.phrase)
+    assertNull(f.state.voice.notice)
+  }
+
+  @Test
   fun pausingWhileHeldKeepsListeningAndReleasingKeepsWhatWasHeard() = runTest {
     val f = fixture()
     f.viewModel.onVoiceStart()

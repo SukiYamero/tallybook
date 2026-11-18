@@ -132,7 +132,9 @@ internal class AddMovimientoVoice(
               }
           is DictationEvent.Failed -> host.updateVoice { afterFailure(event.error, heard) }
           DictationEvent.Listening -> host.updateVoice { copy(isMicReady = true) }
-          is DictationEvent.Partial -> Unit
+          is DictationEvent.Partial,
+          is DictationEvent.Segment,
+          DictationEvent.Pause -> Unit
         }
       }
     }

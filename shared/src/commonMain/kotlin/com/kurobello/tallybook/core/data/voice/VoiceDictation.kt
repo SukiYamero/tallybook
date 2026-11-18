@@ -30,7 +30,18 @@ enum class DictationPermission {
 sealed interface DictationEvent {
   data object Listening : DictationEvent
 
+  /**
+   * What the recognizer reports right now. Some recognizers repeat everything heard since the
+   * start; others restart after a [Pause] or a [Segment], so callers join them with
+   * [DictationTranscript].
+   */
   data class Partial(val text: String) : DictationEvent
+
+  /** A recognizer closed one stretch of speech; the next partials start a new one. */
+  data class Segment(val text: String) : DictationEvent
+
+  /** The speaker went quiet while still holding the microphone. */
+  data object Pause : DictationEvent
 
   data class Final(val text: String) : DictationEvent
 
