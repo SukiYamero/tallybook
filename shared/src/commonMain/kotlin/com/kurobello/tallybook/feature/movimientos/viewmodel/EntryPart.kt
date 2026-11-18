@@ -6,8 +6,10 @@ import kotlinx.datetime.LocalDate
 
 /**
  * One movimiento of a split sentence. Like the single draft, [amountEdited] and [categoriasEdited]
- * tell a value the user changed apart from one the sentence still owns. [segment] is the part's
- * text in the sentence: its amount is always read from there, so editing [titulo] never moves it.
+ * tell a value the user changed apart from one the sentence still owns, and [tipoEdited],
+ * [fechaEdited], [medioEdited] and [cuentaEdited] a pick made in the part's form. [segment] is the
+ * part's text in the sentence: its amount is always read from there, so editing [titulo] never
+ * moves it.
  */
 internal data class EntryPart(
     val segment: String,
@@ -21,6 +23,11 @@ internal data class EntryPart(
     val suggestions: List<Categoria> = emptyList(),
     val descripcion: String = "",
     val overrides: PartOverrides = PartOverrides(),
+    val tipoEdited: Boolean = false,
+    val fechaEdited: Boolean = false,
+    val medioEdited: Boolean = false,
+    val cuentaEdited: Boolean = false,
+    val snapshot: ParteSnapshot? = null,
 )
 
 /**

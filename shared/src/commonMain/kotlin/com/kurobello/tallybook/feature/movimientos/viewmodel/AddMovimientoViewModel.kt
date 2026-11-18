@@ -5,12 +5,14 @@ import androidx.lifecycle.viewModelScope
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
+import com.kurobello.tallybook.core.data.CorreccionFraseRepository
 import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.RecurrenciaRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.entry.CorrectionRules
 import com.kurobello.tallybook.core.data.entry.SentenceSelection
 import com.kurobello.tallybook.core.data.voice.VoiceDictation
 import com.kurobello.tallybook.core.model.AppLocale
@@ -82,6 +84,7 @@ internal class AddMovimientoViewModel(
           descripcion = "",
       )
   private var suggestionIndex = entryEngine.dictionaryIndex(clock.now())
+  private var correctionRules = CorrectionRules.EMPTY
   private var previewJob: Job? = null
   private val voice =
       AddMovimientoVoice(
@@ -143,10 +146,19 @@ internal class AddMovimientoViewModel(
     }
     coroutineScope.launch { observeSuggestionIndex() }
     coroutineScope.launch { observeEtiquetas() }
+    coroutineScope.launch {
+      repositories.correctionRules(clock, entryEngine).collect { rules ->
+        correctionRules = rules
+        refreshPreview(debounce = false)
+      }
+    }
   }
 
   override fun onTipoChanged(tipo: TipoMovimiento) {
-    updateFields { copy(tipo = tipo, cuentaChoice = cuentaChoice.forTipo(tipo)) }
+    updateFields {
+      copy(tipo = tipo, cuentaChoice = cuentaChoice.forTipo(tipo), tipoEdited = true)
+          .keepingSurvivingPicks(this)
+    }
   }
 
   override fun onAmountChanged(value: String) {
@@ -154,14 +166,14 @@ internal class AddMovimientoViewModel(
   }
 
   override fun onMedioSelected(medio: MedioPago) {
-    updateCuentaChoice {
+    updateCuentaChoice({ copy(medioEdited = true) }) {
       if (medio.allows(selectionTipo)) shownChoice.withMedio(medio, cuentas, cuentaDefaults)
       else null
     }
   }
 
   override fun onCuentaSelected(id: String) {
-    updateCuentaChoice {
+    updateCuentaChoice({ copy(cuentaEdited = true) }) {
       cuentas
           .firstOrNull { it.id == id && !it.archivada }
           ?.let { shownChoice.withCuenta(it, selectionTipo) }
@@ -169,7 +181,7 @@ internal class AddMovimientoViewModel(
   }
 
   override fun onFechaChanged(value: LocalDate) {
-    updateFields { copy(fecha = value) }
+    updateFields { copy(fecha = value, fechaEdited = true) }
   }
 
   override fun onCategoriaSelected(id: String) {
@@ -206,7 +218,7 @@ internal class AddMovimientoViewModel(
   }
 
   override fun onTituloChanged(value: String) {
-    updateFields { copy(titulo = value.take(MOVIMIENTO_TITLE_MAX_LENGTH)) }
+    updateFields { copy(titulo = value.take(MOVIMIENTO_TITLE_MAX_LENGTH), tituloEdited = true) }
   }
 
   override fun onDescripcionChanged(value: String) {
@@ -220,9 +232,12 @@ internal class AddMovimientoViewModel(
     applyPhrase(value)
   }
 
-  private fun applyPhrase(value: String, debounce: Boolean = true) {
+  private fun applyPhrase(value: String, debounce: Boolean = true, dictated: Boolean? = null) {
     val phrase = value.replace(LINE_BREAKS, " ").take(MOVIMIENTO_TITLE_MAX_LENGTH)
-    updateFields { if (phrase.isBlank()) withoutInterpretation(phrase) else copy(phrase = phrase) }
+    updateFields {
+      if (phrase.isBlank()) withoutInterpretation(phrase)
+      else copy(phrase = phrase, dictated = dictated ?: this.dictated)
+    }
     refreshPreview(debounce)
   }
 
@@ -256,6 +271,10 @@ internal class AddMovimientoViewModel(
       base
           .withDetection(interpretation, today)
           .copy(
+              snapshot = interpretation.snapshot(text, dictated),
+              tipoEdited = false,
+              fechaEdited = false,
+              tituloEdited = false,
               step =
                   if (interpretation.parts.isEmpty()) AddMovimientoStep.SUMMARY
                   else AddMovimientoStep.REVIEW,
@@ -406,11 +425,17 @@ internal class AddMovimientoViewModel(
   private val AddMovimientoUiState.shownChoice: CuentaSelectionState
     get() = cuentaChoice.copy(cuentaId = cuentaField.selected?.id)
 
-  private fun updateCuentaChoice(choose: AddMovimientoUiState.() -> CuentaSelectionState?) {
+  private fun updateCuentaChoice(
+      edited: AddMovimientoUiState.() -> AddMovimientoUiState,
+      choose: AddMovimientoUiState.() -> CuentaSelectionState?,
+  ) {
     updateFields {
       val choice = choose() ?: return@updateFields this
       val previous = moneda
-      copy(cuentaChoice = choice, cuentaRejected = false).withRederivedAmount(previous)
+      copy(cuentaChoice = choice, cuentaRejected = false)
+          .keepingSurvivingPicks(this)
+          .edited()
+          .withRederivedAmount(previous)
     }
     if (uiState.value.step == AddMovimientoStep.PHRASE) refreshPreview(debounce = false)
   }
@@ -488,6 +513,13 @@ internal class AddMovimientoViewModel(
           editingPart = null,
           reviewShared = null,
           splitStash = null,
+          tipoEdited = false,
+          fechaEdited = false,
+          medioEdited = false,
+          cuentaEdited = false,
+          tituloEdited = false,
+          dictated = false,
+          snapshot = null,
       )
 
   // A category, tags, medio or cuenta picked in the sentence dialog do not guard it: only a typed
@@ -525,19 +557,19 @@ internal class AddMovimientoViewModel(
       selectedId: String?,
   ): List<Categoria> =
       rankSuggestions(query)
-          .filterNot { it.categoriaId == selectedId }
-          .mapNotNull { suggestion -> categorias.firstOrNull { it.id == suggestion.categoriaId } }
+          .filterNot { it == selectedId }
+          .mapNotNull { id -> categorias.firstOrNull { it.id == id } }
           .take(MAX_SUGGESTION_CHIPS)
 
   private fun AddMovimientoUiState.rankSuggestions(query: SuggestionQuery? = suggestionQuery) =
-      query?.let { entryEngine.rank(suggestionIndex, it, candidates()) }.orEmpty()
+      query?.let { suggestionIndex.suggestedCategoriaIds(it, candidates()) }.orEmpty()
 
   // A removed category that the sentence suggested stays dismissed for the same subject.
   private fun AddMovimientoUiState.withCategoria(
       updated: String?,
       removed: String? = null,
   ): AddMovimientoUiState {
-    val dismissed = removed?.takeIf { id -> rankSuggestions().any { it.categoriaId == id } }
+    val dismissed = removed?.takeIf { id -> id in rankSuggestions() }
     return copy(
         categoriaId = updated,
         categoriasEdited = true,
@@ -567,6 +599,11 @@ internal class AddMovimientoViewModel(
           sentenceSelection = SentenceSelection.EMPTY,
           frecuencia = if (frecuenciaEdited) frecuencia else null,
           recurrenceUnsupported = false,
+          tipoEdited = false,
+          fechaEdited = false,
+          tituloEdited = false,
+          dictated = false,
+          snapshot = null,
       )
 
   private val AddMovimientoUiState.manualCategoriaId: String?
@@ -605,7 +642,7 @@ internal class AddMovimientoViewModel(
           state.phraseContext(today),
           suggestionIndex,
           state.candidates(),
-          SentenceCatalogs(state.etiquetas, state.sentenceCuentas()),
+          SentenceCatalogs(state.etiquetas, state.sentenceCuentas(), correctionRules),
       )
 
   private fun refreshPreview(debounce: Boolean) {
@@ -621,7 +658,7 @@ internal class AddMovimientoViewModel(
               snapshot.phraseContext(snapshot.today),
               suggestionIndex,
               snapshot.candidates(),
-              SentenceCatalogs(snapshot.etiquetas, snapshot.sentenceCuentas()),
+              SentenceCatalogs(snapshot.etiquetas, snapshot.sentenceCuentas(), correctionRules),
           )
       uiState.update { current ->
         if (current.step == AddMovimientoStep.PHRASE && current.phrase.trim() == text) {
@@ -644,9 +681,10 @@ internal class AddMovimientoViewModel(
     override fun updateVoice(transform: VoiceInputUi.() -> VoiceInputUi) =
         this@AddMovimientoViewModel.updateVoice(transform)
 
-    override fun applyDictatedPhrase(value: String) = applyPhrase(value)
+    override fun applyDictatedPhrase(value: String) = applyPhrase(value, dictated = true)
 
-    override fun restorePhrase(value: String) = applyPhrase(value, debounce = false)
+    override fun restorePhrase(value: String, dictated: Boolean) =
+        applyPhrase(value, debounce = false, dictated = dictated)
 
     override fun send(effect: AddMovimientoEffect) {
       effectChannel.trySend(effect)
@@ -721,6 +759,7 @@ internal data class AddMovimientoRepositories(
     val cuentas: CuentaRepository,
     val recurrencias: RecurrenciaRepository,
     val voice: VoiceDictation,
+    val correcciones: CorreccionFraseRepository,
 )
 
 private sealed interface LoadState<out T> {

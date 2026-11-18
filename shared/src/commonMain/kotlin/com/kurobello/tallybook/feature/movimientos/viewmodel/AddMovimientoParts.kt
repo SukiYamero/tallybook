@@ -26,6 +26,7 @@ internal fun List<EntryPart>.rebuiltFrom(interpreted: List<PartInterpretation>):
         categoriaId = if (picked) picks[part.titulo] else part.preselectedCategoriaId,
         categoriasEdited = picked,
         suggestionQuery = part.query,
+        snapshot = part.snapshot(),
     )
   }
 }
@@ -69,22 +70,26 @@ private fun AddMovimientoUiState.joinedSummary(): AddMovimientoUiState {
       if (parts.size == detected.parts.size) phrase.trim()
       else parts.joinToString(JOINED_TITULO_SEPARATOR, transform = EntryPart::titulo)
   return copy(
-      step = AddMovimientoStep.SUMMARY,
-      parts = emptyList(),
-      amountInput =
-          parts.mapNotNull { partAmount(it) }.fold(Money(0, moneda), Money::plus).toAmountInput(),
-      amountEdited = true,
-      amountNeedsReview = parts.any(EntryPart::amountNeedsReview),
-      titulo = titulo.take(MOVIMIENTO_TITLE_MAX_LENGTH),
-      descripcion =
-          parts
-              .map(EntryPart::descripcion)
-              .filter(String::isNotBlank)
-              .joinToString(JOINED_DESCRIPCION_SEPARATOR)
-              .take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH),
-      categoriaId = categoria,
-      categoriasEdited = categoria != null && parts.any(EntryPart::categoriasEdited),
-  )
+          step = AddMovimientoStep.SUMMARY,
+          parts = emptyList(),
+          amountInput =
+              parts
+                  .mapNotNull { partAmount(it) }
+                  .fold(Money(0, moneda), Money::plus)
+                  .toAmountInput(),
+          amountEdited = true,
+          amountNeedsReview = parts.any(EntryPart::amountNeedsReview),
+          titulo = titulo.take(MOVIMIENTO_TITLE_MAX_LENGTH),
+          descripcion =
+              parts
+                  .map(EntryPart::descripcion)
+                  .filter(String::isNotBlank)
+                  .joinToString(JOINED_DESCRIPCION_SEPARATOR)
+                  .take(MOVIMIENTO_DESCRIPTION_MAX_LENGTH),
+          categoriaId = categoria,
+          categoriasEdited = categoria != null && parts.any(EntryPart::categoriasEdited),
+      )
+      .withStructureChange(JOINED_PARTS, base = null, amountHandSet = false)
 }
 
 private fun AddMovimientoUiState.leavingReview(summary: AddMovimientoUiState) =
@@ -102,23 +107,30 @@ private fun AddMovimientoUiState.leavingReview(summary: AddMovimientoUiState) =
 /** Like [joined], the sentence no longer reads as this part's amount, so it counts as edited. */
 private fun AddMovimientoUiState.summaryOf(part: EntryPart): AddMovimientoUiState {
   val overrides = part.overrides
+  val handSet = handSetOf(part)
   return copy(
-      step = AddMovimientoStep.SUMMARY,
-      parts = emptyList(),
-      tipo = partTipo(part),
-      fecha = overrides.fecha ?: fecha,
-      cuentaChoice = partCuentaChoice(part),
-      etiquetaIds = overrides.etiquetaIds ?: etiquetaIds,
-      etiquetasEdited = etiquetasEdited || overrides.etiquetaIds != null,
-      amountInput = part.amountInput,
-      amountEdited = true,
-      amountNeedsReview = part.amountNeedsReview,
-      titulo = part.titulo,
-      descripcion = part.descripcion,
-      categoriaId = part.categoriaId,
-      categoriasEdited = part.categoriasEdited,
-      suggestionQuery = part.suggestionQuery,
-  )
+          step = AddMovimientoStep.SUMMARY,
+          parts = emptyList(),
+          tipo = partTipo(part),
+          fecha = overrides.fecha ?: fecha,
+          cuentaChoice = partCuentaChoice(part),
+          etiquetaIds = overrides.etiquetaIds ?: etiquetaIds,
+          etiquetasEdited = etiquetasEdited || overrides.etiquetaIds != null,
+          amountInput = part.amountInput,
+          amountEdited = true,
+          amountNeedsReview = part.amountNeedsReview,
+          titulo = part.titulo,
+          descripcion = part.descripcion,
+          categoriaId = part.categoriaId,
+          categoriasEdited = part.categoriasEdited,
+          suggestionQuery = part.suggestionQuery,
+          tipoEdited = handSet.tipo,
+          fechaEdited = handSet.fecha,
+          medioEdited = handSet.medio,
+          cuentaEdited = handSet.cuenta,
+          tituloEdited = handSet.titulo,
+      )
+      .withStructureChange("1", part.snapshot, amountHandSet = part.amountEdited)
 }
 
 /**

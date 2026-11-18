@@ -1,6 +1,7 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.data.IdGenerator
+import com.kurobello.tallybook.core.model.CorreccionFrase
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.map
@@ -35,13 +36,15 @@ internal class AddMovimientoSubmission(
       }
       return
     }
-    val frecuencia = uiState.value.frecuencia
+    val draft = uiState.value
+    val frecuencia = draft.frecuencia
     val today = createdAt.toLocalDateTime(timeZone).date
     persist(
         write = {
           if (frecuencia == null) repositories.movimientos.insert(movement)
           else repositories.recurrencias.create(movement, frecuencia, today).map {}
         },
+        corrections = { draft.draftCorrections(movement, idGenerator, createdAt) },
         onFailure = { error ->
           // Every refusal is invalid input; re-reading the cuenta tells a refused one apart.
           val rejected =
@@ -63,18 +66,25 @@ internal class AddMovimientoSubmission(
     when (val save = uiState.value.partsToSave(idGenerator, createdAt, timeZone)) {
       is PartsSave.Invalid -> uiState.value = save.form
       is PartsSave.Ready -> {
-        val frecuencia = uiState.value.frecuencia
+        val review = uiState.value
         val today = createdAt.toLocalDateTime(timeZone).date
         persist(
-            write = { repositories.saveAll(save.movimientos, frecuencia, today) },
+            write = { repositories.saveAll(save.movimientos, review.frecuencia, today) },
+            corrections = { review.partsCorrections(save.movimientos, idGenerator, createdAt) },
             onFailure = { uiState.update { it.copy(error = MovimientoFormError.SAVE_FAILED) } },
         )
       }
     }
   }
 
+  /**
+   * The corrections are written apart from the save and only after it succeeded, before Saved
+   * closes the screen and cancels its scope. A failed write is dropped: the movimiento is saved
+   * either way, and a missing record only costs one lesson.
+   */
   private fun persist(
       write: suspend () -> DataOutcome<Unit>,
+      corrections: () -> List<CorreccionFrase>,
       onFailure: suspend (DataError) -> Unit,
   ) {
     uiState.update { it.copy(isSubmitting = true) }
@@ -83,6 +93,9 @@ internal class AddMovimientoSubmission(
       try {
         when (val outcome = write()) {
           is DataOutcome.Success -> {
+            corrections()
+                .takeIf { it.isNotEmpty() }
+                ?.let { repositories.correcciones.insertAll(it) }
             effects.send(AddMovimientoEffect.Saved)
             saved = true
           }

@@ -70,6 +70,7 @@ internal val viewModelModule = module {
                 cuentas = get(),
                 recurrencias = get(),
                 voice = get(),
+                correcciones = get(),
             ),
         idGenerator = get(),
         clock = get(),

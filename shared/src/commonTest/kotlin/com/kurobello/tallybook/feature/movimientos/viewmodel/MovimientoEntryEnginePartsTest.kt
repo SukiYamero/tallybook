@@ -4,6 +4,7 @@ import com.kurobello.tallybook.core.data.CategorySeedCatalog
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.entry.CategoryKeywordDictionary
 import com.kurobello.tallybook.core.data.entry.CategorySuggester
+import com.kurobello.tallybook.core.data.entry.CorrectionRules
 import com.kurobello.tallybook.core.data.entry.CuentaMatcher
 import com.kurobello.tallybook.core.data.entry.EtiquetaMatcher
 import com.kurobello.tallybook.core.data.entry.MovimientoPhraseParser
@@ -50,6 +51,7 @@ class MovimientoEntryEnginePartsTest {
           SentenceCatalogs(
               emptyList(),
               SentenceCuentas(listOf(COP_CASH, NU), Moneda.COP) { _, _ -> Moneda.COP },
+              CorrectionRules.EMPTY,
           ),
       )
 

@@ -1,0 +1,14 @@
+CREATE TABLE correccion_frase (
+    id TEXT NOT NULL PRIMARY KEY,
+    origen TEXT NOT NULL,
+    palabras TEXT NOT NULL,
+    campo TEXT NOT NULL,
+    leido TEXT,
+    propuesto TEXT,
+    guardado TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT
+);
+
+CREATE INDEX correccion_frase_recent ON correccion_frase(created_at);

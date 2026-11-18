@@ -198,6 +198,7 @@ read-modify-write, background scheduler or automatic conflict merge in this deli
   protected by a verified backup; offline or pending A data blocks replacement. No arbitrary transfer
   from A to B and no multiple-Google-account registry in this delivery. Preserve guest data separately.
 - Sign-out, revoke Google access, erase local data and delete Drive backups are distinct actions.
+  Erase and backup must include `correccion_frase`; no erase-all path exists yet.
   Account switching uses the replacement contract, not cloud deletion. Include a clearly confirmed
   deletion/disconnection path for Play readiness: cancel backup work first, delete only Tallybook-owned
   cloud files while permission remains, then erase local owned data and revoke credentials. Partial

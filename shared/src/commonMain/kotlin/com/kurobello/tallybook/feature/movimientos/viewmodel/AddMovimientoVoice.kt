@@ -21,7 +21,7 @@ internal interface AddMovimientoVoiceHost {
   fun applyDictatedPhrase(value: String)
 
   /** Puts back a sentence and its Detected card at once, so cancelled words never linger there. */
-  fun restorePhrase(value: String)
+  fun restorePhrase(value: String, dictated: Boolean)
 
   fun send(effect: AddMovimientoEffect)
 }
@@ -35,6 +35,7 @@ internal class AddMovimientoVoice(
   private var session: Job? = null
   private var stops = Channel<Unit>(Channel.CONFLATED)
   private var phraseBeforeSession = ""
+  private var dictatedBeforeSession = false
   private var permissionDenials = 0
   // Android answers a second request made while the dialog is up with an instant refusal, which
   // would count as a denial the user never gave.
@@ -76,7 +77,7 @@ internal class AddMovimientoVoice(
   fun discard() {
     if (!host.state.voice.canDiscard) return
     cancel()
-    host.restorePhrase(phraseBeforeSession)
+    host.restorePhrase(phraseBeforeSession, dictatedBeforeSession)
   }
 
   // A second refusal in a session is how a permanent denial looks: the system stops asking.
@@ -101,6 +102,7 @@ internal class AddMovimientoVoice(
     if (state.step != AddMovimientoStep.PHRASE || state.voice.isListening) return
     val sessionStops = Channel<Unit>(Channel.CONFLATED).also { stops = it }
     phraseBeforeSession = state.phrase
+    dictatedBeforeSession = state.dictated
     val typed = state.phrase.trim()
     val prefix = if (typed.isEmpty()) "" else "$typed "
     host.updateVoice {
