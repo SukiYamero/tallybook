@@ -171,16 +171,18 @@ app derives the draft from it and the user confirms or refines it; the manual fo
     Efectivo, Crédito, and for a bank account Débito on a gasto and Transferencia on an ingreso),
     except that a transfer word with a bank account selects Transferencia. A contradicting method word
     is dropped. Every result is adapted to the final tipo.
-  - Words are consumed in a fixed order: quantities (decided over the whole sentence first), tipo
-    verbs, method phrases (before account names, so "en efectivo" is not split by the seeded
-    "Efectivo" account), account names, recurrence, fecha, monto; the rest is the subject.
+  - Words are consumed in a fixed order: tipo verbs, method phrases (before account names, so "en
+    efectivo" is not split by the seeded "Efectivo" account), account names, recurrence, fecha,
+    monto; the rest is the subject. Quantities are decided while the monto is read, among the
+    numbers the earlier steps left free.
 - **Quantities** (single and split sentences): a whole number below 100 written without separator,
   symbol, decimals or multiplier, directly followed by a word that is not a stop word ("en", "de",
   "por", "on", "for", "no"…), a multiplier, a currency or a part connector, is a quantity when the
   sentence has at least one amount candidate that is not quantity-shaped. A quantity is not an
-  amount, never raises the ambiguous-amount flag and stays in the título and subject ("compré 2
-  hamburguesas por 20 mil" → 20.000, no flag). A sentence whose candidates are all quantity-shaped
-  keeps the largest as the amount.
+  amount and stays in the título and subject ("compré 2 hamburguesas por 20 mil" → 20.000, no
+  flag). It raises the ambiguous-amount flag only when its value is at least the chosen amount's
+  ("paid 45 dinner, 5 dollars tip" → 5, flagged): it may have been the amount. A sentence whose
+  candidates are all quantity-shaped keeps the largest as the amount.
 - The summary is a tall bottom sheet titled as a review-and-confirm step. It only reviews: labeled
   sections show tipo and fecha (prominent), the amount and the title, and the only choices it offers
   are medio and account, the category with its suggestions and the optional tags. It has no text
@@ -205,12 +207,16 @@ one tap.
   mil" is one part). "y", "e" and "and" inside a spelled number are number connectors, never part
   connectors.
 - **Cut.** Adjacent connectors ("y también", ", y") act as one. With several connector runs between
-  two amounts, the cut is the run right before the next amount when only stop words or a tipo verb
-  sit between them ("20 mil en cine y palomitas y 40 mil en comida"), otherwise the first run ("cine
-  20 mil y comida y bebida 40 mil").
+  two amounts, the cut is the run right before the next amount when only stop words, a tipo verb or
+  shared words (medio, account, date, cadence) sit between them ("20 mil en cine y palomitas y 40
+  mil en comida", "… y palomitas y con débito 40 mil"), otherwise the first run ("cine 20 mil y
+  comida y bebida 40 mil").
 - **Shared tail.** After the last amount, the first connector whose own chunk (up to the next
-  connector) names a medio, account, date or cadence starts the shared tail ("más lo cargué con la
-  tarjeta de crédito"); it belongs to no part. Other trailing text stays in the last part.
+  connector) names a medio, account, date or cadence with only stop words, tipo verbs or charging
+  words ("cargué", "carguei", "charged", "it", "them") before it starts the shared tail ("más lo
+  cargué con la tarjeta de crédito"); it belongs to no part. Other trailing text stays in the last
+  part ("… 40 mil en comida y bebida ayer"), and the date or medio it names is still shared. A
+  connector run that ends the sentence ("… 30 mil y") is dropped.
 - **Limits.** The sentence splits only into 2 to 10 parts. Otherwise, and when every amount
   candidate is quantity-shaped, it stays one movimiento ("cine y comida 60 mil", "2 hamburguesas y 3
   gaseosas por 50 mil").
