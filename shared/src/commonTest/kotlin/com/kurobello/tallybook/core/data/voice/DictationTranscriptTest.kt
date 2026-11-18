@@ -119,7 +119,7 @@ class DictationTranscriptTest {
   }
 
   @Test
-  fun aSegmentReplacesWordsItRevisedAfterAPause() {
+  fun aRewordingAfterAPauseInsideASegmentIsNotDuplicated() {
     val text =
         transcriptOf(
             DictationEvent.Partial("caste 20"),
@@ -168,16 +168,72 @@ class DictationTranscriptTest {
   }
 
   @Test
+  fun aSegmentDropsAStretchThePauseGuessClosedTooEarly() {
+    val text =
+        transcriptOf(
+            DictationEvent.Partial("gasté 20 mil en cine"),
+            DictationEvent.Pause,
+            DictationEvent.Partial("gasté"),
+            DictationEvent.Partial("gasté 20 mil en cine"),
+            DictationEvent.Segment("gasté 20 mil en cine"),
+            DictationEvent.Final(""),
+        )
+
+    assertEquals("gasté 20 mil en cine", text)
+  }
+
+  @Test
+  fun stretchesThatOpenWithTheSameWordAreAllKept() {
+    val sameConnector =
+        transcriptOf(
+            DictationEvent.Partial("netflix 20 mil"),
+            DictationEvent.Pause,
+            DictationEvent.Partial("y"),
+            DictationEvent.Partial("y spotify 10 mil"),
+            DictationEvent.Pause,
+            DictationEvent.Partial("y spotify 10 mil"),
+            DictationEvent.Partial("y"),
+            DictationEvent.Partial("y disney 15 mil"),
+            DictationEvent.Final(""),
+        )
+    val sameVerb =
+        transcriptOf(
+            DictationEvent.Partial("gasté 20 mil en cine"),
+            DictationEvent.Pause,
+            DictationEvent.Partial("gasté"),
+            DictationEvent.Partial("gasté 40 mil en comida"),
+            DictationEvent.Final(""),
+        )
+
+    assertEquals("netflix 20 mil y spotify 10 mil y disney 15 mil", sameConnector)
+    assertEquals("gasté 20 mil en cine gasté 40 mil en comida", sameVerb)
+  }
+
+  @Test
   fun aRepeatedStretchIsRemovedOnlyAsWholeWords() {
     val text =
         transcriptOf(
             DictationEvent.Partial("y"),
             DictationEvent.Pause,
             DictationEvent.Partial("yo pagué"),
+            DictationEvent.Partial("yo pagué 5"),
             DictationEvent.Final(""),
         )
 
-    assertEquals("y yo pagué", text)
+    assertEquals("y yo pagué 5", text)
+  }
+
+  @Test
+  fun aFinalRepeatingEarlierStretchesWithOtherCapitalsIsNotDuplicated() {
+    val text =
+        transcriptOf(
+            DictationEvent.Partial("gasté 20 mil"),
+            DictationEvent.Pause,
+            DictationEvent.Partial("y"),
+            DictationEvent.Final("Gasté 20 mil y 30"),
+        )
+
+    assertEquals("gasté 20 mil y 30", text)
   }
 
   @Test

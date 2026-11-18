@@ -13,7 +13,7 @@ private val whitespace = Regex("\\s+")
  */
 internal class DictationTranscript {
   private val closed = mutableListOf<String>()
-  // Pieces closed by a pause guess since the last segment; the next segment replaces them.
+  // Pieces closed by a pause guess since the last segment; the next segment drops those it revises.
   private var segmentStart = 0
   private var open = ""
   private var pausedSinceOpen = false
@@ -54,12 +54,11 @@ internal class DictationTranscript {
   private fun onSegment(segment: String): String {
     segmented = true
     val words = withoutClosedPrefix(segment, segmentStart).ifEmpty { joinedSinceSegmentStart() }
-    if (segment.isNotEmpty()) {
-      val guessed = closed.subList(segmentStart, closed.size)
-      guessed.retainAll { piece -> isRestart(piece, words) }
-    } else {
-      while (closed.size > segmentStart) closed.removeAt(closed.lastIndex)
-    }
+    val kept =
+        if (segment.isEmpty()) emptyList()
+        else closed.drop(segmentStart).filter { piece -> isRestart(piece, words) }
+    while (closed.size > segmentStart) closed.removeAt(closed.lastIndex)
+    closed += kept
     if (words.isNotEmpty()) closed += words
     segmentStart = closed.size
     open = ""
@@ -84,8 +83,8 @@ internal class DictationTranscript {
     val prefix = closed.take(count).joinToString(" ")
     return when {
       prefix.isEmpty() -> value
-      value == prefix -> ""
-      value.startsWith("$prefix ") -> value.removePrefix(prefix).trim()
+      value.equals(prefix, ignoreCase = true) -> ""
+      value.startsWith("$prefix ", ignoreCase = true) -> value.substring(prefix.length).trim()
       else -> value
     }
   }
@@ -93,11 +92,14 @@ internal class DictationTranscript {
 
 /**
  * A revision keeps the opening of the old text (the first word, or the second when the first was
- * misheard) or is one word-prefix of the other; a new stretch of speech starts with other words.
+ * misheard) or is one word-prefix of the other, and is about as long: a restarting recognizer sends
+ * a new stretch word by word, so its first partials are short even when they repeat the opening
+ * ("gasté … gasté …").
  */
 private fun isRestart(old: String, new: String): Boolean {
   val oldWords = old.lowercase().split(whitespace)
   val newWords = new.lowercase().split(whitespace)
+  if (newWords.size < oldWords.size - 1) return true
   val isWordPrefix =
       newWords.size <= oldWords.size && oldWords.subList(0, newWords.size) == newWords ||
           oldWords.size <= newWords.size && newWords.subList(0, oldWords.size) == oldWords
