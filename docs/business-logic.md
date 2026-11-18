@@ -222,12 +222,14 @@ recorded on the device, and a correction repeated for the same words becomes a p
   units with currency, ISO dates). Records are written after a successful save, in their own
   transaction; a failed record write never affects the save. They are a stamped root entity, excluded
   from CSV export and every user-facing count, and never pruned; rules ignore records older than 180
-  days.
+  days. Records stay on the device and are never sent to a Tallybook server; like all app data, they
+  are included in Android's own backup and device transfer.
 - Learned fields: tipo, categoría, medio, cuenta and frecuencia; the rest are only recorded. A rule is
   (word, field, value) and exists when, among the live records of the last 180 days containing the
   word for that field, at least 2 have `guardado` = value and the most recent one does too (a later
-  contradiction suspends the rule until two newer agreeing records). Words shorter than 3 characters
-  never form rules.
+  contradiction suspends the rule until two newer agreeing records). Records written by one save
+  count once, so a word repeated across the parts of a split sentence is not a rule after one save.
+  Words shorter than 3 characters never form rules.
 - With one agreeing record the value is only offered: categoría as a dimmed suggestion chip and
   cuenta among the suggested accounts. Tipo, medio and frecuencia have no offered state; they are
   applied from the second consistent correction.
@@ -235,6 +237,8 @@ recorded on the device, and a correction repeated for the same words becomes a p
   values are offered (categoría, cuenta); the same value on several words still applies.
 - A rule fills a field the parser left undecided. It overrides an explicit reading only when its
   agreeing records corrected that same reading, so "con débito" is never overridden by a habit.
+  Categoría is gated the same way on the confident suggestion it would replace. A reading kept by
+  this gate still gets the rule's value offered (categoría, cuenta).
 - Order: tipo first (it depends on no other learned value), then categoría, cuenta, medio and
   frecuencia. A learned medio adapts to a learned or named cuenta when that cuenta's type accepts it;
   otherwise the cuenta's implied medio stays. A cuenta rule whose cuenta is archived or deleted is
@@ -316,7 +320,9 @@ the training data, so correcting a suggestion teaches the next one.
   produce a high-confidence result on their own; when unsure, the app offers up to three of them as
   suggestions instead of guessing.
 - Learned word rules (see [Learning from corrections](#learning-from-corrections)) rank after the
-  exact-subject history match and before the dictionary.
+  exact-subject history match and before the dictionary. A confident dictionary or word-history
+  match is kept, with the learned category offered beside it, unless the rule was learned by
+  correcting that same suggestion.
 - Each past movimiento is one full vote for its category. When a clear majority of the past
   movimientos with exactly the same subject share a category, that category is the high-confidence
   suggestion.

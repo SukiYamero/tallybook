@@ -48,7 +48,8 @@ internal fun CategorySuggestionIndex.suggestedCategoriaIds(
 
 /**
  * Exact-subject history outranks a word rule, which outranks the dictionary. The rule is gated on
- * what the app would otherwise preselect, since that is the reading its records corrected.
+ * what the app would otherwise preselect, since that is the reading its records corrected; a rule
+ * learned against another reading is only offered.
  */
 internal fun CategorySuggestionIndex.categoryChoice(
     subject: String,

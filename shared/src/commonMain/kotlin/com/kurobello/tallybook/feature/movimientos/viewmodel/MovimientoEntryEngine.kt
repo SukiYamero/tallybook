@@ -104,7 +104,6 @@ internal data class PhraseInterpretation(
     val sentence: SentenceSelection,
     val words: List<String>,
     val readings: FieldReadings,
-    val offered: OfferedValues,
     /** Empty when the sentence is a single movimiento. */
     val parts: List<PartInterpretation> = emptyList(),
 )
@@ -213,7 +212,6 @@ internal class MovimientoEntryEngine(
         sentence = selection.learned,
         words = words,
         readings = readings,
-        offered = selection.offered,
         parts =
             parser.split(text, moneda, context.locale, context.today, reserved).orEmpty().map {
                 partText ->

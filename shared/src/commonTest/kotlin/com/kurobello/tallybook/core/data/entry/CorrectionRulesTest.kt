@@ -79,7 +79,11 @@ class CorrectionRulesTest {
 
   @Test
   fun shortWordsNeverFormRules() {
-    val rules = rules(record(listOf("la"), "Crédito"), record(listOf("la"), "Crédito"))
+    val rules =
+        rules(
+            record(listOf("la"), "Crédito", daysAgo = 2),
+            record(listOf("la"), "Crédito", daysAgo = 1),
+        )
 
     assertEquals(RuleOutcome.None, rules.medio(listOf("la")))
   }
@@ -88,10 +92,10 @@ class CorrectionRulesTest {
   fun disagreeingWordsOfOneSentenceOfferBoth() {
     val rules =
         rules(
-            record(listOf("netflix"), "Crédito"),
-            record(listOf("netflix"), "Crédito"),
-            record(listOf("uber"), "Débito"),
-            record(listOf("uber"), "Débito"),
+            record(listOf("netflix"), "Crédito", daysAgo = 2),
+            record(listOf("netflix"), "Crédito", daysAgo = 1),
+            record(listOf("uber"), "Débito", daysAgo = 2),
+            record(listOf("uber"), "Débito", daysAgo = 1),
         )
 
     assertEquals(
@@ -101,7 +105,7 @@ class CorrectionRulesTest {
   }
 
   @Test
-  fun anExplicitReadingIsOverriddenOnlyByCorrectionsOfThatReading() {
+  fun anExplicitReadingIsOverriddenOnlyByCorrectionsOfThatReadingAndOfferedOtherwise() {
     val rules =
         rules(
             record(listOf("netflix"), "Crédito", read = "Débito", daysAgo = 2),
@@ -109,7 +113,10 @@ class CorrectionRulesTest {
         )
 
     assertEquals(RuleOutcome.Applied("Crédito"), rules.medio(listOf("netflix"), read = "Débito"))
-    assertEquals(RuleOutcome.None, rules.medio(listOf("netflix"), read = "Efectivo"))
+    assertEquals(
+        RuleOutcome.Offered(setOf("Crédito")),
+        rules.medio(listOf("netflix"), read = "Efectivo"),
+    )
     assertEquals(RuleOutcome.Applied("Crédito"), rules.medio(listOf("netflix"), read = null))
   }
 
@@ -117,8 +124,8 @@ class CorrectionRulesTest {
   fun anOfferOfTheSameValueDoesNotSuspendARule() {
     val rules =
         rules(
-            record(listOf("netflix"), "Crédito"),
-            record(listOf("netflix"), "Crédito"),
+            record(listOf("netflix"), "Crédito", daysAgo = 2),
+            record(listOf("netflix"), "Crédito", daysAgo = 1),
             record(listOf("spotify"), "Crédito"),
         )
 
@@ -129,8 +136,8 @@ class CorrectionRulesTest {
   fun anOfferOfAnotherValueTurnsARuleIntoAnOffer() {
     val rules =
         rules(
-            record(listOf("netflix"), "Crédito"),
-            record(listOf("netflix"), "Crédito"),
+            record(listOf("netflix"), "Crédito", daysAgo = 2),
+            record(listOf("netflix"), "Crédito", daysAgo = 1),
             record(listOf("uber"), "Débito"),
         )
 
@@ -145,7 +152,7 @@ class CorrectionRulesTest {
     val rules =
         rules(
             record(listOf("netflix"), "Crédito", daysAgo = 180),
-            record(listOf("netflix"), "Crédito", daysAgo = 180),
+            record(listOf("netflix"), "Crédito", daysAgo = 179),
         )
 
     assertEquals(RuleOutcome.Applied("Crédito"), rules.medio(listOf("netflix")))
@@ -164,6 +171,48 @@ class CorrectionRulesTest {
   }
 
   @Test
+  fun recordsOfOneSaveCountAsOneCorrection() {
+    val rules =
+        rules(
+            record(listOf("uber"), "Crédito", daysAgo = 1),
+            record(listOf("uber"), "Crédito", daysAgo = 1),
+        )
+
+    assertEquals(RuleOutcome.Offered(setOf("Crédito")), rules.medio(listOf("uber")))
+  }
+
+  @Test
+  fun recordsOfOneSaveCountOnceForTheReadingTheyCorrected() {
+    val rules =
+        rules(
+            record(listOf("uber"), "Crédito", read = "Débito", daysAgo = 2),
+            record(listOf("uber"), "Crédito", read = "Efectivo", daysAgo = 1),
+            record(listOf("uber"), "Crédito", read = "Efectivo", daysAgo = 1),
+        )
+
+    assertEquals(
+        RuleOutcome.Offered(setOf("Crédito")),
+        rules.medio(listOf("uber"), read = "Efectivo"),
+    )
+  }
+
+  @Test
+  fun aRuleLearnedAgainstAnotherReadingDoesNotBlockAnAppliedWord() {
+    val rules =
+        rules(
+            record(listOf("netflix"), "Débito", read = "Crédito", daysAgo = 2),
+            record(listOf("netflix"), "Débito", read = "Crédito", daysAgo = 1),
+            record(listOf("uber"), "Crédito", read = "Efectivo", daysAgo = 2),
+            record(listOf("uber"), "Crédito", read = "Efectivo", daysAgo = 1),
+        )
+
+    assertEquals(
+        RuleOutcome.Applied("Crédito"),
+        rules.medio(listOf("netflix", "uber"), read = "Efectivo"),
+    )
+  }
+
+  @Test
   fun aDuplicatedWordIsNotCountedTwice() {
     val rules = rules(record(listOf("netflix", "netflix"), "Crédito"))
 
@@ -174,10 +223,10 @@ class CorrectionRulesTest {
   fun aGatedOutWordDoesNotBlockAnotherAppliedWord() {
     val rules =
         rules(
-            record(listOf("netflix"), "Crédito", read = "Débito"),
-            record(listOf("netflix"), "Crédito", read = "Débito"),
-            record(listOf("uber"), "Crédito", read = "Efectivo"),
-            record(listOf("uber"), "Crédito", read = "Efectivo"),
+            record(listOf("netflix"), "Crédito", read = "Débito", daysAgo = 2),
+            record(listOf("netflix"), "Crédito", read = "Débito", daysAgo = 1),
+            record(listOf("uber"), "Crédito", read = "Efectivo", daysAgo = 2),
+            record(listOf("uber"), "Crédito", read = "Efectivo", daysAgo = 1),
         )
 
     assertEquals(
@@ -190,8 +239,8 @@ class CorrectionRulesTest {
   fun unlearnedCamposNeverFormRules() {
     val rules =
         rules(
-            record(listOf("netflix"), "10", campo = CampoCorreccion.MONTO),
-            record(listOf("netflix"), "10", campo = CampoCorreccion.MONTO),
+            record(listOf("netflix"), "10", daysAgo = 2, campo = CampoCorreccion.MONTO),
+            record(listOf("netflix"), "10", daysAgo = 1, campo = CampoCorreccion.MONTO),
         )
 
     assertEquals(RuleOutcome.None, rules.outcome(listOf("netflix"), CampoCorreccion.MONTO, null))

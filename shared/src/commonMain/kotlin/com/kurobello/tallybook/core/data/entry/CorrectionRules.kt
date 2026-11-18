@@ -8,7 +8,10 @@ import kotlin.time.Instant
 internal sealed interface RuleOutcome {
   data object None : RuleOutcome
 
-  /** One agreeing record, or rules that disagree across the sentence's words. */
+  /**
+   * One agreeing save, a rule learned against another reading than this sentence's, or rules that
+   * disagree across the sentence's words.
+   */
   data class Offered(val values: Set<String>) : RuleOutcome
 
   data class Applied(val value: String) : RuleOutcome
@@ -26,9 +29,19 @@ internal val LEARNED_CAMPOS =
 internal val RULE_WINDOW = 180.days
 
 private const val MIN_WORD_LENGTH = 3
-private const val MIN_AGREEING_RECORDS = 2
+private const val MIN_AGREEING_SAVES = 2
 
 private data class WordField(val word: String, val campo: CampoCorreccion)
+
+private sealed interface WordRule {
+  val value: String
+
+  data class Single(override val value: String) : WordRule
+
+  data class OtherReading(override val value: String) : WordRule
+
+  data class Rule(override val value: String) : WordRule
+}
 
 internal class CorrectionRules
 private constructor(private val newestFirstByWordField: Map<WordField, List<CorreccionFrase>>) {
@@ -38,29 +51,38 @@ private constructor(private val newestFirstByWordField: Map<WordField, List<Corr
    */
   fun outcome(words: List<String>, campo: CampoCorreccion, leido: String?): RuleOutcome {
     val perWord =
-        words.distinct().map { word ->
-          wordOutcome(newestFirstByWordField[WordField(word, campo)].orEmpty(), leido)
+        words.distinct().mapNotNull { word ->
+          wordRule(newestFirstByWordField[WordField(word, campo)].orEmpty(), leido)
         }
-    val applied = perWord.filterIsInstance<RuleOutcome.Applied>().map { it.value }.toSet()
-    val offered = perWord.filterIsInstance<RuleOutcome.Offered>().flatMap { it.values }.toSet()
+    val applied = perWord.valuesOf<WordRule.Rule>()
+    val offered = perWord.valuesOf<WordRule.Single>()
     return when {
-      applied.isEmpty() && offered.isEmpty() -> RuleOutcome.None
+      perWord.isEmpty() -> RuleOutcome.None
       applied.size == 1 && (offered - applied).isEmpty() -> RuleOutcome.Applied(applied.single())
-      else -> RuleOutcome.Offered(applied + offered)
+      else -> RuleOutcome.Offered(perWord.map { it.value }.toSet())
     }
   }
 
-  private fun wordOutcome(newestFirst: List<CorreccionFrase>, leido: String?): RuleOutcome {
-    val value = newestFirst.firstOrNull()?.guardado ?: return RuleOutcome.None
+  /**
+   * Agreement is counted in saves: every record of one save shares its `createdAt`, and a split
+   * sentence writes one record per part, so a word repeated across parts would count twice.
+   */
+  private fun wordRule(newestFirst: List<CorreccionFrase>, leido: String?): WordRule? {
+    val value = newestFirst.firstOrNull()?.guardado ?: return null
     val agreeing = newestFirst.filter { it.guardado == value }
     val correctedThatReading =
-        leido == null || agreeing.count { it.leido == leido } >= MIN_AGREEING_RECORDS
+        leido == null || agreeing.filter { it.leido == leido }.saveCount() >= MIN_AGREEING_SAVES
     return when {
-      agreeing.size < MIN_AGREEING_RECORDS -> RuleOutcome.Offered(setOf(value))
-      correctedThatReading -> RuleOutcome.Applied(value)
-      else -> RuleOutcome.None
+      agreeing.saveCount() < MIN_AGREEING_SAVES -> WordRule.Single(value)
+      correctedThatReading -> WordRule.Rule(value)
+      else -> WordRule.OtherReading(value)
     }
   }
+
+  private fun List<CorreccionFrase>.saveCount(): Int = distinctBy { it.createdAt }.size
+
+  private inline fun <reified R : WordRule> List<WordRule>.valuesOf(): Set<String> =
+      filterIsInstance<R>().map { it.value }.toSet()
 
   companion object {
     val EMPTY = CorrectionRules(emptyMap())

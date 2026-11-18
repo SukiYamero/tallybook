@@ -31,17 +31,10 @@ internal data class FieldReadings(
 }
 
 /**
- * The medios and cuentas a single agreeing correction (or disagreeing rules) offers without
- * selecting them. Offered categorías travel in [SuggestionQuery.offeredCategoriaIds].
+ * The selection the parser read and the one learned rules turned it into. Offered cuentas join
+ * [SentenceCuenta.alternativeIds]; medio has no offered state.
  */
-internal data class OfferedValues(val medios: Set<MedioPago>, val cuentaIds: List<String>)
-
-/** The selection the parser read and the one learned rules turned it into. */
-internal data class LearnedSelection(
-    val read: SentenceSelection,
-    val learned: SentenceSelection,
-    val offered: OfferedValues,
-)
+internal data class LearnedSelection(val read: SentenceSelection, val learned: SentenceSelection)
 
 internal fun RuleOutcome.appliedValue(): String? = (this as? RuleOutcome.Applied)?.value
 
@@ -83,26 +76,9 @@ internal fun learnedSelection(
       medioOutcome.applied(MedioPago.entries)?.forTipo(tipo)?.takeIf { medio ->
         cuenta == null || cuenta.tipo in medio.compatibleTipos
       }
-  val offeredMedios =
-      medioOutcome
-          .offeredValues()
-          .mapNotNull { value -> MedioPago.entries.firstOrNull { it.name == value }?.forTipo(tipo) }
-          .toSet()
   val learnedMedio =
-      when {
-        appliedMedio != null -> SentenceMedio(appliedMedio, emptySet())
-        cuenta != null || resolvedMedio.medio != null -> resolvedMedio
-        else -> SentenceMedio(null, resolvedMedio.candidates + offeredMedios)
-      }
-  return LearnedSelection(
-      read = read,
-      learned = SentenceSelection(learnedCuenta, learnedMedio),
-      offered =
-          OfferedValues(
-              medios = if (learnedMedio.medio == null) offeredMedios else emptySet(),
-              cuentaIds = offeredCuentaIds,
-          ),
-  )
+      if (appliedMedio != null) SentenceMedio(appliedMedio, emptySet()) else resolvedMedio
+  return LearnedSelection(read = read, learned = SentenceSelection(learnedCuenta, learnedMedio))
 }
 
 /** A recurrence the parser could not represent is a reading of its own, not an undecided one. */

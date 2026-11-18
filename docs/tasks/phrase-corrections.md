@@ -73,7 +73,7 @@ picked; any record leaving the device.
   recorded only.
 - A rule is (word, field, value). It exists when, among the live records of the last 180 days whose
   `palabras` contain the word and whose `campo` is that field:
-  - at least 2 have `guardado` = value, and
+  - at least 2 saves have `guardado` = value (records written by one save count once), and
   - the most recent one has `guardado` = value (a later contradiction suspends the rule until two
     newer agreeing corrections).
 - With exactly one agreeing record (and no newer contradiction) the value is only **offered**:
@@ -85,7 +85,8 @@ picked; any record leaving the device.
   - When the parser left the field undecided, the rule fills it.
   - When the parser decided a value, the rule overrides it only if the rule's agreeing records were
     corrections of that same reading (`leido` equal to the parser's value); otherwise the parser's
-    explicit reading wins ("con débito" is never overridden by a habit).
+    explicit reading wins ("con débito" is never overridden by a habit) and the rule's value is
+    offered (categoría, cuenta). Categoría is gated the same way on the confident suggestion.
   - Order: a tipo rule is resolved first, before the category ranking and medio resolution that
     depend on tipo; a tipo rule fills tipo only when the sentence has no tipo verb (it replaces the
     income-category hint) and overrides a verb only under the `leido` condition above. Then
@@ -132,8 +133,7 @@ picked; any record leaving the device.
 ## Verification
 
 - **Integration contract**: a ViewModel test types "almuerzo 20 mil con la visa" twice, picks
-  Crédito both times and saves (the second time Crédito is already offered); the third time Crédito
-  is preselected; changing it to Débito and saving makes the fourth sentence apply nothing and offer
-  Débito.
+  Crédito both times and saves (the second time nothing is preselected yet); the third time Crédito
+  is preselected; changing it to Débito and saving makes the fourth sentence apply nothing.
 - **Runtime (Xiaomi)**: dictate a sentence with an unknown word, correct the category, save; repeat;
   the third dictation preselects it. Records survive an app restart.

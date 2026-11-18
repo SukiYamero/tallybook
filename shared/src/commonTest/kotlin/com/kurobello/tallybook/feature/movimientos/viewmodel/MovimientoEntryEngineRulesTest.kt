@@ -22,6 +22,7 @@ import com.kurobello.tallybook.core.model.PhraseReviewFlag
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.days
@@ -117,15 +118,14 @@ class MovimientoEntryEngineRulesTest {
   }
 
   @Test
-  fun anOfferedMedioJoinsTheCandidates() {
+  fun aSingleMedioCorrectionChangesNothing() {
     val rules =
         rulesOf(listOf(record(listOf("almuerzo", "visa"), CampoCorreccion.MEDIO, "CREDITO")))
 
     val sentence = interpret("almuerzo 20 mil con la visa", rules)
 
     assertNull(sentence.sentence.medio.medio)
-    assertTrue(MedioPago.CREDITO in sentence.sentence.medio.candidates)
-    assertEquals(setOf(MedioPago.CREDITO), sentence.offered.medios)
+    assertEquals(interpret("almuerzo 20 mil con la visa").sentence, sentence.sentence)
   }
 
   @Test
@@ -173,6 +173,19 @@ class MovimientoEntryEngineRulesTest {
 
     assertEquals("cat_restaurante", interpret("almuerzo 20 mil").preselectedCategoriaId)
     assertEquals("cat_comida", interpret("almuerzo 20 mil", rules).preselectedCategoriaId)
+  }
+
+  @Test
+  fun aRuleLearnedAgainstAnotherReadingIsOfferedBesideAConfidentMatch() {
+    val rules =
+        rulesOf(
+            twice(listOf("almuerzo"), CampoCorreccion.CATEGORIA, "cat_comida", leido = "cat_regalo")
+        )
+
+    val sentence = interpret("almuerzo 20 mil", rules)
+
+    assertEquals("cat_restaurante", sentence.preselectedCategoriaId)
+    assertEquals(listOf("cat_comida"), sentence.query.offeredCategoriaIds)
   }
 
   @Test
@@ -349,7 +362,6 @@ class MovimientoEntryEngineRulesTest {
 
     assertNull(sentence.sentence.cuenta.cuenta)
     assertEquals(listOf(NEQUI.id), sentence.sentence.cuenta.alternativeIds)
-    assertEquals(listOf(NEQUI.id), sentence.offered.cuentaIds)
   }
 
   @Test
@@ -360,7 +372,10 @@ class MovimientoEntryEngineRulesTest {
 
     assertNull(interpret("almuerzo 20 mil", archived, cuentas).sentence.cuenta.cuenta)
     assertNull(interpret("almuerzo 20 mil", deleted, cuentas).sentence.cuenta.cuenta)
-    assertTrue(interpret("almuerzo 20 mil", archived, cuentas).offered.cuentaIds.isEmpty())
+    assertFalse(
+        OLD_BANK.id in
+            interpret("almuerzo 20 mil", archived, cuentas).sentence.cuenta.alternativeIds
+    )
   }
 
   @Test

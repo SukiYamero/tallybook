@@ -136,7 +136,7 @@ internal fun correctionsOf(
 }
 
 /**
- * A título with half or more of its words replaced was rewritten, not corrected: it says nothing
+ * A título with more than half of its words replaced was rewritten, not corrected: it says nothing
  * about how the sentence was heard.
  */
 private fun tituloCorrection(
@@ -148,7 +148,7 @@ private fun tituloCorrection(
   val after = suggestionTokens(saved).distinct()
   val removed = before - after.toSet()
   val added = after - before.toSet()
-  val rewritten = removed.size * 2 >= before.size
+  val rewritten = removed.size * 2 > before.size
   if (rewritten || removed.isEmpty() && added.isEmpty()) return null
   return stamp.record(
       snapshot.palabras,

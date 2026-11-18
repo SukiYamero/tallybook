@@ -226,6 +226,22 @@ class AddMovimientoCorrectionsTest {
   }
 
   @Test
+  fun oneOfTwoTituloWordsCorrectedIsRecorded() = runTest {
+    val viewModel = correctionsViewModel()
+
+    type(viewModel, "uber vissa 8000")
+    viewModel.onPhraseContinue()
+    viewModel.onEditMovimiento()
+    viewModel.onTituloChanged("uber visa 8000")
+    save(viewModel)
+
+    val record = records.single()
+    assertEquals(CampoCorreccion.TITULO, record.campo)
+    assertEquals("vissa", record.propuesto)
+    assertEquals("visa", record.guardado)
+  }
+
+  @Test
   fun eachSavedPartRecordsItsOwnWords() = runTest {
     val viewModel = correctionsViewModel()
 
@@ -332,22 +348,39 @@ class AddMovimientoCorrectionsTest {
   @Test
   fun theThirdSentencePreselectsWhatTheFirstTwoCorrected() = runTest {
     val first = lunchRound()
-    assertFalse(MedioPago.CREDITO in first.sentenceSelection.medio.candidates)
+    assertEquals(MedioPago.EFECTIVO, first.medio)
     pickAndSave(first.viewModel, MedioPago.CREDITO)
 
     val second = lunchRound()
-    assertTrue(MedioPago.CREDITO in second.sentenceSelection.medio.candidates)
-    assertEquals(MedioPago.EFECTIVO, second.viewModel.uiState.value.sentence.cuenta.medio)
+    assertEquals(MedioPago.EFECTIVO, second.medio)
     pickAndSave(second.viewModel, MedioPago.CREDITO)
 
     val third = lunchRound()
-    assertEquals(MedioPago.CREDITO, third.viewModel.uiState.value.sentence.cuenta.medio)
+    assertEquals(MedioPago.CREDITO, third.medio)
     assertEquals(SelectionOwner.SENTENCE, third.viewModel.uiState.value.cuentaChoice.owner)
     pickAndSave(third.viewModel, MedioPago.DEBITO)
 
     val fourth = lunchRound()
-    assertEquals(MedioPago.EFECTIVO, fourth.viewModel.uiState.value.sentence.cuenta.medio)
-    assertTrue(MedioPago.DEBITO in fourth.sentenceSelection.medio.candidates)
+    assertEquals(MedioPago.EFECTIVO, fourth.medio)
+  }
+
+  @Test
+  fun aWordRepeatedAcrossPartsOfOneSaveIsOnlyOffered() = runTest {
+    val first = correctionsViewModel()
+    type(first, "uber 8 mil y uber 12 mil")
+    first.onPhraseContinue()
+    assertEquals(AddMovimientoStep.REVIEW, first.uiState.value.step)
+    first.onCuentaSelected(NU.id)
+    save(first)
+    assertEquals(2, records.count { it.campo == CampoCorreccion.CUENTA && "uber" in it.palabras })
+
+    clock.instant += 1.minutes
+    val next = correctionsViewModel()
+    type(next, "uber 10 mil")
+
+    val cuentaField = next.uiState.value.cuentaField
+    assertFalse(cuentaField.selected == NU, "$cuentaField")
+    assertTrue(NU in cuentaField.suggestions, "$cuentaField")
   }
 
   @Test
@@ -537,8 +570,8 @@ class AddMovimientoCorrectionsTest {
   }
 
   private class Round(val viewModel: AddMovimientoViewModel) {
-    val sentenceSelection
-      get() = viewModel.uiState.value.sentenceSelection
+    val medio
+      get() = viewModel.uiState.value.sentence.cuenta.medio
   }
 
   private fun TestScope.lunchRound(): Round {
