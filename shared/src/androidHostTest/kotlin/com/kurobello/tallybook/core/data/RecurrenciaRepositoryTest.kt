@@ -101,6 +101,18 @@ class RecurrenciaRepositoryTest {
   }
 
   @Test
+  fun `createAll rolls back the rows already written when a later insert fails`() = runTest {
+    withRepository { fixture ->
+      val outcome =
+          fixture.repository.createAll(listOf(rent("a"), rent("a")), Frecuencia.MENSUAL, JAN_31)
+
+      assertIs<DataOutcome.Failure>(outcome)
+      assertEquals(emptyList(), fixture.driver.movimientoIds())
+      assertEquals(emptyList(), fixture.driver.strings("SELECT id FROM recurrencia"))
+    }
+  }
+
+  @Test
   fun `a back-dated movimiento starts the schedule after today with nothing pending`() = runTest {
     withRepository { fixture ->
       val today = LocalDate(2026, 11, 15)
