@@ -713,6 +713,30 @@ class AddMovimientoPartsTest {
     assertEquals(COP_CASH, viewModel.uiState.value.cuentaField.selected)
   }
 
+  // MedioPago.forTipo only swaps medios that accept the same cuenta types, so no fixture can give a
+  // tipo-only part another currency; this pins that the review and Save resolve one choice.
+  @Test
+  fun aPartIsCountedWithTheCuentaItIsSavedWith() = runTest {
+    val viewModel = partsViewModel()
+    type(viewModel, THREE_PARTS)
+    viewModel.onPhraseContinue()
+    viewModel.onMedioSelected(MedioPago.DEBITO)
+    viewModel.onCuentaSelected(NEQUI.id)
+    viewModel.onPartEdit(1)
+    viewModel.onTipoChanged(TipoMovimiento.INGRESO)
+    viewModel.onPartDone()
+
+    val state = viewModel.uiState.value
+    val choice = state.partCuentaChoice(state.parts[1])
+    assertEquals(MedioPago.TRANSFERENCIA, choice.medio)
+    assertEquals(NEQUI.id, choice.cuentaId)
+    state.parts.forEachIndexed { index, part ->
+      val form = state.withPartForm(index)
+      assertEquals(form.cuentaChoice, state.partCuentaChoice(part))
+      assertEquals(form.moneda, state.partMoneda(part))
+    }
+  }
+
   @Test
   fun aCatalogUpdateWhileAPartFormIsOpenReachesTheSharedCuenta() = runTest {
     val movimientos = partsMovimientos()

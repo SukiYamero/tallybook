@@ -58,15 +58,14 @@ internal sealed interface PartsSave {
 internal fun AddMovimientoUiState.withPartForm(index: Int): AddMovimientoUiState {
   val part = parts[index]
   val overrides = part.overrides
-  val partTipo = overrides.tipo ?: tipo
   return copy(
       step = AddMovimientoStep.FORM,
       editingPart = index,
       reviewShared = sharedDraft(),
       formOpenedFromSummary = false,
-      tipo = partTipo,
+      tipo = partTipo(part),
       fecha = overrides.fecha ?: fecha,
-      cuentaChoice = (overrides.cuentaChoice ?: cuentaChoice).forTipo(partTipo),
+      cuentaChoice = partCuentaChoice(part),
       cuentaRejected = false,
       etiquetaIds = overrides.etiquetaIds ?: etiquetaIds,
       amountInput = part.amountInput,

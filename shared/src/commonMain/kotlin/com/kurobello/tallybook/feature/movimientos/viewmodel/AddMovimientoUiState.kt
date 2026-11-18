@@ -223,24 +223,23 @@ internal data class AddMovimientoUiState(
     )
   }
 
-  /** The currency a part is saved in: the shared one unless its form picked another cuenta. */
-  fun partMoneda(part: EntryPart): Moneda =
-      part.overrides.cuentaChoice?.let { monedaOf(it, part.overrides.tipo ?: tipo) } ?: moneda
+  fun partTipo(part: EntryPart): TipoMovimiento = part.overrides.tipo ?: tipo
+
+  /**
+   * The medio and cuenta a part is saved with: its own, or the shared one through a medio its tipo
+   * allows.
+   */
+  fun partCuentaChoice(part: EntryPart): CuentaSelectionState =
+      (part.overrides.cuentaChoice ?: cuentaChoice).forTipo(partTipo(part))
+
+  fun partMoneda(part: EntryPart): Moneda = monedaOf(partCuentaChoice(part), partTipo(part))
 
   fun partAmount(part: EntryPart): Money? =
       (parseAmountInput(part.amountInput, partMoneda(part)) as? AmountInputResult.Valid)?.money
 
   private fun reviewPart(index: Int, part: EntryPart): ReviewPartUi {
-    val partTipo = part.overrides.tipo ?: tipo
-    // A part with only another tipo follows the shared cuenta, through a medio that tipo allows.
-    val partCuenta =
-        movimientoCuentaUi(
-            (part.overrides.cuentaChoice ?: cuentaChoice).forTipo(partTipo),
-            cuentas,
-            partTipo,
-            false,
-            false,
-        )
+    val partTipo = partTipo(part)
+    val partCuenta = movimientoCuentaUi(partCuentaChoice(part), cuentas, partTipo, false, false)
     val partCategoriaId = effectiveCategoriaIdOf(part.categoriaId)
     return ReviewPartUi(
         index = index,

@@ -102,13 +102,12 @@ private fun AddMovimientoUiState.leavingReview(summary: AddMovimientoUiState) =
 /** Like [joined], the sentence no longer reads as this part's amount, so it counts as edited. */
 private fun AddMovimientoUiState.summaryOf(part: EntryPart): AddMovimientoUiState {
   val overrides = part.overrides
-  val partTipo = overrides.tipo ?: tipo
   return copy(
       step = AddMovimientoStep.SUMMARY,
       parts = emptyList(),
-      tipo = partTipo,
+      tipo = partTipo(part),
       fecha = overrides.fecha ?: fecha,
-      cuentaChoice = (overrides.cuentaChoice ?: cuentaChoice).forTipo(partTipo),
+      cuentaChoice = partCuentaChoice(part),
       etiquetaIds = overrides.etiquetaIds ?: etiquetaIds,
       etiquetasEdited = etiquetasEdited || overrides.etiquetaIds != null,
       amountInput = part.amountInput,
