@@ -62,7 +62,8 @@ picked; any record leaving the device.
 - Origin (`DICTADO` / `ESCRITO`) and creation time.
 - Records are a stamped root entity like the others (`updated_at`, `deleted_at`), so they join the
   future Drive backup and server sync without another migration. They are excluded from CSV export
-  and from every user-facing count. Erasing the local data erases them. Older records are kept (no
+  and from every user-facing count. The app has no erase-all path yet; when one is added (with the
+  Drive work) it must erase them too. Older records are kept (no
   pruning) for the future upload; only rules ignore them after 180 days. Volume stays small: one row
   per hand-set field per saved movimiento.
 
