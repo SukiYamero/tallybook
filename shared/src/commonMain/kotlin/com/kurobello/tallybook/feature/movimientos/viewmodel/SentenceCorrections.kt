@@ -5,6 +5,7 @@ import com.kurobello.tallybook.core.data.entry.suggestionTokens
 import com.kurobello.tallybook.core.model.CampoCorreccion
 import com.kurobello.tallybook.core.model.CorreccionFrase
 import com.kurobello.tallybook.core.model.Frecuencia
+import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.OrigenFrase
 import kotlin.time.Instant
@@ -33,12 +34,12 @@ internal data class SentenceSnapshot(
 /**
  * Join or a removal turned the review into one movimiento, compared against [base]. Leaving the
  * review marks the amount edited so a currency change does not re-read it; only a later change to
- * [amountInput] makes it the user's.
+ * [amount] makes it the user's.
  */
 internal data class StructureChange(
     val guardado: String,
     val base: ParteSnapshot,
-    val amountInput: String,
+    val amount: Money?,
     val amountHandSet: Boolean,
 )
 

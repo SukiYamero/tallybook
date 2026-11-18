@@ -12,14 +12,20 @@ import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.OrigenFrase
+import com.kurobello.tallybook.core.model.TipoMovimiento
+import kotlin.coroutines.CoroutineContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 
@@ -344,6 +350,192 @@ class AddMovimientoCorrectionsTest {
     assertTrue(MedioPago.DEBITO in fourth.sentenceSelection.medio.candidates)
   }
 
+  @Test
+  fun aMedioPickThatSwapsTheCuentaDropsTheCuentaPick() = runTest {
+    val viewModel = correctionsViewModel()
+
+    type(viewModel, LUNCH)
+    viewModel.onPhraseContinue()
+    viewModel.onCuentaSelected(NU.id)
+    viewModel.onMedioSelected(MedioPago.EFECTIVO)
+    assertEquals(COP_CASH, viewModel.uiState.value.cuentaField.selected)
+    save(viewModel)
+
+    assertEquals(listOf(CampoCorreccion.MEDIO), records.map { it.campo })
+  }
+
+  @Test
+  fun aMedioPickThatKeepsTheCuentaKeepsTheCuentaPick() = runTest {
+    val viewModel = correctionsViewModel()
+
+    type(viewModel, LUNCH)
+    viewModel.onPhraseContinue()
+    viewModel.onCuentaSelected(NEQUI.id)
+    viewModel.onMedioSelected(MedioPago.TRANSFERENCIA)
+    assertEquals(NEQUI, viewModel.uiState.value.cuentaField.selected)
+    save(viewModel)
+
+    assertEquals(
+        setOf(CampoCorreccion.CUENTA, CampoCorreccion.MEDIO),
+        records.map { it.campo }.toSet(),
+    )
+  }
+
+  @Test
+  fun aCuentaPickThatAdaptsTheMedioDropsTheMedioPick() = runTest {
+    val viewModel = correctionsViewModel()
+
+    type(viewModel, LUNCH)
+    viewModel.onPhraseContinue()
+    viewModel.onMedioSelected(MedioPago.CREDITO)
+    viewModel.onCuentaSelected(NEQUI.id)
+    assertEquals(MedioPago.DEBITO, viewModel.uiState.value.cuentaField.medio)
+    save(viewModel)
+
+    assertEquals(listOf(CampoCorreccion.CUENTA), records.map { it.campo })
+  }
+
+  @Test
+  fun aTipoChangeThatAdaptsTheMedioDropsTheMedioPick() = runTest {
+    val viewModel = correctionsViewModel()
+
+    type(viewModel, LUNCH)
+    viewModel.onPhraseContinue()
+    viewModel.onMedioSelected(MedioPago.DEBITO)
+    viewModel.onEditMovimiento()
+    viewModel.onTipoChanged(TipoMovimiento.INGRESO)
+    assertEquals(MedioPago.TRANSFERENCIA, viewModel.uiState.value.cuentaField.medio)
+    save(viewModel)
+
+    assertEquals(listOf(CampoCorreccion.TIPO), records.map { it.campo })
+  }
+
+  @Test
+  fun aPartFormMedioPickThatSwapsTheCuentaDropsTheCuentaPick() = runTest {
+    val viewModel = correctionsViewModel()
+
+    type(viewModel, TWO_PARTS)
+    viewModel.onPhraseContinue()
+    viewModel.onPartEdit(0)
+    viewModel.onCuentaSelected(NU.id)
+    viewModel.onMedioSelected(MedioPago.EFECTIVO)
+    viewModel.onPartDone()
+    save(viewModel)
+
+    val record = records.single()
+    assertEquals(CampoCorreccion.MEDIO, record.campo)
+    assertTrue("hamburguesa" in record.palabras)
+  }
+
+  @Test
+  fun aPartCuentaPickThatAdaptsTheSharedMedioDropsItForThatPart() = runTest {
+    val viewModel = correctionsViewModel()
+
+    type(viewModel, TWO_PARTS)
+    viewModel.onPhraseContinue()
+    viewModel.onMedioSelected(MedioPago.CREDITO)
+    viewModel.onPartEdit(1)
+    viewModel.onCuentaSelected(NEQUI.id)
+    viewModel.onPartDone()
+    save(viewModel)
+
+    val medio = records.single { it.campo == CampoCorreccion.MEDIO }
+    assertTrue("hamburguesa" in medio.palabras, "only the part that kept the shared pick")
+    val cuenta = records.single { it.campo == CampoCorreccion.CUENTA }
+    assertTrue("gaseosa" in cuenta.palabras)
+    assertEquals(2, records.size)
+  }
+
+  @Test
+  fun aConfirmingTipoOrFechaPickInAPartFormCounts() = runTest {
+    val viewModel = correctionsViewModel()
+
+    type(viewModel, TWO_PARTS)
+    viewModel.onPhraseContinue()
+    val shared = viewModel.uiState.value
+    viewModel.onPartEdit(0)
+    viewModel.onTipoChanged(shared.tipo)
+    viewModel.onFechaChanged(shared.fecha)
+    viewModel.onPartDone()
+    save(viewModel)
+
+    assertEquals(
+        setOf(CampoCorreccion.TIPO, CampoCorreccion.FECHA),
+        records.map { it.campo }.toSet(),
+    )
+    assertTrue(records.all { "hamburguesa" in it.palabras })
+    assertEquals(2, records.size)
+  }
+
+  @Test
+  fun aCurrencyReformatAfterJoinIsNotAnAmountEdit() = runTest {
+    val viewModel = correctionsViewModel()
+
+    type(viewModel, TWO_PARTS)
+    viewModel.onPhraseContinue()
+    viewModel.onJoinParts()
+    val joinedAmount = viewModel.uiState.value.amountInput
+    viewModel.onCuentaSelected(USD_CASH.id)
+    assertFalse(joinedAmount == viewModel.uiState.value.amountInput, "the text is reformatted")
+    save(viewModel)
+
+    assertEquals(
+        listOf(CampoCorreccion.PARTES, CampoCorreccion.CUENTA),
+        records.map { it.campo },
+    )
+  }
+
+  @Test
+  fun anAmountEditAfterJoinIsRecorded() = runTest {
+    val viewModel = correctionsViewModel()
+
+    type(viewModel, TWO_PARTS)
+    viewModel.onPhraseContinue()
+    viewModel.onJoinParts()
+    viewModel.onAmountChanged("45000")
+    save(viewModel)
+
+    assertEquals(
+        listOf(CampoCorreccion.PARTES, CampoCorreccion.MONTO),
+        records.map { it.campo },
+    )
+  }
+
+  @Test
+  fun rulesAreLearnedOnTheComputationDispatcher() = runTest {
+    val computation = CountingDispatcher(StandardTestDispatcher(testScheduler))
+    correctionsViewModel(computationDispatcher = computation)
+    val before = computation.dispatches
+
+    correcciones.records.value = listOf(record(CampoCorreccion.MEDIO, MedioPago.CREDITO.name))
+    runCurrent()
+
+    assertTrue(computation.dispatches > before)
+  }
+
+  private fun record(campo: CampoCorreccion, guardado: String) =
+      CorreccionFrase(
+          id = "seed",
+          origen = OrigenFrase.ESCRITO,
+          palabras = listOf("almuerzo"),
+          campo = campo,
+          leido = null,
+          propuesto = null,
+          guardado = guardado,
+          createdAt = ADD_TEST_NOW,
+      )
+
+  private class CountingDispatcher(private val delegate: CoroutineDispatcher) :
+      CoroutineDispatcher() {
+    var dispatches = 0
+      private set
+
+    override fun dispatch(context: CoroutineContext, block: Runnable) {
+      dispatches++
+      delegate.dispatch(context, block)
+    }
+  }
+
   private class Round(val viewModel: AddMovimientoViewModel) {
     val sentenceSelection
       get() = viewModel.uiState.value.sentenceSelection
@@ -377,6 +569,7 @@ class AddMovimientoCorrectionsTest {
   private fun TestScope.correctionsViewModel(
       movimientos: AddFakeMovimientos = correctionsMovimientos(),
       voice: FakeVoiceDictation = FakeVoiceDictation(available = false),
+      computationDispatcher: CoroutineDispatcher = UnconfinedTestDispatcher(testScheduler),
   ): AddMovimientoViewModel =
       createAddViewModel(
               movimientoRepository = movimientos,
@@ -387,6 +580,7 @@ class AddMovimientoCorrectionsTest {
               clock = clock,
               voice = voice,
               idGenerator = ids,
+              computationDispatcher = computationDispatcher,
               scope = backgroundScope,
           )
           .also { runCurrent() }

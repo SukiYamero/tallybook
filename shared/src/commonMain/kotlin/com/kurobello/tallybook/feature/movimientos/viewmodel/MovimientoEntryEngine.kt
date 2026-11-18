@@ -20,6 +20,7 @@ import com.kurobello.tallybook.core.data.resolveDeviceLocale
 import com.kurobello.tallybook.core.data.voice.dictationLanguageTag
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.CampoCorreccion
+import com.kurobello.tallybook.core.model.CorreccionFrase
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
@@ -145,6 +146,10 @@ internal class MovimientoEntryEngine(
             now,
         )
       }
+
+  /** Records are never pruned, so the rules are built off the main thread like the index. */
+  suspend fun learnRules(records: List<CorreccionFrase>, now: Instant): CorrectionRules =
+      withContext(computationDispatcher) { CorrectionRules.from(records, now) }
 
   suspend fun interpretOffMain(
       text: String,

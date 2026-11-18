@@ -7,6 +7,9 @@ import com.kurobello.tallybook.core.model.CorreccionFrase
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.OrigenFrase
+import com.kurobello.tallybook.core.text.AmountInputResult
+import com.kurobello.tallybook.core.text.parseAmountInput
+import com.kurobello.tallybook.core.text.reformatAmountInput
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -17,12 +20,15 @@ import kotlinx.coroutines.flow.mapLatest
 
 /** Rules learned from the records of the last [RULE_WINDOW]; none while they cannot be read. */
 @OptIn(ExperimentalCoroutinesApi::class)
-internal fun AddMovimientoRepositories.correctionRules(clock: Clock): Flow<CorrectionRules> =
+internal fun AddMovimientoRepositories.correctionRules(
+    clock: Clock,
+    entryEngine: MovimientoEntryEngine,
+): Flow<CorrectionRules> =
     correcciones
         .observeSince(clock.now() - RULE_WINDOW)
         .map { outcome -> (outcome as? DataOutcome.Success)?.data.orEmpty() }
         .catch { emit(emptyList()) }
-        .mapLatest { records -> CorrectionRules.from(records, clock.now()) }
+        .mapLatest { records -> entryEngine.learnRules(records, clock.now()) }
 
 internal fun PhraseInterpretation.snapshot(titulo: String, dictated: Boolean): SentenceSnapshot =
     SentenceSnapshot(
@@ -44,7 +50,13 @@ internal fun AddMovimientoUiState.withStructureChange(
             snapshot?.let {
               it.copy(
                   structure =
-                      StructureChange(guardado, base ?: it.sentence, amountInput, amountHandSet)
+                      StructureChange(
+                          guardado,
+                          base ?: it.sentence,
+                          (parseAmountInput(amountInput, moneda) as? AmountInputResult.Valid)
+                              ?.money,
+                          amountHandSet,
+                      )
               )
             }
     )
@@ -61,8 +73,7 @@ internal fun AddMovimientoUiState.draftCorrections(
   val handSet =
       HandSet(
           tipo = tipoEdited,
-          monto =
-              structure?.let { it.amountHandSet || amountInput != it.amountInput } ?: amountEdited,
+          monto = structure?.let(::amountChangedSince) ?: amountEdited,
           fecha = fechaEdited,
           categoria = categoriasEdited && categoriaId != null,
           medio = medioEdited,
@@ -95,15 +106,37 @@ internal fun AddMovimientoUiState.partsCorrections(
       }
 }
 
-/** A part follows the shared hand-set campos unless its own form changed them. */
-private fun AddMovimientoUiState.handSetOf(part: EntryPart): HandSet =
-    HandSet(
-        tipo = tipoEdited || part.overrides.tipo != null,
-        monto = part.amountEdited,
-        fecha = fechaEdited || part.overrides.fecha != null,
-        categoria = part.categoriasEdited && part.categoriaId != null,
-        medio = medioEdited || part.medioEdited,
-        cuenta = cuentaEdited || part.cuentaEdited,
-        frecuencia = frecuenciaEdited,
-        titulo = part.titulo != part.segment,
+/** A shared pick counts for a part only while the part still holds the picked value. */
+internal fun AddMovimientoUiState.handSetOf(part: EntryPart): HandSet {
+  val partChoice = partCuentaChoice(part)
+  val sharedChoice = cuentaChoice.forTipo(partTipo(part))
+  return HandSet(
+      tipo = part.tipoEdited || tipoEdited && part.overrides.tipo == null,
+      monto = part.amountEdited,
+      fecha = part.fechaEdited || fechaEdited && part.overrides.fecha == null,
+      categoria = part.categoriasEdited && part.categoriaId != null,
+      medio = part.medioEdited || medioEdited && partChoice.medio == sharedChoice.medio,
+      cuenta = part.cuentaEdited || cuentaEdited && partChoice.cuentaId == sharedChoice.cuentaId,
+      frecuencia = frecuenciaEdited,
+      titulo = part.titulo != part.segment,
+  )
+}
+
+/**
+ * A medio or cuenta pick stops counting once a side effect replaced its value: a medio swapping the
+ * cuenta for its default, a cuenta or tipo adapting the medio.
+ */
+internal fun AddMovimientoUiState.keepingSurvivingPicks(
+    before: AddMovimientoUiState
+): AddMovimientoUiState =
+    copy(
+        medioEdited = medioEdited && cuentaChoice.medio == before.cuentaChoice.medio,
+        cuentaEdited = cuentaEdited && cuentaField.selected?.id == before.cuentaField.selected?.id,
     )
+
+/** Another cuenta's currency reformats the amount's text without changing the number. */
+private fun AddMovimientoUiState.amountChangedSince(structure: StructureChange): Boolean {
+  val left = structure.amount ?: return true
+  val now = parseAmountInput(amountInput.reformatAmountInput(moneda, left.moneda), left.moneda)
+  return structure.amountHandSet || (now as? AmountInputResult.Valid)?.money != left
+}

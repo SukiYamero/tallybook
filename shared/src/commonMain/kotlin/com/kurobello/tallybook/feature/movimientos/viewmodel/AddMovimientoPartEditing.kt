@@ -83,6 +83,8 @@ internal fun AddMovimientoUiState.withPartForm(index: Int): AddMovimientoUiState
       suggestionQuery = part.suggestionQuery,
       suggestions = part.suggestions,
       submitAttempted = false,
+      tipoEdited = part.tipoEdited,
+      fechaEdited = part.fechaEdited,
       medioEdited = part.medioEdited,
       cuentaEdited = part.cuentaEdited,
   )
@@ -190,6 +192,8 @@ private fun AddMovimientoUiState.editedPart(part: EntryPart, shared: SharedDraft
         descripcion = descripcion,
         categoriaId = categoriaId,
         categoriasEdited = categoriasEdited,
+        tipoEdited = tipoEdited,
+        fechaEdited = fechaEdited,
         medioEdited = medioEdited,
         cuentaEdited = cuentaEdited,
         overrides =

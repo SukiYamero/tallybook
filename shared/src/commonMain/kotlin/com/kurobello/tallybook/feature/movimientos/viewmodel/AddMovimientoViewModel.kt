@@ -147,7 +147,7 @@ internal class AddMovimientoViewModel(
     coroutineScope.launch { observeSuggestionIndex() }
     coroutineScope.launch { observeEtiquetas() }
     coroutineScope.launch {
-      repositories.correctionRules(clock).collect { rules ->
+      repositories.correctionRules(clock, entryEngine).collect { rules ->
         correctionRules = rules
         refreshPreview(debounce = false)
       }
@@ -155,7 +155,10 @@ internal class AddMovimientoViewModel(
   }
 
   override fun onTipoChanged(tipo: TipoMovimiento) {
-    updateFields { copy(tipo = tipo, cuentaChoice = cuentaChoice.forTipo(tipo), tipoEdited = true) }
+    updateFields {
+      copy(tipo = tipo, cuentaChoice = cuentaChoice.forTipo(tipo), tipoEdited = true)
+          .keepingSurvivingPicks(this)
+    }
   }
 
   override fun onAmountChanged(value: String) {
@@ -429,7 +432,10 @@ internal class AddMovimientoViewModel(
     updateFields {
       val choice = choose() ?: return@updateFields this
       val previous = moneda
-      copy(cuentaChoice = choice, cuentaRejected = false).edited().withRederivedAmount(previous)
+      copy(cuentaChoice = choice, cuentaRejected = false)
+          .keepingSurvivingPicks(this)
+          .edited()
+          .withRederivedAmount(previous)
     }
     if (uiState.value.step == AddMovimientoStep.PHRASE) refreshPreview(debounce = false)
   }
