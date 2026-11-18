@@ -15,9 +15,12 @@ import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.feature.movimientos.viewmodel.EtiquetasLoad
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoCuentaUi
+import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoReviewUi
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSentenceUi
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSummaryUi
+import com.kurobello.tallybook.feature.movimientos.viewmodel.PartPreviewUi
 import com.kurobello.tallybook.feature.movimientos.viewmodel.PhrasePreviewUi
+import com.kurobello.tallybook.feature.movimientos.viewmodel.ReviewPartUi
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.stringResource
@@ -46,6 +49,7 @@ internal class MovimientoEntrySamples(
     val gifts: Categoria,
 ) {
   private val twentyThousand = Money(2_000_000, moneda)
+  private val thirtyThousand = Money(3_000_000, moneda)
 
   val all = listOf(cinema, food, transport, other, health, home, gifts)
 
@@ -151,6 +155,77 @@ internal class MovimientoEntrySamples(
           cuenta = incomeCuenta,
       )
 
+  val splitSentence =
+      completeSentence.copy(
+          text = SPLIT_SENTENCE,
+          detected =
+              PhrasePreviewUi(
+                  tipo = TipoMovimiento.GASTO,
+                  monto = thirtyThousand,
+                  fecha = today,
+                  parts =
+                      listOf(
+                          PartPreviewUi(twentyThousand, SPLIT_PART_ONE, food),
+                          PartPreviewUi(thirtyThousand, SPLIT_PART_TWO, other),
+                      ),
+              ),
+          categoria = other,
+          categoriaIsPending = true,
+      )
+
+  val review =
+      MovimientoReviewUi(
+          parts =
+              listOf(
+                  ReviewPartUi(
+                      index = 0,
+                      tipo = TipoMovimiento.GASTO,
+                      monto = -twentyThousand,
+                      amountNeedsReview = false,
+                      titulo = SPLIT_PART_ONE,
+                      categoria = food,
+                      categoriaIsPending = false,
+                      suggestions = listOf(cinema),
+                  ),
+                  ReviewPartUi(
+                      index = 1,
+                      tipo = TipoMovimiento.GASTO,
+                      monto = -thirtyThousand,
+                      amountNeedsReview = false,
+                      titulo = SPLIT_PART_TWO,
+                      categoria = other,
+                      categoriaIsPending = true,
+                      suggestions = listOf(food, home),
+                  ),
+              ),
+          total = -(twentyThousand + thirtyThousand),
+          excludedFromTotal = 0,
+          tipo = TipoMovimiento.GASTO,
+          fecha = today,
+          cuenta = creditCuenta,
+          etiquetas = listOf(business),
+          etiquetasLoad = EtiquetasLoad.READY,
+          frecuencia = null,
+          canJoin = true,
+          isSubmitting = false,
+      )
+  val divergedReview =
+      review.copy(
+          parts =
+              listOf(
+                  review.parts[0],
+                  review.parts[1].copy(
+                      tipo = TipoMovimiento.INGRESO,
+                      monto = Money(3_000, Moneda.USD),
+                      fecha = yesterday,
+                      cuenta = visa,
+                  ),
+              ),
+          total = -twentyThousand,
+          excludedFromTotal = 1,
+          canJoin = false,
+      )
+
   companion object {
     private fun sampleCuenta(
         id: String,
@@ -173,6 +248,10 @@ internal class MovimientoEntrySamples(
     val yesterday = LocalDate(2026, 9, 14)
     val moneda = Moneda.COP
     const val SENTENCE = "Spent 20.000 on cinema yesterday"
+    const val SPLIT_PART_ONE = "Compré 2 hamburguesas por 20mil"
+    const val SPLIT_PART_TWO = "3 gaseosas fueron 30mil"
+    const val SPLIT_SENTENCE =
+        "$SPLIT_PART_ONE y $SPLIT_PART_TWO, más lo cargué con la tarjeta de crédito"
   }
 }
 

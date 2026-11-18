@@ -72,6 +72,47 @@ class RecurrenciaRepositoryTest {
   }
 
   @Test
+  fun `createAll creates one recurrencia per movimiento`() = runTest {
+    withRepository { fixture ->
+      val outcome =
+          fixture.repository.createAll(listOf(rent("a"), rent("b")), Frecuencia.MENSUAL, JAN_31)
+
+      val created = assertSuccess(outcome)
+      assertEquals(listOf("id-1", "id-2"), created.map { it.id })
+      assertEquals(listOf<String?>("id-1"), listOf(fixture.driver.recurrenciaIdOf("a")))
+      assertEquals(listOf<String?>("id-2"), listOf(fixture.driver.recurrenciaIdOf("b")))
+    }
+  }
+
+  @Test
+  fun `createAll writes nothing when one movimiento is rejected`() = runTest {
+    withRepository { fixture ->
+      val outcome =
+          fixture.repository.createAll(
+              listOf(rent("a"), rent("b").copy(categoriaId = "gone")),
+              Frecuencia.MENSUAL,
+              JAN_31,
+          )
+
+      assertInvalid(outcome)
+      assertEquals(emptyList(), fixture.driver.movimientoIds())
+      assertEquals(emptyList(), fixture.driver.strings("SELECT id FROM recurrencia"))
+    }
+  }
+
+  @Test
+  fun `createAll rolls back the rows already written when a later insert fails`() = runTest {
+    withRepository { fixture ->
+      val outcome =
+          fixture.repository.createAll(listOf(rent("a"), rent("a")), Frecuencia.MENSUAL, JAN_31)
+
+      assertIs<DataOutcome.Failure>(outcome)
+      assertEquals(emptyList(), fixture.driver.movimientoIds())
+      assertEquals(emptyList(), fixture.driver.strings("SELECT id FROM recurrencia"))
+    }
+  }
+
+  @Test
   fun `a back-dated movimiento starts the schedule after today with nothing pending`() = runTest {
     withRepository { fixture ->
       val today = LocalDate(2026, 11, 15)

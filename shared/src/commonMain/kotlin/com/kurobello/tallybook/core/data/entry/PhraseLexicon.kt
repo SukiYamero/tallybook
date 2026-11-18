@@ -190,6 +190,19 @@ internal val bareMagnitudeWords: Set<String> = scaleWords.filterValues { it >= M
 
 internal val numberWordConnectors: Set<String> = setOf("y", "e", "and")
 
+// Shares words with numberWordConnectors safely: the "y" of "treinta y cinco" lies inside its
+// amount, and only tokens between two amounts or after the last one are read as part connectors.
+internal val partConnectors: Set<String> =
+    setOf("y", "e", "and", "mas", "plus", "mais", "tambien", "also", "tambem")
+
+// A comma inside "1.500,50" is part of the number token, so only a standalone comma gets here.
+internal val partConnectorPunctuation: Set<String> = setOf(",", "+")
+
+// Words about how the whole sentence was paid ("más lo cargué con la tarjeta"). They decide no
+// tipo,
+// so they are not tipo verbs; they only let a chunk after the last amount open the shared tail.
+internal val sharedTailWords: Set<String> = setOf("cargue", "carguei", "charged", "it", "them")
+
 internal val slangMultipliers: Map<String, Long> =
     mapOf(
         "lucas" to THOUSAND_FACTOR,

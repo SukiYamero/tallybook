@@ -37,6 +37,13 @@ interface RecurrenciaRepository {
       today: LocalDate,
   ): DataOutcome<Recurrencia>
 
+  /** [create] for every movimiento in one transaction: one rejected item writes nothing. */
+  suspend fun createAll(
+      movimientos: List<Movimiento>,
+      frecuencia: Frecuencia,
+      today: LocalDate,
+  ): DataOutcome<List<Recurrencia>>
+
   /**
    * Creates the movimiento of the oldest occurrence pending through [today] with [monto], which
    * also becomes the template's amount, dated [fecha], and advances proximaFecha.

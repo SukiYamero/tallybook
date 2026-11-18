@@ -21,6 +21,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import com.kurobello.tallybook.core.model.Categoria
+import com.kurobello.tallybook.core.model.TipoMovimiento
 import com.kurobello.tallybook.core.ui.category.CategorySingleField
 import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookButtonDefaults
@@ -90,7 +91,7 @@ internal fun MovimientoSummaryStep(
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space24),
     ) {
       SummaryHeader()
-      SummaryTipoAndDate(summary, today)
+      SummaryTipoAndDate(summary.tipo, summary.fecha, today)
       SummarySection(stringResource(Res.string.amount)) { SummaryAmount(summary) }
       if (summary.titulo.isNotBlank()) {
         SummarySection(stringResource(Res.string.movimiento_summary_title_label)) {
@@ -107,9 +108,19 @@ internal fun MovimientoSummaryStep(
       Spacer(Modifier.height(TallybookTheme.spacing.space32))
     }
     SummaryFooter(
+        secondary =
+            SummaryFooterAction(
+                label = stringResource(Res.string.movimiento_summary_edit),
+                onClick = callbacks.onEdit,
+                enabled = !summary.isSubmitting,
+            ),
+        save =
+            SummaryFooterAction(
+                label = stringResource(Res.string.movimiento_summary_save),
+                onClick = callbacks.onSave,
+                enabled = !summary.isSubmitting,
+            ),
         isSubmitting = summary.isSubmitting,
-        onEdit = callbacks.onEdit,
-        onSave = callbacks.onSave,
     )
   }
 }
@@ -152,22 +163,22 @@ private fun SummaryHeader() {
 }
 
 @Composable
-private fun SummaryTipoAndDate(summary: MovimientoSummaryUi, today: LocalDate) {
+internal fun SummaryTipoAndDate(tipo: TipoMovimiento, fecha: LocalDate, today: LocalDate) {
   Row(
       modifier = Modifier.fillMaxWidth(),
       horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space20),
   ) {
     SummarySection(stringResource(Res.string.movement_type), Modifier.weight(1f)) {
-      MovimientoTypeBadge(summary.tipo, size = MovimientoBadgeSize.Large)
+      MovimientoTypeBadge(tipo, size = MovimientoBadgeSize.Large)
     }
     SummarySection(stringResource(Res.string.date), Modifier.weight(1f)) {
-      MovimientoDateBadge(summary.fecha, today, size = MovimientoBadgeSize.Large)
+      MovimientoDateBadge(fecha, today, size = MovimientoBadgeSize.Large)
     }
   }
 }
 
 @Composable
-private fun SummarySection(
+internal fun SummarySection(
     label: String,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
@@ -181,9 +192,19 @@ private fun SummarySection(
   }
 }
 
+internal data class SummaryFooterAction(
+    val label: String,
+    val onClick: () -> Unit,
+    val enabled: Boolean,
+)
+
+/** The secondary action on the left and the save action on the right, at equal widths. */
 @Composable
-private fun SummaryFooter(isSubmitting: Boolean, onEdit: () -> Unit, onSave: () -> Unit) {
-  val saveLabel = stringResource(Res.string.movimiento_summary_save)
+internal fun SummaryFooter(
+    secondary: SummaryFooterAction,
+    save: SummaryFooterAction,
+    isSubmitting: Boolean,
+) {
   val buttonPadding =
       PaddingValues(
           horizontal = TallybookTheme.spacing.space12,
@@ -195,21 +216,19 @@ private fun SummaryFooter(isSubmitting: Boolean, onEdit: () -> Unit, onSave: () 
       horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
   ) {
     TallybookButton(
-        onClick = onEdit,
+        onClick = secondary.onClick,
         modifier = Modifier.weight(1f).fillMaxHeight(),
-        enabled = !isSubmitting,
+        enabled = secondary.enabled,
         colors = TallybookButtonDefaults.secondaryColors(),
         contentPadding = buttonPadding,
     ) {
-      TallybookText(
-          text = stringResource(Res.string.movimiento_summary_edit),
-          style = buttonLabelStyle,
-      )
+      TallybookText(text = secondary.label, style = buttonLabelStyle)
     }
     TallybookButton(
-        onClick = onSave,
-        modifier = Modifier.weight(1f).fillMaxHeight().semantics { contentDescription = saveLabel },
-        enabled = !isSubmitting,
+        onClick = save.onClick,
+        modifier =
+            Modifier.weight(1f).fillMaxHeight().semantics { contentDescription = save.label },
+        enabled = save.enabled,
         contentPadding = buttonPadding,
     ) {
       if (isSubmitting) {
@@ -218,7 +237,7 @@ private fun SummaryFooter(isSubmitting: Boolean, onEdit: () -> Unit, onSave: () 
             modifier = Modifier.size(TallybookTheme.dimensions.iconLarge),
         )
       } else {
-        TallybookText(text = saveLabel, style = buttonLabelStyle)
+        TallybookText(text = save.label, style = buttonLabelStyle)
       }
     }
   }

@@ -10,7 +10,7 @@ import com.kurobello.tallybook.core.text.normalizeSearchText
 internal fun suggestionTokens(text: String): List<String> =
     normalizeSearchText(text)
         .split(NON_LETTERS)
-        .filter { it.length >= MIN_TOKEN_LENGTH && it !in STOP_WORDS }
+        .filter { it.length >= MIN_TOKEN_LENGTH && it !in suggestionStopWords }
         .map(::reducePlural)
 
 /** Order-insensitive identity of a subject, used for exact history matches. */
@@ -44,7 +44,7 @@ private const val MIN_ES_STEM_LENGTH = 4
 private const val ES_CONSONANT_OFFSET = 3
 private const val ES_VOWEL_OFFSET = 4
 
-private val STOP_WORDS: Set<String> =
+internal val suggestionStopWords: Set<String> =
     """
     de del en el la los las un una unos unas para por con al mi mis lo se su sus sin pa otro otra
     of the on for at and an to in my with from or

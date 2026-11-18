@@ -20,8 +20,11 @@ import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.Etiqueta
 import com.kurobello.tallybook.core.model.MAX_ETIQUETAS_POR_MOVIMIENTO
+import com.kurobello.tallybook.core.model.MOVIMIENTO_TITLE_MAX_LENGTH
 import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.ParsedMovimientoPhrase
+import com.kurobello.tallybook.core.model.PhraseReviewFlag
 import com.kurobello.tallybook.core.model.TipoMovimiento
 import kotlin.time.Instant
 import kotlinx.coroutines.CoroutineDispatcher
@@ -56,6 +59,19 @@ internal data class SuggestionCandidates(
     val excludedIds: Set<String>,
 )
 
+/** One movimiento of a sentence that states several amounts; the rest is shared by the sentence. */
+internal data class PartInterpretation(
+    val titulo: String,
+    val monto: Money?,
+    val amountIsAmbiguous: Boolean,
+    val query: SuggestionQuery,
+    val ranking: List<CategorySuggestion>,
+    val learnedCategoriaId: String?,
+) {
+  val preselectedCategoriaId: String?
+    get() = preselected(learnedCategoriaId, ranking)
+}
+
 internal data class PhraseInterpretation(
     val parsed: ParsedMovimientoPhrase,
     val tipo: TipoMovimiento,
@@ -64,15 +80,16 @@ internal data class PhraseInterpretation(
     val learnedCategoriaId: String?,
     val etiquetaIds: List<String>,
     val sentence: SentenceSelection,
+    /** Empty when the sentence is a single movimiento. */
+    val parts: List<PartInterpretation> = emptyList(),
 ) {
   val preselectedCategoriaId: String?
-    get() =
-        learnedCategoriaId
-            ?: ranking
-                .firstOrNull()
-                ?.takeIf { it.confidence == SuggestionConfidence.HIGH }
-                ?.categoriaId
+    get() = preselected(learnedCategoriaId, ranking)
 }
+
+private fun preselected(learned: String?, ranking: List<CategorySuggestion>): String? =
+    learned
+        ?: ranking.firstOrNull()?.takeIf { it.confidence == SuggestionConfidence.HIGH }?.categoriaId
 
 /** Pure sentence interpretation; only the history indexing and live preview leave the caller. */
 internal class MovimientoEntryEngine(
@@ -159,6 +176,31 @@ internal class MovimientoEntryEngine(
         etiquetaIds =
             etiquetaMatcher.match(text, catalogs.etiquetas).take(MAX_ETIQUETAS_POR_MOVIMIENTO),
         sentence = sentence,
+        parts =
+            parser.split(text, moneda, context.locale, context.today, reserved).orEmpty().map {
+                partText ->
+              val part = parse(partText, context, moneda, cuentas.cuentas)
+              interpretPart(partText, part, tipo, index, candidates)
+            },
+    )
+  }
+
+  private fun interpretPart(
+      text: String,
+      parsed: ParsedMovimientoPhrase,
+      tipo: TipoMovimiento,
+      index: CategorySuggestionIndex,
+      candidates: SuggestionCandidates,
+  ): PartInterpretation {
+    val query = SuggestionQuery(parsed.subject, tipo)
+    return PartInterpretation(
+        titulo = text.trim().take(MOVIMIENTO_TITLE_MAX_LENGTH),
+        monto = parsed.monto,
+        amountIsAmbiguous = PhraseReviewFlag.AMBIGUOUS_AMOUNT in parsed.reviewFlags,
+        query = query,
+        ranking = rank(index, query, candidates),
+        learnedCategoriaId =
+            index.learnedCategoria(query.subject, candidates.availableIds, candidates.excludedIds),
     )
   }
 

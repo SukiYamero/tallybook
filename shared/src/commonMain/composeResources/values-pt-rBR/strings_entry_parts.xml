@@ -1,0 +1,21 @@
+<resources>
+    <plurals name="movimiento_parts_title">
+        <item quantity="one">Revise %1$d movimentação</item>
+        <item quantity="other">Revise %1$d movimentações</item>
+    </plurals>
+    <plurals name="movimiento_parts_detected">
+        <item quantity="one">%1$d movimentação</item>
+        <item quantity="other">%1$d movimentações</item>
+    </plurals>
+    <string name="movimiento_parts_total">Total %1$s</string>
+    <plurals name="movimiento_parts_total_excluded">
+        <item quantity="one">%1$d em outra moeda não entra no total</item>
+        <item quantity="other">%1$d em outras moedas não entram no total</item>
+    </plurals>
+    <string name="movimiento_parts_join">Juntar em uma</string>
+    <string name="movimiento_parts_save">Salvar %1$d</string>
+    <string name="movimiento_parts_remove">Remover “%1$s”</string>
+    <string name="movimiento_part_done">Pronto</string>
+    <string name="movimiento_part_category">Escolher a categoria de “%1$s”. Agora: %2$s</string>
+    <string name="movimiento_part_no_category">Sem categoria</string>
+</resources>

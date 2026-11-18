@@ -6,14 +6,14 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 
 Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 
-1. Varios movimientos en una frase → *Producto*.
-2. Presupuestos (sobre las consultas de Estadísticas) → *Accounts follow-ups*.
-3. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
+1. Presupuestos (sobre las consultas de Estadísticas) → *Accounts follow-ups*.
+2. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
    and Statistics accessibility*, *Profile polish*.
-4. Google login + backup en Drive, cuando 2 esté cerrado → [plan](tasks/google-drive-persistence.md).
-5. Avisos de recurrentes por confirmar → *Producto*.
-6. Pulido chico → *Sentence amount above the cap*, *`ioDispatcher` en iOS*, *Unified Custom
-   date-range picker*, *Recurrentes copy*.
+3. Google login + backup en Drive, cuando 1 esté cerrado → [plan](tasks/google-drive-persistence.md).
+4. Avisos de recurrentes por confirmar → *Producto*.
+5. Vocabulario de la frase más rico en todos los idiomas → *Richer sentence vocabulary*.
+6. Pulido chico → *Several movimientos follow-ups*, *Sentence amount above the cap*,
+   *`ioDispatcher` en iOS*, *Unified Custom date-range picker*, *Recurrentes copy*.
 7. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
 8. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
 9. Prueba completa en iPhone físico, en una sola pasada cuando Android esté terminado (Android es el
@@ -21,17 +21,30 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 
 ## Producto
 
-- **Varios movimientos en una frase** — "Gasté 20 mil en cine y 40 mil en comida" hoy crea un solo
-  movimiento: gana el monto mayor y el resumen pide revisarlo. Debería ofrecer dos movimientos
-  (20.000 Cine y 40.000 Comida), cada uno con su categoría, y dejar sumarlos en uno si eso quería el
-  usuario. Abierto: cómo se parte la frase (conectores "y", comas, "más"), qué hereda cada parte
-  (fecha, medio, cuenta, recurrencia), cómo se revisan y guardan varios borradores a la vez, y el
-  caso con un solo monto ("cine y comida 60 mil"). Ver
-  [Natural-language entry](business-logic.md#natural-language-entry).
-
 - **Avisos de recurrentes por confirmar** — Notificaciones locales programadas para la próxima fecha
   de cada recurrencia (sin trabajo en segundo plano), que abren Recurrentes. Hoy los pendientes solo
   se ven al abrir la app (fila de Inicio). Ver [Recurrentes](business-logic.md#recurrentes).
+
+- **Richer sentence vocabulary** — The dictionary and the sentence lexicon miss many everyday
+  words, so common sentences end without a category or keep words in the título. Grow them in
+  every supported language and regional variant (es, es-AR, other Spanish-speaking countries, en,
+  pt-BR):
+  - Category keywords: dishes, drinks, groceries, services, local brands and slang.
+  - Tipo verbs for expenses and income.
+  - Charge verbs that open the shared tail ("lo pasé", "lo puse", "debité"…).
+  - Medio phrases, amount slang and recurrence phrasings.
+  Each addition goes with corpus tests and keeps the dictionary rules: ambiguous words only as weak
+  hints, no repeated normalized keys. Real dictated sentences that the parser misses are the best
+  source. See [Category suggestions](business-logic.md#category-suggestions) and
+  [Natural-language entry](business-logic.md#natural-language-entry).
+
+- **Several movimientos follow-ups** — Save all maps a rejected cuenta to the generic save error
+  instead of opening the part on it, as the single save does. Every keystroke in the review or a
+  part form re-ranks every part's suggestions on the main thread. The shared tail recognizes only a
+  short list of charge words ("cargué", "charged"…), so phrasings like "lo pasé con débito" keep
+  their words in the last título. A cleared part category stays among that part's suggestions,
+  unlike the single sentence's dismissal. See
+  [Several movimientos](business-logic.md#natural-language-entry).
 
 - **Recurrentes copy** — A pending row reads "Pendiente desde el 15 de noviembre" for a single due
   date ("Vence el …" reads better), and the second pending row of a recurrence truncates its

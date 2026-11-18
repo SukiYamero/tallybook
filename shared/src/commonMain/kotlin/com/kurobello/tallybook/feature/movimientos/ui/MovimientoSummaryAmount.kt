@@ -74,7 +74,7 @@ private fun ColumnScope.MissingAmount() {
 }
 
 @Composable
-private fun AmountReviewHint() {
+internal fun AmountReviewHint() {
   val hint = stringResource(Res.string.movimiento_summary_amount_review)
   Row(
       modifier =

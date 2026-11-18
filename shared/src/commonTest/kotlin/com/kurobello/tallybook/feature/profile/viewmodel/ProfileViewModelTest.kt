@@ -427,6 +427,8 @@ internal class ProfileFakeMovimientos : MovimientoRepository {
 
   override suspend fun insert(movimiento: Movimiento) = unused()
 
+  override suspend fun insertAll(movimientos: List<Movimiento>) = unused()
+
   override suspend fun getById(id: String) = unused()
 
   override suspend fun update(id: String, changes: MovimientoChanges) = unused()

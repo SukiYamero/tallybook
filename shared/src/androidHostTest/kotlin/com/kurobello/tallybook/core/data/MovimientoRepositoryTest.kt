@@ -1431,6 +1431,40 @@ class MovimientoRepositoryTest {
   }
 
   @Test
+  fun `insertAll writes every movimiento`() = runTest {
+    withSelectionFixture { repository, _, _ ->
+      val rows = listOf(movimiento("one"), movimiento("two", monto = Money(900, Moneda.COP)))
+
+      assertEquals(DataOutcome.Success(Unit), repository.insertAll(rows))
+
+      val stored = assertIs<DataOutcome.Success<List<Movimiento>>>(repository.getAll()).data
+      assertEquals(setOf("one", "two"), stored.map { it.id }.toSet())
+    }
+  }
+
+  @Test
+  fun `insertAll writes nothing when one movimiento is rejected`() = runTest {
+    withSelectionFixture { repository, _, _ ->
+      val rows = listOf(movimiento("one"), movimiento("two").copy(cuentaId = "absent"))
+
+      assertInvalid(repository.insertAll(rows))
+
+      assertEquals(DataOutcome.Success(emptyList()), repository.getAll())
+    }
+  }
+
+  @Test
+  fun `insertAll rolls back the rows already written when a later insert fails`() = runTest {
+    withSelectionFixture { repository, _, _ ->
+      val rows = listOf(movimiento("same"), movimiento("same", monto = Money(900, Moneda.COP)))
+
+      assertIs<DataOutcome.Failure>(repository.insertAll(rows))
+
+      assertEquals(DataOutcome.Success(emptyList()), repository.getAll())
+    }
+  }
+
+  @Test
   fun `update keeps an archived cuenta only while unchanged and never changes the currency`() =
       runTest {
         withSelectionFixture { repository, database, driver ->

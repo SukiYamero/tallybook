@@ -172,8 +172,17 @@ app derives the draft from it and the user confirms or refines it; the manual fo
     except that a transfer word with a bank account selects Transferencia. A contradicting method word
     is dropped. Every result is adapted to the final tipo.
   - Words are consumed in a fixed order: tipo verbs, method phrases (before account names, so "en
-    efectivo" is not split by the seeded "Efectivo" account), account names, recurrence, fecha, monto;
-    the rest is the subject.
+    efectivo" is not split by the seeded "Efectivo" account), account names, recurrence, fecha,
+    monto; the rest is the subject. Quantities are decided while the monto is read, among the
+    numbers the earlier steps left free.
+- **Quantities** (single and split sentences): a whole number below 100 written without separator,
+  symbol, decimals or multiplier, directly followed by a word that is not a stop word ("en", "de",
+  "por", "on", "for", "no"…), a multiplier, a currency or a part connector, is a quantity when the
+  sentence has at least one amount candidate that is not quantity-shaped. A quantity is not an
+  amount and stays in the título and subject ("compré 2 hamburguesas por 20 mil" → 20.000, no
+  flag). It raises the ambiguous-amount flag only when its value is at least the chosen amount's
+  ("paid 45 dinner, 5 dollars tip" → 5, flagged): it may have been the amount. A sentence whose
+  candidates are all quantity-shaped keeps the largest as the amount.
 - The summary is a tall bottom sheet titled as a review-and-confirm step. It only reviews: labeled
   sections show tipo and fecha (prominent), the amount and the title, and the only choices it offers
   are medio and account, the category with its suggestions and the optional tags. It has no text
@@ -185,6 +194,64 @@ app derives the draft from it and the user confirms or refines it; the manual fo
   dialog, preserving the draft and the typed text.
 - A non-empty sentence counts as an unsaved change for the existing dismissal guard. Editing an
   existing movimiento keeps opening the form directly.
+
+### Several movimientos
+
+A sentence with several amounts offers one movimiento per amount, reviewed together and saved with
+one tap.
+
+- **Splitting.** Connectors are "y", "e", "and", "más"/"mas", "plus", "mais", "también"/"also"/
+  "também", "+" and a comma that is its own token (a comma inside "1.500,50" is a decimal
+  separator). Two consecutive amounts with a connector between them are cut there; two with no
+  connector do not split. Text before the first amount belongs to the first part ("pan y leche 5
+  mil" is one part). "y", "e" and "and" inside a spelled number are number connectors, never part
+  connectors.
+- **Cut.** Adjacent connectors ("y también", ", y") act as one. With several connector runs between
+  two amounts, the cut is the run right before the next amount when only stop words, a tipo verb or
+  shared words (medio, account, date, cadence) sit between them ("20 mil en cine y palomitas y 40
+  mil en comida", "… y palomitas y con débito 40 mil"), otherwise the first run ("cine 20 mil y
+  comida y bebida 40 mil").
+- **Shared tail.** After the last amount, the first connector whose own chunk (up to the next
+  connector) names a medio, account, date or cadence with only stop words, tipo verbs or charging
+  words ("cargué", "carguei", "charged", "it", "them") before it starts the shared tail ("más lo
+  cargué con la tarjeta de crédito"); it belongs to no part. Other trailing text stays in the last
+  part ("… 40 mil en comida y bebida ayer"), and the date or medio it names is still shared. A
+  connector run that ends the sentence ("… 30 mil y") is dropped.
+- **Limits.** The sentence splits only into 2 to 10 parts. Otherwise, and when every amount
+  candidate is quantity-shaped, it stays one movimiento ("cine y comida 60 mil", "2 hamburguesas y 3
+  gaseosas por 50 mil").
+- **Per part**: monto, título and categoría. The título is the part's own text with edge connectors
+  and punctuation removed; the category comes from the suggestion engine on the part's subject. A
+  part's amount is always re-read from its original segment, so editing its título never changes it.
+  Tipo, fecha, medio, cuenta, frecuencia and tags are read from the whole sentence and shared.
+- **Category by hand.** A category picked in the single Category section is not applied while the
+  sentence is split; it returns if the draft goes back to one movimiento.
+- **Detected card.** While split, it shows "N movimientos" with the total, the shared tipo and fecha
+  and one row per part (amount, título, category; Otros reads as "no category"). Medio and Account
+  stay and apply to all parts; the single Category and Tags sections are hidden.
+- **Review.** Continue opens a review instead of the summary: the parts with their total (signed
+  amounts in the shared currency; parts in another currency are excluded and the label says so),
+  and the shared tipo, fecha, medio, account, tags and Repetir. A part's row shows amount, título and
+  category (Otros reads as "no category"); an ambiguous part amount shows the amount-review hint and
+  a diverged tipo shows under the título. The category tag opens a small sheet with that part's
+  suggestions, clear and "Elegir" for the full picker; a manual pick hands the category to the user.
+  Tapping the row opens the form for that part, whose primary action is Done: it validates and
+  returns to the review without saving. A part may diverge (another fecha, cuenta, medio or tipo);
+  later shared changes no longer touch the fields it changed, and a tipo-only edit does not freeze
+  its cuenta.
+- **Remove and join.** × removes a part; with one left the review becomes the normal summary. Join
+  merges the parts into one draft: monto = sum, título = the whole sentence (after a removal, the
+  remaining títulos joined with ", "), category = the shared one when all parts agree, otherwise none
+  with the sentence's suggestions; per-part overrides are dropped. Join is disabled while a part has
+  another tipo or currency. Join and remove-to-one keep the single hand-picked category and the
+  parts' hand picks, restored on Back.
+- **Save.** Save validates every part; the first invalid one opens its form with the field error.
+  Valid parts are written atomically: all movimientos, or all recurrencias with their first
+  movimiento, in one transaction, so a failure saves none and keeps the review. Repetir is shared:
+  with it on, each part becomes a recurrencia. Parts are saved with `createdAt` 1 ms apart so History
+  lists them in sentence order.
+- **Back** from the review returns to the sentence dialog with its text; Continue rebuilds the parts
+  and keeps a hand-picked category for a part with the same título.
 
 ### Category suggestions
 

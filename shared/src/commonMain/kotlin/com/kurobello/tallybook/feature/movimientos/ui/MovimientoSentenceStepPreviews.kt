@@ -39,6 +39,16 @@ private fun SentenceStepCompleteDarkPreview() =
 private fun SentenceStepIncomeLightPreview() =
     SentenceStepPreview(MovimientoEntrySamples::incomeSentence, darkTheme = false)
 
+@Preview
+@Composable
+private fun SentenceStepSplitLightPreview() =
+    SentenceStepPreview(MovimientoEntrySamples::splitSentence, darkTheme = false)
+
+@Preview
+@Composable
+private fun SentenceStepSplitDarkPreview() =
+    SentenceStepPreview(MovimientoEntrySamples::splitSentence, darkTheme = true)
+
 @Composable
 private fun SentenceStepPreview(
     sentence: (MovimientoEntrySamples) -> MovimientoSentenceUi,

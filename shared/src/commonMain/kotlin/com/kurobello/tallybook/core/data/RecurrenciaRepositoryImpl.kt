@@ -26,6 +26,8 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 
+// The lifecycle operations share one storage/error boundary and one occurrence policy.
+@Suppress("TooManyFunctions")
 internal class RecurrenciaRepositoryImpl(
     private val database: TallybookDatabase,
     private val dispatcher: CoroutineDispatcher,
@@ -62,36 +64,50 @@ internal class RecurrenciaRepositoryImpl(
       movimiento: Movimiento,
       frecuencia: Frecuencia,
       today: LocalDate,
-  ): DataOutcome<Recurrencia> {
-    validateMovimiento(movimiento)?.let {
+  ): DataOutcome<Recurrencia> = createAll(listOf(movimiento), frecuencia, today).map { it.single() }
+
+  override suspend fun createAll(
+      movimientos: List<Movimiento>,
+      frecuencia: Frecuencia,
+      today: LocalDate,
+  ): DataOutcome<List<Recurrencia>> {
+    movimientos.firstNotNullOfOrNull(::validateMovimiento)?.let {
       return DataOutcome.Failure(it)
     }
     return runLocalDataOperation(dispatcher) {
           database.transactionWithResult {
-            writes.rejection(movimiento.changes())?.let {
-              return@transactionWithResult DataOutcome.Failure(it)
+            val missing = movimientos.firstNotNullOfOrNull { writes.rejection(it.changes()) }
+            if (missing != null) {
+              return@transactionWithResult DataOutcome.Failure(missing)
             }
-            val recurrencia =
-                Recurrencia(
-                    id = idGenerator.next(),
-                    tipo = movimiento.tipo,
-                    monto = movimiento.monto,
-                    categoriaId = movimiento.categoriaId,
-                    titulo = movimiento.titulo,
-                    descripcion = movimiento.descripcion,
-                    cuentaId = movimiento.cuentaId,
-                    medio = movimiento.medio,
-                    etiquetaIds = movimiento.etiquetaIds,
-                    frecuencia = frecuencia,
-                    fechaAncla = movimiento.fecha,
-                    proximaFecha =
-                        RecurrenciaRules.firstProximaFecha(movimiento.fecha, frecuencia, today),
-                    createdAt = movimiento.createdAt,
-                )
-            val stamp = changeClock.next()
-            writes.insertRow(movimiento, stamp, recurrenciaId = recurrencia.id)
-            database.insertRecurrenciaRow(recurrencia, stamp)
-            DataOutcome.Success(recurrencia)
+            val created = movimientos.map { movimiento ->
+              val recurrencia =
+                  Recurrencia(
+                      id = idGenerator.next(),
+                      tipo = movimiento.tipo,
+                      monto = movimiento.monto,
+                      categoriaId = movimiento.categoriaId,
+                      titulo = movimiento.titulo,
+                      descripcion = movimiento.descripcion,
+                      cuentaId = movimiento.cuentaId,
+                      medio = movimiento.medio,
+                      etiquetaIds = movimiento.etiquetaIds,
+                      frecuencia = frecuencia,
+                      fechaAncla = movimiento.fecha,
+                      proximaFecha =
+                          RecurrenciaRules.firstProximaFecha(
+                              movimiento.fecha,
+                              frecuencia,
+                              today,
+                          ),
+                      createdAt = movimiento.createdAt,
+                  )
+              val stamp = changeClock.next()
+              writes.insertRow(movimiento, stamp, recurrenciaId = recurrencia.id)
+              database.insertRecurrenciaRow(recurrencia, stamp)
+              recurrencia
+            }
+            DataOutcome.Success(created)
           }
         }
         .flatten()

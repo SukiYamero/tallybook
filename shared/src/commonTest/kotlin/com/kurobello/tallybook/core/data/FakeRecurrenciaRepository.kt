@@ -55,7 +55,21 @@ internal class FakeRecurrenciaRepository(initial: List<Recurrencia> = emptyList(
       movimiento: Movimiento,
       frecuencia: Frecuencia,
       today: LocalDate,
-  ): DataOutcome<Recurrencia> = outcome {
+  ): DataOutcome<Recurrencia> = outcome { createOne(movimiento, frecuencia, today) }
+
+  override suspend fun createAll(
+      movimientos: List<Movimiento>,
+      frecuencia: Frecuencia,
+      today: LocalDate,
+  ): DataOutcome<List<Recurrencia>> = outcome {
+    movimientos.map { createOne(it, frecuencia, today) }
+  }
+
+  private fun createOne(
+      movimiento: Movimiento,
+      frecuencia: Frecuencia,
+      today: LocalDate,
+  ): Recurrencia {
     created += movimiento to frecuencia
     val recurrencia =
         Recurrencia(
@@ -74,7 +88,7 @@ internal class FakeRecurrenciaRepository(initial: List<Recurrencia> = emptyList(
             createdAt = movimiento.createdAt,
         )
     write(recurrencia)
-    recurrencia
+    return recurrencia
   }
 
   override suspend fun confirm(
