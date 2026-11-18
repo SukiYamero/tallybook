@@ -74,16 +74,32 @@ internal fun MovimientoCategoryPickerSheet(
     onSelect: (String) -> Unit,
     picker: MovimientoPickerState,
     creation: CategoryPickerCreation?,
+) =
+    MovimientoCategoryPickerSheet(
+        visible = visible,
+        categorias = uiState.categorias,
+        selection = CategoryPickerSelection(uiState.categoriaId.realCategoriaId(), onSelect),
+        picker = picker,
+        creation = creation,
+    )
+
+/** The same picker for a [selection] other than the form's own category, such as a review part. */
+@Composable
+internal fun MovimientoCategoryPickerSheet(
+    visible: Boolean,
+    categorias: List<Categoria>,
+    selection: CategoryPickerSelection,
+    picker: MovimientoPickerState,
+    creation: CategoryPickerCreation?,
 ) {
-  val selectedId = uiState.categoriaId.realCategoriaId()
   CategoryPickerSheet(
       visible = visible,
-      categorias = uiState.categorias,
-      selectedId = selectedId,
-      onSelect = onSelect,
+      categorias = categorias,
+      selectedId = selection.selectedId,
+      onSelect = selection.onSelect,
       onDismiss = picker.onDismiss,
       onBack = picker.onDismiss,
-      excludedIds = pickerExcludedCategoryIds(uiState.categorias, selectedId),
+      excludedIds = pickerExcludedCategoryIds(categorias, selection.selectedId),
       creation = creation,
   )
 }

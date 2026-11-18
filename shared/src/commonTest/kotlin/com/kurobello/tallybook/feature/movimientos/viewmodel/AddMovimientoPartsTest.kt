@@ -78,6 +78,7 @@ class AddMovimientoPartsTest {
     assertEquals(2, parts.size)
     assertEquals(listOf(cop(2_000_000), cop(3_000_000)), parts.map { it.monto })
     assertEquals(listOf("cat_restaurante", "cat_supermercado"), parts.map { it.categoria?.id })
+    assertEquals(cop(5_000_000), viewModel.uiState.value.detected.partsTotal)
 
     type(viewModel, "Gasté 20 mil en cine")
 

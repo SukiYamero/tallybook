@@ -49,11 +49,15 @@ import com.kurobello.tallybook.core.ui.movimiento.signedMovimientoAmountText
 import com.kurobello.tallybook.core.ui.recurrencia.labelResource
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.movimientos.viewmodel.MovimientoSentenceUi
+import com.kurobello.tallybook.feature.movimientos.viewmodel.PhrasePreviewUi
+import kotlinx.datetime.LocalDate
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.add_movimiento_pane_title
 import tallybook.shared.generated.resources.movimiento_amount_not_detected
 import tallybook.shared.generated.resources.movimiento_detected_label
+import tallybook.shared.generated.resources.movimiento_parts_detected
 import tallybook.shared.generated.resources.movimiento_phrase_continue
 import tallybook.shared.generated.resources.movimiento_phrase_fill_manually
 import tallybook.shared.generated.resources.movimiento_phrase_label
@@ -171,6 +175,7 @@ private fun DetectedArea(
     modifier: Modifier = Modifier,
 ) {
   val detected = sentence.detected
+  val isSplit = detected.parts.size > 1
   TallybookSurface(
       modifier = modifier.fillMaxWidth(),
       style =
@@ -190,40 +195,59 @@ private fun DetectedArea(
         verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
     ) {
       TallybookSectionHeading(stringResource(Res.string.movimiento_detected_label))
-      FlowRow(
-          modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
-          horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
-          verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
-          itemVerticalAlignment = Alignment.CenterVertically,
-      ) {
-        MovimientoTypeBadge(detected.tipo)
-        MovimientoDateBadge(detected.fecha, sentence.today)
-        val monto = detected.monto
-        if (monto == null) AmountNotDetected() else DetectedAmount(monto, detected.tipo)
-        detected.frecuencia?.let { DetectedRecurrence(it) }
-      }
+      DetectedSummary(detected, sentence.today, isSplit)
+      if (isSplit) DetectedPartList(detected.parts, detected.tipo)
       MovimientoCuentaField(
           field = sentence.cuenta,
           callbacks = callbacks.cuenta,
           enabled = sentence.isEnabled && sentence.actionsEnabled,
       )
-      CategorySingleField(
-          categoria = sentence.categoria,
-          deselectable = true,
-          onChoose = callbacks.onChooseCategoria,
-          onSuggestion = callbacks.onSuggestion,
-          onDeselect = callbacks.onDeselectCategoria,
-          pending = sentence.categoriaIsPending,
-          suggestions = sentence.suggestions,
-          enabled = sentence.isEnabled,
-      )
-      MovimientoEtiquetasField(
-          etiquetas = sentence.etiquetas,
-          load = sentence.etiquetasLoad,
-          callbacks = callbacks.etiquetas,
-          enabled = sentence.isEnabled,
-      )
+      if (!isSplit) {
+        CategorySingleField(
+            categoria = sentence.categoria,
+            deselectable = true,
+            onChoose = callbacks.onChooseCategoria,
+            onSuggestion = callbacks.onSuggestion,
+            onDeselect = callbacks.onDeselectCategoria,
+            pending = sentence.categoriaIsPending,
+            suggestions = sentence.suggestions,
+            enabled = sentence.isEnabled,
+        )
+        MovimientoEtiquetasField(
+            etiquetas = sentence.etiquetas,
+            load = sentence.etiquetasLoad,
+            callbacks = callbacks.etiquetas,
+            enabled = sentence.isEnabled,
+        )
+      }
     }
+  }
+}
+
+/** Tipo and fecha, then the amount, or how many movimientos the sentence holds and their total. */
+@Composable
+private fun DetectedSummary(detected: PhrasePreviewUi, today: LocalDate, isSplit: Boolean) {
+  FlowRow(
+      modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+      verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space8),
+      itemVerticalAlignment = Alignment.CenterVertically,
+  ) {
+    MovimientoTypeBadge(detected.tipo)
+    MovimientoDateBadge(detected.fecha, today)
+    if (isSplit) {
+      val count = detected.parts.size
+      TallybookText(
+          text = pluralStringResource(Res.plurals.movimiento_parts_detected, count, count),
+          color = TallybookTheme.colors.foreground.secondary,
+          style = TallybookTheme.typography.bodySmall,
+      )
+      detected.partsTotal?.let { DetectedAmount(it, detected.tipo) }
+    } else {
+      val monto = detected.monto
+      if (monto == null) AmountNotDetected() else DetectedAmount(monto, detected.tipo)
+    }
+    detected.frecuencia?.let { DetectedRecurrence(it) }
   }
 }
 

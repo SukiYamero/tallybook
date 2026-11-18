@@ -9,8 +9,6 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -76,6 +74,7 @@ internal fun AddMovimientoSheet(
         actions = actions,
         callbacks = ModalBottomSheetCallbacks(onDismiss = onDismiss),
         modifier = modifier,
+        categoryTarget = rememberReviewCategoryTarget(),
     )
 
 @Composable
@@ -85,10 +84,14 @@ private fun AddMovimientoSheet(
     uiState: AddMovimientoUiState,
     actions: AddMovimientoActions,
     callbacks: ModalBottomSheetCallbacks,
+    categoryTarget: ReviewCategoryTarget,
     modifier: Modifier = Modifier,
     categoryCreation: CategoryPickerCreation? = null,
     cuentaCreation: CuentaCreation? = null,
 ) {
+  LaunchedEffect(uiState.step) {
+    if (uiState.step != AddMovimientoStep.REVIEW) categoryTarget.close()
+  }
   val dismissGuard =
       rememberDismissGuard(
           hasUnsavedChanges = uiState.hasUnsavedChanges,
@@ -125,6 +128,7 @@ private fun AddMovimientoSheet(
       actions = actions,
       pickers = pickers,
       categoryCreation = categoryCreation,
+      onPartCategoria = categoryTarget::open,
       callbacks =
           callbacks.copy(
               onDismissRequest = dismissGuard::requestDismiss,
@@ -136,7 +140,7 @@ private fun AddMovimientoSheet(
           ),
       modifier = modifier,
   )
-  EntryPickerSheets(uiState, actions, pickerStates, categoryCreation)
+  EntryPickerSheets(uiState, actions, pickerStates, categoryCreation, categoryTarget)
   CuentaCreationSheet(cuentaCreation, uiState.cuentaField, actions::onCuentaSelected)
   DiscardEntryConfirmation(dismissGuard)
 }
@@ -226,6 +230,7 @@ private fun MovimientoReviewSheet(
     actions: AddMovimientoActions,
     pickers: EntryPickers,
     categoryCreation: CategoryPickerCreation?,
+    onPartCategoria: (Int) -> Unit,
     callbacks: ModalBottomSheetCallbacks,
     modifier: Modifier = Modifier,
 ) {
@@ -250,22 +255,17 @@ private fun MovimientoReviewSheet(
         transitionSpec = { stepTransition(animated = visible, fadeMillis = fadeMillis) },
         label = "add movimiento step",
     ) { current ->
-      if (current == AddMovimientoStep.FORM) {
-        MovimientoForm(
-            uiState = shown,
-            actions = actions,
-            supportingContent = { EntryRepetirField(shown, actions) },
-            categoryCreation = categoryCreation,
-            onDeselectCategoria = actions::onCategoriaCleared,
-            onCreateCuenta = pickers.onCreateCuenta,
-        )
-      } else SummaryStepContent(shown, actions, pickers)
+      when (current) {
+        AddMovimientoStep.FORM -> EntryFormContent(shown, actions, pickers, categoryCreation)
+        AddMovimientoStep.REVIEW -> ReviewStepContent(shown, actions, pickers, onPartCategoria)
+        else -> SummaryStepContent(shown, actions, pickers)
+      }
     }
   }
 }
 
 // The sheet composes before the review is ever shown, while the step still reads PHRASE, which has
-// no detent; the review step is the stand-in until a real one arrives.
+// no detent; the summary step is the stand-in until a real one arrives.
 @Composable
 private fun rememberSheetStep(step: AddMovimientoStep): AddMovimientoStep {
   val last = remember { LastSheetStep() }
@@ -292,40 +292,6 @@ private fun stepTransition(animated: Boolean, fadeMillis: Int): ContentTransform
     )
 
 @Composable
-private fun SummaryStepContent(
-    uiState: AddMovimientoUiState,
-    actions: AddMovimientoActions,
-    pickers: EntryPickers,
-) {
-  MovimientoSummaryStep(
-      summary = uiState.summary,
-      callbacks =
-          MovimientoSummaryCallbacks(
-              onDeselectCategoria = actions::onCategoriaCleared,
-              onChooseCategoria = pickers.onChooseCategoria,
-              onSuggestion = { actions.onSuggestionSelected(it.id) },
-              etiquetas = actions.etiquetasCallbacks(onAdd = pickers.onAddEtiqueta),
-              cuenta = actions.cuentaCallbacks(pickers.onChooseCuenta, pickers.onCreateCuenta),
-              onEdit = actions::onEditMovimiento,
-              onSave = actions::onSubmit,
-          ),
-      today = uiState.today,
-      modifier =
-          Modifier.heightIn(min = rememberReviewMinimumHeight())
-              .padding(horizontal = TallybookTheme.dimensions.screenHorizontal)
-              .padding(bottom = TallybookTheme.spacing.space8),
-      supportingContent = { EntryRepetirField(uiState, actions) },
-      messageContent = {
-        MovimientoFormErrorMessage(
-            error = uiState.error,
-            onRetry = actions::onRetryLoad,
-            interactionEnabled = !uiState.isSubmitting,
-        )
-      },
-  )
-}
-
-@Composable
 @Suppress("LongParameterList")
 internal fun AddMovimientoSheetRoute(
     visible: Boolean,
@@ -341,6 +307,7 @@ internal fun AddMovimientoSheetRoute(
   val quickCategoryState by quickCategoryViewModel.uiState.collectAsStateWithLifecycle()
   val quickCuentaState by quickCuentaViewModel.uiState.collectAsStateWithLifecycle()
   val dictationPermission = rememberDictationPermissionLauncher(viewModel::onVoicePermissionResult)
+  val categoryTarget = rememberReviewCategoryTarget()
   AddMovimientoEffects(
       effects = viewModel.effects,
       onSaved = onDismiss,
@@ -348,11 +315,7 @@ internal fun AddMovimientoSheetRoute(
   )
   QuickCategorySelectionEffect(
       effects = quickCategoryViewModel.effects,
-      selection =
-          CategoryPickerSelection(
-              selectedId = uiState.categoriaId.realCategoriaId(),
-              onSelect = viewModel::onCategoriaSelected,
-          ),
+      selection = uiState.categoryPickerSelection(viewModel, categoryTarget),
       catalog = uiState.categorias,
   )
   AddMovimientoSheet(
@@ -360,6 +323,7 @@ internal fun AddMovimientoSheetRoute(
       uiState = uiState,
       actions = viewModel,
       callbacks = ModalBottomSheetCallbacks(onDismiss = onDismiss, onHidden = onHidden),
+      categoryTarget = categoryTarget,
       modifier = modifier,
       categoryCreation = CategoryPickerCreation(quickCategoryState, quickCategoryViewModel),
       cuentaCreation =

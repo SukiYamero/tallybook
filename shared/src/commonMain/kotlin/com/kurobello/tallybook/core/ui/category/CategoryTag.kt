@@ -92,7 +92,7 @@ internal fun CategorySuggestionTag(
 }
 
 @Composable
-private fun selectedTagAppearance(
+internal fun selectedTagAppearance(
     categoria: Categoria,
     pending: Boolean,
     removable: Boolean,

@@ -22,19 +22,41 @@ internal data class EntryPickerStates(
       EntryPickers(category.onOpen, etiqueta.onOpen, cuenta.onOpen, onCreateCuenta)
 }
 
-/** The picker sheets the dialog and the review open, hidden while the form shows its own. */
+/**
+ * The picker sheets the dialog and the review open, hidden while the form shows its own. In the
+ * review the category picker serves the part [categoryTarget] names, through that part's sheet.
+ */
 @Composable
 internal fun EntryPickerSheets(
     uiState: AddMovimientoUiState,
     actions: AddMovimientoActions,
     pickers: EntryPickerStates,
     categoryCreation: CategoryPickerCreation?,
+    categoryTarget: ReviewCategoryTarget,
 ) {
   val outsideForm = uiState.step != AddMovimientoStep.FORM
+  val partIndex = categoryTarget.index?.takeIf { uiState.step == AddMovimientoStep.REVIEW }
+  ReviewPartCategorySheet(
+      visible = partIndex != null && !pickers.category.isVisible,
+      part = partIndex?.let { uiState.review.parts.getOrNull(it) },
+      enabled = !uiState.isSubmitting,
+      callbacks =
+          ReviewPartCategoryCallbacks(
+              onSuggestion = { categoria ->
+                partIndex?.let {
+                  categoryTarget.close()
+                  actions.onPartCategoriaSelected(it, categoria.id)
+                }
+              },
+              onDeselect = { partIndex?.let(actions::onPartCategoriaCleared) },
+              onChoose = pickers.category.onOpen,
+              onDismiss = categoryTarget::close,
+          ),
+  )
   MovimientoCategoryPickerSheet(
       visible = pickers.category.isVisible && outsideForm,
-      uiState = uiState,
-      onSelect = actions::onCategoriaSelected,
+      categorias = uiState.categorias,
+      selection = uiState.categoryPickerSelection(actions, categoryTarget),
       picker = pickers.category,
       creation = categoryCreation,
   )

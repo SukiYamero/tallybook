@@ -27,7 +27,15 @@ internal data class PhrasePreviewUi(
     val frecuencia: Frecuencia? = null,
     /** One row per movimiento when the sentence splits; empty for a single movimiento. */
     val parts: List<PartPreviewUi> = emptyList(),
-)
+) {
+  /** The parts' amounts added up, or null while one of them has none. */
+  val partsTotal: Money?
+    get() {
+      val montos = parts.map(PartPreviewUi::monto)
+      return if (montos.isEmpty() || null in montos) null
+      else montos.filterNotNull().reduce(Money::plus)
+    }
+}
 
 internal data class PartPreviewUi(val monto: Money?, val titulo: String, val categoria: Categoria?)
 
