@@ -12,7 +12,8 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 3. Google login + backup en Drive, cuando 1 esté cerrado → [plan](tasks/google-drive-persistence.md).
 4. Avisos de recurrentes por confirmar → *Producto*.
 5. Vocabulario de la frase más rico en todos los idiomas → *Richer sentence vocabulary*.
-6. Pulido chico → *Several movimientos follow-ups*, *Sentence amount above the cap*,
+6. Pulido chico → *Several movimientos follow-ups*, *Learning from corrections follow-ups*,
+   *Sentence amount above the cap*,
    *`ioDispatcher` en iOS*, *Unified Custom date-range picker*, *Recurrentes copy*.
 7. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
 8. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
@@ -50,6 +51,13 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
   their words in the last título. A cleared part category stays among that part's suggestions,
   unlike the single sentence's dismissal. See
   [Several movimientos](business-logic.md#natural-language-entry).
+
+- **Learning from corrections follow-ups** — Fill manually, then Back and Continue, records nothing
+  for a cuenta the user had already picked by hand. After removing parts and joining the rest, the
+  título is compared with the whole sentence's words. No screen shows or forgets learned rules. With
+  the Drive and sync work: a database read error stops the rules from refreshing until the screen
+  reopens, and records written by a newer app version (an unknown field) fail to load. See
+  [Learning from corrections](business-logic.md#learning-from-corrections).
 
 - **Recurrentes copy** — A pending row reads "Pendiente desde el 15 de noviembre" for a single due
   date ("Vence el …" reads better), and the second pending row of a recurrence truncates its

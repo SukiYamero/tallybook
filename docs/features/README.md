@@ -20,7 +20,7 @@ accepted scope, integration details and verification boundaries.
 | Recurring movimientos | DONE | [Recurring movimientos](recurrentes.md) |
 | Voice dictation and dictated recurrence | DONE | [Voice dictation](voice-dictation.md) |
 | Several movimientos in one sentence | DONE | [Add movimiento](add-movimiento.md) |
-| Learning from corrections | IN_PROGRESS | [Add movimiento](add-movimiento.md) |
+| Learning from corrections | DONE | [Add movimiento](add-movimiento.md) |
 
 ## Status rules
 
