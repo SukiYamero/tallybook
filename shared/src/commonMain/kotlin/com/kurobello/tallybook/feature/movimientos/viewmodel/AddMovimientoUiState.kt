@@ -84,6 +84,17 @@ internal data class AddMovimientoUiState(
     /** The review's own values while [editingPart]'s form holds the single-draft fields. */
     val reviewShared: SharedDraft? = null,
     val splitStash: SplitStash? = null,
+    // Hand-set marks for the corrections a save records. A medio adapted to a new cuenta or tipo
+    // is not the user's pick, so medio and cuenta are tracked apart from cuentaChoice's owner.
+    val tipoEdited: Boolean = false,
+    val fechaEdited: Boolean = false,
+    val medioEdited: Boolean = false,
+    val cuentaEdited: Boolean = false,
+    val tituloEdited: Boolean = false,
+    /** Dictated words reached the sentence; a later Continue records it as dictated. */
+    val dictated: Boolean = false,
+    /** What the last Continue derived; null when the draft did not come from a sentence. */
+    val snapshot: SentenceSnapshot? = null,
 ) : MovimientoFormState {
   /** The tipo medio options follow: the sentence's while it is being typed, the draft's after. */
   val selectionTipo: TipoMovimiento

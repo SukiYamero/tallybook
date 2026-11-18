@@ -39,6 +39,11 @@ internal data class SharedDraft(
     val suggestionQuery: SuggestionQuery?,
     val dismissedSuggestionIds: Set<String>,
     val submitAttempted: Boolean,
+    val tipoEdited: Boolean,
+    val fechaEdited: Boolean,
+    val medioEdited: Boolean,
+    val cuentaEdited: Boolean,
+    val tituloEdited: Boolean,
 ) {
   /** New catalog data reaches a stashed default cuenta as it reaches the draft's. */
   fun withDefaults(defaults: CuentaDefaults?): SharedDraft =
@@ -78,6 +83,8 @@ internal fun AddMovimientoUiState.withPartForm(index: Int): AddMovimientoUiState
       suggestionQuery = part.suggestionQuery,
       suggestions = part.suggestions,
       submitAttempted = false,
+      medioEdited = part.medioEdited,
+      cuentaEdited = part.cuentaEdited,
   )
 }
 
@@ -183,6 +190,8 @@ private fun AddMovimientoUiState.editedPart(part: EntryPart, shared: SharedDraft
         descripcion = descripcion,
         categoriaId = categoriaId,
         categoriasEdited = categoriasEdited,
+        medioEdited = medioEdited,
+        cuentaEdited = cuentaEdited,
         overrides =
             PartOverrides(
                 tipo = tipo.takeIf { it != shared.tipo },
@@ -210,6 +219,11 @@ private fun AddMovimientoUiState.sharedDraft() =
         suggestionQuery = suggestionQuery,
         dismissedSuggestionIds = dismissedSuggestionIds,
         submitAttempted = submitAttempted,
+        tipoEdited = tipoEdited,
+        fechaEdited = fechaEdited,
+        medioEdited = medioEdited,
+        cuentaEdited = cuentaEdited,
+        tituloEdited = tituloEdited,
     )
 
 private fun AddMovimientoUiState.withShared(shared: SharedDraft) =
@@ -234,4 +248,9 @@ private fun AddMovimientoUiState.withShared(shared: SharedDraft) =
         suggestionQuery = shared.suggestionQuery,
         dismissedSuggestionIds = shared.dismissedSuggestionIds,
         submitAttempted = shared.submitAttempted,
+        tipoEdited = shared.tipoEdited,
+        fechaEdited = shared.fechaEdited,
+        medioEdited = shared.medioEdited,
+        cuentaEdited = shared.cuentaEdited,
+        tituloEdited = shared.tituloEdited,
     )

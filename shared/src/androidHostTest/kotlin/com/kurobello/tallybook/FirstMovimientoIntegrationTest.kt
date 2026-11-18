@@ -5,6 +5,7 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
 import com.kurobello.tallybook.core.data.CivilToday
+import com.kurobello.tallybook.core.data.CorreccionFraseRepositoryImpl
 import com.kurobello.tallybook.core.data.CuentaRepositoryImpl
 import com.kurobello.tallybook.core.data.CuentaSeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
@@ -34,6 +35,7 @@ import com.kurobello.tallybook.core.database.TallybookDatabase
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
+import com.kurobello.tallybook.core.model.CampoCorreccion
 import com.kurobello.tallybook.core.model.ChangeStamp
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataOutcome
@@ -94,6 +96,7 @@ class FirstMovimientoIntegrationTest {
                   TestChangeClock(),
               )
           val movimientos = MovimientoRepositoryImpl(database, dispatcher, TestChangeClock())
+          val correcciones = CorreccionFraseRepositoryImpl(database, dispatcher, TestChangeClock())
           val cuentas =
               CuentaRepositoryImpl(
                   database,
@@ -168,6 +171,7 @@ class FirstMovimientoIntegrationTest {
                           cuentas,
                           FakeRecurrenciaRepository(),
                           UnavailableVoiceDictation,
+                          correcciones,
                       ),
                   id = "expense",
                   scope = scopes.newScope(dispatcher),
@@ -199,6 +203,7 @@ class FirstMovimientoIntegrationTest {
                           cuentas,
                           FakeRecurrenciaRepository(),
                           UnavailableVoiceDictation,
+                          correcciones,
                       ),
                   id = "income",
                   scope = scopes.newScope(dispatcher),
@@ -311,6 +316,7 @@ class FirstMovimientoIntegrationTest {
                   TestChangeClock(),
               )
           val movimientos = MovimientoRepositoryImpl(database, dispatcher, TestChangeClock())
+          val correcciones = CorreccionFraseRepositoryImpl(database, dispatcher, TestChangeClock())
           val cuentas =
               CuentaRepositoryImpl(
                   database,
@@ -351,6 +357,7 @@ class FirstMovimientoIntegrationTest {
                   cuentas,
                   FakeRecurrenciaRepository(),
                   UnavailableVoiceDictation,
+                  correcciones,
               )
           val first =
               createMovimientoViewModel(
@@ -374,6 +381,9 @@ class FirstMovimientoIntegrationTest {
           assertEquals("cat_supermercado", saved.categoriaId)
           assertEquals(Money(3_000_000, Moneda.COP), saved.monto)
           assertEquals(FIXED_DATE, saved.fecha)
+          val correction = assertSuccess(correcciones.observeSince(FIXED_INSTANT).first()).single()
+          assertEquals(CampoCorreccion.CATEGORIA, correction.campo)
+          assertEquals("cat_supermercado", correction.guardado)
 
           val second =
               createMovimientoViewModel(

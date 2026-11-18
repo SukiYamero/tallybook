@@ -20,6 +20,8 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.CorreccionFraseRepository
+import com.kurobello.tallybook.core.data.CorreccionFraseRepositoryImpl
 import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.CuentaRepositoryImpl
 import com.kurobello.tallybook.core.data.CuentaSeedProvider
@@ -454,6 +456,9 @@ class HistoryIntegrationTest {
               single<SaldoRepository> { SaldoRepositoryImpl(database, fixture.dispatcher) }
               single<RecurrenciaRepository> { FakeRecurrenciaRepository() }
               single<VoiceDictation> { UnavailableVoiceDictation }
+              single<CorreccionFraseRepository> {
+                CorreccionFraseRepositoryImpl(database, fixture.dispatcher, TestChangeClock())
+              }
               single<StatisticsRepository> {
                 StatisticsRepositoryImpl(database, fixture.dispatcher)
               }
