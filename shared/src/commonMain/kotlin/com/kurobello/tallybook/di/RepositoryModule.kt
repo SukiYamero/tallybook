@@ -5,6 +5,8 @@ import com.kurobello.tallybook.core.data.ActividadRepositoryImpl
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoriaRepositoryImpl
 import com.kurobello.tallybook.core.data.CategorySeedProvider
+import com.kurobello.tallybook.core.data.CorreccionFraseRepository
+import com.kurobello.tallybook.core.data.CorreccionFraseRepositoryImpl
 import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.CuentaRepositoryImpl
 import com.kurobello.tallybook.core.data.CuentaSeedProvider
@@ -79,6 +81,13 @@ val repositoryModule = module {
         dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
         idGenerator = get(),
         clock = get(),
+        changeClock = get(),
+    )
+  }
+  single<CorreccionFraseRepository> {
+    CorreccionFraseRepositoryImpl(
+        database = get(),
+        dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
         changeClock = get(),
     )
   }

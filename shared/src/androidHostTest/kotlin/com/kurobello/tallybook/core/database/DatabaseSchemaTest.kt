@@ -327,6 +327,19 @@ class DatabaseSchemaTest {
       }
 
   @Test
+  fun `migration from schema 11 adds the empty correccion_frase table`() =
+      withSnapshot(version = 11) { driver ->
+        TallybookDatabase.Schema.migrate(
+            driver,
+            oldVersion = 11,
+            newVersion = TallybookDatabase.Schema.version,
+        )
+
+        assertEquals(listOf("0"), driver.queryStrings("SELECT COUNT(*) FROM correccion_frase"))
+        assertEquals(freshSchema(), driver.schemaObjects())
+      }
+
+  @Test
   fun `fresh schema rejects invalid cuenta and transferencia rows`() {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       TallybookDatabase.Schema.create(driver)
@@ -840,6 +853,7 @@ class DatabaseSchemaTest {
         )
         assertEquals(
             listOf(
+                "correccion_frase_recent",
                 "movimiento_by_categoria",
                 "movimiento_by_cuenta",
                 "movimiento_etiqueta_etiqueta",
@@ -871,6 +885,7 @@ class DatabaseSchemaTest {
         assertEquals(
             listOf(
                 "categoria",
+                "correccion_frase",
                 "cuenta",
                 "etiqueta",
                 "movimiento",

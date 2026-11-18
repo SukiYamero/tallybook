@@ -13,4 +13,6 @@ FROM (
     SELECT updated_at FROM transferencia
     UNION ALL
     SELECT updated_at FROM recurrencia
+    UNION ALL
+    SELECT updated_at FROM correccion_frase
 );

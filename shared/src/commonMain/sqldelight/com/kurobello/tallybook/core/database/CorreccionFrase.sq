@@ -1,0 +1,25 @@
+-- updated_at has no DEFAULT so a write that forgets its ChangeStamp fails instead of becoming SEED.
+CREATE TABLE correccion_frase (
+    id TEXT NOT NULL PRIMARY KEY,
+    origen TEXT NOT NULL,
+    palabras TEXT NOT NULL,
+    campo TEXT NOT NULL,
+    leido TEXT,
+    propuesto TEXT,
+    guardado TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT
+);
+
+CREATE INDEX correccion_frase_recent ON correccion_frase(created_at);
+
+insertCorreccionFrase:
+INSERT INTO correccion_frase(id, origen, palabras, campo, leido, propuesto, guardado, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectCorreccionesFraseSince:
+SELECT *
+FROM correccion_frase
+WHERE created_at >= ? AND deleted_at IS NULL
+ORDER BY created_at DESC, id DESC;
