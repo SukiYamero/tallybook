@@ -17,8 +17,8 @@ import kotlinx.datetime.LocalDate
 
 /**
  * Serves the given [statuses] and records every write. [createResult] scripts what [create]
- * answers, [failure] makes writes and reads fail, and [history] and [suggestions] hold the answers
- * of their reads.
+ * answers, [failure] makes writes and reads fail, and [writeFailure] fails create, update and
+ * delete, [history] and [suggestions] hold the answers of their reads.
  */
 internal class FakePresupuestoRepository(initial: List<BudgetStatus> = emptyList()) :
     PresupuestoRepository {
@@ -32,14 +32,22 @@ internal class FakePresupuestoRepository(initial: List<BudgetStatus> = emptyList
   var history: List<BudgetMonth> = emptyList()
   var createResult: PresupuestoWrite? = null
   var suggestionFailure: DataError? = null
+  var writeFailure: DataError? = null
+  val observedDays = mutableListOf<LocalDate>()
 
-  override fun observeStatuses(today: LocalDate): Flow<DataOutcome<List<BudgetStatus>>> = statuses
+  override fun observeStatuses(today: LocalDate): Flow<DataOutcome<List<BudgetStatus>>> {
+    observedDays += today
+    return statuses
+  }
 
   override suspend fun create(
       categoriaId: String,
       monto: Money,
       today: LocalDate,
   ): DataOutcome<PresupuestoWrite> {
+    writeFailure?.let {
+      return DataOutcome.Failure(it)
+    }
     created += categoriaId to monto
     return DataOutcome.Success(
         createResult
@@ -50,6 +58,9 @@ internal class FakePresupuestoRepository(initial: List<BudgetStatus> = emptyList
   }
 
   override suspend fun updateMonto(id: String, monto: Money): DataOutcome<PresupuestoWrite> {
+    writeFailure?.let {
+      return DataOutcome.Failure(it)
+    }
     updated += id to monto
     val current = (statuses.value as DataOutcome.Success).data
     val target = current.first { it.presupuesto.id == id }
@@ -62,6 +73,9 @@ internal class FakePresupuestoRepository(initial: List<BudgetStatus> = emptyList
   }
 
   override suspend fun delete(id: String): DataOutcome<Unit> {
+    writeFailure?.let {
+      return DataOutcome.Failure(it)
+    }
     deleted += id
     val current = (statuses.value as DataOutcome.Success).data
     statuses.value = DataOutcome.Success(current.filterNot { it.presupuesto.id == id })

@@ -3,6 +3,7 @@ package com.kurobello.tallybook.feature.budgets.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kurobello.tallybook.core.data.AppPreferencesRepository
+import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CivilToday
 import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.PresupuestoRepository
@@ -42,11 +43,13 @@ import kotlinx.datetime.yearMonth
 internal class BudgetsViewModel(
     private val presupuestos: PresupuestoRepository,
     cuentas: CuentaRepository,
+    categorias: CategoriaRepository,
     preferences: AppPreferencesRepository,
     private val today: CivilToday,
     scope: CoroutineScope? = null,
 ) : ViewModel(), BudgetsActions {
   private val coroutineScope = scope ?: viewModelScope
+  private val currentDay = MutableStateFlow(today.date())
   private val contentRetries = MutableStateFlow(0)
 
   // Null until both the accounts and the primary moneda have loaded; creating waits for them.
@@ -62,6 +65,12 @@ internal class BudgetsViewModel(
   init {
     coroutineScope.launch { observeContent() }
     coroutineScope.launch {
+      categorias.observeAll().collect { outcome ->
+        val live = (outcome as? DataOutcome.Success)?.data.orEmpty()
+        uiState.update { it.copy(categorias = live) }
+      }
+    }
+    coroutineScope.launch {
       combine(cuentas.observeAll(), preferences.preferences.map { it.primaryMoneda() }) {
               accounts,
               primary ->
@@ -73,6 +82,11 @@ internal class BudgetsViewModel(
           }
           .collect { editorMonedas.value = it }
     }
+  }
+
+  /** Every resume reads the day again, so a new day or month moves the spent window. */
+  override fun onResume() {
+    currentDay.value = today.date()
   }
 
   override fun onRetry() {
@@ -115,7 +129,9 @@ internal class BudgetsViewModel(
 
   override fun onCategorySelected(id: String) {
     val editor = uiState.value.editor?.takeIf { it.editingId == null } ?: return
-    uiState.update { it.copy(editor = editor.copy(categoriaId = id, suggestion = null)) }
+    uiState.update {
+      it.copy(editor = editor.copy(categoriaId = id, suggestion = null, saveFailed = false))
+    }
     loadSuggestion()
   }
 
@@ -127,6 +143,7 @@ internal class BudgetsViewModel(
           editor =
               editor.copy(
                   moneda = moneda,
+                  saveFailed = false,
                   suggestion = null,
                   amountInput = editor.amountInput.reformatAmountInput(editor.moneda, moneda),
                   amountError = false,
@@ -137,18 +154,20 @@ internal class BudgetsViewModel(
   }
 
   override fun onAmountChanged(text: String) = updateEditor {
-    copy(amountInput = text, amountError = false)
+    copy(amountInput = text, amountError = false, saveFailed = false)
   }
 
   override fun onUseSuggestion() = updateEditor {
-    suggestion?.let { copy(amountInput = it.toAmountInput(), amountError = false) } ?: this
+    suggestion?.let {
+      copy(amountInput = it.toAmountInput(), amountError = false, saveFailed = false)
+    } ?: this
   }
 
   override fun onSave() {
     val editor = uiState.value.editor?.takeIf { !it.saving && it.canSave } ?: return
     val parsed = parseAmountInput(editor.amountInput, editor.moneda)
     if (parsed is AmountInputResult.Valid) {
-      updateEditor { copy(saving = true) }
+      updateEditor { copy(saving = true, saveFailed = false) }
       coroutineScope.launch { finishSave(write(editor, parsed.money)) }
     } else {
       updateEditor { copy(amountError = true) }
@@ -191,14 +210,17 @@ internal class BudgetsViewModel(
     }
   }
 
-  override fun onRequestDelete() = updateDetail { copy(confirmingDelete = true) }
+  override fun onRequestDelete() = updateDetail {
+    copy(confirmingDelete = true, deleteFailed = false)
+  }
 
   override fun onConfirmDelete() {
     val detail = uiState.value.detail?.takeIf { it.confirmingDelete } ?: return
     coroutineScope.launch {
       when (presupuestos.delete(detail.status.presupuesto.id)) {
         is DataOutcome.Success -> uiState.update { it.copy(detail = null) }
-        is DataOutcome.Failure -> updateDetail { copy(confirmingDelete = false) }
+        is DataOutcome.Failure ->
+            updateDetail { copy(confirmingDelete = false, deleteFailed = true) }
       }
     }
   }
@@ -233,7 +255,7 @@ internal class BudgetsViewModel(
 
   private fun finishSave(outcome: DataOutcome<PresupuestoWrite>) {
     when (outcome) {
-      is DataOutcome.Failure -> updateEditor { copy(saving = false) }
+      is DataOutcome.Failure -> updateEditor { copy(saving = false, saveFailed = true) }
       is DataOutcome.Success ->
           when (val write = outcome.data) {
             is PresupuestoWrite.Saved -> uiState.update { it.copy(editor = null) }
@@ -273,9 +295,8 @@ internal class BudgetsViewModel(
   }
 
   private suspend fun observeContent() {
-    contentRetries
-        .flatMapLatest {
-          val day = today.date()
+    combine(currentDay, contentRetries) { day, _ -> day }
+        .flatMapLatest { day ->
           presupuestos.observeStatuses(day).map { outcome -> day to outcome }
         }
         .collect { (day, outcome) ->

@@ -31,4 +31,6 @@ internal interface BudgetsActions {
   fun onViewMovements()
 
   fun onRetry()
+
+  fun onResume()
 }

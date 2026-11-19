@@ -149,6 +149,7 @@ internal val viewModelModule = module {
     BudgetsViewModel(
         presupuestos = get(),
         cuentas = get(),
+        categorias = get(),
         preferences = get(),
         today = CivilToday(get(), get()),
     )

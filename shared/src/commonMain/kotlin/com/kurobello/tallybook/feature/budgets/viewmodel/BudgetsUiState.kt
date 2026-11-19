@@ -2,6 +2,7 @@ package com.kurobello.tallybook.feature.budgets.viewmodel
 
 import com.kurobello.tallybook.core.model.BudgetMonth
 import com.kurobello.tallybook.core.model.BudgetStatus
+import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
@@ -13,6 +14,7 @@ internal data class BudgetsUiState(
     val content: RetainedLoadState<BudgetsContent, DataError> = RetainedLoadState.Loading(),
     val editor: BudgetEditorState? = null,
     val detail: BudgetDetailState? = null,
+    val categorias: List<Categoria> = emptyList(),
 )
 
 internal data class BudgetsContent(
@@ -35,6 +37,7 @@ internal data class BudgetEditorState(
     val amountError: Boolean,
     val duplicateOf: Presupuesto?,
     val saving: Boolean,
+    val saveFailed: Boolean = false,
 )
 
 /** [history] is null until the six months load. */
@@ -42,4 +45,5 @@ internal data class BudgetDetailState(
     val status: BudgetStatus,
     val history: List<BudgetMonth>?,
     val confirmingDelete: Boolean,
+    val deleteFailed: Boolean = false,
 )

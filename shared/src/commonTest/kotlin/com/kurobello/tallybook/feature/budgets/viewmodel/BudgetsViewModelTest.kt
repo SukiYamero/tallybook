@@ -20,8 +20,10 @@ import com.kurobello.tallybook.core.model.PresupuestoWrite
 import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.budgetStatus
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
+import com.kurobello.tallybook.feature.movimientos.viewmodel.AddFakeCategorias
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddFakePreferences
 import com.kurobello.tallybook.feature.movimientos.viewmodel.COP_CASH
+import com.kurobello.tallybook.feature.movimientos.viewmodel.addTestCategoria
 import com.kurobello.tallybook.feature.movimientos.viewmodel.testCuenta
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -257,9 +259,64 @@ class BudgetsViewModelTest {
     assertIs<RetainedLoadState.Ready<BudgetsContent>>(f.state().content)
   }
 
+  @Test
+  fun exposesCategoryCatalogForPicker() = runTest {
+    val f = fixture()
+
+    assertEquals(listOf("cat_food"), f.state().categorias.map { it.id })
+  }
+
+  @Test
+  fun saveFailureFlagsEditor() = runTest {
+    val f = fixture()
+    f.presupuestos.writeFailure = DataError.Local(IllegalStateException("disk"))
+    f.viewModel.onCreate()
+    f.viewModel.onCategorySelected("cat_food")
+    f.viewModel.onAmountChanged("500000")
+
+    f.viewModel.onSave()
+    runCurrent()
+
+    assertEquals(true, f.state().editor?.saveFailed)
+    assertEquals(false, f.state().editor?.saving)
+
+    f.viewModel.onAmountChanged("400000")
+    assertEquals(false, f.state().editor?.saveFailed)
+  }
+
+  @Test
+  fun deleteFailureKeepsDetailOpen() = runTest {
+    val f = fixture()
+    f.presupuestos.writeFailure = DataError.Local(IllegalStateException("disk"))
+    f.viewModel.onOpen("food")
+    f.viewModel.onRequestDelete()
+
+    f.viewModel.onConfirmDelete()
+    runCurrent()
+
+    val detail = assertNotNull(f.state().detail)
+    assertEquals(true, detail.deleteFailed)
+    assertEquals(false, detail.confirmingDelete)
+  }
+
+  @Test
+  fun resumeOnNewMonthRereadsStatuses() = runTest {
+    val f = fixture()
+
+    f.clock.now = Instant.parse("2026-12-01T12:00:00Z")
+    f.viewModel.onResume()
+    runCurrent()
+
+    assertEquals(LocalDate(2026, 12, 1), f.presupuestos.observedDays.last())
+    val content = assertIs<RetainedLoadState.Ready<BudgetsContent>>(f.state().content).value
+    assertEquals(YearMonth(2026, 12), content.month)
+    assertEquals(31, content.daysLeft)
+  }
+
   private class Fixture(
       val viewModel: BudgetsViewModel,
       val presupuestos: FakePresupuestoRepository,
+      val clock: MutableClock,
   ) {
     fun state() = viewModel.uiState.value
   }
@@ -285,6 +342,8 @@ class BudgetsViewModelTest {
         BudgetsViewModel(
             presupuestos = repository,
             cuentas = FakeCuentaRepository(cuentas),
+            categorias =
+                AddFakeCategorias(DataOutcome.Success(listOf(addTestCategoria("cat_food")))),
             preferences =
                 AddFakePreferences(
                     DataOutcome.Success(AppPreferencesState.Ready(AppPreferences(primary)))
@@ -293,7 +352,7 @@ class BudgetsViewModelTest {
             scope = backgroundScope,
         )
     runCurrent()
-    return Fixture(viewModel, repository)
+    return Fixture(viewModel, repository, clock)
   }
 }
 
