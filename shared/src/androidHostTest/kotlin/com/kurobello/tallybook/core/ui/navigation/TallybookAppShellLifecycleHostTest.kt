@@ -452,7 +452,8 @@ private class ShellHarness(
               Categories,
               Tags,
               Accounts,
-              Recurrentes -> Unit
+              Recurrentes,
+              Presupuestos -> Unit
             }
             SideEffect {
               owners[destination] = owner

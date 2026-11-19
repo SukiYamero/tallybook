@@ -188,6 +188,7 @@ private fun PrimaryRoute(
     Tags -> TagsDestination(navigator)
     Accounts -> AccountsDestination(navigator, openers.transfer)
     Recurrentes -> RecurrentesDestination(navigator, feedback)
+    Presupuestos -> PresupuestosDestination(navigator)
   }
 }
 
@@ -236,6 +237,7 @@ internal fun primaryContentKey(destination: Destination): String =
       Tags -> "secondary-tags"
       Accounts -> "secondary-accounts"
       Recurrentes -> "secondary-recurrentes"
+      Presupuestos -> "secondary-presupuestos"
     }
 
 internal fun destinationBackStackSerializer(): KSerializer<NavBackStack<Destination>> =

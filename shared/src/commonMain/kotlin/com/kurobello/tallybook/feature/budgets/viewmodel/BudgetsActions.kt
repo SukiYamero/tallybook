@@ -24,6 +24,8 @@ internal interface BudgetsActions {
 
   fun onRequestDelete()
 
+  fun onCancelDelete()
+
   fun onConfirmDelete()
 
   fun onDismissDetail()

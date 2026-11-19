@@ -419,6 +419,27 @@ internal class PrimaryNavigationTest {
   }
 
   @Test
+  fun presupuestosOpensOverHomeOrProfileAndBackReturnsToThatPrimary() {
+    val home = PrimaryNavigationState()
+    val fromHome = home.openSecondary(Presupuestos)
+    assertEquals(listOf(Home, Presupuestos), fromHome.displayedKeys)
+    assertEquals(home, fromHome.back())
+
+    val history = home.select(History)
+    assertSame(history, history.openSecondary(Presupuestos))
+
+    val profile = home.select(Profile)
+    val fromProfile = profile.openSecondary(Presupuestos)
+    assertEquals(listOf(Home, Profile, Presupuestos), fromProfile.retainedKeys)
+    assertEquals(profile, fromProfile.back())
+    assertEquals(
+        initialPrimaryNavigation(Profile).openSecondary(Presupuestos),
+        initialPrimaryNavigation(Presupuestos),
+    )
+    assertEquals("secondary-presupuestos", primaryContentKey(Presupuestos))
+  }
+
+  @Test
   fun snapshotWithAccountsOpenOverHomeRestoresTheSecondarySlot() {
     val original = PrimaryNavigationState().openSecondary(Accounts)
     val restored =

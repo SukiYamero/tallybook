@@ -70,10 +70,16 @@ internal class BudgetsViewModel(
         uiState.update { it.copy(categorias = live) }
       }
     }
+    val primaryMoneda = preferences.preferences.map { it.primaryMoneda() }
     coroutineScope.launch {
-      combine(cuentas.observeAll(), preferences.preferences.map { it.primaryMoneda() }) {
-              accounts,
-              primary ->
+      primaryMoneda.collect { outcome ->
+        if (outcome is DataOutcome.Success) {
+          uiState.update { it.copy(primaryMoneda = outcome.data) }
+        }
+      }
+    }
+    coroutineScope.launch {
+      combine(cuentas.observeAll(), primaryMoneda) { accounts, primary ->
             if (accounts is DataOutcome.Success && primary is DataOutcome.Success) {
               primaryFirst(accounts.data.filterNot { it.archivada }.monedas(), primary.data)
             } else {
@@ -213,6 +219,8 @@ internal class BudgetsViewModel(
   override fun onRequestDelete() = updateDetail {
     copy(confirmingDelete = true, deleteFailed = false)
   }
+
+  override fun onCancelDelete() = updateDetail { copy(confirmingDelete = false) }
 
   override fun onConfirmDelete() {
     val detail = uiState.value.detail?.takeIf { it.confirmingDelete } ?: return

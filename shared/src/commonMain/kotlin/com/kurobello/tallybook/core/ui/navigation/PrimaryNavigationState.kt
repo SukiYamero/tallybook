@@ -77,7 +77,8 @@ private fun Destination.opensOver(primary: Destination): Boolean =
       Categories,
       Tags -> primary == Profile
       Accounts,
-      Recurrentes -> primary == Home || primary == Profile
+      Recurrentes,
+      Presupuestos -> primary == Home || primary == Profile
       Home,
       History,
       Search,
@@ -96,5 +97,6 @@ internal fun initialPrimaryNavigation(start: Destination): PrimaryNavigationStat
       Categories,
       Tags,
       Accounts,
-      Recurrentes -> PrimaryNavigationState(Profile, profileVisited = true, secondary = start)
+      Recurrentes,
+      Presupuestos -> PrimaryNavigationState(Profile, profileVisited = true, secondary = start)
     }

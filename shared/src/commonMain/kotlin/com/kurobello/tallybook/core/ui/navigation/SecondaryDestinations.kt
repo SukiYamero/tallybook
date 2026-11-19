@@ -1,8 +1,10 @@
 package com.kurobello.tallybook.core.ui.navigation
 
 import androidx.compose.runtime.Composable
+import com.kurobello.tallybook.core.model.SearchTipo
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackQueue
 import com.kurobello.tallybook.feature.accounts.ui.AccountsRoute
+import com.kurobello.tallybook.feature.budgets.ui.BudgetsRoute
 import com.kurobello.tallybook.feature.categories.ui.CategoriesRoute
 import com.kurobello.tallybook.feature.recurrentes.ui.RecurrentesRoute
 import com.kurobello.tallybook.feature.tags.ui.TagsRoute
@@ -39,6 +41,23 @@ internal fun RecurrentesDestination(
       active = navigator.state.secondary == Recurrentes,
       onBack = navigator::back,
       feedback = feedback,
+  )
+}
+
+@Composable
+internal fun PresupuestosDestination(navigator: PrimaryNavigator) {
+  BudgetsRoute(
+      modals = navigator.modals,
+      active = navigator.state.secondary == Presupuestos,
+      onBack = navigator::back,
+      onViewMovements = { categoriaId, moneda, range ->
+        navigator.showSearchFilter(
+            categoryIds = setOf(categoriaId),
+            moneda = moneda,
+            range = range,
+            tipo = SearchTipo.GASTO,
+        )
+      },
   )
 }
 

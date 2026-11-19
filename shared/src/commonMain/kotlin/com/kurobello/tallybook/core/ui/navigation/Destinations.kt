@@ -24,3 +24,5 @@ import kotlinx.serialization.Serializable
 @Serializable data object Accounts : Destination
 
 @Serializable data object Recurrentes : Destination
+
+@Serializable data object Presupuestos : Destination

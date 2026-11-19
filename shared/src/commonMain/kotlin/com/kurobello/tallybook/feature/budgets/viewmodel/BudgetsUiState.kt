@@ -15,6 +15,8 @@ internal data class BudgetsUiState(
     val editor: BudgetEditorState? = null,
     val detail: BudgetDetailState? = null,
     val categorias: List<Categoria> = emptyList(),
+    /** Null until preferences load; rows show their currency code only outside it. */
+    val primaryMoneda: Moneda? = null,
 )
 
 internal data class BudgetsContent(

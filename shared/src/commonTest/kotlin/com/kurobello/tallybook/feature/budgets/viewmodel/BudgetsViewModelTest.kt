@@ -210,6 +210,27 @@ class BudgetsViewModelTest {
   }
 
   @Test
+  fun cancelDeleteKeepsTheBudget() = runTest {
+    val f = fixture()
+    f.viewModel.onOpen("food")
+    f.viewModel.onRequestDelete()
+
+    f.viewModel.onCancelDelete()
+    f.viewModel.onConfirmDelete()
+    runCurrent()
+
+    assertEquals(false, f.state().detail?.confirmingDelete)
+    assertEquals(emptyList(), f.presupuestos.deleted)
+  }
+
+  @Test
+  fun exposesPrimaryMonedaForRowCurrencyCodes() = runTest {
+    val f = fixture(cuentas = listOf(COP_CASH, usdCash), primary = Moneda.USD)
+
+    assertEquals(Moneda.USD, f.state().primaryMoneda)
+  }
+
+  @Test
   fun viewMovementsEmitsCurrentMonthSearch() = runTest {
     val f = fixture()
     f.viewModel.onOpen("food")

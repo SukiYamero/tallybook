@@ -1,0 +1,44 @@
+<resources>
+    <string name="profile_budgets_label">Presupuestos</string>
+    <string name="profile_budgets_body">Ponle un tope mensual a lo que gastas en cada categoría.</string>
+    <string name="budgets_title">Presupuestos</string>
+    <plurals name="budgets_period">
+        <item quantity="one">%1$s · queda %2$d día</item>
+        <item quantity="other">%1$s · quedan %2$d días</item>
+    </plurals>
+    <string name="budgets_summary">Vas bien en %1$d de %2$d</string>
+    <string name="budgets_spent_of">%1$s de %2$s</string>
+    <string name="budgets_line_over">%1$s por encima de tu presupuesto</string>
+    <string name="budgets_line_left">Te quedan %1$s</string>
+    <string name="budgets_line_reached">Ya usaste todo tu presupuesto de este mes</string>
+    <string name="budgets_line_pace">A este ritmo llegarías al tope el día %1$d</string>
+    <string name="budgets_line_per_day">Te quedan %1$s · %2$s por día</string>
+    <string name="budgets_name_with_moneda">%1$s (%2$s)</string>
+    <string name="budgets_add">Presupuesto</string>
+    <string name="budgets_add_description">Crear presupuesto</string>
+    <string name="budgets_open">Abrir presupuesto</string>
+    <string name="budgets_empty_title">Todavía no tienes presupuestos</string>
+    <string name="budgets_empty_body">Para saber cuánto te queda cada mes, ponle un tope a una categoría.</string>
+    <string name="budgets_load_error">No pudimos cargar tus presupuestos. Tus datos siguen guardados; intenta de nuevo.</string>
+    <string name="budget_new_title">Nuevo presupuesto</string>
+    <string name="budget_edit_title">Editar presupuesto</string>
+    <string name="budget_category_label">Categoría</string>
+    <string name="budget_amount_label">Tope mensual</string>
+    <string name="budget_amount_error">Escribe un monto mayor a cero.</string>
+    <string name="budget_suggestion">Tu promedio: %1$s</string>
+    <string name="budget_duplicate">Ya tienes un presupuesto para %1$s en %2$s; aquí puedes cambiar su tope.</string>
+    <string name="budget_save">Guardar</string>
+    <string name="budget_save_error">No pudimos guardar el presupuesto. Lo que tenías sigue igual; intenta de nuevo.</string>
+    <string name="budget_edit_amount">Cambiar tope</string>
+    <string name="budget_history_heading">Últimos seis meses</string>
+    <string name="budget_history_compared">Comparado con tu tope actual de %1$s</string>
+    <string name="budget_history_within">Dentro del tope en %1$d de %2$d meses</string>
+    <string name="budget_history_month_item">%1$s %2$s</string>
+    <string name="budget_history_description">Gasto en %1$s por mes: %2$s. Tope actual %3$s.</string>
+    <string name="budget_history_error">No pudimos cargar los últimos meses. Tu presupuesto sigue guardado; intenta de nuevo.</string>
+    <string name="budget_view_movimientos">Ver movimientos</string>
+    <string name="budget_delete">Eliminar presupuesto</string>
+    <string name="budget_delete_title">¿Eliminar este presupuesto?</string>
+    <string name="budget_delete_message">Tus movimientos no cambian; solo dejas de seguir este tope.</string>
+    <string name="budget_delete_error">No pudimos eliminarlo. Tus datos siguen guardados; intenta de nuevo.</string>
+</resources>

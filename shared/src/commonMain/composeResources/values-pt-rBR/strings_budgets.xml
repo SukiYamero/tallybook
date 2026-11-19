@@ -1,0 +1,44 @@
+<resources>
+    <string name="profile_budgets_label">Orçamentos</string>
+    <string name="profile_budgets_body">Defina um limite mensal para o que você gasta em cada categoria.</string>
+    <string name="budgets_title">Orçamentos</string>
+    <plurals name="budgets_period">
+        <item quantity="one">%1$s · falta %2$d dia</item>
+        <item quantity="other">%1$s · faltam %2$d dias</item>
+    </plurals>
+    <string name="budgets_summary">Tudo certo em %1$d de %2$d</string>
+    <string name="budgets_spent_of">%1$s de %2$s</string>
+    <string name="budgets_line_over">%1$s acima do seu orçamento</string>
+    <string name="budgets_line_left">Restam %1$s</string>
+    <string name="budgets_line_reached">Você já usou todo o seu orçamento deste mês</string>
+    <string name="budgets_line_pace">Nesse ritmo você chegaria ao limite no dia %1$d</string>
+    <string name="budgets_line_per_day">Restam %1$s · %2$s por dia</string>
+    <string name="budgets_name_with_moneda">%1$s (%2$s)</string>
+    <string name="budgets_add">Orçamento</string>
+    <string name="budgets_add_description">Criar orçamento</string>
+    <string name="budgets_open">Abrir orçamento</string>
+    <string name="budgets_empty_title">Você ainda não tem orçamentos</string>
+    <string name="budgets_empty_body">Para saber quanto ainda pode gastar no mês, defina um limite para uma categoria.</string>
+    <string name="budgets_load_error">Não conseguimos carregar seus orçamentos. Seus dados continuam salvos; tente de novo.</string>
+    <string name="budget_new_title">Novo orçamento</string>
+    <string name="budget_edit_title">Editar orçamento</string>
+    <string name="budget_category_label">Categoria</string>
+    <string name="budget_amount_label">Limite mensal</string>
+    <string name="budget_amount_error">Digite um valor maior que zero.</string>
+    <string name="budget_suggestion">Sua média: %1$s</string>
+    <string name="budget_duplicate">Você já tem um orçamento para %1$s em %2$s; aqui dá para mudar o limite.</string>
+    <string name="budget_save">Salvar</string>
+    <string name="budget_save_error">Não conseguimos salvar o orçamento. Nada mudou; tente de novo.</string>
+    <string name="budget_edit_amount">Mudar limite</string>
+    <string name="budget_history_heading">Últimos seis meses</string>
+    <string name="budget_history_compared">Comparado com o seu limite atual de %1$s</string>
+    <string name="budget_history_within">Dentro do limite em %1$d de %2$d meses</string>
+    <string name="budget_history_month_item">%1$s %2$s</string>
+    <string name="budget_history_description">Gastos em %1$s por mês: %2$s. Limite atual %3$s.</string>
+    <string name="budget_history_error">Não conseguimos carregar os últimos meses. Seu orçamento continua salvo; tente de novo.</string>
+    <string name="budget_view_movimientos">Ver movimentações</string>
+    <string name="budget_delete">Excluir orçamento</string>
+    <string name="budget_delete_title">Excluir este orçamento?</string>
+    <string name="budget_delete_message">Suas movimentações continuam iguais; você só deixa de acompanhar este limite.</string>
+    <string name="budget_delete_error">Não conseguimos excluir. Seus dados continuam salvos; tente de novo.</string>
+</resources>

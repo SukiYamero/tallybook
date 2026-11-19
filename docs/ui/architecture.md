@@ -460,7 +460,7 @@ Snapshotting extras for each parent lifetime prevents Activity Intent Bundles fr
 Tabs select existing entries; History root Back selects Home, Home root delegates platform exit, and
 Search, Statistics and Profile root Back select Home. One `secondary` slot shows a secondary
 destination over the selected primary with the bottom bar hidden: the UI catalog over any primary,
-Categories and Tags only over Profile, Accounts and Recurrentes over Home or Profile (`PrimaryNavigator.openSecondary`). Back closes the
+Categories and Tags only over Profile, Accounts, Recurrentes and Presupuestos over Home or Profile (`PrimaryNavigator.openSecondary`). Back closes the
 secondary first, and selecting any primary clears it. Home search opens Search with a one-time focus
 intent; "View N movements" in a Categories or Tags sheet, or "View movements" in an account sheet,
 selects Search, once that sheet has hidden, with a one-shot `SearchFilterRequest` (category, tag or

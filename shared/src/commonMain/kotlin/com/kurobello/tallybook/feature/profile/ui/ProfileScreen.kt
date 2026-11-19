@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.Dp
 import com.composables.icons.lucide.ChevronRight
 import com.composables.icons.lucide.Hash
 import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.PiggyBank
 import com.composables.icons.lucide.Repeat
 import com.composables.icons.lucide.Smartphone
 import com.composables.icons.lucide.Tags
@@ -55,6 +56,7 @@ import com.kurobello.tallybook.core.ui.layout.TallybookScreenFrame
 import com.kurobello.tallybook.core.ui.navigation.Accounts
 import com.kurobello.tallybook.core.ui.navigation.Categories
 import com.kurobello.tallybook.core.ui.navigation.Destination
+import com.kurobello.tallybook.core.ui.navigation.Presupuestos
 import com.kurobello.tallybook.core.ui.navigation.Recurrentes
 import com.kurobello.tallybook.core.ui.navigation.Tags
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
@@ -70,6 +72,8 @@ import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.navigation_profile
 import tallybook.shared.generated.resources.profile_accounts_body
 import tallybook.shared.generated.resources.profile_accounts_label
+import tallybook.shared.generated.resources.profile_budgets_body
+import tallybook.shared.generated.resources.profile_budgets_label
 import tallybook.shared.generated.resources.profile_categories_body
 import tallybook.shared.generated.resources.profile_categories_label
 import tallybook.shared.generated.resources.profile_currency_label
@@ -181,6 +185,12 @@ private val dataDestinations =
             Res.string.profile_recurrentes_label,
             Res.string.profile_recurrentes_body,
             Recurrentes,
+        ),
+        DataDestinationCard(
+            Lucide.PiggyBank,
+            Res.string.profile_budgets_label,
+            Res.string.profile_budgets_body,
+            Presupuestos,
         ),
     )
 
