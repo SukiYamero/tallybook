@@ -123,7 +123,7 @@ internal class BudgetsViewModel(
     }
     coroutineScope.launch {
       val outcome = presupuestos.history(id, today.date())
-      if (outcome is DataOutcome.Success) showHistory(id, outcome.data)
+      showHistory(id, outcome)
     }
   }
 
@@ -275,11 +275,17 @@ internal class BudgetsViewModel(
     }
   }
 
-  private fun showHistory(id: String, history: List<BudgetMonth>) {
+  private fun showHistory(id: String, outcome: DataOutcome<List<BudgetMonth>>) {
     uiState.update { state ->
       val detail = state.detail
       if (detail?.status?.presupuesto?.id == id) {
-        state.copy(detail = detail.copy(history = history))
+        state.copy(
+            detail =
+                when (outcome) {
+                  is DataOutcome.Success -> detail.copy(history = outcome.data)
+                  is DataOutcome.Failure -> detail.copy(historyFailed = true)
+                }
+        )
       } else {
         state
       }

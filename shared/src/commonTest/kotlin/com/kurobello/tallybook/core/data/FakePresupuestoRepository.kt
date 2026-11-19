@@ -33,6 +33,7 @@ internal class FakePresupuestoRepository(initial: List<BudgetStatus> = emptyList
   var createResult: PresupuestoWrite? = null
   var suggestionFailure: DataError? = null
   var writeFailure: DataError? = null
+  var historyFailure: DataError? = null
   val observedDays = mutableListOf<LocalDate>()
 
   override fun observeStatuses(today: LocalDate): Flow<DataOutcome<List<BudgetStatus>>> {
@@ -83,7 +84,7 @@ internal class FakePresupuestoRepository(initial: List<BudgetStatus> = emptyList
   }
 
   override suspend fun history(id: String, today: LocalDate): DataOutcome<List<BudgetMonth>> =
-      DataOutcome.Success(history)
+      historyFailure?.let { DataOutcome.Failure(it) } ?: DataOutcome.Success(history)
 
   override suspend fun suggestion(
       categoriaId: String,

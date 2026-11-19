@@ -40,10 +40,11 @@ internal data class BudgetEditorState(
     val saveFailed: Boolean = false,
 )
 
-/** [history] is null until the six months load. */
+/** [history] is null until the six months load, or for good when [historyFailed]. */
 internal data class BudgetDetailState(
     val status: BudgetStatus,
     val history: List<BudgetMonth>?,
     val confirmingDelete: Boolean,
     val deleteFailed: Boolean = false,
+    val historyFailed: Boolean = false,
 )

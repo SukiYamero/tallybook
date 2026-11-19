@@ -242,6 +242,19 @@ class BudgetsViewModelTest {
   }
 
   @Test
+  fun failedHistoryReadFlagsDetail() = runTest {
+    val f = fixture()
+    f.presupuestos.historyFailure = DataError.Local(IllegalStateException("disk"))
+
+    f.viewModel.onOpen("food")
+    runCurrent()
+
+    val detail = assertNotNull(f.state().detail)
+    assertEquals(true, detail.historyFailed)
+    assertNull(detail.history)
+  }
+
+  @Test
   fun failedReadKeepsPreviousContent() = runTest {
     val f = fixture()
     val previous = assertIs<RetainedLoadState.Ready<BudgetsContent>>(f.state().content).value
