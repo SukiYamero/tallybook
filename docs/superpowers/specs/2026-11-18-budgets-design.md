@@ -199,3 +199,12 @@ row and opens Presupuestos; it never changes Home's totals, and a failed read hi
 Package layout (`feature.budgets`), exact component composition, the chart used for the six-month
 bars, `en`/`pt-BR` strings within the wording rules, and test split (pure rules in `commonTest`,
 SQL in host tests, final check on the confirmed physical Xiaomi).
+
+## Delivered with these changes
+
+The rules, screens and notice as shipped are in
+[Presupuestos](../../business-logic.md#presupuestos); scope and verification boundaries in
+[Budgets](../../features/budgets.md). Shipped details that differ from the sketches above: amounts use
+the app-wide `Money.format()`; a NEAR budget with nothing left reads "Ya usaste todo tu presupuesto de
+este mes"; the six-month history draws the current amount as a dashed line and counts only closed
+months; "Ver" opens Presupuestos through `PrimaryNavigator.showSecondary`.
