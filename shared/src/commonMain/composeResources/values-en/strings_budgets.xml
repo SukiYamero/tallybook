@@ -32,7 +32,7 @@
     <string name="budget_edit_amount">Change limit</string>
     <string name="budget_history_heading">Last six months</string>
     <string name="budget_history_compared">Compared with your current limit of %1$s</string>
-    <string name="budget_history_within">Within the limit in %1$d of %2$d months</string>
+    <string name="budget_history_within">Within the limit in %1$d of the last %2$d months</string>
     <string name="budget_history_month_item">%1$s %2$s</string>
     <string name="budget_history_description">Spending on %1$s by month: %2$s. Current limit %3$s.</string>
     <string name="budget_history_error">We couldn’t load the last months. Your budget is still saved; try again.</string>

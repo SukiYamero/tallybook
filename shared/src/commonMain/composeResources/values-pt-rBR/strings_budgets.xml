@@ -32,7 +32,7 @@
     <string name="budget_edit_amount">Mudar limite</string>
     <string name="budget_history_heading">Últimos seis meses</string>
     <string name="budget_history_compared">Comparado com o seu limite atual de %1$s</string>
-    <string name="budget_history_within">Dentro do limite em %1$d de %2$d meses</string>
+    <string name="budget_history_within">Dentro do limite em %1$d dos últimos %2$d meses</string>
     <string name="budget_history_month_item">%1$s %2$s</string>
     <string name="budget_history_description">Gastos em %1$s por mês: %2$s. Limite atual %3$s.</string>
     <string name="budget_history_error">Não conseguimos carregar os últimos meses. Seu orçamento continua salvo; tente de novo.</string>

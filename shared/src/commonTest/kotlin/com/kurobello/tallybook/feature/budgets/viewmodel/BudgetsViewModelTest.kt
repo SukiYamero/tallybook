@@ -32,7 +32,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -153,7 +153,41 @@ class BudgetsViewModelTest {
     runCurrent()
 
     assertEquals(listOf("cat_food" to cop(500_000)), f.presupuestos.created)
+    assertEquals(true, f.state().sheetClosing)
+    assertNotNull(f.state().editor)
+
+    f.viewModel.onSheetHidden()
+
     assertNull(f.state().editor)
+    assertEquals(false, f.state().sheetClosing)
+  }
+
+  @Test
+  fun dismissingTheDetailKeepsItUntilTheSheetHides() = runTest {
+    val f = fixture()
+    f.viewModel.onOpen("food")
+
+    f.viewModel.onDismissDetail()
+
+    assertEquals(true, f.state().sheetClosing)
+    assertNotNull(f.state().detail)
+
+    f.viewModel.onSheetHidden()
+
+    assertNull(f.state().detail)
+  }
+
+  @Test
+  fun dismissingAnEditorOpenedFromTheDetailReturnsToIt() = runTest {
+    val f = fixture()
+    f.viewModel.onOpen("food")
+    f.viewModel.onEditAmount()
+
+    f.viewModel.onDismissEditor()
+
+    assertNull(f.state().editor)
+    assertNotNull(f.state().detail)
+    assertEquals(false, f.state().sheetClosing)
   }
 
   @Test
@@ -206,6 +240,10 @@ class BudgetsViewModelTest {
     runCurrent()
 
     assertEquals(listOf("food"), f.presupuestos.deleted)
+    assertEquals(true, f.state().sheetClosing)
+
+    f.viewModel.onSheetHidden()
+
     assertNull(f.state().detail)
   }
 
@@ -231,19 +269,31 @@ class BudgetsViewModelTest {
   }
 
   @Test
-  fun viewMovementsEmitsCurrentMonthSearch() = runTest {
+  fun viewMovementsSearchesTheCurrentMonthOnlyOnceTheSheetHides() = runTest {
     val f = fixture()
+    val effects = mutableListOf<BudgetsEffect>()
+    backgroundScope.launch { f.viewModel.effects.collect { effects += it } }
     f.viewModel.onOpen("food")
 
     f.viewModel.onViewMovements()
+    runCurrent()
+
+    assertEquals(emptyList(), effects)
+    assertEquals(true, f.state().sheetClosing)
+    assertNotNull(f.state().detail)
+
+    f.viewModel.onSheetHidden()
+    runCurrent()
 
     assertEquals(
-        BudgetsEffect.OpenSearch(
-            categoriaId = "cat_food",
-            moneda = Moneda.COP,
-            range = MovimientoDateRange(LocalDate(2026, 11, 1), LocalDate(2026, 11, 15)),
+        listOf<BudgetsEffect>(
+            BudgetsEffect.OpenSearch(
+                categoriaId = "cat_food",
+                moneda = Moneda.COP,
+                range = MovimientoDateRange(LocalDate(2026, 11, 1), LocalDate(2026, 11, 15)),
+            )
         ),
-        f.viewModel.effects.first(),
+        effects,
     )
     assertNull(f.state().detail)
   }

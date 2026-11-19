@@ -56,6 +56,10 @@ internal class BudgetsViewModel(
   private val editorMonedas = MutableStateFlow<List<Moneda>?>(null)
   private var suggestionJob: Job? = null
 
+  // Held until the detail sheet has hidden: the shell refuses to navigate while it covers the
+  // screen.
+  private var pendingSearch: BudgetsEffect.OpenSearch? = null
+
   val uiState: StateFlow<BudgetsUiState>
     field = MutableStateFlow(BudgetsUiState())
 
@@ -102,6 +106,7 @@ internal class BudgetsViewModel(
   }
 
   override fun onCreate() {
+    if (uiState.value.sheetClosing) return
     val monedas = editorMonedas.value ?: return
     uiState.update {
       it.copy(
@@ -122,6 +127,7 @@ internal class BudgetsViewModel(
   }
 
   override fun onOpen(id: String) {
+    if (uiState.value.sheetClosing) return
     val status =
         uiState.value.content.cachedValue?.statuses?.find { it.presupuesto.id == id } ?: return
     uiState.update {
@@ -192,10 +198,11 @@ internal class BudgetsViewModel(
 
   override fun onDismissEditor() {
     suggestionJob?.cancel()
-    uiState.update { it.copy(editor = null) }
+    uiState.update { it.leavingEditor() }
   }
 
   override fun onEditAmount() {
+    if (uiState.value.sheetClosing) return
     val presupuesto = uiState.value.detail?.status?.presupuesto ?: return
     val monto = presupuesto.monto
     uiState.update {
@@ -226,7 +233,7 @@ internal class BudgetsViewModel(
     val detail = uiState.value.detail?.takeIf { it.confirmingDelete } ?: return
     coroutineScope.launch {
       when (presupuestos.delete(detail.status.presupuesto.id)) {
-        is DataOutcome.Success -> uiState.update { it.copy(detail = null) }
+        is DataOutcome.Success -> uiState.update { it.closingSheet() }
         is DataOutcome.Failure ->
             updateDetail { copy(confirmingDelete = false, deleteFailed = true) }
       }
@@ -234,20 +241,29 @@ internal class BudgetsViewModel(
   }
 
   override fun onDismissDetail() {
-    uiState.update { it.copy(detail = null) }
+    uiState.update { it.closingSheet() }
   }
 
   override fun onViewMovements() {
-    val presupuesto = uiState.value.detail?.status?.presupuesto ?: return
+    val state = uiState.value
+    if (state.sheetClosing) return
+    val presupuesto = state.detail?.status?.presupuesto ?: return
     val day = today.date()
-    uiState.update { it.copy(detail = null) }
-    effectChannel.trySend(
+    pendingSearch =
         BudgetsEffect.OpenSearch(
             categoriaId = presupuesto.categoriaId,
             moneda = presupuesto.monto.moneda,
             range = MovimientoDateRange(LocalDate(day.year, day.month, 1), day),
         )
-    )
+    uiState.update { it.closingSheet() }
+  }
+
+  override fun onSheetHidden() {
+    if (!uiState.value.sheetClosing) return
+    suggestionJob?.cancel()
+    uiState.update { it.copy(editor = null, detail = null, sheetClosing = false) }
+    pendingSearch?.let(effectChannel::trySend)
+    pendingSearch = null
   }
 
   private fun loadSuggestion() {
@@ -266,7 +282,7 @@ internal class BudgetsViewModel(
       is DataOutcome.Failure -> updateEditor { copy(saving = false, saveFailed = true) }
       is DataOutcome.Success ->
           when (val write = outcome.data) {
-            is PresupuestoWrite.Saved -> uiState.update { it.copy(editor = null) }
+            is PresupuestoWrite.Saved -> uiState.update { it.leavingEditor() }
             is PresupuestoWrite.Duplicate ->
                 updateEditor {
                   copy(
@@ -320,11 +336,16 @@ internal class BudgetsViewModel(
                   state.copy(
                       content = RetainedLoadState.Failed(outcome.error, state.content.cachedValue)
                   )
-              is DataOutcome.Success ->
-                  state.copy(
-                      content = RetainedLoadState.Ready(contentOf(outcome.data, day)),
-                      detail = state.detail?.refreshedFrom(outcome.data),
-                  )
+              is DataOutcome.Success -> {
+                val refreshed = state.detail?.refreshedFrom(outcome.data)
+                val ready =
+                    state.copy(content = RetainedLoadState.Ready(contentOf(outcome.data, day)))
+                when {
+                  state.detail == null -> ready
+                  refreshed == null -> ready.closingSheet()
+                  else -> ready.copy(detail = refreshed)
+                }
+              }
             }
           }
         }
@@ -337,6 +358,13 @@ private val BudgetEditorState.canSave: Boolean
 private fun primaryFirst(monedas: List<Moneda>, primary: Moneda): List<Moneda> =
     if (primary in monedas) listOf(primary) + (monedas - primary)
     else monedas.ifEmpty { listOf(primary) }
+
+private fun BudgetsUiState.closingSheet(): BudgetsUiState =
+    if (editor == null && detail == null) this else copy(sheetClosing = true)
+
+/** An editor opened from a detail hands the sheet back to it; any other editor closes the sheet. */
+private fun BudgetsUiState.leavingEditor(): BudgetsUiState =
+    if (detail != null && !sheetClosing) copy(editor = null) else closingSheet()
 
 /** Null when the budget is gone, which closes its detail. */
 private fun BudgetDetailState.refreshedFrom(statuses: List<BudgetStatus>): BudgetDetailState? =

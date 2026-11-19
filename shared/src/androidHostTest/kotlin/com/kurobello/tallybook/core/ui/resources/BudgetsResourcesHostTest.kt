@@ -14,6 +14,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.budget_history_within
 import tallybook.shared.generated.resources.budget_suggestion
 import tallybook.shared.generated.resources.budgets_line_left
 import tallybook.shared.generated.resources.budgets_line_over
@@ -54,6 +55,10 @@ class BudgetsResourcesHostTest {
             getString(Res.string.budgets_line_per_day, cop(110_000), cop(9_000)),
         )
         assertEquals("Vas bien en 5 de 7", getString(Res.string.budgets_summary, 5, 7))
+        assertEquals(
+            "Dentro del tope en 3 de los últimos 5 meses",
+            getString(Res.string.budget_history_within, 3, 5),
+        )
         assertEquals(
             "Tu promedio: ${cop(430_000)}",
             getString(Res.string.budget_suggestion, cop(430_000)),

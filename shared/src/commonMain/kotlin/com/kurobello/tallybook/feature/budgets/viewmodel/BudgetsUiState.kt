@@ -17,6 +17,11 @@ internal data class BudgetsUiState(
     val categorias: List<Categoria> = emptyList(),
     /** Null until preferences load; rows show their currency code only outside it. */
     val primaryMoneda: Moneda? = null,
+    /**
+     * The sheet is sliding away: [editor] and [detail] stay until it has hidden, so the shell keeps
+     * treating the screen as covered and Search opens only afterwards.
+     */
+    val sheetClosing: Boolean = false,
 )
 
 internal data class BudgetsContent(

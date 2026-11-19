@@ -142,6 +142,8 @@ private class RecordingActions(private val open: (String) -> Unit) : BudgetsActi
 
   override fun onViewMovements() = Unit
 
+  override fun onSheetHidden() = Unit
+
   override fun onRetry() = Unit
 
   override fun onResume() = Unit

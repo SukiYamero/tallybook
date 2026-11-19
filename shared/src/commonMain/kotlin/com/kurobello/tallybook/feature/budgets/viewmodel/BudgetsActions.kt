@@ -32,6 +32,8 @@ internal interface BudgetsActions {
 
   fun onViewMovements()
 
+  fun onSheetHidden()
+
   fun onRetry()
 
   fun onResume()

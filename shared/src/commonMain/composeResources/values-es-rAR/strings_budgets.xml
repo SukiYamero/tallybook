@@ -32,7 +32,7 @@
     <string name="budget_edit_amount">Cambiar tope</string>
     <string name="budget_history_heading">Últimos seis meses</string>
     <string name="budget_history_compared">Comparado con tu tope actual de %1$s</string>
-    <string name="budget_history_within">Dentro del tope en %1$d de %2$d meses</string>
+    <string name="budget_history_within">Dentro del tope en %1$d de los últimos %2$d meses</string>
     <string name="budget_history_month_item">%1$s %2$s</string>
     <string name="budget_history_description">Gasto en %1$s por mes: %2$s. Tope actual %3$s.</string>
     <string name="budget_history_error">No pudimos cargar los últimos meses. Tu presupuesto sigue guardado; intentá de nuevo.</string>

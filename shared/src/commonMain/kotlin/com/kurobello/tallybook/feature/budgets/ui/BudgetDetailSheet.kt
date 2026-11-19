@@ -19,6 +19,7 @@ import com.kurobello.tallybook.core.model.BudgetMonth
 import com.kurobello.tallybook.core.model.BudgetStatus
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.Moneda
+import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.ui.category.CategoryAvatar
 import com.kurobello.tallybook.core.ui.category.tintColors
 import com.kurobello.tallybook.core.ui.chart.TallybookCategoryTrendChart
@@ -57,6 +58,14 @@ import tallybook.shared.generated.resources.loading
 import tallybook.shared.generated.resources.retry
 
 private const val ITEM_SEPARATOR = ", "
+
+internal data class BudgetHistoryTally(val within: Int, val closed: Int)
+
+/** The last month is still running, so only the months before it can be within the monto yet. */
+internal fun List<BudgetMonth>.tally(monto: Money): BudgetHistoryTally {
+  val closed = dropLast(1)
+  return BudgetHistoryTally(within = closed.count { it.spent <= monto }, closed = closed.size)
+}
 
 @Composable
 internal fun BudgetDetailContent(
@@ -191,12 +200,9 @@ private fun BudgetHistoryChart(
       color = TallybookTheme.colors.foreground.tertiary,
       style = TallybookTheme.typography.caption,
   )
+  val tally = history.tally(monto)
   TallybookText(
-      stringResource(
-          Res.string.budget_history_within,
-          history.count { it.spent <= monto },
-          history.size,
-      ),
+      stringResource(Res.string.budget_history_within, tally.within, tally.closed),
       color = TallybookTheme.colors.foreground.secondary,
       style = TallybookTheme.typography.bodySmall,
   )
