@@ -19,6 +19,7 @@ import com.kurobello.tallybook.core.ui.component.TallybookButton
 import com.kurobello.tallybook.core.ui.component.TallybookFieldMessage
 import com.kurobello.tallybook.core.ui.component.TallybookSectionHeading
 import com.kurobello.tallybook.core.ui.component.TallybookSheetForm
+import com.kurobello.tallybook.core.ui.component.TallybookSheetFormLayout
 import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
@@ -53,6 +54,10 @@ internal fun BudgetEditorContent(
   TallybookSheetForm(
       header = { TallybookSheetTitle(title) },
       footer = { BudgetEditorFooter(editor, actions) },
+      layout =
+          TallybookSheetFormLayout(
+              minimumBodyHeight = TallybookTheme.dimensions.editorSheetFormMinimumHeight
+          ),
   ) {
     if (editor.editingId == null) {
       BudgetTarget(editor, categoria, actions, onChooseCategory)
