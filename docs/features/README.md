@@ -21,7 +21,7 @@ accepted scope, integration details and verification boundaries.
 | Voice dictation and dictated recurrence | DONE | [Voice dictation](voice-dictation.md) |
 | Several movimientos in one sentence | DONE | [Add movimiento](add-movimiento.md) |
 | Learning from corrections | DONE | [Add movimiento](add-movimiento.md) |
-| Budgets | IN_PROGRESS | [Budgets](budgets.md) |
+| Budgets | DONE | [Budgets](budgets.md) |
 
 ## Status rules
 

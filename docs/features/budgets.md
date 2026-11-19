@@ -42,20 +42,7 @@ tombstones); ViewModel, creation/edit/Pagado notice paths and the six-month tall
 
 On the Xiaomi M2012K11AG, `BudgetsScreenTest` passed (3 tests).
 
-### Pending: physical-device acceptance
+Accepted by the user on the Xiaomi.
 
-Not run yet; the feature stays `IN_PROGRESS` until the user accepts it on the device.
-
-- [ ] Create a budget with the suggested amount.
-- [ ] Duplicate offer for an existing `(categoria, moneda)`.
-- [ ] Rows in each state (FINE, NEAR, NEAR with nothing left, PACE, OVER).
-- [ ] Home row appears and opens Presupuestos.
-- [ ] Notice after creating a gasto, after editing one and after Pagado with Undo.
-- [ ] "Ver" from History, Search and Statistics, and Back.
-- [ ] "Ver movimientos", and the history bars and caption.
-- [ ] Delete with confirmation.
-- [ ] es-AR and en copy; light and dark theme.
-- [ ] TalkBack on a row (including whether its focus splits) and on the progress bar.
-
-Not covered even after acceptance: iOS runtime (see the backlog's iOS item), other locales on device
+Not covered: iOS runtime (see the backlog's iOS item), other locales on device
 and enlarged text.

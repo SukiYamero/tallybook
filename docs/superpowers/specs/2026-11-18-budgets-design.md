@@ -1,6 +1,6 @@
 # Budgets (Presupuestos) — design
 
-Status: draft for approval. Backlog item: *Accounts follow-ups → Budgets* (first in the work order).
+Status: delivered.
 
 ## Intent
 
@@ -37,14 +37,6 @@ or spending fast enough to pass it before the month ends.
   (see [wording](../../wording.md) §2 and §5).
 - Stacking several budget notices for one save.
 - A notice on Undo/restore, on transfers, or on ingresos.
-
-## Approaches considered
-
-| Approach | Trade-off | Outcome |
-| --- | --- | --- |
-| **A. Own `presupuesto` table** with category, currency and amount, stamped and tombstoned like every root entity; a dedicated SQL aggregate and pure status rules | More code; scales to several currencies per category and joins Drive backup/sync with no extra work | **Chosen** by the user ("the option that scales best") |
-| B. Amount column on `categoria` | Fastest; one amount per category (no multi-currency), budget edits bump the category's stamp and complicate sync, predefined categories become editable | Rejected |
-| C. Derive from `StatisticsRepository.observe` | No new query; but distribution sums roots only (no child budgets) and the snapshot is too heavy per save | Rejected |
 
 ## Data
 
@@ -172,39 +164,11 @@ row and opens Presupuestos; it never changes Home's totals, and a failed read hi
 - Delivered through the shell's `ManagementFeedbackQueue`; a standalone notice is informational
   (Short). The feedback model gains an optional budget line rather than a second queued item.
 
-## Builder notes (existing pieces to reuse)
-
-- Table and repository patterns: `Recurrencia.sq`, `RecurrenciaRepositoryImpl.kt`, `ChangeClock` /
-  `HybridChangeClock.kt`.
-- Pace window and "whole months with gasto": `core/model/StatisticsRules.kt` (`pace`).
-- Category picker, Profile entry rows and the Home recurrentes row
-  (`feature/home/HomeRecurrentesRow.kt`) as visual templates.
-- Creation ends with `AddMovimientoEffect.Saved` (`AddMovimientoSubmission.kt`); edits go through
-  `ManageMovimientoViewModel`; feedback through `core/ui/feedback/ManagementFeedbackQueue.kt`.
-- Business rules land in `docs/business-logic.md` (new *Presupuestos* section), the feature row in
-  `docs/features/README.md`, and the backlog item (which still says "built on the Statistics
-  queries") is removed when delivered.
-
-## Calls made while writing (check these)
-
-- Pace state starts on day 8 of the month.
-- The suggestion averages over months with any gasto in the currency, counting zero category months.
-- Backdated gastos and gastos moved out of a budget raise no notice.
-- Edit and Pagado merge the budget line into their existing snackbar; Undo keeps priority over "Ver".
-- Deleting a custom category tombstones its budgets; a hidden category keeps its budget.
-- The six-month history compares past months against the current amount (amounts are not versioned).
-
-## Left to the builder
-
-Package layout (`feature.budgets`), exact component composition, the chart used for the six-month
-bars, `en`/`pt-BR` strings within the wording rules, and test split (pure rules in `commonTest`,
-SQL in host tests, final check on the confirmed physical Xiaomi).
-
-## Delivered with these changes
+## As shipped
 
 The rules, screens and notice as shipped are in
 [Presupuestos](../../business-logic.md#presupuestos); scope and verification boundaries in
-[Budgets](../../features/budgets.md). Shipped details that differ from the sketches above: amounts use
+[Budgets](../../features/budgets.md). Shipped details beyond the sketches above: amounts use
 the app-wide `Money.format()`; a NEAR budget with nothing left reads "Ya usaste todo tu presupuesto de
 este mes"; the six-month history draws the current amount as a dashed line and counts only closed
 months; "Ver" opens Presupuestos through `PrimaryNavigator.showSecondary`.
