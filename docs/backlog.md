@@ -12,7 +12,7 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 3. Avisos de recurrentes por confirmar → *Producto*.
 4. Vocabulario de la frase más rico en todos los idiomas → *Richer sentence vocabulary*.
 5. Pulido chico → *Several movimientos follow-ups*, *Learning from corrections follow-ups*,
-   *Budgets follow-ups*,
+   *Budgets follow-ups*, *Statistics average*,
    *Sentence amount above the cap*,
    *`ioDispatcher` en iOS*, *Unified Custom date-range picker*, *Recurrentes copy*.
 6. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
@@ -66,6 +66,12 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
   Picking a moneda or category while a suggestion is loading can show the previous one's suggestion,
   and creating with no primary moneda loaded does nothing silently. `HomeBudgetsRow` duplicates
   `HomeRecurrentesRow` (extract a shared row on a third one). See [Budgets](features/budgets.md).
+
+- **Statistics average** — The category detail averages every complete month shown, so months
+  before the first movimiento count as zero: with only the current month recorded it reads
+  "Promedio $ 0,00". Budgets already count only months with records; the detail could do the same, or
+  hide the average when no complete month has any. See
+  [Statistics](business-logic.md#statistics).
 
 - **Recurrentes copy** — A pending row reads "Pendiente desde el 15 de noviembre" for a single due
   date ("Vence el …" reads better), and the second pending row of a recurrence truncates its
@@ -121,8 +127,7 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
   Manual Xiaomi main-flow checks do not establish these cases; see
   [Manage movimientos](features/manage-movimientos.md#verification-boundaries). Statistics needs the
   same passes: TalkBack on the chart summaries and the category sheet, and enlarged text on its cards
-  and rows, plus a light-theme and es-AR/pt-BR visual pass
-  (only dark theme in English was checked). TalkBack reads change labels like "▲ 12%" literally.
+  and rows. TalkBack reads change labels like "▲ 12%" literally.
 
 - **Taxonomía detallada de errores** — `DataError` arranca con `Local`/`Unknown` en
   `docs/tasks/fundacion/wave-1/task1/task.md`; falta expandirlo (causas de red granulares, mapeo a
