@@ -22,6 +22,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.kurobello.tallybook.core.model.BudgetNotice
 import com.kurobello.tallybook.core.ui.component.DismissGuardState
 import com.kurobello.tallybook.core.ui.component.LastWhileVisible
 import com.kurobello.tallybook.core.ui.component.ModalBottomSheetCallbacks
@@ -297,6 +298,7 @@ internal fun AddMovimientoSheetRoute(
     visible: Boolean,
     onDismiss: () -> Unit,
     onHidden: () -> Unit = {},
+    onBudgetNotice: (BudgetNotice) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: AddMovimientoViewModel = koinViewModel(),
     quickCategoryViewModel: QuickCategoryViewModel =
@@ -310,7 +312,10 @@ internal fun AddMovimientoSheetRoute(
   val categoryTarget = rememberReviewCategoryTarget()
   AddMovimientoEffects(
       effects = viewModel.effects,
-      onSaved = onDismiss,
+      onSaved = { notice ->
+        notice?.let(onBudgetNotice)
+        onDismiss()
+      },
       dictationPermission = dictationPermission,
   )
   QuickCategorySelectionEffect(
@@ -339,7 +344,7 @@ internal fun AddMovimientoSheetRoute(
 @Composable
 internal fun AddMovimientoEffects(
     effects: Flow<AddMovimientoEffect>,
-    onSaved: () -> Unit,
+    onSaved: (BudgetNotice?) -> Unit,
     dictationPermission: DictationPermissionLauncher,
 ) {
   val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -349,7 +354,7 @@ internal fun AddMovimientoEffects(
     lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
       effects.collect { effect ->
         when (effect) {
-          AddMovimientoEffect.Saved -> currentOnSaved()
+          is AddMovimientoEffect.Saved -> currentOnSaved(effect.notice)
           AddMovimientoEffect.RequestDictationPermission -> currentPermission.request()
           AddMovimientoEffect.OpenDictationSettings -> currentPermission.openSettings()
         }

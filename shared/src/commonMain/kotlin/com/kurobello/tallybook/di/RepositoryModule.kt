@@ -15,6 +15,8 @@ import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
+import com.kurobello.tallybook.core.data.PresupuestoRepository
+import com.kurobello.tallybook.core.data.PresupuestoRepositoryImpl
 import com.kurobello.tallybook.core.data.RecurrenciaRepository
 import com.kurobello.tallybook.core.data.RecurrenciaRepositoryImpl
 import com.kurobello.tallybook.core.data.SaldoRepository
@@ -77,6 +79,15 @@ val repositoryModule = module {
   }
   single<RecurrenciaRepository> {
     RecurrenciaRepositoryImpl(
+        database = get(),
+        dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
+        idGenerator = get(),
+        clock = get(),
+        changeClock = get(),
+    )
+  }
+  single<PresupuestoRepository> {
+    PresupuestoRepositoryImpl(
         database = get(),
         dispatcher = get<CoroutineDispatcher>(named(DispatcherQualifier.IO)),
         idGenerator = get(),

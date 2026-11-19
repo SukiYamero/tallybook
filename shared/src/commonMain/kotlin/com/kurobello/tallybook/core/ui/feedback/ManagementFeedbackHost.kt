@@ -19,6 +19,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.kurobello.tallybook.core.model.BudgetNotice
+import com.kurobello.tallybook.core.model.BudgetState
+import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.ui.component.LocalTallybookViewportOverlayState
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarDismissReason
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarDuration
@@ -30,6 +33,12 @@ import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
+import tallybook.shared.generated.resources.budget_notice_left
+import tallybook.shared.generated.resources.budget_notice_merged
+import tallybook.shared.generated.resources.budget_notice_over
+import tallybook.shared.generated.resources.budget_notice_pace
+import tallybook.shared.generated.resources.budget_notice_reached
+import tallybook.shared.generated.resources.budget_notice_view
 import tallybook.shared.generated.resources.movimiento_deleted
 import tallybook.shared.generated.resources.movimiento_missing
 import tallybook.shared.generated.resources.movimiento_notification_close
@@ -64,6 +73,7 @@ internal fun ManagementFeedbackRoute(
     queue: ManagementFeedbackQueue,
     modals: PrimaryModalCoordinator,
     bottomBarClearance: Dp,
+    onOpenBudgets: () -> Unit,
 ) {
   val lifecycle = LocalLifecycleOwner.current.lifecycle
   val lifecycleState by lifecycle.currentStateFlow.collectAsState()
@@ -79,7 +89,10 @@ internal fun ManagementFeedbackRoute(
       isActive = lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && isUncovered,
       bottomBarClearance = bottomBarClearance,
       onAction = { token, revision ->
-        modals.dispatchFeedback(canDeliver()) { queue.onFeedbackAction(token, revision) }
+        modals.dispatchFeedback(canDeliver()) {
+          if (queue.onBudgetAction(token, revision)) onOpenBudgets()
+          else queue.onFeedbackAction(token, revision)
+        }
       },
       onDismiss = { token, revision, _ ->
         modals.dispatchFeedback(canDeliver()) { queue.onFeedbackDismiss(token, revision) }
@@ -135,24 +148,86 @@ private fun ManagementFeedbackHost(
   }
 }
 
+internal data class ManagementFeedbackPresentation(
+    val message: StringResource?,
+    val budget: BudgetNotice?,
+    val action: StringResource?,
+    val duration: TallybookSnackbarDuration,
+    val status: TallybookSnackbarStatus,
+)
+
+/**
+ * A standalone budget notice is informational, so it stays Short even though it offers "Ver"; a
+ * line merged into a save keeps that save's Long window.
+ */
+internal fun ManagementFeedback.presentation(): ManagementFeedbackPresentation {
+  val message =
+      if (isRestoring) managementFeedbackRestoring.getValue(subject)
+      else managementFeedbackMessages[subject]?.getValue(kind)
+  val action =
+      if (opensBudgets) Res.string.budget_notice_view
+      else managementFeedbackActions[kind]?.takeIf { undo != null }
+  val isLong = undo != null || (budget != null && message != null)
+  return ManagementFeedbackPresentation(
+      message = message,
+      budget = budget.takeUnless { isRestoring },
+      action = action,
+      duration = if (isLong) TallybookSnackbarDuration.Long else TallybookSnackbarDuration.Short,
+      status = managementFeedbackStatuses.getValue(kind),
+  )
+}
+
 @Composable
 private fun ManagementFeedback.toSnackbarMessage(): TallybookSnackbarMessage {
+  val presentation = presentation()
+  val base = presentation.message?.let { stringResource(it) }
+  val notice = presentation.budget?.let { budgetNoticeText(it) }
   val message =
-      stringResource(
-          if (isRestoring) managementFeedbackRestoring.getValue(subject)
-          else managementFeedbackMessages.getValue(subject).getValue(kind)
-      )
-  val actionLabel =
-      managementFeedbackActions[kind]?.takeIf { hasAction }?.let { stringResource(it) }
+      if (base != null && notice != null)
+          stringResource(Res.string.budget_notice_merged, base, notice)
+      else base ?: notice.orEmpty()
   return TallybookSnackbarMessage(
       token,
       revision,
       message,
-      if (hasAction) TallybookSnackbarDuration.Long else TallybookSnackbarDuration.Short,
-      actionLabel,
+      presentation.duration,
+      presentation.action?.let { stringResource(it) },
       isRestoring,
-      status = managementFeedbackStatuses.getValue(kind),
+      status = presentation.status,
   )
+}
+
+internal sealed interface BudgetNoticeLine {
+  data object Over : BudgetNoticeLine
+
+  data class Left(val remaining: Money) : BudgetNoticeLine
+
+  data object Reached : BudgetNoticeLine
+
+  data class Pace(val day: Int) : BudgetNoticeLine
+}
+
+/** A PACE notice without its day, or a FINE one, still reads truthfully as what remains. */
+internal fun BudgetNotice.line(): BudgetNoticeLine {
+  val pace = paceDay
+  return when {
+    state == BudgetState.OVER -> BudgetNoticeLine.Over
+    state == BudgetState.PACE && pace != null -> BudgetNoticeLine.Pace(pace)
+    amount.minorUnits > 0 -> BudgetNoticeLine.Left(amount)
+    else -> BudgetNoticeLine.Reached
+  }
+}
+
+@Composable
+private fun budgetNoticeText(notice: BudgetNotice): String {
+  val nombre = notice.categoriaNombre
+  return when (val line = notice.line()) {
+    BudgetNoticeLine.Over -> stringResource(Res.string.budget_notice_over, nombre)
+    is BudgetNoticeLine.Left ->
+        stringResource(Res.string.budget_notice_left, nombre, line.remaining.format())
+    BudgetNoticeLine.Reached -> stringResource(Res.string.budget_notice_reached, nombre)
+    is BudgetNoticeLine.Pace -> stringResource(Res.string.budget_notice_pace, nombre, line.day)
+  }
 }
 
 internal val managementFeedbackActions: Map<ManagementFeedbackKind, StringResource> =
@@ -174,6 +249,7 @@ internal val managementFeedbackStatuses: Map<ManagementFeedbackKind, TallybookSn
         ManagementFeedbackKind.RestoreConflict to TallybookSnackbarStatus.Warning,
         ManagementFeedbackKind.RestoreMissingCuenta to TallybookSnackbarStatus.Warning,
         ManagementFeedbackKind.RestoreFailed to TallybookSnackbarStatus.Error,
+        ManagementFeedbackKind.BudgetNotice to TallybookSnackbarStatus.Info,
     )
 
 private val movimientoMessages: Map<ManagementFeedbackKind, StringResource> =
@@ -199,6 +275,7 @@ private val recurrenciaMessages: Map<ManagementFeedbackKind, StringResource> =
         ManagementFeedbackKind.RestoreConflict to Res.string.recurrencia_undo_conflict,
     )
 
+/** A budget notice has no message of its own, so [ManagementSubject.Presupuesto] has no entry. */
 internal val managementFeedbackMessages:
     Map<ManagementSubject, Map<ManagementFeedbackKind, StringResource>> =
     mapOf(
@@ -217,6 +294,7 @@ internal val managementFeedbackMessages:
         ManagementSubject.Recurrencia to recurrenciaMessages,
     )
 
+/** A budget notice carries no snapshot, so it is never restored. */
 internal val managementFeedbackRestoring: Map<ManagementSubject, StringResource> =
     mapOf(
         ManagementSubject.Movimiento to Res.string.movimiento_restoring,

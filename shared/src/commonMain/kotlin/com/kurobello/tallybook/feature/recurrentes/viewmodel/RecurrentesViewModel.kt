@@ -6,7 +6,10 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CivilToday
 import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepository
+import com.kurobello.tallybook.core.data.PresupuestoRepository
 import com.kurobello.tallybook.core.data.RecurrenciaRepository
+import com.kurobello.tallybook.core.data.noticeAfterSave
+import com.kurobello.tallybook.core.model.BudgetNotice
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
@@ -20,6 +23,7 @@ import com.kurobello.tallybook.core.model.RecurrenciaDraft
 import com.kurobello.tallybook.core.model.RecurrenciaWithPending
 import com.kurobello.tallybook.core.model.RecurrenciaWrite
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.budgetTouch
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackKind
 import com.kurobello.tallybook.core.ui.feedback.ManagementOutcome
 import com.kurobello.tallybook.core.ui.feedback.ManagementSubject
@@ -54,6 +58,7 @@ internal data class RecurrentesRepositories(
     val categorias: CategoriaRepository,
     val cuentas: CuentaRepository,
     val etiquetas: EtiquetaRepository,
+    val presupuestos: PresupuestoRepository,
 )
 
 @Suppress("TooManyFunctions")
@@ -128,15 +133,23 @@ internal class RecurrentesViewModel(
       it.copy(sheet = validated.copy(busy = OccurrenceAction.CONFIRM.takeIf { monto != null }))
     }
     if (monto == null) return
+    val template = sheet.recurrencia
+    val touch =
+        budgetTouch(
+            template.tipo,
+            template.categoriaId,
+            monto.moneda,
+            validated.fecha,
+            categorias(),
+        )
     coroutineScope.launch {
-      val outcome =
-          repositories.recurrencias.confirm(
-              sheet.recurrencia.id,
-              today.date(),
-              monto,
-              validated.fecha,
-          )
-      finishOccurrence(outcome, ManagementFeedbackKind.Confirmed) { error ->
+      val day = today.date()
+      val outcome = repositories.recurrencias.confirm(template.id, day, monto, validated.fecha)
+      val confirmed = (outcome as? DataOutcome.Success)?.data is OccurrenceResult.Done
+      val budget =
+          if (confirmed) repositories.presupuestos.noticeAfterSave(listOfNotNull(touch), day)
+          else null
+      finishOccurrence(outcome, ManagementFeedbackKind.Confirmed, budget) { error ->
         if (error is DataError.InvalidInput) OccurrenceError.TEMPLATE_INVALID
         else OccurrenceError.CONFIRM_FAILED
       }
@@ -167,6 +180,7 @@ internal class RecurrentesViewModel(
   private fun finishOccurrence(
       outcome: DataOutcome<OccurrenceResult>,
       kind: ManagementFeedbackKind,
+      budget: BudgetNotice? = null,
       errorOf: (DataError) -> OccurrenceError,
   ) {
     when (outcome) {
@@ -180,6 +194,7 @@ internal class RecurrentesViewModel(
                         ManagementSubject.Recurrencia,
                         kind,
                         UndoSnapshot.OfOccurrence(result.undo),
+                        budget,
                     )
                 )
             OccurrenceResult.NothingPending -> close()

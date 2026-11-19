@@ -8,11 +8,11 @@ import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.RestoreResult
-import com.kurobello.tallybook.core.ui.component.TallybookSnackbarDuration
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarMessage
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarTimer
 import com.kurobello.tallybook.core.ui.component.tallybookSnackbarTimeoutMillis
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackKind
+import com.kurobello.tallybook.core.ui.feedback.presentation
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -202,6 +202,7 @@ class ManageMovimientoFeedbackTest {
                             f.categorias,
                             f.etiquetas,
                             f.cuentas,
+                            f.presupuestos,
                         ),
                         f.clock,
                         TimeZoneProvider { TimeZone.UTC },
@@ -233,7 +234,7 @@ class ManageMovimientoFeedbackTest {
     runCurrent()
     val failed = assertNotNull(f.feedback.state.value.feedback)
     assertEquals(ManagementFeedbackKind.RestoreMissingCuenta, failed.kind)
-    assertFalse(failed.hasAction)
+    assertFalse(failed.presentation().action != null)
 
     f.feedback.onFeedbackDismiss(failed.token, failed.revision)
     assertEquals(ManagementFeedbackKind.Missing, f.feedback.state.value.feedback?.kind)
@@ -248,7 +249,7 @@ private fun updateFeedbackTimer(timer: TallybookSnackbarTimer, fixture: ManageMo
             it.token,
             it.revision,
             "Operation complete",
-            if (it.hasAction) TallybookSnackbarDuration.Long else TallybookSnackbarDuration.Short,
+            it.presentation().duration,
             isBusy = it.isRestoring,
         )
       }

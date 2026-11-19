@@ -1,9 +1,14 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.data.IdGenerator
+import com.kurobello.tallybook.core.data.noticeAfterSave
+import com.kurobello.tallybook.core.model.BudgetTouch
+import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CorreccionFrase
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
+import com.kurobello.tallybook.core.model.Movimiento
+import com.kurobello.tallybook.core.model.budgetTouch
 import com.kurobello.tallybook.core.model.map
 import kotlin.time.Instant
 import kotlinx.coroutines.CoroutineScope
@@ -11,6 +16,7 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
@@ -45,6 +51,8 @@ internal class AddMovimientoSubmission(
           else repositories.recurrencias.create(movement, frecuencia, today).map {}
         },
         corrections = { draft.draftCorrections(movement, idGenerator, createdAt) },
+        touches = budgetTouches(listOf(movement), draft.categorias),
+        today = today,
         onFailure = { error ->
           // Every refusal is invalid input; re-reading the cuenta tells a refused one apart.
           val rejected =
@@ -71,6 +79,8 @@ internal class AddMovimientoSubmission(
         persist(
             write = { repositories.saveAll(save.movimientos, review.frecuencia, today) },
             corrections = { review.partsCorrections(save.movimientos, idGenerator, createdAt) },
+            touches = budgetTouches(save.movimientos, review.categorias),
+            today = today,
             onFailure = { uiState.update { it.copy(error = MovimientoFormError.SAVE_FAILED) } },
         )
       }
@@ -80,11 +90,14 @@ internal class AddMovimientoSubmission(
   /**
    * The corrections are written apart from the save and only after it succeeded, before Saved
    * closes the screen and cancels its scope. A failed write is dropped: the movimiento is saved
-   * either way, and a missing record only costs one lesson.
+   * either way, and a missing record only costs one lesson. The budget notice is read the same way,
+   * after the write and before Saved, for every saved gasto at once.
    */
   private fun persist(
       write: suspend () -> DataOutcome<Unit>,
       corrections: () -> List<CorreccionFrase>,
+      touches: List<BudgetTouch>,
+      today: LocalDate,
       onFailure: suspend (DataError) -> Unit,
   ) {
     uiState.update { it.copy(isSubmitting = true) }
@@ -96,7 +109,8 @@ internal class AddMovimientoSubmission(
             corrections()
                 .takeIf { it.isNotEmpty() }
                 ?.let { repositories.correcciones.insertAll(it) }
-            effects.send(AddMovimientoEffect.Saved)
+            val notice = repositories.presupuestos.noticeAfterSave(touches, today)
+            effects.send(AddMovimientoEffect.Saved(notice))
             saved = true
           }
           is DataOutcome.Failure -> onFailure(outcome.error)
@@ -107,6 +121,13 @@ internal class AddMovimientoSubmission(
         }
       }
     }
+  }
+
+  private fun budgetTouches(
+      movimientos: List<Movimiento>,
+      categorias: List<Categoria>,
+  ): List<BudgetTouch> = movimientos.mapNotNull {
+    budgetTouch(it.tipo, it.categoriaId, it.monto.moneda, it.fecha, categorias)
   }
 
   private fun AddMovimientoUiState.withRejectedCuenta(): AddMovimientoUiState =

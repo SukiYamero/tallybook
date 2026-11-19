@@ -3,10 +3,14 @@ package com.kurobello.tallybook.feature.recurrentes.viewmodel
 import com.kurobello.tallybook.core.data.CivilToday
 import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
+import com.kurobello.tallybook.core.data.FakePresupuestoRepository
 import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.FakeTransferenciaRepository
 import com.kurobello.tallybook.core.data.MutableClock
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.model.BudgetNotice
+import com.kurobello.tallybook.core.model.BudgetState
+import com.kurobello.tallybook.core.model.BudgetTouch
 import com.kurobello.tallybook.core.model.CATEGORIA_OTROS_ID
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
@@ -15,8 +19,10 @@ import com.kurobello.tallybook.core.model.Frecuencia
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
+import com.kurobello.tallybook.core.model.Presupuesto
 import com.kurobello.tallybook.core.model.Recurrencia
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.budgetStatus
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackKind
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackViewModel
 import com.kurobello.tallybook.core.ui.feedback.ManagementOutcome
@@ -103,6 +109,70 @@ class RecurrentesViewModelTest {
     assertEquals(ManagementFeedbackKind.Confirmed, outcome.kind)
     assertIs<UndoSnapshot.OfOccurrence>(outcome.undo)
     assertEquals(2, f.viewModel.uiState.value.pendingCount)
+  }
+
+  @Test
+  fun paidGastoMergesNoticeAndKeepsUndo() = runTest {
+    val f = fixture(rent())
+    f.presupuestos.statuses.value = DataOutcome.Success(listOf(hogarBudget()))
+    f.viewModel.onOpenOccurrence("rent")
+    f.viewModel.onOccurrenceFechaChanged(LocalDate(2026, 11, 10))
+
+    f.viewModel.onPaid()
+    runCurrent()
+    f.viewModel.onSheetHidden()
+
+    val outcome = f.feedbackOutcome()
+    assertEquals(ManagementFeedbackKind.Confirmed, outcome.kind)
+    assertIs<UndoSnapshot.OfOccurrence>(outcome.undo)
+    assertEquals(
+        BudgetNotice("Hogar", BudgetState.OVER, Money(30_000_000, Moneda.COP), null),
+        outcome.budget,
+    )
+    assertEquals(
+        listOf(listOf(BudgetTouch("cat_hogar", null, Moneda.COP, LocalDate(2026, 11, 10)))),
+        f.presupuestos.noticeReads,
+    )
+  }
+
+  @Test
+  fun paidLastMonthSendsNone() = runTest {
+    val f = fixture(rent())
+    f.presupuestos.statuses.value = DataOutcome.Success(listOf(hogarBudget()))
+    f.viewModel.onOpenOccurrence("rent")
+    f.viewModel.onOccurrenceFechaChanged(LocalDate(2026, 10, 31))
+
+    f.viewModel.onPaid()
+    runCurrent()
+    f.viewModel.onSheetHidden()
+
+    val outcome = f.feedbackOutcome()
+    assertEquals(ManagementFeedbackKind.Confirmed, outcome.kind)
+    assertIs<UndoSnapshot.OfOccurrence>(outcome.undo)
+    assertNull(outcome.budget)
+  }
+
+  @Test
+  fun paidIngresoAndSkipReadNoNotice() = runTest {
+    val f = fixture(rent(), salary())
+    f.presupuestos.statuses.value = DataOutcome.Success(listOf(hogarBudget()))
+    f.clock.now = Instant.parse("2026-11-30T12:00:00Z")
+    f.viewModel.onResume()
+    runCurrent()
+
+    f.viewModel.onOpenOccurrence("salary")
+    f.viewModel.onPaid()
+    runCurrent()
+    f.viewModel.onSheetHidden()
+    assertNull(f.feedbackOutcome().budget)
+
+    f.viewModel.onOpenOccurrence("rent")
+    f.viewModel.onSkip()
+    runCurrent()
+    f.viewModel.onSheetHidden()
+    assertNull(f.feedbackOutcome().budget)
+
+    assertTrue(f.presupuestos.noticeReads.isEmpty())
   }
 
   @Test
@@ -379,6 +449,7 @@ class RecurrentesViewModelTest {
   private class Fixture(
       val viewModel: RecurrentesViewModel,
       val recurrencias: FakeRecurrenciaRepository,
+      val presupuestos: FakePresupuestoRepository,
       val clock: MutableClock,
       private val scope: TestScope,
   ) {
@@ -401,6 +472,7 @@ class RecurrentesViewModelTest {
   ): Fixture {
     val repository = FakeRecurrenciaRepository(recurrencias.toList()).apply(configure)
     val clock = MutableClock(Instant.parse("2026-11-15T12:00:00Z"))
+    val presupuestos = FakePresupuestoRepository()
     val viewModel =
         RecurrentesViewModel(
             repositories =
@@ -417,12 +489,13 @@ class RecurrentesViewModelTest {
                         ),
                     cuentas = FakeCuentaRepository(listOf(COP_CASH)),
                     etiquetas = FakeEtiquetaRepository(),
+                    presupuestos = presupuestos,
                 ),
             today = CivilToday(clock, TimeZoneProvider { TimeZone.UTC }),
             scope = backgroundScope,
         )
     runCurrent()
-    return Fixture(viewModel, repository, clock, this)
+    return Fixture(viewModel, repository, presupuestos, clock, this)
   }
 }
 
@@ -478,4 +551,18 @@ private fun salary() =
         LocalDate(2026, 10, 30),
         LocalDate(2026, 11, 30),
         "2026-10-30T10:00:00Z",
+    )
+
+private fun hogarBudget() =
+    budgetStatus(
+        Presupuesto(
+            "hogar-budget",
+            "cat_hogar",
+            Money(100_000_000, Moneda.COP),
+            Instant.parse("2026-01-01T00:00:00Z"),
+        ),
+        "Hogar",
+        null,
+        Money(130_000_000, Moneda.COP),
+        LocalDate(2026, 11, 15),
     )

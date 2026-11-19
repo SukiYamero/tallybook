@@ -11,9 +11,11 @@ import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.FakeCorreccionFraseRepository
 import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
+import com.kurobello.tallybook.core.data.FakePresupuestoRepository
 import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.PresupuestoRepository
 import com.kurobello.tallybook.core.data.RecurrenciaRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
@@ -67,6 +69,7 @@ internal fun createAddViewModel(
     cuentaRepository: CuentaRepository = FakeCuentaRepository(addCashCuentas()),
     recurrenciaRepository: RecurrenciaRepository = FakeRecurrenciaRepository(),
     correccionRepository: CorreccionFraseRepository = FakeCorreccionFraseRepository(),
+    presupuestoRepository: PresupuestoRepository = FakePresupuestoRepository(),
     clock: Clock = AddFixedClock(ADD_TEST_NOW),
     timeZone: TimeZone = TimeZone.UTC,
     computationDispatcher: CoroutineDispatcher = UnconfinedTestDispatcher(),
@@ -85,6 +88,7 @@ internal fun createAddViewModel(
                 recurrencias = recurrenciaRepository,
                 voice = voice,
                 correcciones = correccionRepository,
+                presupuestos = presupuestoRepository,
             ),
         idGenerator = idGenerator,
         clock = clock,

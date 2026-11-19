@@ -17,6 +17,7 @@ import com.kurobello.tallybook.feature.search.ui.SearchFilterRequest
  * transition drops a pending one because it belonged to the navigation that issued it.
  */
 @Stable
+@Suppress("TooManyFunctions")
 internal class PrimaryNavigator(
     private val navigation: MutableState<PrimaryNavigationState>,
     val modals: PrimaryModalCoordinator,
@@ -76,6 +77,10 @@ internal class PrimaryNavigator(
 
   fun openSecondary(destination: Destination) {
     navigate { openSecondary(destination) }
+  }
+
+  fun showSecondary(destination: Destination) {
+    navigate { showSecondary(destination) }
   }
 
   fun back() {

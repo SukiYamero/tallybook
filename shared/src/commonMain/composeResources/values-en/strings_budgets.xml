@@ -1,0 +1,53 @@
+<resources>
+    <string name="profile_budgets_label">Budgets</string>
+    <string name="profile_budgets_body">Set a monthly limit for what you spend in each category.</string>
+    <string name="budgets_title">Budgets</string>
+    <plurals name="budgets_period">
+        <item quantity="one">%1$s · %2$d day left</item>
+        <item quantity="other">%1$s · %2$d days left</item>
+    </plurals>
+    <string name="budgets_summary">On track in %1$d of %2$d</string>
+    <string name="budgets_spent_of">%1$s of %2$s</string>
+    <string name="budgets_line_over">%1$s over your budget</string>
+    <string name="budgets_line_left">%1$s left</string>
+    <string name="budgets_line_reached">You’ve used your whole budget this month</string>
+    <string name="budgets_line_pace">At this pace you’d hit the limit on day %1$d</string>
+    <string name="budgets_line_per_day">%1$s left · %2$s a day</string>
+    <string name="budgets_name_with_moneda">%1$s (%2$s)</string>
+    <string name="budgets_add">Budget</string>
+    <string name="budgets_add_description">Create budget</string>
+    <string name="budgets_open">Open budget</string>
+    <string name="budgets_empty_title">No budgets yet</string>
+    <string name="budgets_empty_body">To see how much you have left each month, set a limit for a category.</string>
+    <string name="budgets_load_error">We couldn’t load your budgets. Your data is still saved; try again.</string>
+    <string name="budget_new_title">New budget</string>
+    <string name="budget_edit_title">Edit budget</string>
+    <string name="budget_category_label">Category</string>
+    <string name="budget_amount_label">Monthly limit</string>
+    <string name="budget_suggestion">Your average: %1$s</string>
+    <string name="budget_duplicate">You already have a budget for %1$s in %2$s; you can change its limit here.</string>
+    <string name="budget_save">Save</string>
+    <string name="budget_save_error">We couldn’t save the budget. Nothing changed; try again.</string>
+    <string name="budget_edit_amount">Change limit</string>
+    <string name="budget_history_heading">Last six months</string>
+    <string name="budget_history_compared">Compared with your current limit of %1$s</string>
+    <string name="budget_history_within">Within the limit in %1$d of the last %2$d months</string>
+    <string name="budget_history_month_item">%1$s %2$s</string>
+    <string name="budget_history_description">Spending on %1$s by month: %2$s. Current limit %3$s.</string>
+    <string name="budget_history_error">We couldn’t load the last months. Your budget is still saved; try again.</string>
+    <string name="budget_view_movimientos">View movements</string>
+    <string name="budget_delete">Delete budget</string>
+    <string name="budget_delete_title">Delete this budget?</string>
+    <string name="budget_delete_message">Your movements stay as they are; you just stop tracking this limit.</string>
+    <string name="budget_delete_error">We couldn’t delete it. Your data is still saved; try again.</string>
+    <string name="budget_notice_over">%1$s: you’re already over budget this month</string>
+    <string name="budget_notice_left">%1$s: %2$s left this month</string>
+    <string name="budget_notice_reached">%1$s: you’ve used your whole budget this month</string>
+    <string name="budget_notice_pace">%1$s: at this pace you’d hit the limit on day %2$d</string>
+    <string name="budget_notice_merged">%1$s · %2$s</string>
+    <string name="budget_notice_view">View</string>
+    <plurals name="home_budgets_to_review">
+        <item quantity="one">%1$d budget to review</item>
+        <item quantity="other">%1$d budgets to review</item>
+    </plurals>
+</resources>

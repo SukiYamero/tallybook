@@ -559,6 +559,9 @@ nombres de las categorías predefinidas siguen el idioma activo; la moneda infer
   confirmar" sits under the balance card and opens Recurrentes. N counts occurrences, not
   recurrencias. It never changes the balance, the month's totals or the recent movimientos, and a
   failed read hides only the row.
+- While any [budget](#presupuestos) is not fine, a compact row "N presupuestos para revisar" sits
+  with the recurrentes row and opens Presupuestos. It never changes the balance, the month's totals
+  or the recent movimientos, and a failed read hides only the row.
 
 ## Recurrentes
 
@@ -602,6 +605,89 @@ Home total, History, Search, Statistics or CSV export until it becomes a movimie
   can always change and applies to pending and future occurrences. Past movimientos never change.
 - **Deleting** asks first and has no Undo. It tombstones the recurrencia; its movimientos keep
   `recurrencia_id`. Deleting or re-dating a confirmed movimiento does not bring its occurrence back.
+
+## Presupuestos
+
+A budget is a monthly amount the user assigns to a category. The goal is awareness, never
+restriction: the app never blocks, delays or asks to confirm a save because of a budget, and its copy
+is calm (no "alerta", exclamation marks or warning icons; see [wording](wording.md)).
+
+- **Data.** `presupuesto` is a stamped root table (see
+  [Change stamps and tombstones](#change-stamps-and-tombstones)) with `categoria_id`, `moneda` and
+  `monto_minor` (> 0, capped by `Money.MAX_MINOR_UNITS`). At most one live budget per
+  `(categoria, moneda)`, checked by the repository; creating one that exists offers the existing
+  budget instead of a duplicate. A budget exists on any category except Otros: predefined roots and
+  children and custom categories. The currency is chosen at creation (the primary one by default; the
+  selector appears only while live accounts exist in more than one currency) and is locked
+  afterwards. A hidden category keeps its budget and keeps counting; deleting a custom category
+  tombstones its budgets (see [Custom categories](#custom-categories)).
+- **Spent** is the sum of live gastos in the budget's currency whose category is the budget's
+  category or one of its children (a parent includes its children, a child only itself), with `fecha`
+  from the first day of the current month through today. Ingresos, transfers and recurrente
+  occurrences not yet confirmed do not count. Every read uses the injected civil day, never the
+  clock, and sums are exact minor units. Parent and child budgets coexist and are evaluated on their
+  own.
+- **Remaining** is monto minus spent. **Per day** is remaining over the days left including today,
+  rounded down to the minor unit, shown only while remaining is above zero.
+- **States**, the first that applies: `OVER` (spent above monto); `NEAR` (spent at least 80% of
+  monto; spent equal to monto is NEAR with nothing left); `PACE` (from day 8 of the month, spent
+  above zero and spent over elapsed days times the month's days above monto; the day it would be
+  reached is the first day `d` with spent over elapsed times `d` above monto, at most the month's last
+  day); `FINE` otherwise.
+- **Order** on screen: state (OVER, NEAR, PACE, FINE), then share spent descending, then category
+  name.
+- **Suggested amount** when creating: the average monthly gasto of that category (children included)
+  in the chosen currency over up to the three latest whole months with any gasto in that currency
+  among the previous five, the window [Statistics](#statistics) uses for pace; a month the category had
+  no gasto counts as zero. Rounded up to two significant digits (420.337 becomes 430.000). No
+  suggestion without such a month or when the average is zero. It is a tappable hint, never prefilled.
+
+### Presupuestos screen (Profile, Home row, "Ver")
+
+- Profile lists Presupuestos next to Categories and Tags. The header shows the month and the days
+  left; a summary card says "Vas bien en X de N" (X counts FINE budgets). Each row is the category,
+  "spent of monto" (amounts through the app-wide `Money.format()`), a progress bar colored by state
+  (neutral, amber for NEAR and PACE, soft red for OVER) and one line:
+  OVER "$ 20.000 por encima de tu presupuesto"; NEAR "Te quedan $ 30.000", or, with nothing left,
+  "Ya usaste todo tu presupuesto de este mes"; PACE "A este ritmo llegarías al tope el día 22"; FINE
+  "Te quedan $ 110.000 · $ 9.000 por día". Rows of a currency other than the primary show its code.
+  Without budgets the screen invites creating the first one; a failed read shows a retryable error.
+- Creating opens a sheet: category (the single-select picker, without Otros), the currency when
+  applicable and the amount with the suggestion hint. Saving an existing `(categoria, moneda)` offers
+  its budget to edit.
+- A row opens its sheet: the amount (editable), delete with confirmation and no Undo (it tombstones
+  the budget; movimientos do not change), "Ver movimientos" and the last six months as bars of
+  monthly gasto with the current amount drawn as a dashed line. Past months are compared with the
+  current amount because amounts are not versioned, and the caption "Dentro del tope en X de los
+  últimos N meses" counts only closed months in which the user recorded some gasto in that currency (the running month
+  is shown but not counted); with none, the caption is hidden. "Ver
+  movimientos" opens Search filtered by the category (children included), the currency, type gasto
+  and the current month (a [filter request](#search-and-filters)).
+- The sheet keeps the shell covered until it is hidden, so the screen behind never flashes between
+  sheet and navigation.
+- "Ver" (from the notice) and the Home row open Presupuestos over the selected primary tab when the
+  shell allows a secondary destination there, otherwise over Home, replacing an open secondary; Back
+  returns to that primary's root.
+
+### Notice after saving
+
+- Raised after any successful save of a gasto: single creation, several movimientos, edit, and Pagado
+  on a recurrente. Never after Undo, on transfers or on ingresos.
+- Candidates are the budgets whose category subtree contains a saved gasto's category, in that gasto's
+  currency, evaluated after the write, only for gastos whose `fecha` is in the current month (a
+  backdated gasto, or Pagado on last month's due date, does not touch this month's budgets). A budget
+  an edit moved the gasto out of is not a candidate. Only non-FINE candidates count; the most severe
+  wins, ties go to the more specific category (child), then the higher share spent. Exactly one notice
+  or none.
+- Copy, with the category as prefix: OVER "Comida: ya estás por encima de tu presupuesto este mes";
+  NEAR "Comida: te quedan $ 30.000 este mes", or, with nothing left, "Comida: ya usaste todo tu
+  presupuesto de este mes"; PACE "Comida: a este ritmo llegarías al tope el día 22".
+- One snackbar per save. Creation enqueues only the budget notice, a standalone informational (Short)
+  snackbar with the action "Ver". Edit and Pagado already enqueue their own snackbar (`Saved`,
+  `Confirmed` with Undo): the budget line is merged into its message. Edit's `Saved` has no action, so
+  with a budget line it gains "Ver" and becomes Long; Pagado keeps Undo, which wins over "Ver", so
+  Undo removes the notice together with the save. It shows every time a save
+  touches a non-FINE budget, not only on the first crossing.
 
 ## CSV export
 
@@ -712,7 +798,8 @@ personalizadas son alcance aceptado en una fase posterior (abajo).
 - Any category except Otros can be hidden. Hidden categories leave the movimiento pickers and
   suggestions but stay on existing movimientos, History and Search, and remain filterable.
 - A custom category is deleted only while no movimiento in any currency uses it; when in use, the
-  sheet offers hiding it instead, and no movimiento is rewritten.
+  sheet offers hiding it instead, and no movimiento is rewritten. Deleting one also tombstones its
+  [budgets](#presupuestos) in the same transaction; a hidden category keeps its budget.
 
 ## Tracking and History
 
@@ -894,7 +981,7 @@ one currency at a time. Presentation lives in
 Every persisted root entity is ready for the future Drive backup and sync engine without another data
 migration.
 
-- `movimiento`, `categoria`, `etiqueta`, `cuenta`, `transferencia`, `recurrencia` and
+- `movimiento`, `categoria`, `etiqueta`, `cuenta`, `transferencia`, `recurrencia`, `presupuesto` and
   `correccion_frase` have
   `updated_at` (non-null) and `deleted_at` (null while live). Both hold a `ChangeStamp`: a hybrid
   logical clock value encoded as sortable text,

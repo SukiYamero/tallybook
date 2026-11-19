@@ -6,18 +6,17 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 
 Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 
-1. Presupuestos (sobre las consultas de Estadísticas) → *Accounts follow-ups*.
-2. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
+1. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
    and Statistics accessibility*, *Profile polish*.
-3. Google login + backup en Drive, cuando 1 esté cerrado → [plan](tasks/google-drive-persistence.md).
-4. Avisos de recurrentes por confirmar → *Producto*.
-5. Vocabulario de la frase más rico en todos los idiomas → *Richer sentence vocabulary*.
-6. Pulido chico → *Several movimientos follow-ups*, *Learning from corrections follow-ups*,
+2. Google login + backup en Drive → [plan](tasks/google-drive-persistence.md).
+3. Avisos de recurrentes por confirmar → *Producto*.
+4. Vocabulario de la frase más rico en todos los idiomas → *Richer sentence vocabulary*.
+5. Pulido chico → *Several movimientos follow-ups*, *Learning from corrections follow-ups*,
    *Sentence amount above the cap*,
    *`ioDispatcher` en iOS*, *Unified Custom date-range picker*, *Recurrentes copy*.
-7. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
-8. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
-9. Prueba completa en iPhone físico, en una sola pasada cuando Android esté terminado (Android es el
+6. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
+7. Infra → *Taxonomía de errores* (con Drive), *Sync engine* (después de Drive), *Detekt con Gradle 10*, *CI*.
+8. Prueba completa en iPhone físico, en una sola pasada cuando Android esté terminado (Android es el
    objetivo primero; cada feature mantiene compilando iOS mientras tanto) → *iOS physical end-to-end*.
 
 ## Producto
@@ -152,8 +151,6 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 - **Accounts follow-ups** — Not in the delivered scope, still wanted:
   - Exchange rates and FX conversion between currencies.
   - Transfers between own accounts from the sentence dialog.
-  - Budgets, built on the Statistics queries (`StatisticsRepository`) and their account and medio
-    dimensions.
   - Investment and asset accounts.
   - Excluding an account from totals.
 

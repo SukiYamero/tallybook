@@ -269,7 +269,7 @@ class AddMovimientoViewModelTest {
     runCurrent()
 
     assertEquals(1, repository.insertCalls)
-    assertEquals(AddMovimientoEffect.Saved, viewModel.effects.first())
+    assertEquals(AddMovimientoEffect.Saved(null), viewModel.effects.first())
   }
 
   @Test
@@ -286,7 +286,7 @@ class AddMovimientoViewModelTest {
     runCurrent()
 
     assertEquals(1, repository.inserted.size)
-    assertEquals(AddMovimientoEffect.Saved, viewModel.effects.first())
+    assertEquals(AddMovimientoEffect.Saved(null), viewModel.effects.first())
     assertNull(withTimeoutOrNull(1) { viewModel.effects.first() })
   }
 
@@ -335,7 +335,7 @@ class AddMovimientoViewModelTest {
     assertEquals(2, repository.inserted.size)
     assertEquals(repository.inserted.first(), repository.inserted.last())
     assertNull(viewModel.uiState.value.error)
-    assertEquals(AddMovimientoEffect.Saved, viewModel.effects.first())
+    assertEquals(AddMovimientoEffect.Saved(null), viewModel.effects.first())
   }
 
   @Test

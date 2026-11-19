@@ -10,6 +10,7 @@ import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.PresupuestoRepository
 import com.kurobello.tallybook.core.data.RecurrenciaRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
 import com.kurobello.tallybook.core.data.entry.CorrectionRules
@@ -760,6 +761,7 @@ internal data class AddMovimientoRepositories(
     val recurrencias: RecurrenciaRepository,
     val voice: VoiceDictation,
     val correcciones: CorreccionFraseRepository,
+    val presupuestos: PresupuestoRepository,
 )
 
 private sealed interface LoadState<out T> {

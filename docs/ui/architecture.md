@@ -460,7 +460,9 @@ Snapshotting extras for each parent lifetime prevents Activity Intent Bundles fr
 Tabs select existing entries; History root Back selects Home, Home root delegates platform exit, and
 Search, Statistics and Profile root Back select Home. One `secondary` slot shows a secondary
 destination over the selected primary with the bottom bar hidden: the UI catalog over any primary,
-Categories and Tags only over Profile, Accounts and Recurrentes over Home or Profile (`PrimaryNavigator.openSecondary`). Back closes the
+Categories and Tags only over Profile, Accounts, Recurrentes and Presupuestos over Home or Profile (`PrimaryNavigator.openSecondary`).
+A snackbar's "Ver" reaches Presupuestos from anywhere through `PrimaryNavigator.showSecondary`, which
+replaces an open secondary and falls back to Home when the selected primary cannot hold it. Back closes the
 secondary first, and selecting any primary clears it. Home search opens Search with a one-time focus
 intent; "View N movements" in a Categories or Tags sheet, or "View movements" in an account sheet,
 selects Search, once that sheet has hidden, with a one-shot `SearchFilterRequest` (category, tag or
@@ -827,7 +829,7 @@ modal coordinator already keeps that sheet and a claimed restore exclusive.
 read generation, management session, editable draft, mutation and the pending committed outcome it
 enqueues once its sheet is hidden. `ManageTransferenciaViewModel` (`feature/transfers`) lives in
 the same owner under the same contract for the transfer sheet (create, edit, delete); creating a
-transfer enqueues nothing, like movimiento creation. The queue outlives every sheet so Undo does not
+transfer enqueues nothing; movimiento creation enqueues only a budget notice. The queue outlives every sheet so Undo does not
 depend on an entry or closing modal. The existing creation store/session remains separate.
 
 The child uses the root parent's remembered creation extras and no saved-state registry.
@@ -854,7 +856,10 @@ badge background.
 One shell host renders committed management feedback after
 the originating sheet is hidden. It sits above measured bottom chrome, safe drawing and IME clearance,
 respecting horizontal safe edges and the shared content width. Inline messages remain the recovery
-surface inside an open sheet; creation does not acquire a new snackbar producer.
+surface inside an open sheet; creation enqueues only the budget notice, and only when a saved gasto
+leaves a budget in a non-fine state. That notice stands alone (Short, action "Ver"); after an edit or
+Pagado its line is merged into that save's own feedback instead, so one save never queues two
+snackbars, Undo keeps priority over "Ver", and claiming Undo drops the line with the save.
 
 Informational feedback normally uses the Short 3.7-second token; Undo/Retry uses Long 9.7 seconds.
 Once messages are waiting, that visible batch uses half the baseline: Short 1.85 seconds and Long

@@ -60,6 +60,19 @@ internal data class PrimaryNavigationState(
       if (secondary == null && destination.opensOver(selected)) copy(secondary = destination)
       else this
 
+  /**
+   * Shows [destination] from wherever the shell stands, for intents raised outside any screen (a
+   * snackbar action): it replaces an open secondary and falls back to Home when the selected
+   * primary cannot hold it.
+   */
+  fun showSecondary(destination: Destination): PrimaryNavigationState =
+      when {
+        secondary == destination -> this
+        destination.opensOver(selected) -> copy(secondary = destination)
+        destination.opensOver(Home) -> copy(selected = Home, secondary = destination)
+        else -> this
+      }
+
   fun back(): PrimaryNavigationState =
       when {
         secondary != null -> copy(secondary = null)
@@ -77,7 +90,8 @@ private fun Destination.opensOver(primary: Destination): Boolean =
       Categories,
       Tags -> primary == Profile
       Accounts,
-      Recurrentes -> primary == Home || primary == Profile
+      Recurrentes,
+      Presupuestos -> primary == Home || primary == Profile
       Home,
       History,
       Search,
@@ -96,5 +110,6 @@ internal fun initialPrimaryNavigation(start: Destination): PrimaryNavigationStat
       Categories,
       Tags,
       Accounts,
-      Recurrentes -> PrimaryNavigationState(Profile, profileVisited = true, secondary = start)
+      Recurrentes,
+      Presupuestos -> PrimaryNavigationState(Profile, profileVisited = true, secondary = start)
     }

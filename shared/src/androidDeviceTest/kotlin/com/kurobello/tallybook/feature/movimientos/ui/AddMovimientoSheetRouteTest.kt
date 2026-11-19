@@ -14,6 +14,7 @@ import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.FakeCorreccionFraseRepository
 import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
+import com.kurobello.tallybook.core.data.FakePresupuestoRepository
 import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.MovimientoRepository
@@ -156,6 +157,7 @@ class AddMovimientoSheetRouteTest {
                   recurrencias = FakeRecurrenciaRepository(),
                   voice = UnavailableVoiceDictation,
                   correcciones = FakeCorreccionFraseRepository(),
+                  presupuestos = FakePresupuestoRepository(),
               ),
           idGenerator = IdGenerator { "movement-id" },
           clock = FixedClock,

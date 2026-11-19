@@ -196,6 +196,28 @@ internal class PrimaryNavigationTest {
   }
 
   @Test
+  fun budgetsShowFromAnyPrimaryOrSecondary() {
+    val home = PrimaryNavigationState()
+    assertEquals(home.copy(secondary = Presupuestos), home.showSecondary(Presupuestos))
+
+    val history = home.select(History)
+    val overHome = history.showSecondary(Presupuestos)
+    assertEquals(Home, overHome.selected)
+    assertEquals(Presupuestos, overHome.secondary)
+    assertTrue(overHome.historyVisited)
+    assertEquals(home.copy(historyVisited = true), overHome.back())
+
+    val accounts = history.select(Profile).openSecondary(Accounts)
+    val overProfile = accounts.showSecondary(Presupuestos)
+    assertEquals(Profile, overProfile.selected)
+    assertEquals(Presupuestos, overProfile.secondary)
+
+    val budgets = home.openSecondary(Presupuestos)
+    assertSame(budgets, budgets.showSecondary(Presupuestos))
+    assertSame(home, home.showSecondary(Categories))
+  }
+
+  @Test
   fun tagsOpensOnlyOverProfileAndBackReturnsToProfile() {
     val home = PrimaryNavigationState()
     assertSame(home, home.openSecondary(Tags))
@@ -416,6 +438,27 @@ internal class PrimaryNavigationTest {
         initialPrimaryNavigation(Recurrentes),
     )
     assertEquals("secondary-recurrentes", primaryContentKey(Recurrentes))
+  }
+
+  @Test
+  fun presupuestosOpensOverHomeOrProfileAndBackReturnsToThatPrimary() {
+    val home = PrimaryNavigationState()
+    val fromHome = home.openSecondary(Presupuestos)
+    assertEquals(listOf(Home, Presupuestos), fromHome.displayedKeys)
+    assertEquals(home, fromHome.back())
+
+    val history = home.select(History)
+    assertSame(history, history.openSecondary(Presupuestos))
+
+    val profile = home.select(Profile)
+    val fromProfile = profile.openSecondary(Presupuestos)
+    assertEquals(listOf(Home, Profile, Presupuestos), fromProfile.retainedKeys)
+    assertEquals(profile, fromProfile.back())
+    assertEquals(
+        initialPrimaryNavigation(Profile).openSecondary(Presupuestos),
+        initialPrimaryNavigation(Presupuestos),
+    )
+    assertEquals("secondary-presupuestos", primaryContentKey(Presupuestos))
   }
 
   @Test

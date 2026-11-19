@@ -33,7 +33,7 @@ class AddMovimientoRepetirTest {
 
     assertEquals(1, f.movimientos.inserted.size)
     assertEquals(emptyList(), f.recurrencias.created)
-    assertEquals(AddMovimientoEffect.Saved, f.viewModel.effects.first())
+    assertEquals(AddMovimientoEffect.Saved(null), f.viewModel.effects.first())
   }
 
   @Test
@@ -53,7 +53,7 @@ class AddMovimientoRepetirTest {
     assertEquals(Money(500_000, Moneda.COP), movimiento.monto)
     val recurrencia = f.recurrencias.recurrencias.value.values.single()
     assertEquals(LocalDate(2026, 9, 22), recurrencia.proximaFecha)
-    assertEquals(AddMovimientoEffect.Saved, f.viewModel.effects.first())
+    assertEquals(AddMovimientoEffect.Saved(null), f.viewModel.effects.first())
   }
 
   @Test

@@ -3,6 +3,8 @@ package com.kurobello.tallybook.core.ui.feedback
 import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.FakeTransferenciaRepository
 import com.kurobello.tallybook.core.data.TransferenciaRepository
+import com.kurobello.tallybook.core.model.BudgetNotice
+import com.kurobello.tallybook.core.model.BudgetState
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Moneda
@@ -71,7 +73,7 @@ class ManagementFeedbackQueueTest {
 
     val third = assertNotNull(f.queue.state.value.feedback)
     assertEquals(ManagementFeedbackKind.Saved, third.kind)
-    assertFalse(third.hasAction)
+    assertFalse(third.presentation().action != null)
     assertTrue(third.token > second.token)
   }
 
@@ -117,7 +119,7 @@ class ManagementFeedbackQueueTest {
     runCurrent()
     val restored = assertNotNull(f.queue.state.value.feedback)
     assertEquals(ManagementFeedbackKind.Restored, restored.kind)
-    assertFalse(restored.hasAction)
+    assertFalse(restored.presentation().action != null)
     assertEquals(waiting, f.queue.state.value.feedbackQueue[1])
   }
 
@@ -310,7 +312,58 @@ class ManagementFeedbackQueueTest {
     runCurrent()
     assertEquals(0, f.transferencias.restores)
   }
+
+  @Test
+  fun viewDismissesOnlyTheVisibleNoticeAndAdvances() = runTest {
+    val f = QueueFixture(backgroundScope)
+    f.queue.enqueue(
+        ManagementOutcome(
+            ManagementSubject.Presupuesto,
+            ManagementFeedbackKind.BudgetNotice,
+            budget = QUEUE_NOTICE,
+        )
+    )
+    f.enqueue(ManagementOutcome(ManagementSubject.Transferencia, ManagementFeedbackKind.Saved))
+    val head = assertNotNull(f.queue.state.value.feedback)
+    val waiting = f.queue.state.value.feedbackQueue[1]
+    assertEquals(QUEUE_NOTICE, head.budget)
+    assertTrue(head.presentation().action != null)
+
+    assertFalse(f.queue.onBudgetAction(waiting.token, waiting.revision))
+    assertFalse(f.queue.onBudgetAction(head.token, head.revision + 1))
+    assertTrue(f.queue.onBudgetAction(head.token, head.revision))
+
+    assertEquals(listOf(waiting), f.queue.state.value.feedbackQueue)
+    assertFalse(f.queue.onBudgetAction(waiting.token, waiting.revision))
+  }
+
+  @Test
+  fun undoTakesTheBudgetLineAwayWithTheSave() = runTest {
+    val f = QueueFixture(backgroundScope)
+    f.enqueue(
+        ManagementOutcome(
+            ManagementSubject.Movimiento,
+            ManagementFeedbackKind.Deleted,
+            UndoSnapshot.OfMovimiento(managementMovimiento()),
+            budget = QUEUE_NOTICE,
+        )
+    )
+    val head = assertNotNull(f.queue.state.value.feedback)
+    assertFalse(f.queue.onBudgetAction(head.token, head.revision))
+
+    f.queue.onFeedbackAction(head.token, head.revision)
+    assertNull(f.queue.state.value.feedback?.budget)
+    runCurrent()
+
+    val restored = assertNotNull(f.queue.state.value.feedback)
+    assertEquals(ManagementFeedbackKind.Restored, restored.kind)
+    assertNull(restored.budget)
+    assertFalse(restored.presentation().action != null)
+  }
 }
+
+private val QUEUE_NOTICE =
+    BudgetNotice("Comida", BudgetState.OVER, Money(2_000_000, Moneda.COP), paceDay = null)
 
 private class QueueFixture(scope: CoroutineScope) {
   val movimientos = ManagementRepository()

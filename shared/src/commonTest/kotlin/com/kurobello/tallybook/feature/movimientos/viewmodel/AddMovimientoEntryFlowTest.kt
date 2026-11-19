@@ -249,7 +249,7 @@ class AddMovimientoEntryFlowTest {
     assertEquals(CATEGORIA_OTROS_ID, saved.categoriaId)
     assertEquals("Gasté 5.000 en algo raro", saved.titulo)
     assertNull(saved.descripcion)
-    assertEquals(AddMovimientoEffect.Saved, viewModel.effects.first())
+    assertEquals(AddMovimientoEffect.Saved(null), viewModel.effects.first())
   }
 
   @Test

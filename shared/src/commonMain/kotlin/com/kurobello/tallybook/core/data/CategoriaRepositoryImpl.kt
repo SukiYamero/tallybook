@@ -204,6 +204,7 @@ internal class CategoriaRepositoryImpl(
                   } else {
                     val stamp = changeClock.next().value
                     check(queries.tombstoneCustomCategoria(stamp = stamp, id = id).value == 1L)
+                    database.presupuestoQueries.tombstonePresupuestosByCategoria(stamp, id)
                     DataOutcome.Success(CategoriaDelete.Deleted)
                   }
                 }

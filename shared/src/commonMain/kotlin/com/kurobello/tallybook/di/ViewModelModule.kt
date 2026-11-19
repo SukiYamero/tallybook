@@ -6,6 +6,7 @@ import com.kurobello.tallybook.core.data.CivilToday
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackViewModel
 import com.kurobello.tallybook.feature.accounts.viewmodel.AccountsViewModel
 import com.kurobello.tallybook.feature.accounts.viewmodel.QuickCuentaViewModel
+import com.kurobello.tallybook.feature.budgets.viewmodel.BudgetsViewModel
 import com.kurobello.tallybook.feature.categories.viewmodel.CategoriesViewModel
 import com.kurobello.tallybook.feature.categories.viewmodel.QuickCategoryViewModel
 import com.kurobello.tallybook.feature.history.viewmodel.HistoryDateProvider
@@ -46,7 +47,7 @@ internal val viewModelModule = module {
   }
   viewModel {
     HomeViewModel(
-        repositories = HomeRepositories(get(), get(), get(), get(), get(), get()),
+        repositories = HomeRepositories(get(), get(), get(), get(), get(), get(), get()),
         today = CivilToday(get(), get()),
     )
   }
@@ -71,6 +72,7 @@ internal val viewModelModule = module {
                 recurrencias = get(),
                 voice = get(),
                 correcciones = get(),
+                presupuestos = get(),
             ),
         idGenerator = get(),
         clock = get(),
@@ -87,7 +89,7 @@ internal val viewModelModule = module {
   }
   viewModel { parameters ->
     ManageMovimientoViewModel(
-        repositories = ManageMovimientoRepositories(get(), get(), get(), get()),
+        repositories = ManageMovimientoRepositories(get(), get(), get(), get(), get()),
         clock = get(),
         timeZoneProvider = get(),
         feedback = parameters.get(),
@@ -145,6 +147,15 @@ internal val viewModelModule = module {
   }
   viewModel { QuickCuentaViewModel(cuentaRepository = get()) }
   viewModel {
+    BudgetsViewModel(
+        presupuestos = get(),
+        cuentas = get(),
+        categorias = get(),
+        preferences = get(),
+        today = CivilToday(get(), get()),
+    )
+  }
+  viewModel {
     RecurrentesViewModel(
         repositories =
             RecurrentesRepositories(
@@ -152,6 +163,7 @@ internal val viewModelModule = module {
                 categorias = get(),
                 cuentas = get(),
                 etiquetas = get(),
+                presupuestos = get(),
             ),
         today = CivilToday(get(), get()),
     )
