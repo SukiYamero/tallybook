@@ -38,3 +38,13 @@ internal interface PresupuestoRepository {
   /** Uses [touches] as given; the caller fills each [BudgetTouch.padreId]. */
   suspend fun notice(touches: List<BudgetTouch>, today: LocalDate): DataOutcome<BudgetNotice?>
 }
+
+/**
+ * The notice for a save that already succeeded. Without touches nothing is read, and a failed read
+ * yields none: the save stands either way.
+ */
+internal suspend fun PresupuestoRepository.noticeAfterSave(
+    touches: List<BudgetTouch>,
+    today: LocalDate,
+): BudgetNotice? =
+    if (touches.isEmpty()) null else (notice(touches, today) as? DataOutcome.Success)?.data

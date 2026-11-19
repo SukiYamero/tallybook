@@ -321,7 +321,7 @@ class HistoryIntegrationTest {
           form.viewModel.onSubmit()
           form.viewModel.onSubmit()
           runCurrent()
-          assertEquals(listOf(AddMovimientoEffect.Saved), form.effects)
+          assertEquals(listOf(AddMovimientoEffect.Saved(null)), form.effects)
           assertEquals(listOf("retry"), assertSuccess(graph.movimientos.getAll()).map { it.id })
           val selected = graph.history.uiState.value.selection
           val previousPeriod = graph.period
@@ -342,7 +342,7 @@ class HistoryIntegrationTest {
           assertEquals(1, graph.period.movementCount)
           assertEquals(summary(0, 1050), graph.period.summary)
           assertEquals(selected, graph.history.uiState.value.selection)
-          assertEquals(listOf(AddMovimientoEffect.Saved), form.effects)
+          assertEquals(listOf(AddMovimientoEffect.Saved(null)), form.effects)
         }
       }
 
@@ -544,7 +544,7 @@ class HistoryIntegrationTest {
         onSubmit()
       }
       fixture.test.runCurrent()
-      assertEquals(listOf(AddMovimientoEffect.Saved), form.effects)
+      assertEquals(listOf(AddMovimientoEffect.Saved(null)), form.effects)
     }
 
     suspend fun close() {

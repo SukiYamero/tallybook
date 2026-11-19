@@ -139,7 +139,7 @@ class AddMovimientoCorrectionsTest {
 
     assertEquals(1, movimientos.inserted.size)
     assertEquals(1, correcciones.insertCalls)
-    assertEquals(AddMovimientoEffect.Saved, viewModel.effects.first())
+    assertEquals(AddMovimientoEffect.Saved(null), viewModel.effects.first())
   }
 
   @Test

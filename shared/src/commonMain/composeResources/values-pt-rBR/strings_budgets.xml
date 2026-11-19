@@ -41,6 +41,11 @@
     <string name="budget_delete_title">Excluir este orçamento?</string>
     <string name="budget_delete_message">Suas movimentações continuam iguais; você só deixa de acompanhar este limite.</string>
     <string name="budget_delete_error">Não conseguimos excluir. Seus dados continuam salvos; tente de novo.</string>
+    <string name="budget_notice_over">%1$s: você já passou do orçamento neste mês</string>
+    <string name="budget_notice_left">%1$s: restam %2$s neste mês</string>
+    <string name="budget_notice_pace">%1$s: nesse ritmo você chegaria ao limite no dia %2$d</string>
+    <string name="budget_notice_merged">%1$s · %2$s</string>
+    <string name="budget_notice_view">Ver</string>
     <plurals name="home_budgets_to_review">
         <item quantity="one">%1$d orçamento para revisar</item>
         <item quantity="other">%1$d orçamentos para revisar</item>

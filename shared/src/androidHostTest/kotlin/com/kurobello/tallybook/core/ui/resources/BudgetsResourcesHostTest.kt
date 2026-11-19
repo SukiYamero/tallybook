@@ -15,6 +15,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import tallybook.shared.generated.resources.Res
 import tallybook.shared.generated.resources.budget_history_within
+import tallybook.shared.generated.resources.budget_notice_left
+import tallybook.shared.generated.resources.budget_notice_over
+import tallybook.shared.generated.resources.budget_notice_pace
+import tallybook.shared.generated.resources.budget_notice_view
 import tallybook.shared.generated.resources.budget_suggestion
 import tallybook.shared.generated.resources.budgets_line_left
 import tallybook.shared.generated.resources.budgets_line_over
@@ -71,6 +75,19 @@ class BudgetsResourcesHostTest {
             "noviembre · queda 1 día",
             getPluralString(Res.plurals.budgets_period, 1, "noviembre", 1),
         )
+        assertEquals(
+            "Comida: ya estás por encima de tu presupuesto este mes",
+            getString(Res.string.budget_notice_over, "Comida"),
+        )
+        assertEquals(
+            "Comida: te quedan ${cop(30_000)} este mes",
+            getString(Res.string.budget_notice_left, "Comida", cop(30_000)),
+        )
+        assertEquals(
+            "Comida: a este ritmo llegarías al tope el día 22",
+            getString(Res.string.budget_notice_pace, "Comida", 22),
+        )
+        assertEquals("Ver", getString(Res.string.budget_notice_view))
       }
 
   @Test

@@ -41,6 +41,11 @@
     <string name="budget_delete_title">¿Eliminar este presupuesto?</string>
     <string name="budget_delete_message">Tus movimientos no cambian; solo dejás de seguir este tope.</string>
     <string name="budget_delete_error">No pudimos eliminarlo. Tus datos siguen guardados; intentá de nuevo.</string>
+    <string name="budget_notice_over">%1$s: ya estás por encima de tu presupuesto este mes</string>
+    <string name="budget_notice_left">%1$s: te quedan %2$s este mes</string>
+    <string name="budget_notice_pace">%1$s: a este ritmo llegarías al tope el día %2$d</string>
+    <string name="budget_notice_merged">%1$s · %2$s</string>
+    <string name="budget_notice_view">Ver</string>
     <plurals name="home_budgets_to_review">
         <item quantity="one">%1$d presupuesto para revisar</item>
         <item quantity="other">%1$d presupuestos para revisar</item>

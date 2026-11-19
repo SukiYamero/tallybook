@@ -108,6 +108,23 @@ internal val budgetOrder: Comparator<BudgetStatus> =
         .thenComparator { a, b -> shareDescending(a, b) }
         .thenBy { it.categoriaNombre }
 
+/** Only a gasto touches a budget; [categorias] supplies its category's padre. */
+internal fun budgetTouch(
+    tipo: TipoMovimiento,
+    categoriaId: String,
+    moneda: Moneda,
+    fecha: LocalDate,
+    categorias: List<Categoria>,
+): BudgetTouch? =
+    if (tipo != TipoMovimiento.GASTO) null
+    else
+        BudgetTouch(
+            categoriaId = categoriaId,
+            padreId = categorias.firstOrNull { it.id == categoriaId }?.padreId,
+            moneda = moneda,
+            fecha = fecha,
+        )
+
 /**
  * The most severe budget a save touched this month, with the subcategory winning a tie over its
  * parent. Null when every touched budget is [BudgetState.FINE].

@@ -174,6 +174,7 @@ class FirstMovimientoIntegrationTest {
                           FakeRecurrenciaRepository(),
                           UnavailableVoiceDictation,
                           correcciones,
+                          FakePresupuestoRepository(),
                       ),
                   id = "expense",
                   scope = scopes.newScope(dispatcher),
@@ -206,6 +207,7 @@ class FirstMovimientoIntegrationTest {
                           FakeRecurrenciaRepository(),
                           UnavailableVoiceDictation,
                           correcciones,
+                          FakePresupuestoRepository(),
                       ),
                   id = "income",
                   scope = scopes.newScope(dispatcher),
@@ -360,6 +362,7 @@ class FirstMovimientoIntegrationTest {
                   FakeRecurrenciaRepository(),
                   UnavailableVoiceDictation,
                   correcciones,
+                  FakePresupuestoRepository(),
               )
           val first =
               createMovimientoViewModel(

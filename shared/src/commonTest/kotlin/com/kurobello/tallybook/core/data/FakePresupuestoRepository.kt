@@ -10,6 +10,7 @@ import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Presupuesto
 import com.kurobello.tallybook.core.model.PresupuestoWrite
+import com.kurobello.tallybook.core.model.budgetNotice
 import kotlin.time.Instant
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +19,9 @@ import kotlinx.datetime.LocalDate
 /**
  * Serves the given [statuses] and records every write. [createResult] scripts what [create]
  * answers, [failure] makes writes and reads fail, and [writeFailure] fails create, update and
- * delete, [history] and [suggestions] hold the answers of their reads.
+ * delete, [history] and [suggestions] hold the answers of their reads. [notice] applies the real
+ * rule to [statuses] as they stand, records each read in [noticeReads] and fails with
+ * [noticeFailure].
  */
 internal class FakePresupuestoRepository(initial: List<BudgetStatus> = emptyList()) :
     PresupuestoRepository {
@@ -34,6 +37,8 @@ internal class FakePresupuestoRepository(initial: List<BudgetStatus> = emptyList
   var suggestionFailure: DataError? = null
   var writeFailure: DataError? = null
   var historyFailure: DataError? = null
+  var noticeFailure: DataError? = null
+  val noticeReads = mutableListOf<List<BudgetTouch>>()
   val observedDays = mutableListOf<LocalDate>()
 
   override fun observeStatuses(today: LocalDate): Flow<DataOutcome<List<BudgetStatus>>> {
@@ -99,5 +104,12 @@ internal class FakePresupuestoRepository(initial: List<BudgetStatus> = emptyList
   override suspend fun notice(
       touches: List<BudgetTouch>,
       today: LocalDate,
-  ): DataOutcome<BudgetNotice?> = DataOutcome.Success(null)
+  ): DataOutcome<BudgetNotice?> {
+    noticeReads += touches
+    noticeFailure?.let {
+      return DataOutcome.Failure(it)
+    }
+    val current = (statuses.value as? DataOutcome.Success)?.data.orEmpty()
+    return DataOutcome.Success(budgetNotice(current, touches, today))
+  }
 }

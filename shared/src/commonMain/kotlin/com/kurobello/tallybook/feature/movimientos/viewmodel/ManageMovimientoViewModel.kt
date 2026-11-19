@@ -6,7 +6,9 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.PresupuestoRepository
 import com.kurobello.tallybook.core.data.TimeZoneProvider
+import com.kurobello.tallybook.core.data.noticeAfterSave
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.Etiqueta
@@ -18,6 +20,7 @@ import com.kurobello.tallybook.core.model.Movimiento
 import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.budgetTouch
 import com.kurobello.tallybook.core.text.AmountInputResult
 import com.kurobello.tallybook.core.text.normalizeOptionalText
 import com.kurobello.tallybook.core.text.parseAmountInput
@@ -52,6 +55,7 @@ internal class ManageMovimientoViewModel(
   private val categoriaRepository = repositories.categorias
   private val etiquetaRepository = repositories.etiquetas
   private val cuentaRepository = repositories.cuentas
+  private val presupuestoRepository = repositories.presupuestos
   private val coroutineScope = scope ?: viewModelScope
   private var nextToken = 0L
   private var readGeneration = 0L
@@ -259,11 +263,25 @@ internal class ManageMovimientoViewModel(
         }
         is DataOutcome.Success ->
             when (outcome.data) {
-              MovimientoUpdateResult.Updated ->
-                  close(
-                      session.token,
-                      ManagementOutcome(ManagementSubject.Movimiento, ManagementFeedbackKind.Saved),
-                  )
+              MovimientoUpdateResult.Updated -> {
+                val touch =
+                    budgetTouch(
+                        update.tipo,
+                        update.categoriaId,
+                        update.monto.moneda,
+                        update.fecha,
+                        session.categorias,
+                    )
+                close(
+                    session.token,
+                    ManagementOutcome(
+                        ManagementSubject.Movimiento,
+                        ManagementFeedbackKind.Saved,
+                        budget =
+                            presupuestoRepository.noticeAfterSave(listOfNotNull(touch), today()),
+                    ),
+                )
+              }
               MovimientoUpdateResult.NotFound ->
                   updateSession(session.token) {
                     copy(isSubmitting = false, error = MovimientoManagementError.MissingOnSave)
@@ -541,6 +559,7 @@ internal data class ManageMovimientoRepositories(
     val categorias: CategoriaRepository,
     val etiquetas: EtiquetaRepository,
     val cuentas: CuentaRepository,
+    val presupuestos: PresupuestoRepository,
 )
 
 private val EditMovimientoUiState.shownChoice: CuentaSelectionState

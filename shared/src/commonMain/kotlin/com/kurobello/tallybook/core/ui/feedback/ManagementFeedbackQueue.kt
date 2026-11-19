@@ -63,16 +63,32 @@ internal class ManagementFeedbackQueue(
   }
 
   private fun ManagementOutcome.toFeedback() =
-      ManagementFeedback(token = ++nextToken, subject = subject, kind = kind, undo = undo)
+      ManagementFeedback(
+          token = ++nextToken,
+          subject = subject,
+          kind = kind,
+          undo = undo,
+          budget = budget,
+      )
 
   fun onFeedbackAction(token: Long, revision: Int) {
     val current = state.value
     val feedback = current.feedbackFor(token, revision)?.takeIf { current.openSessions == 0 }
     val undo = feedback?.undo ?: return
-    val claimed = feedback.copy(revision = revision + 1, isRestoring = true)
+    val claimed = feedback.copy(revision = revision + 1, isRestoring = true, budget = null)
     if (state.compareAndSet(current, current.withHead(claimed))) {
       scope.launch { complete(claimed, undo, restore(undo)) }
     }
+  }
+
+  /** Dismisses the visible head when its action opens Presupuestos; true when it did. */
+  fun onBudgetAction(token: Long, revision: Int): Boolean {
+    var dismissed = false
+    state.update {
+      dismissed = it.feedbackFor(token, revision)?.opensBudgets == true
+      if (dismissed) it.copy(feedbackQueue = it.feedbackQueue.drop(1)) else it
+    }
+    return dismissed
   }
 
   fun onFeedbackDismiss(token: Long, revision: Int) {

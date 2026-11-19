@@ -4,6 +4,7 @@ import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
+import com.kurobello.tallybook.core.data.FakePresupuestoRepository
 import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.FakeTransferenciaRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
@@ -42,6 +43,7 @@ internal class ManageMovimientoFixture(scope: CoroutineScope) {
   val categorias = ManagementCategorias()
   val etiquetas = FakeEtiquetaRepository()
   val cuentas = FakeCuentaRepository(listOf(USD_CASH, USD_BANK, USD_CARD, COP_CASH, NU))
+  val presupuestos = FakePresupuestoRepository()
   val clock = ManagementClock()
   val feedback =
       ManagementFeedbackViewModel(
@@ -53,7 +55,7 @@ internal class ManageMovimientoFixture(scope: CoroutineScope) {
           .queue
   val viewModel =
       ManageMovimientoViewModel(
-          ManageMovimientoRepositories(repository, categorias, etiquetas, cuentas),
+          ManageMovimientoRepositories(repository, categorias, etiquetas, cuentas, presupuestos),
           clock,
           TimeZoneProvider { TimeZone.UTC },
           feedback,

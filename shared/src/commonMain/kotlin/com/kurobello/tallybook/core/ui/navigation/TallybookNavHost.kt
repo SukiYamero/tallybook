@@ -18,8 +18,11 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.serialization.NavBackStackSerializer
 import androidx.navigation3.ui.NavDisplay
 import com.kurobello.tallybook.core.ui.catalog.UiCatalogRoute
+import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackKind
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackQueue
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackRoute
+import com.kurobello.tallybook.core.ui.feedback.ManagementOutcome
+import com.kurobello.tallybook.core.ui.feedback.ManagementSubject
 import com.kurobello.tallybook.core.ui.layout.TallybookAppShell
 import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSession
 import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSessionLifecycle
@@ -71,12 +74,18 @@ fun TallybookNavHost(
       onAdd = navigator::openCreation,
       onSelect = navigator::select,
       overlay = { clearance ->
-        ManagementFeedbackRoute(feedbackState, feedback, modals, clearance)
+        ManagementFeedbackRoute(
+            feedbackState,
+            feedback,
+            modals,
+            clearance,
+            onOpenBudgets = { navigator.showSecondary(Presupuestos) },
+        )
       },
   ) { clearance ->
     PrimaryNavigationDisplay(navigator, clearance, openers, feedback)
   }
-  AddMovimientoSessionRoute(sheetSession)
+  AddMovimientoSessionRoute(sheetSession, feedback)
   ManageMovimientoRoute(managementState, management)
   TransferSheetRoute(transfersState, transfers)
 }
@@ -205,7 +214,10 @@ private fun StatisticsDestination(navigator: PrimaryNavigator, clearance: Dp) {
 }
 
 @Composable
-private fun AddMovimientoSessionRoute(sheetSession: AddMovimientoSheetSession) {
+private fun AddMovimientoSessionRoute(
+    sheetSession: AddMovimientoSheetSession,
+    feedback: ManagementFeedbackQueue,
+) {
   if (sheetSession.hasBeenOpened) {
     val origin = sheetSession.token
     key(origin) {
@@ -219,6 +231,15 @@ private fun AddMovimientoSessionRoute(sheetSession: AddMovimientoSheetSession) {
             visible = sheetSession.isVisible,
             onDismiss = { if (sheetSession.token == origin) sheetSession.dismiss() },
             onHidden = { sheetSession.onSheetHidden(origin) },
+            onBudgetNotice = { notice ->
+              feedback.enqueue(
+                  ManagementOutcome(
+                      ManagementSubject.Presupuesto,
+                      ManagementFeedbackKind.BudgetNotice,
+                      budget = notice,
+                  )
+              )
+            },
             viewModel = viewModel,
         )
       }

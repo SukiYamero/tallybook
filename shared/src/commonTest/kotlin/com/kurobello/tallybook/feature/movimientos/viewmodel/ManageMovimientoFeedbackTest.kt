@@ -202,6 +202,7 @@ class ManageMovimientoFeedbackTest {
                             f.categorias,
                             f.etiquetas,
                             f.cuentas,
+                            f.presupuestos,
                         ),
                         f.clock,
                         TimeZoneProvider { TimeZone.UTC },

@@ -72,6 +72,7 @@ internal val viewModelModule = module {
                 recurrencias = get(),
                 voice = get(),
                 correcciones = get(),
+                presupuestos = get(),
             ),
         idGenerator = get(),
         clock = get(),
@@ -88,7 +89,7 @@ internal val viewModelModule = module {
   }
   viewModel { parameters ->
     ManageMovimientoViewModel(
-        repositories = ManageMovimientoRepositories(get(), get(), get(), get()),
+        repositories = ManageMovimientoRepositories(get(), get(), get(), get(), get()),
         clock = get(),
         timeZoneProvider = get(),
         feedback = parameters.get(),
@@ -162,6 +163,7 @@ internal val viewModelModule = module {
                 categorias = get(),
                 cuentas = get(),
                 etiquetas = get(),
+                presupuestos = get(),
             ),
         today = CivilToday(get(), get()),
     )

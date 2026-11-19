@@ -558,7 +558,7 @@ class AddMovimientoSheetTest {
       )
     }
     composeRule.runOnIdle { useLatestCallback = true }
-    composeRule.runOnIdle { effects.tryEmit(AddMovimientoEffect.Saved) }
+    composeRule.runOnIdle { effects.tryEmit(AddMovimientoEffect.Saved(null)) }
     composeRule.waitForIdle()
 
     composeRule.runOnIdle {

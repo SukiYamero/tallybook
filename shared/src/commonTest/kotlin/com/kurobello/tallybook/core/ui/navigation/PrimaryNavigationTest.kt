@@ -196,6 +196,28 @@ internal class PrimaryNavigationTest {
   }
 
   @Test
+  fun budgetsShowFromAnyPrimaryOrSecondary() {
+    val home = PrimaryNavigationState()
+    assertEquals(home.copy(secondary = Presupuestos), home.showSecondary(Presupuestos))
+
+    val history = home.select(History)
+    val overHome = history.showSecondary(Presupuestos)
+    assertEquals(Home, overHome.selected)
+    assertEquals(Presupuestos, overHome.secondary)
+    assertTrue(overHome.historyVisited)
+    assertEquals(home.copy(historyVisited = true), overHome.back())
+
+    val accounts = history.select(Profile).openSecondary(Accounts)
+    val overProfile = accounts.showSecondary(Presupuestos)
+    assertEquals(Profile, overProfile.selected)
+    assertEquals(Presupuestos, overProfile.secondary)
+
+    val budgets = home.openSecondary(Presupuestos)
+    assertSame(budgets, budgets.showSecondary(Presupuestos))
+    assertSame(home, home.showSecondary(Categories))
+  }
+
+  @Test
   fun tagsOpensOnlyOverProfileAndBackReturnsToProfile() {
     val home = PrimaryNavigationState()
     assertSame(home, home.openSecondary(Tags))

@@ -41,6 +41,11 @@
     <string name="budget_delete_title">Delete this budget?</string>
     <string name="budget_delete_message">Your movements stay as they are; you just stop tracking this limit.</string>
     <string name="budget_delete_error">We couldn’t delete it. Your data is still saved; try again.</string>
+    <string name="budget_notice_over">%1$s: you’re already over budget this month</string>
+    <string name="budget_notice_left">%1$s: %2$s left this month</string>
+    <string name="budget_notice_pace">%1$s: at this pace you’d hit the limit on day %2$d</string>
+    <string name="budget_notice_merged">%1$s · %2$s</string>
+    <string name="budget_notice_view">View</string>
     <plurals name="home_budgets_to_review">
         <item quantity="one">%1$d budget to review</item>
         <item quantity="other">%1$d budgets to review</item>

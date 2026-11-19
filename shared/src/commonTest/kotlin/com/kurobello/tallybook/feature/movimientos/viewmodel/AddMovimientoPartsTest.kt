@@ -1,8 +1,13 @@
 package com.kurobello.tallybook.feature.movimientos.viewmodel
 
 import com.kurobello.tallybook.core.data.FakeCuentaRepository
+import com.kurobello.tallybook.core.data.FakePresupuestoRepository
 import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
+import com.kurobello.tallybook.core.model.BudgetNotice
+import com.kurobello.tallybook.core.model.BudgetState
+import com.kurobello.tallybook.core.model.BudgetStatus
+import com.kurobello.tallybook.core.model.BudgetTouch
 import com.kurobello.tallybook.core.model.Cuenta
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
@@ -10,8 +15,10 @@ import com.kurobello.tallybook.core.model.Frecuencia
 import com.kurobello.tallybook.core.model.MedioPago
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
+import com.kurobello.tallybook.core.model.Presupuesto
 import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.budgetStatus
 import com.kurobello.tallybook.core.text.AmountInputResult
 import com.kurobello.tallybook.core.text.parseAmountInput
 import com.kurobello.tallybook.core.text.reformatAmountInput
@@ -23,6 +30,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
@@ -545,7 +553,7 @@ class AddMovimientoPartsTest {
     viewModel.onSubmit()
     runCurrent()
 
-    assertEquals(AddMovimientoEffect.Saved, viewModel.effects.first())
+    assertEquals(AddMovimientoEffect.Saved(null), viewModel.effects.first())
     val saved = movimientos.inserted
     assertEquals(listOf(cop(2_000_000), cop(3_000_000)), saved.map { it.monto })
     assertEquals(
@@ -564,6 +572,46 @@ class AddMovimientoPartsTest {
   }
 
   @Test
+  fun severalPartsSendOneNotice() = runTest {
+    val presupuestos =
+        FakePresupuestoRepository(
+            listOf(
+                partsBudget("cat_comida", "Comida", null, monto = 100_000, spent = 85_000),
+                partsBudget(
+                    "cat_supermercado",
+                    "Supermercado",
+                    "cat_comida",
+                    monto = 20_000,
+                    spent = 30_000,
+                ),
+            )
+        )
+    val viewModel = partsViewModel(presupuestos = presupuestos)
+    type(viewModel, CONTEXT_SENTENCE)
+    viewModel.onPhraseContinue()
+
+    viewModel.onSubmit()
+    runCurrent()
+
+    assertEquals(
+        AddMovimientoEffect.Saved(
+            BudgetNotice("Supermercado", BudgetState.OVER, cop(1_000_000), null)
+        ),
+        viewModel.effects.first(),
+    )
+    assertEquals(
+        listOf(
+            listOf(
+                BudgetTouch("cat_restaurante", "cat_comida", Moneda.COP, TODAY),
+                BudgetTouch("cat_supermercado", "cat_comida", Moneda.COP, TODAY),
+            )
+        ),
+        presupuestos.noticeReads,
+    )
+    assertNull(withTimeoutOrNull(1) { viewModel.effects.first() })
+  }
+
+  @Test
   fun saveAllWithRepetirCreatesOneRecurrenciaPerPart() = runTest {
     val movimientos = partsMovimientos()
     val recurrencias = FakeRecurrenciaRepository()
@@ -576,7 +624,7 @@ class AddMovimientoPartsTest {
     viewModel.onSubmit()
     runCurrent()
 
-    assertEquals(AddMovimientoEffect.Saved, viewModel.effects.first())
+    assertEquals(AddMovimientoEffect.Saved(null), viewModel.effects.first())
     assertEquals(
         listOf(cop(2_000_000) to Frecuencia.MENSUAL, cop(1_000_000) to Frecuencia.MENSUAL),
         recurrencias.created.map { (movimiento, frecuencia) -> movimiento.monto to frecuencia },
@@ -789,6 +837,7 @@ class AddMovimientoPartsTest {
       recurrencias: FakeRecurrenciaRepository = FakeRecurrenciaRepository(),
       idGenerator: IdGenerator = IdGenerator { "movement-id" },
       cuentaRepository: FakeCuentaRepository = FakeCuentaRepository(cuentas),
+      presupuestos: FakePresupuestoRepository = FakePresupuestoRepository(),
   ): AddMovimientoViewModel =
       createAddViewModel(
               movimientoRepository = movimientos,
@@ -796,6 +845,7 @@ class AddMovimientoPartsTest {
               preferencesRepository = addPreferences(Moneda.COP),
               cuentaRepository = cuentaRepository,
               recurrenciaRepository = recurrencias,
+              presupuestoRepository = presupuestos,
               idGenerator = idGenerator,
               scope = backgroundScope,
           )
@@ -806,6 +856,26 @@ class AddMovimientoPartsTest {
     testScheduler.advanceTimeBy(PARTS_DEBOUNCE_FOR_TESTS)
     runCurrent()
   }
+
+  private fun partsBudget(
+      categoriaId: String,
+      nombre: String,
+      padreId: String?,
+      monto: Long,
+      spent: Long,
+  ): BudgetStatus =
+      budgetStatus(
+          Presupuesto(
+              "budget-$categoriaId",
+              categoriaId,
+              cop(monto * 100),
+              Instant.parse("2026-01-01T00:00:00Z"),
+          ),
+          nombre,
+          padreId,
+          cop(spent * 100),
+          TODAY,
+      )
 
   private companion object {
     const val THREE_PARTS = "Gasté 20 mil en cine y 40 mil en comida y 10 mil en taxi"
