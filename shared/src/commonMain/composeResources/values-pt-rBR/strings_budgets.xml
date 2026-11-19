@@ -43,6 +43,7 @@
     <string name="budget_delete_error">Não conseguimos excluir. Seus dados continuam salvos; tente de novo.</string>
     <string name="budget_notice_over">%1$s: você já passou do orçamento neste mês</string>
     <string name="budget_notice_left">%1$s: restam %2$s neste mês</string>
+    <string name="budget_notice_reached">%1$s: você já usou todo o orçamento deste mês</string>
     <string name="budget_notice_pace">%1$s: nesse ritmo você chegaria ao limite no dia %2$d</string>
     <string name="budget_notice_merged">%1$s · %2$s</string>
     <string name="budget_notice_view">Ver</string>

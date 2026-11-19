@@ -153,6 +153,20 @@ class ManagementFeedbackMessagesTest {
   }
 
   @Test
+  fun nearNoticeWithNothingLeftSaysTheBudgetIsUsed() {
+    assertEquals(BudgetNoticeLine.Reached, NEAR.copy(amount = Money(0, Moneda.COP)).line())
+    assertEquals(BudgetNoticeLine.Left(NEAR.amount), NEAR.line())
+    assertEquals(
+        BudgetNoticeLine.Over,
+        NEAR.copy(state = BudgetState.OVER, amount = Money(0, Moneda.COP)).line(),
+    )
+    assertEquals(
+        BudgetNoticeLine.Pace(22),
+        NEAR.copy(state = BudgetState.PACE, paceDay = 22).line(),
+    )
+  }
+
+  @Test
   fun everyOccurrenceUndoResultMapsToARestoreResult() {
     assertEquals(
         mapOf(

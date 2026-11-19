@@ -18,6 +18,7 @@ import tallybook.shared.generated.resources.budget_history_within
 import tallybook.shared.generated.resources.budget_notice_left
 import tallybook.shared.generated.resources.budget_notice_over
 import tallybook.shared.generated.resources.budget_notice_pace
+import tallybook.shared.generated.resources.budget_notice_reached
 import tallybook.shared.generated.resources.budget_notice_view
 import tallybook.shared.generated.resources.budget_suggestion
 import tallybook.shared.generated.resources.budgets_line_left
@@ -86,6 +87,10 @@ class BudgetsResourcesHostTest {
         assertEquals(
             "Comida: a este ritmo llegarías al tope el día 22",
             getString(Res.string.budget_notice_pace, "Comida", 22),
+        )
+        assertEquals(
+            "Comida: ya usaste todo tu presupuesto de este mes",
+            getString(Res.string.budget_notice_reached, "Comida"),
         )
         assertEquals("Ver", getString(Res.string.budget_notice_view))
       }

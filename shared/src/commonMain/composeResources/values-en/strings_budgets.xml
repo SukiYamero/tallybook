@@ -43,6 +43,7 @@
     <string name="budget_delete_error">We couldn’t delete it. Your data is still saved; try again.</string>
     <string name="budget_notice_over">%1$s: you’re already over budget this month</string>
     <string name="budget_notice_left">%1$s: %2$s left this month</string>
+    <string name="budget_notice_reached">%1$s: you’ve used your whole budget this month</string>
     <string name="budget_notice_pace">%1$s: at this pace you’d hit the limit on day %2$d</string>
     <string name="budget_notice_merged">%1$s · %2$s</string>
     <string name="budget_notice_view">View</string>

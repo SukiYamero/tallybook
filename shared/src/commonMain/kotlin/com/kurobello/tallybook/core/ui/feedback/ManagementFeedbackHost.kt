@@ -21,6 +21,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.kurobello.tallybook.core.model.BudgetNotice
 import com.kurobello.tallybook.core.model.BudgetState
+import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.ui.component.LocalTallybookViewportOverlayState
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarDismissReason
 import com.kurobello.tallybook.core.ui.component.TallybookSnackbarDuration
@@ -36,6 +37,7 @@ import tallybook.shared.generated.resources.budget_notice_left
 import tallybook.shared.generated.resources.budget_notice_merged
 import tallybook.shared.generated.resources.budget_notice_over
 import tallybook.shared.generated.resources.budget_notice_pace
+import tallybook.shared.generated.resources.budget_notice_reached
 import tallybook.shared.generated.resources.budget_notice_view
 import tallybook.shared.generated.resources.movimiento_deleted
 import tallybook.shared.generated.resources.movimiento_missing
@@ -196,21 +198,37 @@ private fun ManagementFeedback.toSnackbarMessage(): TallybookSnackbarMessage {
   )
 }
 
+/** What a budget notice says, chosen like the row's line in Presupuestos. */
+internal sealed interface BudgetNoticeLine {
+  data object Over : BudgetNoticeLine
+
+  data class Left(val remaining: Money) : BudgetNoticeLine
+
+  data object Reached : BudgetNoticeLine
+
+  data class Pace(val day: Int) : BudgetNoticeLine
+}
+
 /** A PACE notice without its day, or a FINE one, still reads truthfully as what remains. */
+internal fun BudgetNotice.line(): BudgetNoticeLine {
+  val pace = paceDay
+  return when {
+    state == BudgetState.OVER -> BudgetNoticeLine.Over
+    state == BudgetState.PACE && pace != null -> BudgetNoticeLine.Pace(pace)
+    amount.minorUnits > 0 -> BudgetNoticeLine.Left(amount)
+    else -> BudgetNoticeLine.Reached
+  }
+}
+
 @Composable
 private fun budgetNoticeText(notice: BudgetNotice): String {
-  val paceDay = notice.paceDay
-  return when {
-    notice.state == BudgetState.OVER ->
-        stringResource(Res.string.budget_notice_over, notice.categoriaNombre)
-    notice.state == BudgetState.PACE && paceDay != null ->
-        stringResource(Res.string.budget_notice_pace, notice.categoriaNombre, paceDay)
-    else ->
-        stringResource(
-            Res.string.budget_notice_left,
-            notice.categoriaNombre,
-            notice.amount.format(),
-        )
+  val nombre = notice.categoriaNombre
+  return when (val line = notice.line()) {
+    BudgetNoticeLine.Over -> stringResource(Res.string.budget_notice_over, nombre)
+    is BudgetNoticeLine.Left ->
+        stringResource(Res.string.budget_notice_left, nombre, line.remaining.format())
+    BudgetNoticeLine.Reached -> stringResource(Res.string.budget_notice_reached, nombre)
+    is BudgetNoticeLine.Pace -> stringResource(Res.string.budget_notice_pace, nombre, line.day)
   }
 }
 

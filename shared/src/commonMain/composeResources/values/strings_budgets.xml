@@ -43,6 +43,7 @@
     <string name="budget_delete_error">No pudimos eliminarlo. Tus datos siguen guardados; intenta de nuevo.</string>
     <string name="budget_notice_over">%1$s: ya estás por encima de tu presupuesto este mes</string>
     <string name="budget_notice_left">%1$s: te quedan %2$s este mes</string>
+    <string name="budget_notice_reached">%1$s: ya usaste todo tu presupuesto de este mes</string>
     <string name="budget_notice_pace">%1$s: a este ritmo llegarías al tope el día %2$d</string>
     <string name="budget_notice_merged">%1$s · %2$s</string>
     <string name="budget_notice_view">Ver</string>
