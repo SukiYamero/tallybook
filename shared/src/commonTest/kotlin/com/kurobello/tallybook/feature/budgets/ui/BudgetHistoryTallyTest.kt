@@ -31,7 +31,28 @@ class BudgetHistoryTallyTest {
     assertEquals(BudgetHistoryTally(within = 1, closed = 1), history.tally(cop(500_000)))
   }
 
-  private fun month(month: Int, spent: Long) = BudgetMonth(YearMonth(2026, month), cop(spent))
+  @Test
+  fun monthsTheUserNeverRecordedDoNotCount() {
+    val history =
+        listOf(
+            month(8, spent = 0, recorded = false),
+            month(9, spent = 0, recorded = false),
+            month(10, spent = 100_000),
+            month(11, spent = 100_000),
+        )
+
+    assertEquals(BudgetHistoryTally(within = 1, closed = 1), history.tally(cop(500_000)))
+  }
+
+  @Test
+  fun noRecordedClosedMonthLeavesNothingToTally() {
+    val history = listOf(month(10, spent = 0, recorded = false), month(11, spent = 100_000))
+
+    assertEquals(BudgetHistoryTally(within = 0, closed = 0), history.tally(cop(500_000)))
+  }
+
+  private fun month(month: Int, spent: Long, recorded: Boolean = true) =
+      BudgetMonth(YearMonth(2026, month), cop(spent), recorded)
 
   private fun cop(units: Long) = Money(units * 100, Moneda.COP)
 }

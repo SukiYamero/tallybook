@@ -19,6 +19,7 @@ import com.kurobello.tallybook.core.model.Presupuesto
 import com.kurobello.tallybook.core.model.PresupuestoWrite
 import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.budgetStatus
+import com.kurobello.tallybook.core.text.AmountInputError
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddFakeCategorias
 import com.kurobello.tallybook.feature.movimientos.viewmodel.AddFakePreferences
@@ -131,15 +132,25 @@ class BudgetsViewModelTest {
     f.viewModel.onSave()
     runCurrent()
 
-    assertEquals(true, f.state().editor?.amountError)
+    assertEquals(AmountInputError.OVERFLOW, f.state().editor?.amountError)
     assertEquals(emptyList(), f.presupuestos.created)
 
     f.viewModel.onAmountChanged("0")
     f.viewModel.onSave()
     runCurrent()
 
-    assertEquals(true, f.state().editor?.amountError)
+    assertEquals(AmountInputError.NOT_POSITIVE, f.state().editor?.amountError)
     assertEquals(emptyList(), f.presupuestos.created)
+
+    f.viewModel.onAmountChanged("1,5,5")
+    f.viewModel.onSave()
+    runCurrent()
+
+    assertEquals(AmountInputError.MALFORMED, f.state().editor?.amountError)
+    assertEquals(emptyList(), f.presupuestos.created)
+
+    f.viewModel.onAmountChanged("12")
+    assertNull(f.state().editor?.amountError)
   }
 
   @Test
@@ -248,6 +259,20 @@ class BudgetsViewModelTest {
   }
 
   @Test
+  fun aSecondConfirmWhileDeletingIsIgnored() = runTest {
+    val f = fixture()
+    f.viewModel.onOpen("food")
+    f.viewModel.onRequestDelete()
+
+    f.viewModel.onConfirmDelete()
+    f.viewModel.onConfirmDelete()
+    runCurrent()
+
+    assertEquals(listOf("food"), f.presupuestos.deleted)
+    assertEquals(false, f.state().detail?.deleteFailed)
+  }
+
+  @Test
   fun cancelDeleteKeepsTheBudget() = runTest {
     val f = fixture()
     f.viewModel.onOpen("food")
@@ -301,7 +326,8 @@ class BudgetsViewModelTest {
   @Test
   fun openLoadsSixMonthHistory() = runTest {
     val f = fixture()
-    val months = (6..11).map { BudgetMonth(YearMonth(2026, it), cop(100_000L * it)) }
+    val months =
+        (6..11).map { BudgetMonth(YearMonth(2026, it), cop(100_000L * it), recorded = true) }
     f.presupuestos.history = months
 
     f.viewModel.onOpen("food")

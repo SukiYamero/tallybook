@@ -63,7 +63,7 @@ internal fun BudgetSheetHost(uiState: BudgetsUiState, actions: BudgetsActions) {
       visible =
           !uiState.sheetClosing &&
               uiState.editor == null &&
-              uiState.detail?.confirmingDelete == true,
+              uiState.detail?.let { it.confirmingDelete && !it.deleting } == true,
       actions = actions,
   )
 }

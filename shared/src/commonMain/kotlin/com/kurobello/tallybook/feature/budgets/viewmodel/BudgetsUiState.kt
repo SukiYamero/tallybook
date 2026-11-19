@@ -7,6 +7,7 @@ import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.Moneda
 import com.kurobello.tallybook.core.model.Money
 import com.kurobello.tallybook.core.model.Presupuesto
+import com.kurobello.tallybook.core.text.AmountInputError
 import com.kurobello.tallybook.core.ui.state.RetainedLoadState
 import kotlinx.datetime.YearMonth
 
@@ -41,7 +42,7 @@ internal data class BudgetEditorState(
     val monedas: List<Moneda>,
     val amountInput: String,
     val suggestion: Money?,
-    val amountError: Boolean,
+    val amountError: AmountInputError?,
     val duplicateOf: Presupuesto?,
     val saving: Boolean,
     val saveFailed: Boolean = false,
@@ -52,6 +53,7 @@ internal data class BudgetDetailState(
     val status: BudgetStatus,
     val history: List<BudgetMonth>?,
     val confirmingDelete: Boolean,
+    val deleting: Boolean = false,
     val deleteFailed: Boolean = false,
     val historyFailed: Boolean = false,
 )

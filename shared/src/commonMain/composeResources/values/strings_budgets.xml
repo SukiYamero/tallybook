@@ -24,7 +24,6 @@
     <string name="budget_edit_title">Editar presupuesto</string>
     <string name="budget_category_label">Categoría</string>
     <string name="budget_amount_label">Tope mensual</string>
-    <string name="budget_amount_error">Escribe un monto mayor a cero.</string>
     <string name="budget_suggestion">Tu promedio: %1$s</string>
     <string name="budget_duplicate">Ya tienes un presupuesto para %1$s en %2$s; aquí puedes cambiar su tope.</string>
     <string name="budget_save">Guardar</string>

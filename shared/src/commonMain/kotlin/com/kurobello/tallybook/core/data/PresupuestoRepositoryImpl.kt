@@ -147,20 +147,32 @@ internal class PresupuestoRepositoryImpl(
                 queries.selectLiveById(id).executeAsOneOrNull()
                     ?: return@runLocalDataOperation DataOutcome.Failure(unknownPresupuesto(id))
             val moneda = Moneda.valueOf(current.moneda)
+            val start = today.monthsBack(HISTORY_MONTHS - 1).toString()
             val spentByMonth =
                 queries
                     .sumGastoPresupuestoPorMes(
                         categoria_id = current.categoria_id,
                         moneda = current.moneda,
-                        start_date = today.monthsBack(HISTORY_MONTHS - 1).toString(),
+                        start_date = start,
                         end_date = today.toString(),
                     )
                     .executeAsList()
                     .associate { YearMonth.parse(it.month) to it.total_minor }
+            val recordedMonths =
+                database.movimientoQueries
+                    .sumPorMes(current.moneda, start, today.toString())
+                    .executeAsList()
+                    .filter { it.tipo == GASTO }
+                    .map { YearMonth.parse(it.month) }
+                    .toSet()
             DataOutcome.Success(
                 (HISTORY_MONTHS - 1 downTo 0).map { back ->
                   val month = today.monthsBack(back).yearMonth
-                  BudgetMonth(month, Money(spentByMonth[month] ?: 0L, moneda))
+                  BudgetMonth(
+                      month,
+                      Money(spentByMonth[month] ?: 0L, moneda),
+                      month in recordedMonths,
+                  )
                 }
             )
           }
@@ -239,6 +251,7 @@ private fun LocalDate.firstOfMonth() = LocalDate(year, month, 1)
 private fun LocalDate.monthsBack(months: Int) = firstOfMonth().minus(months, DateTimeUnit.MONTH)
 
 private fun invalidMonto(monto: Money): DataError.InvalidInput? =
-    if (monto.minorUnits > 0) null else DataError.InvalidInput("Monto must be positive")
+    if (monto.minorUnits in 1..Money.MAX_MINOR_UNITS) null
+    else DataError.InvalidInput("Monto must be positive and within the supported range")
 
 private fun unknownPresupuesto(id: String) = DataError.InvalidInput("Unknown presupuesto $id")

@@ -118,7 +118,7 @@ internal class BudgetsViewModel(
                   monedas = monedas,
                   amountInput = "",
                   suggestion = null,
-                  amountError = false,
+                  amountError = null,
                   duplicateOf = null,
                   saving = false,
               )
@@ -158,7 +158,7 @@ internal class BudgetsViewModel(
                   saveFailed = false,
                   suggestion = null,
                   amountInput = editor.amountInput.reformatAmountInput(editor.moneda, moneda),
-                  amountError = false,
+                  amountError = null,
               )
       )
     }
@@ -166,23 +166,24 @@ internal class BudgetsViewModel(
   }
 
   override fun onAmountChanged(text: String) = updateEditor {
-    copy(amountInput = text, amountError = false, saveFailed = false)
+    copy(amountInput = text, amountError = null, saveFailed = false)
   }
 
   override fun onUseSuggestion() = updateEditor {
     suggestion?.let {
-      copy(amountInput = it.toAmountInput(), amountError = false, saveFailed = false)
+      copy(amountInput = it.toAmountInput(), amountError = null, saveFailed = false)
     } ?: this
   }
 
   override fun onSave() {
     val editor = uiState.value.editor?.takeIf { !it.saving && it.canSave } ?: return
     val parsed = parseAmountInput(editor.amountInput, editor.moneda)
-    if (parsed is AmountInputResult.Valid) {
-      updateEditor { copy(saving = true, saveFailed = false) }
-      coroutineScope.launch { finishSave(write(editor, parsed.money)) }
-    } else {
-      updateEditor { copy(amountError = true) }
+    when (parsed) {
+      is AmountInputResult.Valid -> {
+        updateEditor { copy(saving = true, saveFailed = false) }
+        coroutineScope.launch { finishSave(write(editor, parsed.money)) }
+      }
+      is AmountInputResult.Invalid -> updateEditor { copy(amountError = parsed.reason) }
     }
   }
 
@@ -215,7 +216,7 @@ internal class BudgetsViewModel(
                   monedas = listOf(monto.moneda),
                   amountInput = monto.toAmountInput(),
                   suggestion = null,
-                  amountError = false,
+                  amountError = null,
                   duplicateOf = null,
                   saving = false,
               )
@@ -224,18 +225,19 @@ internal class BudgetsViewModel(
   }
 
   override fun onRequestDelete() = updateDetail {
-    copy(confirmingDelete = true, deleteFailed = false)
+    if (deleting) this else copy(confirmingDelete = true, deleteFailed = false)
   }
 
   override fun onCancelDelete() = updateDetail { copy(confirmingDelete = false) }
 
   override fun onConfirmDelete() {
-    val detail = uiState.value.detail?.takeIf { it.confirmingDelete } ?: return
+    val detail = uiState.value.detail?.takeIf { it.confirmingDelete && !it.deleting } ?: return
+    updateDetail { copy(deleting = true) }
     coroutineScope.launch {
       when (presupuestos.delete(detail.status.presupuesto.id)) {
         is DataOutcome.Success -> uiState.update { it.closingSheet() }
         is DataOutcome.Failure ->
-            updateDetail { copy(confirmingDelete = false, deleteFailed = true) }
+            updateDetail { copy(confirmingDelete = false, deleting = false, deleteFailed = true) }
       }
     }
   }

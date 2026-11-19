@@ -22,12 +22,12 @@ import com.kurobello.tallybook.core.ui.component.TallybookSheetForm
 import com.kurobello.tallybook.core.ui.component.TallybookSheetTitle
 import com.kurobello.tallybook.core.ui.component.TallybookText
 import com.kurobello.tallybook.core.ui.component.TallybookTextButton
+import com.kurobello.tallybook.core.ui.component.message
 import com.kurobello.tallybook.core.ui.theme.TallybookTheme
 import com.kurobello.tallybook.feature.budgets.viewmodel.BudgetEditorState
 import com.kurobello.tallybook.feature.budgets.viewmodel.BudgetsActions
 import org.jetbrains.compose.resources.stringResource
 import tallybook.shared.generated.resources.Res
-import tallybook.shared.generated.resources.budget_amount_error
 import tallybook.shared.generated.resources.budget_amount_label
 import tallybook.shared.generated.resources.budget_category_label
 import tallybook.shared.generated.resources.budget_duplicate
@@ -66,10 +66,7 @@ internal fun BudgetEditorContent(
         currencySymbol = editor.moneda.symbol,
         modifier = Modifier.revealWhenFocused(),
         enabled = enabled,
-        message =
-            if (editor.amountError)
-                TallybookFieldMessage.Error(stringResource(Res.string.budget_amount_error))
-            else null,
+        message = editor.amountError?.let { TallybookFieldMessage.Error(it.message()) },
     )
     editor.suggestion?.let { suggestion ->
       TallybookTextButton(

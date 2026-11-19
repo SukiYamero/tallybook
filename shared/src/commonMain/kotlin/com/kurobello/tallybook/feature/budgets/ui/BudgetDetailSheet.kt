@@ -61,9 +61,12 @@ private const val ITEM_SEPARATOR = ", "
 
 internal data class BudgetHistoryTally(val within: Int, val closed: Int)
 
-/** The last month is still running, so only the months before it can be within the monto yet. */
+/**
+ * The last month is still running, so only the months before it can be within the monto yet; months
+ * the user never recorded say nothing about the budget.
+ */
 internal fun List<BudgetMonth>.tally(monto: Money): BudgetHistoryTally {
-  val closed = dropLast(1)
+  val closed = dropLast(1).filter { it.recorded }
   return BudgetHistoryTally(within = closed.count { it.spent <= monto }, closed = closed.size)
 }
 
@@ -201,11 +204,13 @@ private fun BudgetHistoryChart(
       style = TallybookTheme.typography.caption,
   )
   val tally = history.tally(monto)
-  TallybookText(
-      stringResource(Res.string.budget_history_within, tally.within, tally.closed),
-      color = TallybookTheme.colors.foreground.secondary,
-      style = TallybookTheme.typography.bodySmall,
-  )
+  if (tally.closed > 0) {
+    TallybookText(
+        stringResource(Res.string.budget_history_within, tally.within, tally.closed),
+        color = TallybookTheme.colors.foreground.secondary,
+        style = TallybookTheme.typography.bodySmall,
+    )
+  }
 }
 
 @Composable

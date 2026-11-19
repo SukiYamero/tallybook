@@ -24,7 +24,6 @@
     <string name="budget_edit_title">Edit budget</string>
     <string name="budget_category_label">Category</string>
     <string name="budget_amount_label">Monthly limit</string>
-    <string name="budget_amount_error">Enter an amount above zero.</string>
     <string name="budget_suggestion">Your average: %1$s</string>
     <string name="budget_duplicate">You already have a budget for %1$s in %2$s; you can change its limit here.</string>
     <string name="budget_save">Save</string>

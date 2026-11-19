@@ -11,4 +11,5 @@ sealed interface PresupuestoWrite {
   data object UnknownCategoria : PresupuestoWrite
 }
 
-data class BudgetMonth(val month: YearMonth, val spent: Money)
+/** [recorded] is whether the user logged any gasto that month, in any categoria of the moneda. */
+data class BudgetMonth(val month: YearMonth, val spent: Money, val recorded: Boolean)

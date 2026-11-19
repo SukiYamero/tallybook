@@ -121,6 +121,38 @@ class PresupuestoRepositoryTest {
   }
 
   @Test
+  fun createAndUpdateMontoRejectAboveTheCap() = runTest {
+    withRepository { fixture ->
+      val overCap = Money(Money.MAX_MINOR_UNITS + 1, Moneda.COP)
+
+      assertIs<DataError.InvalidInput>(
+          assertIs<DataOutcome.Failure>(fixture.repository.create("cat_viajes", overCap, TODAY))
+              .error
+      )
+
+      fixture.created("cat_viajes", cop(1_000))
+      assertIs<DataError.InvalidInput>(
+          assertIs<DataOutcome.Failure>(fixture.repository.updateMonto("id-1", overCap)).error
+      )
+      assertEquals(
+          Money.MAX_MINOR_UNITS,
+          assertIs<PresupuestoWrite.Saved>(
+                  assertIs<DataOutcome.Success<PresupuestoWrite>>(
+                          fixture.repository.updateMonto(
+                              "id-1",
+                              Money(Money.MAX_MINOR_UNITS, Moneda.COP),
+                          )
+                      )
+                      .data
+              )
+              .presupuesto
+              .monto
+              .minorUnits,
+      )
+    }
+  }
+
+  @Test
   fun spentIncludesChildrenOnlyForParentBudget() = runTest {
     withRepository { fixture ->
       fixture.created("cat_viajes", cop(100_000))
@@ -265,6 +297,7 @@ class PresupuestoRepositoryTest {
       fixture.gasto("sep", "cat_viajes", 500, fecha = LocalDate(2026, 9, 30))
       fixture.gasto("nov", "cat_viajes", 300)
       fixture.gasto("other", "cat_finanzas", 5_000)
+      fixture.gasto("oct-other", "cat_finanzas", 1, fecha = LocalDate(2026, 10, 5))
 
       val history =
           assertIs<DataOutcome.Success<List<BudgetMonth>>>(
@@ -273,9 +306,15 @@ class PresupuestoRepositoryTest {
               .data
 
       assertEquals(
-          listOf(6 to 700L, 7 to 0L, 8 to 0L, 9 to 500L, 10 to 0L, 11 to 300L).map { (m, v) ->
-            BudgetMonth(YearMonth(2026, m), cop(v))
-          },
+          listOf(
+                  Triple(6, 700L, true),
+                  Triple(7, 0L, false),
+                  Triple(8, 0L, false),
+                  Triple(9, 500L, true),
+                  Triple(10, 0L, true),
+                  Triple(11, 300L, true),
+              )
+              .map { (m, v, recorded) -> BudgetMonth(YearMonth(2026, m), cop(v), recorded) },
           history,
       )
     }

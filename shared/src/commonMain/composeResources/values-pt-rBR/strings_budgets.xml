@@ -24,7 +24,6 @@
     <string name="budget_edit_title">Editar orçamento</string>
     <string name="budget_category_label">Categoria</string>
     <string name="budget_amount_label">Limite mensal</string>
-    <string name="budget_amount_error">Digite um valor maior que zero.</string>
     <string name="budget_suggestion">Sua média: %1$s</string>
     <string name="budget_duplicate">Você já tem um orçamento para %1$s em %2$s; aqui dá para mudar o limite.</string>
     <string name="budget_save">Salvar</string>
