@@ -7,11 +7,12 @@ Una fuente por ítem — se borra de acá en cuanto se resuelve. No es historial
 Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 
 1. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
-   and Statistics accessibility*, *Profile polish*.
+   and Statistics accessibility*, *Profile polish*, *Budgets follow-ups* (TalkBack).
 2. Google login + backup en Drive → [plan](tasks/google-drive-persistence.md).
 3. Avisos de recurrentes por confirmar → *Producto*.
 4. Vocabulario de la frase más rico en todos los idiomas → *Richer sentence vocabulary*.
 5. Pulido chico → *Several movimientos follow-ups*, *Learning from corrections follow-ups*,
+   *Budgets follow-ups*,
    *Sentence amount above the cap*,
    *`ioDispatcher` en iOS*, *Unified Custom date-range picker*, *Recurrentes copy*.
 6. Resto de *Accounts follow-ups* (transferencias desde la frase, FX, inversiones, excluir del total).
@@ -57,6 +58,14 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
   the Drive and sync work: a database read error stops the rules from refreshing until the screen
   reopens, and records written by a newer app version (an unknown field) fail to load. See
   [Learning from corrections](business-logic.md#learning-from-corrections).
+
+- **Budgets follow-ups** — TalkBack: a budget row's nested merged semantics may split its focus, and
+  the progress bar has no progress semantics. A notice names the category without its moneda, which is
+  ambiguous when the same category has budgets in two monedas. Copy: pt-BR "Ver movimentações" differs
+  from the sibling "Ver movimentos", and en "On track in 5 of 7" reads better as "5 of 7 on track".
+  Picking a moneda or category while a suggestion is loading can show the previous one's suggestion,
+  and creating with no primary moneda loaded does nothing silently. `HomeBudgetsRow` duplicates
+  `HomeRecurrentesRow` (extract a shared row on a third one). See [Budgets](features/budgets.md).
 
 - **Recurrentes copy** — A pending row reads "Pendiente desde el 15 de noviembre" for a single due
   date ("Vence el …" reads better), and the second pending row of a recurrence truncates its
