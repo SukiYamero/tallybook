@@ -148,7 +148,6 @@ private fun ManagementFeedbackHost(
   }
 }
 
-/** What the host shows for one feedback, before any string is resolved. */
 internal data class ManagementFeedbackPresentation(
     val message: StringResource?,
     val budget: BudgetNotice?,
@@ -198,7 +197,6 @@ private fun ManagementFeedback.toSnackbarMessage(): TallybookSnackbarMessage {
   )
 }
 
-/** What a budget notice says, chosen like the row's line in Presupuestos. */
 internal sealed interface BudgetNoticeLine {
   data object Over : BudgetNoticeLine
 

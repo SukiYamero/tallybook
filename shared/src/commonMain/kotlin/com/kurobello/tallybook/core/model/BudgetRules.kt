@@ -102,7 +102,6 @@ internal fun budgetStatus(
   )
 }
 
-/** State, then share spent descending, then category name. */
 internal val budgetOrder: Comparator<BudgetStatus> =
     compareBy<BudgetStatus> { it.state }
         .thenComparator { a, b -> shareDescending(a, b) }

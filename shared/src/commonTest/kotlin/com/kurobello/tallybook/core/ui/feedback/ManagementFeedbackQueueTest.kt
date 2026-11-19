@@ -73,7 +73,7 @@ class ManagementFeedbackQueueTest {
 
     val third = assertNotNull(f.queue.state.value.feedback)
     assertEquals(ManagementFeedbackKind.Saved, third.kind)
-    assertFalse(third.hasAction)
+    assertFalse(third.presentation().action != null)
     assertTrue(third.token > second.token)
   }
 
@@ -119,7 +119,7 @@ class ManagementFeedbackQueueTest {
     runCurrent()
     val restored = assertNotNull(f.queue.state.value.feedback)
     assertEquals(ManagementFeedbackKind.Restored, restored.kind)
-    assertFalse(restored.hasAction)
+    assertFalse(restored.presentation().action != null)
     assertEquals(waiting, f.queue.state.value.feedbackQueue[1])
   }
 
@@ -327,7 +327,7 @@ class ManagementFeedbackQueueTest {
     val head = assertNotNull(f.queue.state.value.feedback)
     val waiting = f.queue.state.value.feedbackQueue[1]
     assertEquals(QUEUE_NOTICE, head.budget)
-    assertTrue(head.hasAction)
+    assertTrue(head.presentation().action != null)
 
     assertFalse(f.queue.onBudgetAction(waiting.token, waiting.revision))
     assertFalse(f.queue.onBudgetAction(head.token, head.revision + 1))
@@ -358,7 +358,7 @@ class ManagementFeedbackQueueTest {
     val restored = assertNotNull(f.queue.state.value.feedback)
     assertEquals(ManagementFeedbackKind.Restored, restored.kind)
     assertNull(restored.budget)
-    assertFalse(restored.hasAction)
+    assertFalse(restored.presentation().action != null)
   }
 }
 

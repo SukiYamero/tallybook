@@ -42,10 +42,6 @@ internal data class ManagementFeedback(
     val undo: UndoSnapshot? = null,
     val budget: BudgetNotice? = null,
 ) {
-  /** Undo or retry while the snapshot is held, otherwise "Ver" for a budget line. */
-  val hasAction: Boolean
-    get() = undo != null || budget != null
-
   /** Undo keeps priority: undoing the save also takes its budget line away. */
   val opensBudgets: Boolean
     get() = undo == null && budget != null

@@ -26,8 +26,8 @@ currency), a Statistics section, a month picker, CSV export of budgets.
 - UI: `feature.budgets` (`BudgetsViewModel` with `UiState`, effects and `Actions`; screen, `BudgetRow`,
   editor and detail sheets, `BudgetSheetHost`), `HomeBudgetsRow` in `feature.home`, strings in
   `strings_budgets.xml` for every locale.
-- Notice: creation enqueues only the budget notice; edit and Pagado merge its line into their existing
-  snackbar and keep Undo (see
+- Notice: creation enqueues only the budget notice; edit and Pagado merge its line into their snackbar;
+  Pagado keeps Undo, while edit gains "Ver" (see
   [snackbar presentation](../ui/architecture.md#snackbar-presentation)).
 - Navigation: Presupuestos is a secondary destination from Profile, the Home row and the notice's
   "Ver", which uses `PrimaryNavigator.showSecondary` (over the selected tab when allowed, otherwise over

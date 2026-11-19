@@ -3,6 +3,7 @@ package com.kurobello.tallybook.feature.movimientos.viewmodel
 import com.kurobello.tallybook.core.model.DataOutcome
 import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.ui.feedback.ManagementFeedbackKind
+import com.kurobello.tallybook.core.ui.feedback.presentation
 import com.kurobello.tallybook.core.ui.movimiento.AddMovimientoSheetSession
 import com.kurobello.tallybook.core.ui.navigation.MovimientoManagementController
 import com.kurobello.tallybook.core.ui.navigation.PrimaryModalCoordinator
@@ -205,7 +206,7 @@ class MovimientoUndoTest {
     runCurrent()
     val conflict = assertNotNull(f.feedback.state.value.feedback)
     assertEquals(ManagementFeedbackKind.RestoreConflict, conflict.kind)
-    assertFalse(conflict.hasAction)
+    assertFalse(conflict.presentation().action != null)
     f.feedback.onFeedbackAction(conflict.token, conflict.revision)
     runCurrent()
     assertEquals(1, f.repository.restores)
@@ -227,7 +228,7 @@ class MovimientoUndoTest {
     val failed = assertNotNull(f.feedback.state.value.feedback)
     assertEquals(ManagementFeedbackKind.RestoreMissingCuenta, failed.kind)
     assertNull(failed.undo)
-    assertFalse(failed.hasAction)
+    assertFalse(failed.presentation().action != null)
     f.feedback.onFeedbackAction(failed.token, failed.revision)
     runCurrent()
     assertEquals(1, f.repository.restores)
@@ -245,6 +246,6 @@ class MovimientoUndoTest {
     f.viewModel.onSheetHidden(assertNotNull(f.viewModel.uiState.value.session).token)
     val feedback = assertNotNull(f.feedback.state.value.feedback)
     assertEquals(ManagementFeedbackKind.Missing, feedback.kind)
-    assertFalse(feedback.hasAction)
+    assertFalse(feedback.presentation().action != null)
   }
 }

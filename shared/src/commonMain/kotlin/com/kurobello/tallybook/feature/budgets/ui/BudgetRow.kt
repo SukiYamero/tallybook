@@ -46,7 +46,6 @@ import tallybook.shared.generated.resources.budgets_name_with_moneda
 import tallybook.shared.generated.resources.budgets_open
 import tallybook.shared.generated.resources.budgets_spent_of
 
-/** What a budget's supporting line says, chosen by its state. */
 internal sealed interface BudgetLine {
   data class Over(val excess: Money) : BudgetLine
 
@@ -180,7 +179,6 @@ internal fun SpentOfMonto(status: BudgetStatus, modifier: Modifier = Modifier) {
   )
 }
 
-/** The progress bar colored by state, and the line that says what it means. */
 @Composable
 internal fun BudgetProgress(status: BudgetStatus, modifier: Modifier = Modifier) {
   Column(

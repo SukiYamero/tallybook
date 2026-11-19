@@ -659,7 +659,8 @@ is calm (no "alerta", exclamation marks or warning icons; see [wording](wording.
   the budget; movimientos do not change), "Ver movimientos" and the last six months as bars of
   monthly gasto with the current amount drawn as a dashed line. Past months are compared with the
   current amount because amounts are not versioned, and the caption "Dentro del tope en X de los
-  últimos N meses" counts only closed months (the running month is shown but not counted). "Ver
+  últimos N meses" counts only closed months in which the user recorded some gasto in that currency (the running month
+  is shown but not counted); with none, the caption is hidden. "Ver
   movimientos" opens Search filtered by the category (children included), the currency, type gasto
   and the current month (a [filter request](#search-and-filters)).
 - The sheet keeps the shell covered until it is hidden, so the screen behind never flashes between
@@ -683,8 +684,9 @@ is calm (no "alerta", exclamation marks or warning icons; see [wording](wording.
   presupuesto de este mes"; PACE "Comida: a este ritmo llegarías al tope el día 22".
 - One snackbar per save. Creation enqueues only the budget notice, a standalone informational (Short)
   snackbar with the action "Ver". Edit and Pagado already enqueue their own snackbar (`Saved`,
-  `Confirmed` with Undo): the budget line is merged into its message and the existing action is kept
-  (Undo wins over "Ver"), so Undo removes the notice together with the save. It shows every time a save
+  `Confirmed` with Undo): the budget line is merged into its message. Edit's `Saved` has no action, so
+  with a budget line it gains "Ver" and becomes Long; Pagado keeps Undo, which wins over "Ver", so
+  Undo removes the notice together with the save. It shows every time a save
   touches a non-FINE budget, not only on the first crossing.
 
 ## CSV export
