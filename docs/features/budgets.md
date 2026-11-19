@@ -17,7 +17,7 @@ currency), a Statistics section, a month picker, CSV export of budgets.
 
 ## Integration
 
-- **Schema 12 (`12.sqm`)** adds `presupuesto` (stamped, tombstoned); `Presupuesto.sq` holds the
+- **Schema 13 (`12.sqm`)** adds `presupuesto` (stamped, tombstoned); `Presupuesto.sq` holds the
   statements and the spent aggregate. `ChangeClock` bootstrap includes the table.
 - `core.model`: `Presupuesto`, `BudgetState`, `BudgetStatus` and the pure `BudgetRules` (status over an
   injected civil day, order, suggestion, touches and the notice pick).

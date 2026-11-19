@@ -8,7 +8,7 @@ Qué se ataca primero; el detalle de cada ítem vive en su sección de abajo.
 
 1. Accesibilidad y verificaciones pendientes en Android → *Accounts acceptance gaps*, *Management
    and Statistics accessibility*, *Profile polish*.
-2. Google login + backup en Drive, cuando 1 esté cerrado → [plan](tasks/google-drive-persistence.md).
+2. Google login + backup en Drive → [plan](tasks/google-drive-persistence.md).
 3. Avisos de recurrentes por confirmar → *Producto*.
 4. Vocabulario de la frase más rico en todos los idiomas → *Richer sentence vocabulary*.
 5. Pulido chico → *Several movimientos follow-ups*, *Learning from corrections follow-ups*,
