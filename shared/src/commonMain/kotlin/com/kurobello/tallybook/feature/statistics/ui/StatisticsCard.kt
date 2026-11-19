@@ -52,25 +52,30 @@ internal fun StatisticsLegend(
     modifier: Modifier = Modifier,
     note: String? = null,
 ) {
-  FlowRow(
+  Column(
       modifier = modifier.fillMaxWidth(),
-      horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
       verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space6),
   ) {
-    entries.forEach { entry ->
-      Row(
-          horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space6),
-          verticalAlignment = Alignment.CenterVertically,
-      ) {
-        Box(
-            Modifier.size(TallybookTheme.dimensions.chartLegendDot)
-                .background(entry.color, CircleShape)
-        )
-        TallybookText(
-            entry.label,
-            color = TallybookTheme.colors.foreground.secondary,
-            style = TallybookTheme.typography.caption,
-        )
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space12),
+        verticalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space6),
+    ) {
+      entries.forEach { entry ->
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(TallybookTheme.spacing.space6),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Box(
+              Modifier.size(TallybookTheme.dimensions.chartLegendDot)
+                  .background(entry.color, CircleShape)
+          )
+          TallybookText(
+              entry.label,
+              color = TallybookTheme.colors.foreground.secondary,
+              style = TallybookTheme.typography.caption,
+          )
+        }
       }
     }
     if (note != null) {

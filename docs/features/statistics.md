@@ -62,7 +62,8 @@ On the Xiaomi, the affected instrumented classes pass (49 tests: Statistics navi
 navigation, Categories and Tags navigation, UI catalog, chart components and the Statistics screen).
 A manual dark-theme, English pass covered the tab, Home card, Month and Year, the Food sheet and
 "View 7 movements" reaching Search with the same seven rows; the user accepted the delivered flows on
-that device.
+that device. A light-theme pass in es, es-AR and pt-BR covered the tab, Month and Year, and the
+category sheet.
 
-Not covered: light theme and es/pt-BR on screen, TalkBack and enlarged text, and iOS runtime
+Not covered: TalkBack and enlarged text, and iOS runtime
 (tracked in the [backlog](../backlog.md)).
