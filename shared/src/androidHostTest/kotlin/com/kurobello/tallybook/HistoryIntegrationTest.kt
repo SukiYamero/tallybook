@@ -28,6 +28,7 @@ import com.kurobello.tallybook.core.data.CuentaSeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
+import com.kurobello.tallybook.core.data.FakePresupuestoRepository
 import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
@@ -36,6 +37,7 @@ import com.kurobello.tallybook.core.data.MovimientoRepositoryImpl
 import com.kurobello.tallybook.core.data.PreferencesDataStoreFactory
 import com.kurobello.tallybook.core.data.PreferencesFile
 import com.kurobello.tallybook.core.data.PreferencesPathProvider
+import com.kurobello.tallybook.core.data.PresupuestoRepository
 import com.kurobello.tallybook.core.data.RecurrenciaRepository
 import com.kurobello.tallybook.core.data.SaldoRepository
 import com.kurobello.tallybook.core.data.SaldoRepositoryImpl
@@ -455,6 +457,7 @@ class HistoryIntegrationTest {
               single<MovimientoRepository> { movimientos }
               single<SaldoRepository> { SaldoRepositoryImpl(database, fixture.dispatcher) }
               single<RecurrenciaRepository> { FakeRecurrenciaRepository() }
+              single<PresupuestoRepository> { FakePresupuestoRepository() }
               single<VoiceDictation> { UnavailableVoiceDictation }
               single<CorreccionFraseRepository> {
                 CorreccionFraseRepositoryImpl(database, fixture.dispatcher, TestChangeClock())

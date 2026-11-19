@@ -47,7 +47,7 @@ internal val viewModelModule = module {
   }
   viewModel {
     HomeViewModel(
-        repositories = HomeRepositories(get(), get(), get(), get(), get(), get()),
+        repositories = HomeRepositories(get(), get(), get(), get(), get(), get(), get()),
         today = CivilToday(get(), get()),
     )
   }

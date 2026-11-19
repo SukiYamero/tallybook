@@ -39,9 +39,11 @@ import com.kurobello.tallybook.core.data.CuentaRepository
 import com.kurobello.tallybook.core.data.EtiquetaRepository
 import com.kurobello.tallybook.core.data.FakeCuentaRepository
 import com.kurobello.tallybook.core.data.FakeEtiquetaRepository
+import com.kurobello.tallybook.core.data.FakePresupuestoRepository
 import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.FakeSaldoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.PresupuestoRepository
 import com.kurobello.tallybook.core.data.RecurrenciaRepository
 import com.kurobello.tallybook.core.data.SaldoRepository
 import com.kurobello.tallybook.core.data.StatisticsRepository
@@ -294,6 +296,7 @@ private class ShellSuite(private val scope: TestScope) {
             single<CuentaRepository> { FakeCuentaRepository(listOf(cashCuenta(Moneda.USD))) }
             single<SaldoRepository> { FakeSaldoRepository() }
             single<RecurrenciaRepository> { FakeRecurrenciaRepository() }
+            single<PresupuestoRepository> { FakePresupuestoRepository() }
             single<StatisticsRepository> { FakeStatistics() }
             single<EtiquetaRepository> { FakeEtiquetaRepository() }
             single<CategoriaRepository> { ShellCategories() }

@@ -41,4 +41,8 @@
     <string name="budget_delete_title">Excluir este orçamento?</string>
     <string name="budget_delete_message">Suas movimentações continuam iguais; você só deixa de acompanhar este limite.</string>
     <string name="budget_delete_error">Não conseguimos excluir. Seus dados continuam salvos; tente de novo.</string>
+    <plurals name="home_budgets_to_review">
+        <item quantity="one">%1$d orçamento para revisar</item>
+        <item quantity="other">%1$d orçamentos para revisar</item>
+    </plurals>
 </resources>

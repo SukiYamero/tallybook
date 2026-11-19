@@ -6,10 +6,13 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CivilToday
 import com.kurobello.tallybook.core.data.MovimientoRepository
+import com.kurobello.tallybook.core.data.PresupuestoRepository
 import com.kurobello.tallybook.core.data.RecurrenciaRepository
 import com.kurobello.tallybook.core.data.SaldoRepository
 import com.kurobello.tallybook.core.data.StatisticsRepository
 import com.kurobello.tallybook.core.model.AppPreferencesState
+import com.kurobello.tallybook.core.model.BudgetState
+import com.kurobello.tallybook.core.model.BudgetStatus
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.DataError
 import com.kurobello.tallybook.core.model.DataOutcome
@@ -48,6 +51,7 @@ internal data class HomeRepositories(
     val saldos: SaldoRepository,
     val statistics: StatisticsRepository,
     val recurrencias: RecurrenciaRepository,
+    val presupuestos: PresupuestoRepository,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -133,6 +137,7 @@ internal class HomeViewModel(
         combine(
             repositories.statistics.observe(statistics).toLoadState(),
             repositories.recurrencias.observePendingCount(date).toLoadState(),
+            repositories.presupuestos.observeStatuses(date).toLoadState(),
             ::HomeExtras,
         )
     return combine(
@@ -162,6 +167,7 @@ private fun HomeUiState.asFlow(): Flow<HomeUiState> = kotlinx.coroutines.flow.fl
 private class HomeExtras(
     val statistics: LoadState<StatisticsSnapshot>,
     val pendingRecurrentes: LoadState<Int>,
+    val budgets: LoadState<List<BudgetStatus>>,
 )
 
 private data class HomeSnapshot(
@@ -171,6 +177,7 @@ private data class HomeSnapshot(
     val totalBalance: Money?,
     val statistics: HomeStatistics?,
     val pendingRecurrentes: Int,
+    val budgetsToReview: Int,
     val error: DataError?,
     val isLoading: Boolean,
 ) {
@@ -187,6 +194,7 @@ private data class HomeSnapshot(
                     totalBalance = requireNotNull(totalBalance),
                     statistics = statistics,
                     pendingRecurrentes = pendingRecurrentes,
+                    budgetsToReview = budgetsToReview,
                 )
             )
       }
@@ -210,6 +218,8 @@ private data class HomeSnapshot(
             totalBalance = totales.successOrNull()?.let { it[moneda] ?: Money(0, moneda) },
             statistics = extras.statistics.successOrNull()?.homeStatisticsOrNull(today),
             pendingRecurrentes = extras.pendingRecurrentes.successOrNull() ?: 0,
+            budgetsToReview =
+                extras.budgets.successOrNull().orEmpty().count { it.state != BudgetState.FINE },
             error =
                 summary.errorOrNull()
                     ?: recent.errorOrNull()
@@ -221,7 +231,8 @@ private data class HomeSnapshot(
                     categorias is LoadState.Loading ||
                     totales is LoadState.Loading ||
                     extras.statistics is LoadState.Loading ||
-                    extras.pendingRecurrentes is LoadState.Loading,
+                    extras.pendingRecurrentes is LoadState.Loading ||
+                    extras.budgets is LoadState.Loading,
         )
   }
 }

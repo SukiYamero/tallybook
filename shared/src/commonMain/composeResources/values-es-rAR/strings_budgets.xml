@@ -41,4 +41,8 @@
     <string name="budget_delete_title">¿Eliminar este presupuesto?</string>
     <string name="budget_delete_message">Tus movimientos no cambian; solo dejás de seguir este tope.</string>
     <string name="budget_delete_error">No pudimos eliminarlo. Tus datos siguen guardados; intentá de nuevo.</string>
+    <plurals name="home_budgets_to_review">
+        <item quantity="one">%1$d presupuesto para revisar</item>
+        <item quantity="other">%1$d presupuestos para revisar</item>
+    </plurals>
 </resources>

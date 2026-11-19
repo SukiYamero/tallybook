@@ -154,6 +154,7 @@ private fun PrimaryRoute(
             onOpenAccounts = { navigator.openSecondary(Accounts) },
             onOpenStatistics = { navigator.select(Statistics) },
             onOpenRecurrentes = { navigator.openSecondary(Recurrentes) },
+            onOpenBudgets = { navigator.openSecondary(Presupuestos) },
         )
     History ->
         HistoryRoute(

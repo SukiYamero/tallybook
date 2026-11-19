@@ -5,10 +5,12 @@ import com.kurobello.tallybook.core.data.AppPreferencesRepository
 import com.kurobello.tallybook.core.data.CategoriaRepository
 import com.kurobello.tallybook.core.data.CategoryHistoryRow
 import com.kurobello.tallybook.core.data.CivilToday
+import com.kurobello.tallybook.core.data.FakePresupuestoRepository
 import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.FakeSaldoRepository
 import com.kurobello.tallybook.core.data.MovimientoRepository
 import com.kurobello.tallybook.core.data.MutableClock
+import com.kurobello.tallybook.core.data.PresupuestoRepository
 import com.kurobello.tallybook.core.data.RecurrenciaRepository
 import com.kurobello.tallybook.core.data.SaldoRepository
 import com.kurobello.tallybook.core.data.StatisticsRepository
@@ -17,6 +19,7 @@ import com.kurobello.tallybook.core.data.UnsupportedCategoriaRepository
 import com.kurobello.tallybook.core.model.AppLocale
 import com.kurobello.tallybook.core.model.AppPreferences
 import com.kurobello.tallybook.core.model.AppPreferencesState
+import com.kurobello.tallybook.core.model.BudgetStatus
 import com.kurobello.tallybook.core.model.Categoria
 import com.kurobello.tallybook.core.model.CategoryIcon
 import com.kurobello.tallybook.core.model.CategoryStatisticsRequest
@@ -41,6 +44,7 @@ import com.kurobello.tallybook.core.model.MovimientoChanges
 import com.kurobello.tallybook.core.model.MovimientoDateRange
 import com.kurobello.tallybook.core.model.MovimientoSummary
 import com.kurobello.tallybook.core.model.MovimientoUpdateResult
+import com.kurobello.tallybook.core.model.Presupuesto
 import com.kurobello.tallybook.core.model.Recurrencia
 import com.kurobello.tallybook.core.model.RestoreResult
 import com.kurobello.tallybook.core.model.StatisticsKey
@@ -50,6 +54,7 @@ import com.kurobello.tallybook.core.model.StatisticsSnapshot
 import com.kurobello.tallybook.core.model.ThemeMode
 import com.kurobello.tallybook.core.model.TipoCuenta
 import com.kurobello.tallybook.core.model.TipoMovimiento
+import com.kurobello.tallybook.core.model.budgetStatus
 import com.kurobello.tallybook.core.model.statisticsRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -317,6 +322,7 @@ class HomeViewModelTest {
                 primarySaldos(),
                 FakeHomeStatistics(),
                 FakeRecurrenciaRepository(),
+                FakePresupuestoRepository(),
             ),
             today(),
             backgroundScope,
@@ -369,6 +375,7 @@ class HomeViewModelTest {
                 primarySaldos(),
                 FakeHomeStatistics(),
                 FakeRecurrenciaRepository(),
+                FakePresupuestoRepository(),
             ),
             today(),
             backgroundScope,
@@ -752,6 +759,70 @@ class HomeViewModelTest {
     assertFalse(vm.uiState.value.isLoading)
   }
 
+  @Test
+  fun budgetsRowCountsNonFineBudgets() = runTest {
+    val vm =
+        homeWithBudgets(
+            FakePresupuestoRepository(
+                listOf(
+                    statusOf("over", Moneda.COP, spent = 150),
+                    statusOf("near", Moneda.COP, spent = 90),
+                    statusOf("fine", Moneda.COP, spent = 10),
+                    statusOf("usd", Moneda.USD, spent = 150),
+                )
+            )
+        )
+    runCurrent()
+
+    assertEquals(3, vm.uiState.value.budgetsToReview)
+  }
+
+  @Test
+  fun budgetsRowHiddenWhenAllFine() = runTest {
+    val vm =
+        homeWithBudgets(FakePresupuestoRepository(listOf(statusOf("fine", Moneda.COP, spent = 10))))
+    runCurrent()
+
+    assertEquals(0, vm.uiState.value.budgetsToReview)
+    assertTrue(vm.uiState.value.hasSnapshot)
+  }
+
+  @Test
+  fun failedBudgetReadHidesOnlyTheRow() = runTest {
+    val presupuestos = FakePresupuestoRepository()
+    presupuestos.statuses.value =
+        DataOutcome.Failure(DataError.Local(IllegalStateException("disk")))
+    val vm = homeWithBudgets(presupuestos)
+    runCurrent()
+
+    assertEquals(0, vm.uiState.value.budgetsToReview)
+    assertNull(vm.uiState.value.error)
+    assertTrue(vm.uiState.value.hasSnapshot)
+    assertFalse(vm.uiState.value.isLoading)
+  }
+
+  private fun TestScope.homeWithBudgets(presupuestos: PresupuestoRepository): HomeViewModel =
+      createViewModel(
+          FakePreferencesRepository(readyPreferences(Moneda.COP)),
+          FakeMovimientoRepository(
+              recent = DataOutcome.Success(emptyList()),
+              summary = DataOutcome.Success(summary(Moneda.COP)),
+          ),
+          FakeCategoriaRepository(DataOutcome.Success(emptyList())),
+          backgroundScope,
+          presupuestos = presupuestos,
+      )
+
+  private fun statusOf(id: String, moneda: Moneda, spent: Long): BudgetStatus =
+      budgetStatus(
+          Presupuesto(id, "cat_$id", Money(100_00, moneda), Instant.parse("2026-01-01T00:00:00Z")),
+          id,
+          null,
+          Money(spent * 100, moneda),
+          // Day 1 keeps the pace rule out of the way: only OVER, NEAR and FINE are possible.
+          LocalDate(2026, 10, 1),
+      )
+
   private fun TestScope.readyHome(statistics: FakeHomeStatistics): HomeViewModel =
       createViewModel(
           FakePreferencesRepository(readyPreferences(Moneda.COP)),
@@ -773,6 +844,7 @@ class HomeViewModelTest {
       today: CivilToday = today(),
       statistics: StatisticsRepository = FakeHomeStatistics(),
       recurrencias: RecurrenciaRepository = FakeRecurrenciaRepository(),
+      presupuestos: PresupuestoRepository = FakePresupuestoRepository(),
   ): HomeViewModel {
     val viewModel =
         HomeViewModel(
@@ -784,6 +856,7 @@ class HomeViewModelTest {
                     saldos,
                     statistics,
                     recurrencias,
+                    presupuestos,
                 ),
             today = today,
             scope = scope,

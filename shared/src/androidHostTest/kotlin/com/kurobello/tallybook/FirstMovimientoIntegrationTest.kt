@@ -10,6 +10,7 @@ import com.kurobello.tallybook.core.data.CuentaRepositoryImpl
 import com.kurobello.tallybook.core.data.CuentaSeedProvider
 import com.kurobello.tallybook.core.data.DeviceLocaleProvider
 import com.kurobello.tallybook.core.data.EtiquetaRepositoryImpl
+import com.kurobello.tallybook.core.data.FakePresupuestoRepository
 import com.kurobello.tallybook.core.data.FakeRecurrenciaRepository
 import com.kurobello.tallybook.core.data.IdGenerator
 import com.kurobello.tallybook.core.data.LocalDataBootstrapper
@@ -149,6 +150,7 @@ class FirstMovimientoIntegrationTest {
                           SaldoRepositoryImpl(database, dispatcher),
                           StatisticsRepositoryImpl(database, dispatcher),
                           FakeRecurrenciaRepository(),
+                          FakePresupuestoRepository(),
                       ),
                   today = CivilToday(FixedClock(FIXED_INSTANT), TimeZoneProvider { TimeZone.UTC }),
                   scope = scopes.newScope(dispatcher),
