@@ -15,4 +15,6 @@ FROM (
     SELECT updated_at FROM recurrencia
     UNION ALL
     SELECT updated_at FROM correccion_frase
+    UNION ALL
+    SELECT updated_at FROM presupuesto
 );

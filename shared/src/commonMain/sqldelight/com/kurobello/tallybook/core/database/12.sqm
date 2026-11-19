@@ -1,0 +1,11 @@
+CREATE TABLE presupuesto (
+    id TEXT NOT NULL PRIMARY KEY,
+    categoria_id TEXT NOT NULL,
+    moneda TEXT NOT NULL,
+    monto_minor INTEGER NOT NULL CHECK (monto_minor > 0),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT
+);
+
+CREATE INDEX presupuesto_categoria ON presupuesto(categoria_id);

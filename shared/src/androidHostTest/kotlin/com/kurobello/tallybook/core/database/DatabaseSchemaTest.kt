@@ -340,6 +340,19 @@ class DatabaseSchemaTest {
       }
 
   @Test
+  fun `migration from schema 12 adds the empty presupuesto table`() =
+      withSnapshot(version = 12) { driver ->
+        TallybookDatabase.Schema.migrate(
+            driver,
+            oldVersion = 12,
+            newVersion = TallybookDatabase.Schema.version,
+        )
+
+        assertEquals(listOf("0"), driver.queryStrings("SELECT COUNT(*) FROM presupuesto"))
+        assertEquals(freshSchema(), driver.schemaObjects())
+      }
+
+  @Test
   fun `fresh schema rejects invalid cuenta and transferencia rows`() {
     JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
       TallybookDatabase.Schema.create(driver)
@@ -858,6 +871,7 @@ class DatabaseSchemaTest {
                 "movimiento_by_cuenta",
                 "movimiento_etiqueta_etiqueta",
                 "movimiento_recent",
+                "presupuesto_categoria",
                 "transferencia_by_destino",
                 "transferencia_by_origen",
                 "transferencia_recent",
@@ -890,6 +904,7 @@ class DatabaseSchemaTest {
                 "etiqueta",
                 "movimiento",
                 "movimiento_etiqueta",
+                "presupuesto",
                 "recurrencia",
                 "recurrencia_etiqueta",
                 "transferencia",
